@@ -16,6 +16,9 @@ vi.mock('@/lib/sessionIdentity', () => ({
 const rpcMock = vi.mocked(supabase.rpc);
 const persistMock = vi.mocked(sessionIdentity.persistSessionIdentity);
 
+const SESSION_ID = '11111111-1111-4111-8111-111111111111';
+const PARTICIPANT_ID = '22222222-2222-4222-8222-222222222222';
+
 describe('sessions API', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -24,9 +27,9 @@ describe('sessions API', () => {
   it('createSession calls RPC, persists identity, and returns parsed result', async () => {
     rpcMock.mockResolvedValue({
       data: {
-        session_id: 'session-1',
+        session_id: SESSION_ID,
         host_token: 'host-secret',
-        participant_id: 'participant-1',
+        participant_id: PARTICIPANT_ID,
         claim_token: 'claim-1',
       },
       error: null,
@@ -46,17 +49,17 @@ describe('sessions API', () => {
       p_nickname: 'Host',
       p_workout: [{ name: 'Burpees', target: 10, unit: 'reps' }],
     });
-    expect(persistMock).toHaveBeenCalledWith('session-1', {
+    expect(persistMock).toHaveBeenCalledWith(SESSION_ID, {
       nickname: 'Host',
-      participantId: 'participant-1',
+      participantId: PARTICIPANT_ID,
       hostToken: 'host-secret',
       claimToken: 'claim-1',
     });
     expect(result.error).toBeNull();
     expect(result.data).toEqual({
-      sessionId: 'session-1',
+      sessionId: SESSION_ID,
       hostToken: 'host-secret',
-      participantId: 'participant-1',
+      participantId: PARTICIPANT_ID,
       claimToken: 'claim-1',
     });
   });
@@ -86,10 +89,21 @@ describe('sessions API', () => {
     expect(result.error?.message).toBe('This session is full (max 6 participants).');
   });
 
+  it('joinSession rejects invalid session ID before RPC', async () => {
+    const result = await joinSession({
+      sessionId: 'not-a-uuid',
+      nickname: 'Guest',
+    });
+
+    expect(rpcMock).not.toHaveBeenCalled();
+    expect(result.data).toBeNull();
+    expect(result.error?.message).toBe('Enter a valid session ID (UUID format).');
+  });
+
   it('joinSession calls RPC and never accepts host_token in response', async () => {
     rpcMock.mockResolvedValue({
       data: {
-        participant_id: 'participant-2',
+        participant_id: '33333333-3333-4333-8333-333333333333',
         claim_token: 'claim-2',
         host_token: 'should-not-be-here',
       },
@@ -100,7 +114,7 @@ describe('sessions API', () => {
     });
 
     const result = await joinSession({
-      sessionId: 'session-1',
+      sessionId: SESSION_ID,
       nickname: 'Guest',
     });
 
@@ -112,7 +126,7 @@ describe('sessions API', () => {
   it('joinSession persists identity on success', async () => {
     rpcMock.mockResolvedValue({
       data: {
-        participant_id: 'participant-2',
+        participant_id: '33333333-3333-4333-8333-333333333333',
         claim_token: 'claim-2',
       },
       error: null,
@@ -122,22 +136,22 @@ describe('sessions API', () => {
     });
 
     const result = await joinSession({
-      sessionId: 'session-1',
+      sessionId: SESSION_ID,
       nickname: 'Guest',
     });
 
     expect(rpcMock).toHaveBeenCalledWith('join_session', {
-      p_session_id: 'session-1',
+      p_session_id: SESSION_ID,
       p_nickname: 'Guest',
     });
-    expect(persistMock).toHaveBeenCalledWith('session-1', {
+    expect(persistMock).toHaveBeenCalledWith(SESSION_ID, {
       nickname: 'Guest',
-      participantId: 'participant-2',
+      participantId: '33333333-3333-4333-8333-333333333333',
       claimToken: 'claim-2',
     });
     expect(result.error).toBeNull();
     expect(result.data).toEqual({
-      participantId: 'participant-2',
+      participantId: '33333333-3333-4333-8333-333333333333',
       claimToken: 'claim-2',
     });
   });

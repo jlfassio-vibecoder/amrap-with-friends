@@ -1,55 +1,10 @@
--- PR 3: Lobby schema — sessions, participants, rounds, create/join RPCs, RPC-only RLS
-
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
-CREATE TABLE IF NOT EXISTS public.sessions (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  host_token text NOT NULL,
-  duration_minutes int NOT NULL CHECK (duration_minutes BETWEEN 1 AND 60),
-  workout jsonb NOT NULL,
-  state text NOT NULL DEFAULT 'waiting' CHECK (state IN ('waiting', 'setup', 'work', 'finished')),
-  time_left_sec int NOT NULL DEFAULT 10,
-  is_paused boolean NOT NULL DEFAULT false,
-  started_at timestamptz,
-  segment_index int NOT NULL DEFAULT 0,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS public.participants (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  session_id uuid NOT NULL REFERENCES public.sessions (id) ON DELETE CASCADE,
-  nickname text NOT NULL,
-  role text NOT NULL CHECK (role IN ('host', 'joiner')),
-  joined_at timestamptz NOT NULL DEFAULT now(),
-  claim_token_hash text
-);
-
-CREATE INDEX IF NOT EXISTS idx_participants_session_id ON public.participants (session_id);
-
-CREATE TABLE IF NOT EXISTS public.rounds (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  session_id uuid NOT NULL REFERENCES public.sessions (id) ON DELETE CASCADE,
-  participant_id uuid NOT NULL REFERENCES public.participants (id) ON DELETE CASCADE,
-  round_index int NOT NULL,
-  elapsed_sec_at_round int NOT NULL,
-  segment_index int NOT NULL DEFAULT 0,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (participant_id, segment_index, round_index)
-);
-
-CREATE INDEX IF NOT EXISTS idx_rounds_session_id ON public.rounds (session_id);
-CREATE INDEX IF NOT EXISTS idx_rounds_participant_id ON public.rounds (participant_id);
-
-ALTER TABLE public.rounds
-  ADD CONSTRAINT rounds_session_participant_consistency
-  FOREIGN KEY (session_id, participant_id)
-  REFERENCES public.participants (session_id, id);
+-- PR 3 review fixes: pgcrypto search_path, workout NULL guard, rounds FK, participant grants
 
 CREATE OR REPLACE FUNCTION public.validate_workout(p_workout jsonb)
 RETURNS boolean
 LANGUAGE plpgsql
 IMMUTABLE
-SET search_path = pg_catalog, public, extensions
+SET search_path = pg_catalog, public
 AS $$
 DECLARE
   v_len int;
@@ -225,42 +180,15 @@ BEGIN
 END;
 $$;
 
-ALTER TABLE public.sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.participants ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.rounds ENABLE ROW LEVEL SECURITY;
-
-REVOKE ALL ON public.sessions FROM anon, authenticated;
-REVOKE ALL ON public.participants FROM anon, authenticated;
-REVOKE ALL ON public.rounds FROM anon, authenticated;
-
-GRANT SELECT (
-  id,
-  duration_minutes,
-  workout,
-  state,
-  time_left_sec,
-  is_paused,
-  started_at,
-  segment_index,
-  created_at
-) ON public.sessions TO anon, authenticated;
+REVOKE SELECT ON public.participants FROM anon, authenticated;
 
 GRANT SELECT (id, session_id, nickname, role, joined_at)
   ON public.participants TO anon, authenticated;
 
--- Copilot suggestion ignored: guest-first lobby requires anon RPC access in PR3; add rate limits and retention in a hardening PR before production scale.
-GRANT EXECUTE ON FUNCTION public.create_session(int, text, jsonb) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.join_session(uuid, text) TO anon, authenticated;
+ALTER TABLE public.rounds
+  DROP CONSTRAINT IF EXISTS rounds_session_participant_consistency;
 
-ALTER TABLE public.sessions REPLICA IDENTITY FULL;
-ALTER TABLE public.participants REPLICA IDENTITY FULL;
-
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
-    ALTER PUBLICATION supabase_realtime ADD TABLE public.sessions;
-    ALTER PUBLICATION supabase_realtime ADD TABLE public.participants;
-  END IF;
-EXCEPTION
-  WHEN duplicate_object THEN NULL;
-END $$;
+ALTER TABLE public.rounds
+  ADD CONSTRAINT rounds_session_participant_consistency
+  FOREIGN KEY (session_id, participant_id)
+  REFERENCES public.participants (session_id, id);

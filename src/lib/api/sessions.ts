@@ -11,9 +11,22 @@ export type SessionApiError = {
   message: string;
 };
 
+const SESSION_ID_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isSessionIdUuid(value: string): boolean {
+  return SESSION_ID_UUID_RE.test(value);
+}
+
 function mapRpcError(message: string | undefined): string {
   if (!message) {
     return 'Something went wrong. Please try again.';
+  }
+  if (
+    message.includes('invalid input syntax for type uuid') ||
+    message.toLowerCase().includes('invalid uuid')
+  ) {
+    return 'Enter a valid session ID (UUID format).';
   }
   if (message.includes('Session is full')) {
     return 'This session is full (max 6 participants).';
@@ -90,6 +103,12 @@ export async function joinSession(
 
   if (!sessionId) {
     return { data: null, error: { message: 'Enter a session ID.' } };
+  }
+  if (!isSessionIdUuid(sessionId)) {
+    return {
+      data: null,
+      error: { message: 'Enter a valid session ID (UUID format).' },
+    };
   }
   if (!nickname) {
     return { data: null, error: { message: 'Enter your name or a nickname.' } };

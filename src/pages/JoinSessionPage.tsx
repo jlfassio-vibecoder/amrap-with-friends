@@ -22,20 +22,24 @@ export default function JoinSessionPage() {
 
     setLoading(true);
 
-    const result = await joinSession({
-      sessionId,
-      nickname,
-    });
+    try {
+      const result = await joinSession({
+        sessionId,
+        nickname,
+      });
 
-    setLoading(false);
+      if (result.error) {
+        setError(result.error.message);
+        return;
+      }
 
-    if (result.error) {
-      setError(result.error.message);
-      return;
-    }
-
-    if (result.data) {
-      navigate(`/session/${sessionId.trim()}`);
+      if (result.data) {
+        navigate(`/session/${sessionId.trim()}`);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
     }
   }
 
