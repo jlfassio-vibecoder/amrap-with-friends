@@ -1,0 +1,1 @@
+export const DEFAULT_SETUP_DURATION_SEC = 10;
