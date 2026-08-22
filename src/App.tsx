@@ -1,13 +1,31 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage';
-import TimerDevPage from './pages/dev/TimerDevPage';
+
+const CreateSessionPage = lazy(() => import('./pages/CreateSessionPage'));
+const JoinSessionPage = lazy(() => import('./pages/JoinSessionPage'));
+const SessionWaitingRoomPage = lazy(() => import('./pages/SessionWaitingRoomPage'));
+const TimerDevPage = lazy(() => import('./pages/dev/TimerDevPage'));
+
+function RouteFallback() {
+  return (
+    <main className="flex min-h-screen items-center justify-center p-6 text-sm text-gray-600">
+      Loading…
+    </main>
+  );
+}
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route path="/dev/timer" element={<TimerDevPage />} />
-    </Routes>
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/create" element={<CreateSessionPage />} />
+        <Route path="/join" element={<JoinSessionPage />} />
+        <Route path="/session/:sessionId" element={<SessionWaitingRoomPage />} />
+        {import.meta.env.DEV && <Route path="/dev/timer" element={<TimerDevPage />} />}
+      </Routes>
+    </Suspense>
   );
 }
 
