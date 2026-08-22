@@ -94,6 +94,8 @@ export function useSessionChannel(
         return;
       }
 
+      setError(null);
+
       if (sessionResult.data) {
         const parsed = parseSessionRow(sessionResult.data as Record<string, unknown>);
         if (parsed) {

@@ -23,14 +23,17 @@ END $$;
 
 CREATE POLICY sessions_select_anon ON public.sessions
   FOR SELECT TO anon, authenticated
+  -- Copilot suggestion ignored: guest-first lobby needs permissive SELECT for anon Realtime; scope via claim tokens in a hardening PR.
   USING (true);
 
 CREATE POLICY participants_select_anon ON public.participants
   FOR SELECT TO anon, authenticated
+  -- Copilot suggestion ignored: guest-first lobby needs permissive SELECT for anon Realtime; scope via claim tokens in a hardening PR.
   USING (true);
 
 CREATE POLICY rounds_select_anon ON public.rounds
   FOR SELECT TO anon, authenticated
+  -- Copilot suggestion ignored: guest-first lobby needs permissive SELECT for anon Realtime; scope via claim tokens in a hardening PR.
   USING (true);
 
 CREATE OR REPLACE FUNCTION public.update_session_state(
@@ -140,6 +143,8 @@ DECLARE
   v_participant_session_id uuid;
   v_session_state text;
   v_session_segment_index int;
+  v_duration_minutes int;
+  v_max_work_sec int;
   v_round_count int;
   v_round_id uuid;
   v_hash text;
@@ -167,13 +172,19 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'reason', 'invalid_claim_token');
   END IF;
 
-  SELECT state, segment_index
-  INTO v_session_state, v_session_segment_index
+  SELECT state, segment_index, duration_minutes
+  INTO v_session_state, v_session_segment_index, v_duration_minutes
   FROM public.sessions
   WHERE id = p_session_id;
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Session not found';
+  END IF;
+
+  v_max_work_sec := v_duration_minutes * 60;
+
+  IF p_elapsed_sec_at_round > v_max_work_sec THEN
+    RAISE EXCEPTION 'Invalid round log';
   END IF;
 
   IF v_session_state <> 'work' THEN
