@@ -14,6 +14,7 @@ export interface UseAmrapTimerReturn {
   workDurationSec: number;
   setupDurationSec: number;
   isPaused: boolean;
+  workStartedAtMs: number | null;
   rounds: AmrapRoundLog[];
   start: (config: { setupDurationSec: number; workDurationSec: number }) => void;
   pause: () => void;
@@ -77,6 +78,7 @@ export function useAmrapTimer(): UseAmrapTimerReturn {
     workDurationSec: state.workDurationSec,
     setupDurationSec: state.setupDurationSec,
     isPaused: state.isPaused,
+    workStartedAtMs: state.workStartedAtMs,
     rounds: state.rounds,
     start,
     pause,

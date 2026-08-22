@@ -1,12 +1,30 @@
 import { Link, useParams } from 'react-router-dom';
-import {
-  getStoredNickname,
-  getStoredParticipantId,
-} from '@/lib/sessionIdentity';
+import { getStoredParticipantId } from '@/lib/sessionIdentity';
+import { useLiveAmrapSession } from '@/hooks/useLiveAmrapSession';
+
+function formatTime(totalSec: number): string {
+  const minutes = Math.floor(totalSec / 60);
+  const seconds = totalSec % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function phaseLabel(phase: string): string {
+  switch (phase) {
+    case 'waiting':
+      return 'Waiting';
+    case 'setup':
+      return 'Get ready';
+    case 'work':
+      return 'Work';
+    case 'finished':
+      return 'Finished';
+    default:
+      return phase;
+  }
+}
 
 export default function SessionWaitingRoomPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
-  const nickname = sessionId ? getStoredNickname(sessionId) : null;
   const participantId = sessionId ? getStoredParticipantId(sessionId) : null;
 
   if (!sessionId) {
@@ -32,21 +50,151 @@ export default function SessionWaitingRoomPage() {
     );
   }
 
+  return <LiveSessionView sessionId={sessionId} />;
+}
+
+function LiveSessionView({ sessionId }: { sessionId: string }) {
+  const live = useLiveAmrapSession(sessionId);
+
+  const showStart = live.isHost && live.phase === 'waiting';
+  const showPause = live.isHost && live.phase === 'work' && !live.isPaused;
+  const showResume = live.isHost && live.phase === 'work' && live.isPaused;
+  const showLogRound = live.phase === 'work' && !live.isPaused;
+
   return (
     <main className="mx-auto max-w-lg space-y-6 p-6">
       <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Waiting room</h1>
-        <p className="text-sm text-gray-600">Waiting for host to start the session.</p>
+        <h1 className="text-2xl font-semibold">Live session</h1>
+        <p className="text-sm text-gray-600">
+          {live.isHost ? 'You are the host.' : 'Waiting on host for session control.'}
+        </p>
       </div>
 
-      <section className="space-y-2 rounded border border-gray-300 p-4 text-sm">
-        <p><span className="font-medium">Session ID:</span> {sessionId}</p>
-        <p><span className="font-medium">Your nickname:</span> {nickname ?? 'Unknown'}</p>
+      {live.syncError && (
+        <p className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">
+          {live.syncError}
+        </p>
+      )}
+
+      <section className="space-y-3 rounded border border-gray-300 p-4 text-center">
+        <p className="text-sm font-medium uppercase tracking-wide text-gray-500">
+          {phaseLabel(live.phase)}
+        </p>
+        <p className="text-5xl font-semibold tabular-nums">
+          {live.phase === 'waiting' ? '—' : formatTime(live.timeLeftSec)}
+        </p>
+        {live.phase === 'work' || live.phase === 'finished' ? (
+          <p className="text-sm text-gray-600">
+            Elapsed: {formatTime(live.elapsedSec)}
+          </p>
+        ) : null}
+        <p className="text-xs text-gray-500">
+          Realtime: {live.isRealtimeConnected ? 'connected' : 'connecting…'}
+        </p>
       </section>
 
-      <p className="text-sm text-gray-600">
-        Live countdown and participant sync arrive in a later update.
-      </p>
+      <section className="flex flex-wrap gap-2">
+        {showStart && (
+          <button
+            type="button"
+            className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white"
+            onClick={() => live.start()}
+          >
+            Start
+          </button>
+        )}
+        {showPause && (
+          <button
+            type="button"
+            className="rounded border border-gray-400 px-4 py-2 text-sm"
+            onClick={() => live.pause()}
+          >
+            Pause
+          </button>
+        )}
+        {showResume && (
+          <button
+            type="button"
+            className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white"
+            onClick={() => live.resume()}
+          >
+            Resume
+          </button>
+        )}
+        {showLogRound && (
+          <button
+            type="button"
+            className="rounded bg-green-600 px-4 py-2 text-sm font-medium text-white"
+            onClick={() => live.logRound()}
+          >
+            Log round
+          </button>
+        )}
+      </section>
+
+      <section className="space-y-2 rounded border border-gray-300 p-4">
+        <h2 className="text-sm font-semibold">Leaderboard</h2>
+        {live.leaderboard.length === 0 ? (
+          <p className="text-sm text-gray-600">No rounds logged yet.</p>
+        ) : (
+          <ul className="space-y-1 text-sm">
+            {live.leaderboard.map((entry) => (
+              <li key={entry.participantId} className="flex justify-between">
+                <span>
+                  {entry.nickname}
+                  {entry.isSelf ? ' (you)' : ''}
+                </span>
+                <span className="font-medium tabular-nums">{entry.roundCount}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="space-y-2 rounded border border-gray-300 p-4">
+        <h2 className="text-sm font-semibold">Who&apos;s here</h2>
+        <ul className="space-y-1 text-sm">
+          {live.presence.map((entry) => (
+            <li key={entry.participantId} className="flex items-center gap-2">
+              <span
+                className={`inline-block h-2 w-2 rounded-full ${
+                  entry.isOnline ? 'bg-green-500' : 'bg-gray-300'
+                }`}
+                aria-hidden
+              />
+              <span>
+                {entry.nickname}
+                {entry.participantId === live.participantId ? ' (you)' : ''}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {live.workout.length > 0 && (
+        <section className="space-y-2 rounded border border-gray-300 p-4">
+          <h2 className="text-sm font-semibold">Workout</h2>
+          <ul className="space-y-1 text-sm">
+            {live.workout.map((exercise, index) => (
+              <li key={`${exercise.name}-${index}`}>
+                {exercise.name}
+                {exercise.target !== undefined
+                  ? ` — ${exercise.target}${exercise.unit ? ` ${exercise.unit}` : ''}`
+                  : ''}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section className="text-sm text-gray-600">
+        <p>
+          <span className="font-medium">Session ID:</span> {live.sessionId}
+        </p>
+        <p>
+          <span className="font-medium">Your nickname:</span> {live.nickname}
+        </p>
+      </section>
 
       <Link className="text-sm" to="/">Back home</Link>
     </main>
