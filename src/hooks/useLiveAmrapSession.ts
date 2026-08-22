@@ -4,6 +4,7 @@ import { computeElapsedSecForLogRound } from '@/lib/amrapTimer/computeElapsedSec
 import { selectElapsedSec } from '@/lib/amrapTimer/reducer';
 import type { AmrapTimerPhase } from '@/lib/amrapTimer/types';
 import { useAmrapTimer } from '@/hooks/useAmrapTimer';
+import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import {
   buildLeaderboard,
   buildPresenceList,
@@ -81,6 +82,7 @@ export function useLiveAmrapSession(sessionId: string): UseLiveAmrapSessionRetur
   const isHost = hostToken !== null;
 
   const timer = useAmrapTimer();
+  const { isAuthenticated } = useAmrapAuth();
   const channelPresence = useMemo(
     () =>
       participantId ? { participantId, nickname } : null,
@@ -347,7 +349,12 @@ export function useLiveAmrapSession(sessionId: string): UseLiveAmrapSessionRetur
   }, [isHost, timer]);
 
   const logRoundAction = useCallback(async () => {
-    if (displayPhase !== 'work' || displayIsPaused || !claimToken || !participantId) {
+    if (displayPhase !== 'work' || displayIsPaused || !participantId) {
+      return;
+    }
+
+    const tokenForRpc = claimToken ?? '';
+    if (!tokenForRpc && !isAuthenticated) {
       return;
     }
 
@@ -364,7 +371,7 @@ export function useLiveAmrapSession(sessionId: string): UseLiveAmrapSessionRetur
     const result = await logRound({
       sessionId,
       participantId,
-      claimToken,
+      claimToken: tokenForRpc,
       roundIndex: myRoundCount,
       elapsedSecAtRound,
       segmentIndex,
@@ -379,6 +386,7 @@ export function useLiveAmrapSession(sessionId: string): UseLiveAmrapSessionRetur
     displayPhase,
     displayIsPaused,
     claimToken,
+    isAuthenticated,
     participantId,
     workDurationSec,
     displayTimeLeftSec,
