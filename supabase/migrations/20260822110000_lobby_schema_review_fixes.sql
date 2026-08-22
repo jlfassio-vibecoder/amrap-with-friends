@@ -185,6 +185,12 @@ REVOKE SELECT ON public.participants FROM anon, authenticated;
 GRANT SELECT (id, session_id, nickname, role, joined_at)
   ON public.participants TO anon, authenticated;
 
+ALTER TABLE public.participants
+  DROP CONSTRAINT IF EXISTS participants_session_id_id_unique;
+
+ALTER TABLE public.participants
+  ADD CONSTRAINT participants_session_id_id_unique UNIQUE (session_id, id);
+
 ALTER TABLE public.rounds
   DROP CONSTRAINT IF EXISTS rounds_session_participant_consistency;
 

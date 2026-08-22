@@ -45,9 +45,13 @@ export function getSupabaseClient(): SupabaseClient {
 
 /** Lazy Supabase client — only initializes when first used (e.g. create/join RPC). */
 export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
-  get(_target, prop, receiver) {
-    const value = Reflect.get(getSupabaseClient(), prop, receiver);
-    return typeof value === 'function' ? value.bind(getSupabaseClient()) : value;
+  get(_target, prop) {
+    const client = getSupabaseClient();
+    const value = client[prop as keyof SupabaseClient];
+    if (typeof value === 'function') {
+      return value.bind(client);
+    }
+    return value;
   },
 });
 

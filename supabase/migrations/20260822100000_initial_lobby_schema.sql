@@ -26,6 +26,10 @@ CREATE TABLE IF NOT EXISTS public.participants (
 
 CREATE INDEX IF NOT EXISTS idx_participants_session_id ON public.participants (session_id);
 
+-- Required for rounds composite FK: (session_id, participant_id) -> participants (session_id, id)
+ALTER TABLE public.participants
+  ADD CONSTRAINT participants_session_id_id_unique UNIQUE (session_id, id);
+
 CREATE TABLE IF NOT EXISTS public.rounds (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id uuid NOT NULL REFERENCES public.sessions (id) ON DELETE CASCADE,
