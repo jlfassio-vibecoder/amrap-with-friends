@@ -23,6 +23,12 @@ The dev server runs at [http://localhost:5173](http://localhost:5173).
 | `npm run test` | Vitest (single run) |
 | `npm run format` | Prettier |
 
+## Supabase migrations
+
+Lobby schema and RPCs live in [`supabase/migrations/`](supabase/migrations/). Apply with the Supabase CLI (`supabase db push`) or paste into the Supabase SQL editor. Use a service-role key only on your machine for admin tasks—never in the client or `.env` bundled with the app.
+
+Manual RPC checks: [`supabase/scripts/verify_lobby_rpc.sql`](supabase/scripts/verify_lobby_rpc.sql).
+
 ## Architecture decisions
 
 This project is a deliberate from-scratch rebuild of the AMRAP With Friends experience from the interval-timers monorepo. Several features from the reference app are **intentionally excluded**:
