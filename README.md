@@ -1,0 +1,35 @@
+# AMRAP With Friends
+
+AMRAP With Friends is a standalone web app for running social AMRAP (As Many Rounds As Possible) workout sessions with friends in real time. This repository is a from-scratch rebuild focused on a single, self-contained experience—create or join a session, sync the timer, and track rounds together.
+
+## Local development
+
+```bash
+npm install
+cp .env.example .env
+# Fill in VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env
+npm run dev
+```
+
+The dev server runs at [http://localhost:5173](http://localhost:5173).
+
+### Other scripts
+
+| Command | Description |
+|---|---|
+| `npm run build` | Type-check and production build |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | TypeScript project references build |
+| `npm run test` | Vitest (single run) |
+| `npm run format` | Prettier |
+
+## Architecture decisions
+
+This project is a deliberate from-scratch rebuild of the AMRAP With Friends experience from the interval-timers monorepo. Several features from the reference app are **intentionally excluded**:
+
+- **Tabata timer** support
+- **Embed module** and Trainer-Live-specific options
+- **WorkoutExplorer** marketing page
+- **Hub/handoff** activation tracking across multiple hosted timer apps
+
+The app is fully standalone—not embeddable into another product. Supabase integration uses `@supabase/supabase-js` only (`createClient`); `@supabase/ssr` and cross-subdomain cookie auth are omitted until multi-subdomain auth is actually needed.
