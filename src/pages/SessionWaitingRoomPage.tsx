@@ -5,6 +5,7 @@ import { useParticipantClaim } from '@/hooks/useParticipantClaim';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useSessionChannel } from '@/lib/realtime/useSessionChannel';
 import { AppHeader } from '@/components/AppHeader';
+import { ExerciseInfoTrigger } from '@/components/exerciseInfo/ExerciseInfoTrigger';
 import { ParticipantsPanel } from '@/components/ParticipantsPanel';
 import { SessionChat } from '@/components/SessionChat';
 import { buildParticipantRoster } from '@/lib/sessionSync/buildParticipantRoster';
@@ -229,14 +230,15 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
               {live.workout.map((exercise, index) => (
                 <li
                   key={`${exercise.name}-${index}`}
-                  className="lg:flex lg:items-center lg:gap-4"
+                  className="flex items-center gap-2 lg:gap-4"
                 >
                   <span className="hidden lg:flex lg:h-12 lg:w-12 lg:shrink-0 lg:items-center lg:justify-center lg:rounded-full lg:bg-accent lg:text-xl lg:font-semibold lg:text-on-accent">
                     {index + 1}
                   </span>
-                  <span className="lg:text-2xl lg:leading-snug xl:text-3xl">
+                  <span className="min-w-0 flex-1 lg:text-2xl lg:leading-snug xl:text-3xl">
                     {formatExerciseLabel(exercise)}
                   </span>
+                  <ExerciseInfoTrigger name={exercise.name} size="lg" />
                 </li>
               ))}
             </ul>

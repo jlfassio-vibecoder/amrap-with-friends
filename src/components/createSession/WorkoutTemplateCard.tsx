@@ -1,4 +1,6 @@
+import type { KeyboardEvent } from 'react';
 import type { WorkoutTemplate } from '@/data/workoutTemplates';
+import { ExerciseInfoTrigger } from '@/components/exerciseInfo/ExerciseInfoTrigger';
 import { formatTemplateMovementLine } from '@/lib/workout/templateToExercises';
 
 interface WorkoutTemplateCardProps {
@@ -8,16 +10,25 @@ interface WorkoutTemplateCardProps {
 }
 
 export function WorkoutTemplateCard({ template, selected, onSelect }: WorkoutTemplateCardProps) {
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onSelect(template);
+    }
+  }
+
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
+      aria-pressed={selected}
       className={
         selected
-          ? 'card relative w-full space-y-3 border-2 border-accent p-4 text-left shadow-card'
-          : 'card w-full space-y-3 p-4 text-left hover:border-accent/40'
+          ? 'card relative w-full cursor-pointer space-y-3 border-2 border-accent p-4 text-left shadow-card'
+          : 'card w-full cursor-pointer space-y-3 p-4 text-left hover:border-accent/40'
       }
-      aria-pressed={selected}
       onClick={() => onSelect(template)}
+      onKeyDown={handleKeyDown}
     >
       {selected ? (
         <span
@@ -37,12 +48,16 @@ export function WorkoutTemplateCard({ template, selected, onSelect }: WorkoutTem
       </div>
       <ul className="space-y-1 text-sm text-ink">
         {template.movements.map((movement) => (
-          <li key={`${template.id}-${movement.name}`}>
-            {formatTemplateMovementLine(movement)}
+          <li
+            key={`${template.id}-${movement.name}`}
+            className="flex items-center justify-between gap-2"
+          >
+            <span>{formatTemplateMovementLine(movement)}</span>
+            <ExerciseInfoTrigger name={movement.name} size="sm" />
           </li>
         ))}
       </ul>
       <p className="text-xs italic text-secondary">{template.tacticalNote}</p>
-    </button>
+    </div>
   );
 }
