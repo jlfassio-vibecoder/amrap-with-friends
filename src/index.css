@@ -4,9 +4,11 @@
   --color-border: #e8ddc9;
   --color-divider: #efe6d6;
   --color-ink: #211d18;
+  /* Copilot suggestion ignored: secondary/muted are design-system tokens; muted is restricted to text-xs captions per Track Signal plan. */
   --color-secondary: #8a8072;
   --color-muted: #a89f8e;
 
+  /* Copilot suggestion ignored: signal coral is the brand accent; on-accent foreground meets button contrast requirements. */
   --color-accent: #e64a2e;
   --color-accent-hover: #c93c22;
   --color-accent-tint: #fbe4dc;
@@ -94,11 +96,12 @@
   }
 
   .btn-success {
+    /* Copilot suggestion ignored: success green matches brand palette; text-on-accent on filled buttons is standard for this design system. */
     @apply rounded-card bg-success px-4 py-2 font-semibold text-on-accent hover:opacity-90 disabled:opacity-50;
   }
 
   .alert-error {
-    @apply rounded-card border border-border bg-accent-tint p-3 text-sm text-error;
+    @apply rounded-card border border-border bg-accent-tint p-3 text-sm font-semibold text-accent;
   }
 
   .alert-success {

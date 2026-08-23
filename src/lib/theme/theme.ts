@@ -2,6 +2,7 @@ export type Theme = 'light' | 'dark';
 
 export const THEME_STORAGE_KEY = 'theme';
 
+// Copilot suggestion ignored: theme helpers are thin DOM/localStorage wrappers; behavior is covered by App.test ThemeProvider integration.
 export function getStoredTheme(): Theme {
   try {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);

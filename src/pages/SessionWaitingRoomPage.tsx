@@ -94,10 +94,14 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
     : 'Waiting on host for session control.';
 
   return (
-    <main className="mx-auto max-w-lg space-y-6 bg-page p-6 lg:max-w-none lg:space-y-0 lg:p-0 lg:min-h-screen lg:flex lg:flex-col">
-      <AppHeader title="Live session" subtitle={hostStatusText} />
+    <main className="mx-auto max-w-lg space-y-6 bg-page px-6 pb-6 pt-0 lg:max-w-none lg:space-y-0 lg:p-0 lg:min-h-screen lg:flex lg:flex-col">
+      <AppHeader
+        title="Live session"
+        subtitle={hostStatusText}
+        desktopTitleAsPageHeading
+      />
 
-      <div className="space-y-6 lg:mx-auto lg:w-full lg:max-w-7xl lg:space-y-4 lg:px-8 lg:pt-6">
+      <div className="space-y-6 px-6 pb-6 pt-0 lg:mx-auto lg:w-full lg:max-w-7xl lg:space-y-4 lg:px-8 lg:pt-6 lg:pb-0">
         {live.syncError && (
           <p className="alert-error">{live.syncError}</p>
         )}
@@ -141,7 +145,7 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
         )}
       </div>
 
-      <div className="space-y-6 lg:mx-auto lg:grid lg:w-full lg:max-w-7xl lg:flex-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:grid-rows-[auto_auto_minmax(0,1fr)] lg:items-stretch lg:gap-6 lg:space-y-0 lg:px-8 lg:py-6 lg:min-h-0">
+      <div className="space-y-6 px-6 lg:mx-auto lg:grid lg:w-full lg:max-w-7xl lg:flex-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:grid-rows-[auto_auto_minmax(0,1fr)] lg:items-stretch lg:gap-6 lg:space-y-0 lg:px-8 lg:py-6 lg:min-h-0">
         <div className="space-y-6 lg:col-start-1 lg:row-start-1 lg:row-span-2 lg:space-y-4 lg:self-start lg:rounded-card lg:border lg:border-border lg:bg-surface lg:p-6 lg:shadow-card">
           <section className="card space-y-3 p-4 text-center lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
             <p className="text-display text-sm text-secondary lg:text-base">
@@ -240,7 +244,7 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
         )}
       </div>
 
-      <section className="space-y-2 text-sm text-secondary lg:hidden">
+      <section className="space-y-2 px-6 pb-6 text-sm text-secondary lg:hidden">
         <p>
           <span className="font-semibold text-ink">Session ID:</span> {live.sessionId}
         </p>

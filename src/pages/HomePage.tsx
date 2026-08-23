@@ -3,7 +3,11 @@ import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 
 function HomePage() {
   return (
-    <NarrowPageLayout title="AMRAP With Friends" subtitle="Train together">
+    <NarrowPageLayout
+      title="AMRAP With Friends"
+      subtitle="Train together"
+      desktopTitleAsPageHeading
+    >
       <div className="flex flex-col items-center gap-6 py-6 text-center lg:py-16">
         <div className="flex flex-wrap justify-center gap-4">
           <Link className="btn-primary" to="/create">
