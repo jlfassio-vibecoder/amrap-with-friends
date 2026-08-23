@@ -29,6 +29,14 @@ Lobby schema and RPCs live in [`supabase/migrations/`](supabase/migrations/). Ap
 
 Manual RPC checks: [`supabase/scripts/verify_lobby_rpc.sql`](supabase/scripts/verify_lobby_rpc.sql).
 
+### Auth (manual verification)
+
+Magic-link sign-in requires Supabase Auth email provider enabled and redirect URLs allowing your dev origin (e.g. `http://localhost:5173`). After `supabase db push` for `20260822140000_auth_claim.sql`:
+
+1. Play a session as guest, finish, sign in via magic link, click **Save this session to my account**.
+2. Open **My sessions** — saved session appears with round count.
+3. Optional: sign in mid-session, save, then **Log round** still works after claim.
+
 ## Architecture decisions
 
 This project is a deliberate from-scratch rebuild of the AMRAP With Friends experience from the interval-timers monorepo. Several features from the reference app are **intentionally excluded**:

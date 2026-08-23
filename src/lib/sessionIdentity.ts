@@ -49,6 +49,14 @@ export function setStoredClaimToken(sessionId: string, claimToken: string): void
   writeItem(storageKey(STORAGE_PREFIX.claimToken, sessionId), claimToken);
 }
 
+export function clearStoredClaimToken(sessionId: string): void {
+  try {
+    sessionStorage.removeItem(storageKey(STORAGE_PREFIX.claimToken, sessionId));
+  } catch {
+    /* sessionStorage unavailable */
+  }
+}
+
 export function getStoredNickname(sessionId: string): string | null {
   return readItem(storageKey(STORAGE_PREFIX.nickname, sessionId));
 }

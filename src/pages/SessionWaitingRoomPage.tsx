@@ -1,6 +1,8 @@
 import { Link, useParams } from 'react-router-dom';
 import { getStoredParticipantId } from '@/lib/sessionIdentity';
 import { useLiveAmrapSession } from '@/hooks/useLiveAmrapSession';
+import { useParticipantClaim } from '@/hooks/useParticipantClaim';
+import { AuthHeaderActions } from '@/components/AuthHeaderActions';
 
 function formatTime(totalSec: number): string {
   const minutes = Math.floor(totalSec / 60);
@@ -55,25 +57,73 @@ export default function SessionWaitingRoomPage() {
 
 function LiveSessionView({ sessionId }: { sessionId: string }) {
   const live = useLiveAmrapSession(sessionId);
+  const claim = useParticipantClaim(sessionId);
 
   const showStart = live.isHost && live.phase === 'waiting';
   const showPause = live.isHost && live.phase === 'work' && !live.isPaused;
   const showResume = live.isHost && live.phase === 'work' && live.isPaused;
   const showLogRound = live.phase === 'work' && !live.isPaused;
+  const showFinishedClaimPrompt =
+    live.phase === 'finished' && claim.showClaimPrompt;
 
   return (
     <main className="mx-auto max-w-lg space-y-6 p-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Live session</h1>
-        <p className="text-sm text-gray-600">
-          {live.isHost ? 'You are the host.' : 'Waiting on host for session control.'}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-semibold">Live session</h1>
+          <p className="text-sm text-gray-600">
+            {live.isHost ? 'You are the host.' : 'Waiting on host for session control.'}
+          </p>
+        </div>
+        <AuthHeaderActions />
       </div>
 
       {live.syncError && (
         <p className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">
           {live.syncError}
         </p>
+      )}
+
+      {claim.claimError && (
+        <p className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">
+          {claim.claimError}
+        </p>
+      )}
+
+      {claim.claimMessage && (
+        <p className="rounded border border-green-300 bg-green-50 p-3 text-sm text-green-800">
+          {claim.claimMessage}
+        </p>
+      )}
+
+      {showFinishedClaimPrompt && (
+        <section className="space-y-2 rounded border border-blue-200 bg-blue-50 p-4 text-sm">
+          <p className="font-medium">Save your results</p>
+          <p className="text-gray-700">
+            Sign up is optional, but saving links this session to your account for My Sessions.
+          </p>
+          <button
+            type="button"
+            className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            disabled={claim.isClaiming}
+            onClick={() => claim.saveToAccount()}
+          >
+            {claim.isClaiming ? 'Saving…' : 'Save this session to my account'}
+          </button>
+        </section>
+      )}
+
+      {claim.showClaimPrompt && live.phase !== 'finished' && (
+        <section className="rounded border border-gray-300 p-4 text-sm">
+          <button
+            type="button"
+            className="rounded border border-gray-400 px-4 py-2 disabled:opacity-50"
+            disabled={claim.isClaiming}
+            onClick={() => claim.saveToAccount()}
+          >
+            {claim.isClaiming ? 'Saving…' : 'Save this session to my account'}
+          </button>
+        </section>
       )}
 
       <section className="space-y-3 rounded border border-gray-300 p-4 text-center">
