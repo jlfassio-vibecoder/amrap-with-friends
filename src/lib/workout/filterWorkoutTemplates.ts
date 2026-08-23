@@ -53,3 +53,12 @@ export function firstAvailableCategoryForDuration(
   );
   return match?.id ?? null;
 }
+
+export function categoriesForDuration(
+  categories: WorkoutCategoryMeta[],
+  durationMinutes: TimeDomain
+): WorkoutCategoryMeta[] {
+  return categories.filter((category) =>
+    category.availableForDurations.includes(durationMinutes)
+  );
+}

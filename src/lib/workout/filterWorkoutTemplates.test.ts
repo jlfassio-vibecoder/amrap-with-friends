@@ -9,6 +9,7 @@ import {
   firstAvailableCategoryForDuration,
   isCategoryAvailable,
   isDurationAvailable,
+  categoriesForDuration,
 } from './filterWorkoutTemplates';
 
 describe('filterWorkoutTemplates', () => {
@@ -74,6 +75,15 @@ describe('filterWorkoutTemplates', () => {
       })
     ).toEqual([]);
   });
+
+  it('returns 10 Aerobic Matrix templates at 20 minutes', () => {
+    expect(
+      filterWorkoutTemplates(WORKOUT_TEMPLATES, {
+        durationMinutes: 20,
+        category: 'aerobic-matrix',
+      })
+    ).toHaveLength(10);
+  });
 });
 
 describe('WORKOUT_TEMPLATES data integrity', () => {
@@ -96,11 +106,11 @@ describe('WORKOUT_TEMPLATES data integrity', () => {
 });
 
 describe('isDurationAvailable', () => {
-  it('is true for 5, 10, and 15 minutes', () => {
+  it('is true for 5, 10, 15, and 20 minutes', () => {
     expect(isDurationAvailable(5, WORKOUT_TEMPLATES)).toBe(true);
     expect(isDurationAvailable(10, WORKOUT_TEMPLATES)).toBe(true);
     expect(isDurationAvailable(15, WORKOUT_TEMPLATES)).toBe(true);
-    expect(isDurationAvailable(20, WORKOUT_TEMPLATES)).toBe(false);
+    expect(isDurationAvailable(20, WORKOUT_TEMPLATES)).toBe(true);
   });
 });
 
@@ -126,6 +136,49 @@ describe('isCategoryAvailable', () => {
       }
 
       expect(isCategoryAvailable(category, 10, WORKOUT_TEMPLATES)).toBe(false);
+    }
+  });
+
+  it('is true for aerobic-matrix at 20 minutes', () => {
+    const aerobicMatrix = WORKOUT_CATEGORIES.find(
+      (category) => category.id === 'aerobic-matrix'
+    );
+    expect(aerobicMatrix).toBeDefined();
+    if (!aerobicMatrix) {
+      return;
+    }
+
+    expect(isCategoryAvailable(aerobicMatrix, 20, WORKOUT_TEMPLATES)).toBe(true);
+  });
+
+  it('is false for aerobic-matrix at 5, 10, and 15 minutes', () => {
+    const aerobicMatrix = WORKOUT_CATEGORIES.find(
+      (category) => category.id === 'aerobic-matrix'
+    );
+    expect(aerobicMatrix).toBeDefined();
+    if (!aerobicMatrix) {
+      return;
+    }
+
+    expect(isCategoryAvailable(aerobicMatrix, 5, WORKOUT_TEMPLATES)).toBe(false);
+    expect(isCategoryAvailable(aerobicMatrix, 10, WORKOUT_TEMPLATES)).toBe(false);
+    expect(isCategoryAvailable(aerobicMatrix, 15, WORKOUT_TEMPLATES)).toBe(false);
+  });
+
+  it('is false for legacy categories at 20 minutes', () => {
+    for (const categoryId of [
+      'blood-shunt',
+      'localized-trap',
+      'engine-room',
+      'midline-tension',
+    ] as const) {
+      const category = WORKOUT_CATEGORIES.find((entry) => entry.id === categoryId);
+      expect(category).toBeDefined();
+      if (!category) {
+        return;
+      }
+
+      expect(isCategoryAvailable(category, 20, WORKOUT_TEMPLATES)).toBe(false);
     }
   });
 
@@ -163,8 +216,12 @@ describe('isCategoryAvailable', () => {
     expect(isCategoryAvailable(midlineTension, 5, WORKOUT_TEMPLATES)).toBe(true);
   });
 
-  it('reports every category as available at 5 minutes', () => {
+  it('reports every 5-minute category as available at 5 minutes', () => {
     for (const category of WORKOUT_CATEGORIES) {
+      if (!category.availableForDurations.includes(5)) {
+        continue;
+      }
+
       expect(isCategoryAvailable(category, 5, WORKOUT_TEMPLATES)).toBe(true);
     }
   });
@@ -189,9 +246,35 @@ describe('firstAvailableCategoryForDuration', () => {
     );
   });
 
-  it('returns null for 20 minutes when no category has templates', () => {
+  it('returns aerobic-matrix for 20 minutes', () => {
     expect(firstAvailableCategoryForDuration(WORKOUT_CATEGORIES, 20, WORKOUT_TEMPLATES)).toBe(
-      null
+      'aerobic-matrix'
     );
+  });
+});
+
+describe('categoriesForDuration', () => {
+  it('excludes aerobic-matrix at 5, 10, and 15 minutes', () => {
+    for (const duration of [5, 10, 15] as TimeDomain[]) {
+      const ids = categoriesForDuration(WORKOUT_CATEGORIES, duration).map(
+        (category) => category.id
+      );
+      expect(ids).not.toContain('aerobic-matrix');
+    }
+  });
+
+  it('includes only aerobic-matrix at 20 minutes', () => {
+    expect(categoriesForDuration(WORKOUT_CATEGORIES, 20).map((category) => category.id)).toEqual([
+      'aerobic-matrix',
+    ]);
+  });
+
+  it('includes blood-shunt at 5, 10, and 15 minutes', () => {
+    for (const duration of [5, 10, 15] as TimeDomain[]) {
+      const ids = categoriesForDuration(WORKOUT_CATEGORIES, duration).map(
+        (category) => category.id
+      );
+      expect(ids).toContain('blood-shunt');
+    }
   });
 });

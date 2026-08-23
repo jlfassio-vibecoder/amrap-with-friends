@@ -10,6 +10,7 @@ import {
   filterWorkoutTemplates,
   isCategoryAvailable,
   isDurationAvailable,
+  categoriesForDuration,
 } from '@/lib/workout/filterWorkoutTemplates';
 import { WorkoutTemplateCard } from '@/components/createSession/WorkoutTemplateCard';
 
@@ -34,7 +35,8 @@ export function WorkoutTemplatePicker({
     durationMinutes,
     category: selectedCategory,
   });
-  const selectedCategoryMeta = WORKOUT_CATEGORIES.find(
+  const visibleCategories = categoriesForDuration(WORKOUT_CATEGORIES, durationMinutes);
+  const selectedCategoryMeta = visibleCategories.find(
     (category) => category.id === selectedCategory
   );
 
@@ -74,7 +76,7 @@ export function WorkoutTemplatePicker({
       <div className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-secondary">Category</p>
         <div className="flex flex-wrap gap-2">
-          {WORKOUT_CATEGORIES.map((category) => {
+          {visibleCategories.map((category) => {
             const available = isCategoryAvailable(
               category,
               durationMinutes,

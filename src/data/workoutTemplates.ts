@@ -4,7 +4,8 @@ export type WorkoutCategory =
   | 'blood-shunt'
   | 'localized-trap'
   | 'engine-room'
-  | 'midline-tension';
+  | 'midline-tension'
+  | 'aerobic-matrix';
 
 export interface WorkoutCategoryMeta {
   id: WorkoutCategory;
@@ -59,6 +60,13 @@ export const WORKOUT_CATEGORIES: WorkoutCategoryMeta[] = [
     description:
       'Dynamic Core — pairs a cardiovascular movement with strict, controlled core work. A fatigued core makes everything else feel twice as hard.',
     availableForDurations: [5],
+  },
+  {
+    id: 'aerobic-matrix',
+    label: 'Aerobic Matrix',
+    description:
+      'The Quadruplet — four movements distribute fatigue globally so the cardiovascular system stays the sole bottleneck, letting you keep moving for the full 20 minutes without hitting a localized muscular wall.',
+    availableForDurations: [20],
   },
 ];
 
@@ -813,5 +821,145 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     ],
     tacticalNote:
       'Remember the posterior core. Lift the chest and thighs off the floor simultaneously, squeezing the lower back.',
+  },
+  {
+    id: 'the-four-horsemen',
+    name: 'The Four Horsemen',
+    durationMinutes: 20,
+    category: 'aerobic-matrix',
+    movements: [
+      { name: 'Push-ups', reps: 10 },
+      { name: 'V-Ups', reps: 15 },
+      { name: 'Air Squats', reps: 20 },
+      { name: 'Jumping Jacks', reps: 30 },
+    ],
+    tacticalNote:
+      'The baseline standard. Distributes fatigue perfectly across chest, core, legs, and lungs.',
+  },
+  {
+    id: 'the-long-slog',
+    name: 'The Long Slog',
+    durationMinutes: 20,
+    category: 'aerobic-matrix',
+    movements: [
+      { name: 'Hand-Release Push-ups', reps: 10 },
+      { name: 'Walking Lunges', reps: 20 },
+      { name: 'Butterfly Sit-ups', reps: 15 },
+      { name: 'Mountain Climbers', reps: 30 },
+    ],
+    tacticalNote:
+      'Constant forward-and-back motion. Pace the hand-release push-ups from round one.',
+  },
+  {
+    id: 'the-gridlock',
+    name: 'The Gridlock',
+    durationMinutes: 20,
+    category: 'aerobic-matrix',
+    movements: [
+      { name: 'Gorilla Sprawls', reps: 10 },
+      { name: 'Leg Raises', reps: 15 },
+      { name: 'Glute Bridges', reps: 20 },
+      { name: 'High Knees', reps: 30 },
+    ],
+    tacticalNote:
+      'Heavy on the hip flexors and core. Use the glute bridges as your active recovery.',
+  },
+  {
+    id: 'the-horizon',
+    name: 'The Horizon',
+    durationMinutes: 20,
+    category: 'aerobic-matrix',
+    movements: [
+      { name: 'Wide Push-ups', reps: 12 },
+      { name: 'Air Squats', reps: 24 },
+      { name: 'Hollow Rocks', reps: 12 },
+      { name: 'Lateral Line Hops', reps: 36 },
+    ],
+    tacticalNote:
+      'A mathematical ladder. Keep the lateral line hops light and springy to rest the quads.',
+  },
+  {
+    id: 'the-pacer',
+    name: 'The Pacer',
+    durationMinutes: 20,
+    category: 'aerobic-matrix',
+    movements: [
+      { name: 'T-Push-ups', reps: 10 },
+      { name: 'Reverse Lunges', reps: 20 },
+      { name: 'Russian Twists', reps: 15 },
+      { name: 'Skater Jumps', reps: 30 },
+    ],
+    tacticalNote:
+      'Rotational demands at every station. Breathe deeply during the T-Push-ups.',
+  },
+  {
+    id: 'the-slow-burn',
+    name: 'The Slow Burn',
+    durationMinutes: 20,
+    category: 'aerobic-matrix',
+    movements: [
+      { name: 'Pike Push-ups', reps: 10 },
+      { name: 'Dead Bugs', reps: 15 },
+      { name: 'Jump Squats', reps: 20 },
+      { name: 'Butt Kicks', reps: 30 },
+    ],
+    tacticalNote:
+      'The dead bugs force the heart rate down; the jump squats violently spike it back up.',
+  },
+  {
+    id: 'the-ground-war',
+    name: 'The Ground War',
+    durationMinutes: 20,
+    category: 'aerobic-matrix',
+    movements: [
+      { name: 'Surrenders', reps: 10 },
+      { name: 'Down-Ups', reps: 10 },
+      { name: 'Strict Sit-Ups', reps: 15 },
+      { name: 'Double-Tap Jumps', reps: 20 },
+    ],
+    tacticalNote:
+      'Heavy transition tax. Getting off the floor repeatedly will slowly drain the central nervous system.',
+  },
+  {
+    id: 'the-endurance-engine',
+    name: 'The Endurance Engine',
+    durationMinutes: 20,
+    category: 'aerobic-matrix',
+    movements: [
+      { name: 'Dive-Bomber Push-ups', reps: 10 },
+      { name: 'Alternating Lunges', reps: 20 },
+      { name: 'Plank Jacks', reps: 15 },
+      { name: 'Jumping Jacks', reps: 30 },
+    ],
+    tacticalNote:
+      'High time-under-tension on the shoulders. Shake the arms out during the lunges.',
+  },
+  {
+    id: 'the-centurion',
+    name: 'The Centurion',
+    durationMinutes: 20,
+    category: 'aerobic-matrix',
+    movements: [
+      { name: 'Diamond Push-ups', reps: 10 },
+      { name: 'V-Ups', reps: 15 },
+      { name: 'Fast Calf Raises', reps: 20 },
+      { name: 'High Knees', reps: 40 },
+    ],
+    tacticalNote:
+      'Saves the large leg muscles but destroys the calves and midline.',
+  },
+  {
+    id: 'the-sentinel',
+    name: 'The Sentinel',
+    durationMinutes: 20,
+    category: 'aerobic-matrix',
+    movements: [
+      { name: 'Sprawls', reps: 10 },
+      { name: 'Superman Raises', reps: 15 },
+      { name: 'Air Squats', reps: 20 },
+      { name: 'Mountain Climbers', reps: 30 },
+    ],
+    tacticalNote:
+      'Attacks the posterior chain heavily. Squeeze the glutes aggressively on the Supermans.',
   },
 ];
