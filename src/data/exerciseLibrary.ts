@@ -1,6 +1,8 @@
 export interface ExercisePhoto {
+  /** Relative path in the `exercise-media` Storage bucket (e.g. "burpees/1-setup.jpg"). Empty = placeholder cell. */
   url: string;
-  caption: string;
+  /** Optional label for what the photo shows; omit when not needed. */
+  caption?: string;
 }
 
 export interface ExerciseInfo {
@@ -11,6 +13,7 @@ export interface ExerciseInfo {
   coachingCue: string;
   amrapTip?: string;
   photos: ExercisePhoto[];
+  /** Relative path in the `exercise-media` bucket (e.g. "burpees/video.mp4"). Absent = "No video yet". */
   videoUrl?: string;
 }
 

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ExerciseInfo } from '@/data/exerciseLibrary';
+import { getExerciseMediaUrl } from '@/lib/media/getExerciseMediaUrl';
+import { getPhotoGridColumnCount } from '@/components/exerciseInfo/getPhotoGridColumnCount';
 
 interface ExerciseInfoModalProps {
   info: ExerciseInfo;
@@ -8,7 +10,7 @@ interface ExerciseInfoModalProps {
 
 type MediaTab = 'photos' | 'video';
 
-function PhotoPlaceholder({ caption }: { caption: string }) {
+function PhotoPlaceholder({ caption }: { caption?: string }) {
   return (
     <div className="flex aspect-square flex-col items-center justify-center gap-1 rounded-card border border-border bg-page p-2 text-center">
       <span
@@ -17,7 +19,7 @@ function PhotoPlaceholder({ caption }: { caption: string }) {
       >
         ◻
       </span>
-      <span className="text-xs text-secondary">{caption}</span>
+      {caption ? <span className="text-xs text-secondary">{caption}</span> : null}
     </div>
   );
 }
@@ -25,6 +27,7 @@ function PhotoPlaceholder({ caption }: { caption: string }) {
 export function ExerciseInfoModal({ info, onClose }: ExerciseInfoModalProps) {
   const titleId = 'exercise-info-title';
   const [mediaTab, setMediaTab] = useState<MediaTab>('photos');
+  const [failedPhotoUrls, setFailedPhotoUrls] = useState<Record<string, true>>({});
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -36,6 +39,13 @@ export function ExerciseInfoModal({ info, onClose }: ExerciseInfoModalProps) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
+
+  const videoSrc = info.videoUrl ? getExerciseMediaUrl(info.videoUrl) : '';
+  const photoColumns = getPhotoGridColumnCount(info.photos.length);
+
+  function photoFailureKey(photoUrl: string): string {
+    return `${info.id}:${photoUrl}`;
+  }
 
   return (
     <div
@@ -103,31 +113,50 @@ export function ExerciseInfoModal({ info, onClose }: ExerciseInfoModalProps) {
                 No photos yet
               </p>
             ) : (
-              <div className="grid grid-cols-3 gap-2">
-                {info.photos.map((photo) =>
-                  photo.url ? (
-                    <figure key={`${photo.caption}-${photo.url}`} className="space-y-1">
+              <div
+                className="grid gap-2"
+                style={{
+                  gridTemplateColumns: `repeat(${photoColumns}, minmax(0, 1fr))`,
+                }}
+                data-testid="exercise-photo-grid"
+                data-columns={photoColumns}
+              >
+                {info.photos.map((photo, index) => {
+                  const showPlaceholder =
+                    !photo.url || failedPhotoUrls[photoFailureKey(photo.url)];
+                  const cellKey = `${photo.url || 'empty'}-${photo.caption || index}`;
+
+                  if (showPlaceholder) {
+                    return (
+                      <PhotoPlaceholder key={cellKey} caption={photo.caption} />
+                    );
+                  }
+
+                  return (
+                    <figure key={cellKey} className="space-y-1">
                       <img
-                        src={photo.url}
-                        alt={photo.caption}
+                        src={getExerciseMediaUrl(photo.url)}
+                        alt={photo.caption || info.name}
                         className="aspect-square w-full rounded-card border border-border object-cover"
+                        onError={() => {
+                          setFailedPhotoUrls((prev) => ({
+                            ...prev,
+                            [photoFailureKey(photo.url)]: true,
+                          }));
+                        }}
                       />
-                      <figcaption className="text-center text-xs text-secondary">
-                        {photo.caption}
-                      </figcaption>
+                      {photo.caption ? (
+                        <figcaption className="text-center text-xs text-secondary">
+                          {photo.caption}
+                        </figcaption>
+                      ) : null}
                     </figure>
-                  ) : (
-                    <PhotoPlaceholder key={photo.caption} caption={photo.caption} />
-                  )
-                )}
+                  );
+                })}
               </div>
             )
-          ) : info.videoUrl ? (
-            <video
-              controls
-              src={info.videoUrl}
-              className="w-full rounded-card border border-border"
-            >
+          ) : videoSrc ? (
+            <video controls src={videoSrc} className="w-full rounded-card border border-border">
               Your browser does not support the video tag.
             </video>
           ) : (
