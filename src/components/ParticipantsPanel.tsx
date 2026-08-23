@@ -51,6 +51,7 @@ function RosterRow({
 }) {
   return (
     <div
+      role="listitem"
       className={
         variant === 'pinned'
           ? 'flex items-center gap-3 rounded-md border border-blue-200 bg-blue-50 px-2 py-2'
@@ -94,7 +95,7 @@ export function ParticipantsPanel({ roster, className }: ParticipantsPanelProps)
       </div>
 
       {visibleAvatars.length > 0 ? (
-        <div className="flex items-center">
+        <div className="flex items-center" aria-hidden="true">
           {visibleAvatars.map((entry, index) => (
             <span
               key={entry.participantId}
@@ -118,7 +119,10 @@ export function ParticipantsPanel({ roster, className }: ParticipantsPanelProps)
         <p className="text-sm text-gray-600">No participants yet.</p>
       ) : (
         <>
-          <div className="max-h-48 space-y-1 overflow-y-auto lg:max-h-52">
+          <div
+            role="list"
+            className="max-h-48 space-y-1 overflow-y-auto lg:max-h-52"
+          >
             {scrollEntries.length === 0 ? (
               <p className="px-2 text-sm text-gray-600">No other participants yet.</p>
             ) : (
@@ -128,7 +132,11 @@ export function ParticipantsPanel({ roster, className }: ParticipantsPanelProps)
             )}
           </div>
 
-          {selfEntry ? <RosterRow entry={selfEntry} variant="pinned" /> : null}
+          {selfEntry ? (
+            <div role="list" aria-label="Your rank">
+              <RosterRow entry={selfEntry} variant="pinned" />
+            </div>
+          ) : null}
         </>
       )}
     </section>
