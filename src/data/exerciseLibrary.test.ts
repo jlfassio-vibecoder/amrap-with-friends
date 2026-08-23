@@ -6,7 +6,7 @@ describe('getExerciseInfo', () => {
     const info = getExerciseInfo('Burpees');
     expect(info?.id).toBe('burpees');
     expect(info?.name).toBe('Burpees');
-    expect(info?.amrapTip).toBeUndefined();
+    expect(info?.amrapTip).toBeTruthy();
   });
 
   it('matches case-insensitively', () => {
@@ -95,5 +95,73 @@ describe('getExerciseInfo', () => {
     expect(getExerciseInfo('Hollow Hold')?.commonMistakes).toEqual([]);
     expect(getExerciseInfo('Reverse Lunges')?.commonMistakes).toEqual([]);
     expect(getExerciseInfo('Pogo Jumps')?.commonMistakes).toEqual([]);
+  });
+
+  it('matches Engine Room entries by exact name', () => {
+    expect(getExerciseInfo('Sprawls')?.id).toBe('sprawls');
+    expect(getExerciseInfo('Down-Ups')?.id).toBe('down-ups');
+    expect(getExerciseInfo('Half-Burpees')?.id).toBe('half-burpees');
+    expect(getExerciseInfo('Mountain Climbers')?.id).toBe('mountain-climbers');
+    expect(getExerciseInfo('Cross-Body Mountain Climbers')?.id).toBe(
+      'cross-body-mountain-climbers'
+    );
+    expect(getExerciseInfo('High Knees')?.id).toBe('high-knees');
+    expect(getExerciseInfo('Butt Kicks')?.id).toBe('butt-kicks');
+    expect(getExerciseInfo('Jumping Jacks')?.id).toBe('jumping-jacks');
+    expect(getExerciseInfo('Lateral Line Hops')?.id).toBe('lateral-line-hops');
+    expect(getExerciseInfo('Double-Tap Jumps')?.id).toBe('double-tap-jumps');
+  });
+
+  it('strips parenthetical for Engine Room template names', () => {
+    expect(getExerciseInfo('Sprawls (No-Push-up Burpees)')?.id).toBe('sprawls');
+    expect(getExerciseInfo('Mountain Climbers (Total)')?.id).toBe(
+      'mountain-climbers'
+    );
+    expect(getExerciseInfo('High Knees (Total)')?.id).toBe('high-knees');
+    expect(getExerciseInfo('Butt Kicks (Total)')?.id).toBe('butt-kicks');
+    expect(getExerciseInfo('Half-Burpees (Plank to squat stance)')?.id).toBe(
+      'half-burpees'
+    );
+    expect(getExerciseInfo('Double-Tap Jumps (Penguin Taps)')?.id).toBe(
+      'double-tap-jumps'
+    );
+  });
+
+  it('keeps Cross-Body Mountain Climbers separate from Mountain Climbers', () => {
+    expect(getExerciseInfo('Mountain Climbers')?.id).toBe('mountain-climbers');
+    expect(getExerciseInfo('Cross-Body Mountain Climbers')?.id).toBe(
+      'cross-body-mountain-climbers'
+    );
+  });
+
+  it('hides empty common mistakes for Engine Room entries', () => {
+    expect(getExerciseInfo('Sprawls')?.commonMistakes).toEqual([]);
+    expect(getExerciseInfo('Jumping Jacks')?.commonMistakes).toEqual([]);
+  });
+
+  it('matches Midline Tension entries by exact name', () => {
+    expect(getExerciseInfo('V-Ups')?.id).toBe('v-ups');
+    expect(getExerciseInfo('Strict Sit-Ups')?.id).toBe('strict-sit-ups');
+    expect(getExerciseInfo('Leg Raises')?.id).toBe('leg-raises');
+    expect(getExerciseInfo('Russian Twists')?.id).toBe('russian-twists');
+    expect(getExerciseInfo('Bicycle Crunches')?.id).toBe('bicycle-crunches');
+    expect(getExerciseInfo('Plank Knee-to-Elbows')?.id).toBe(
+      'plank-knee-to-elbows'
+    );
+    expect(getExerciseInfo('Dead Bugs')?.id).toBe('dead-bugs');
+    expect(getExerciseInfo('Flutter Kicks')?.id).toBe('flutter-kicks');
+    expect(getExerciseInfo('Superman Raises')?.id).toBe('superman-raises');
+  });
+
+  it('keeps Plank Knee-to-Elbows separate from Plank Shoulder Taps', () => {
+    expect(getExerciseInfo('Plank Knee-to-Elbows')?.id).toBe(
+      'plank-knee-to-elbows'
+    );
+    expect(getExerciseInfo('Plank Shoulder Taps')?.id).toBe('plank-shoulder-taps');
+  });
+
+  it('hides empty common mistakes for Midline Tension entries', () => {
+    expect(getExerciseInfo('Dead Bugs')?.commonMistakes).toEqual([]);
+    expect(getExerciseInfo('Flutter Kicks')?.commonMistakes).toEqual([]);
   });
 });

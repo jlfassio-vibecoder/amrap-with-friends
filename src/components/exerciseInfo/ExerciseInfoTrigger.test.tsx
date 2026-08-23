@@ -24,10 +24,10 @@ describe('ExerciseInfoTrigger', () => {
     expect(screen.getByRole('dialog')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Burpees' })).toBeTruthy();
     expect(
-      screen.getByText('Stand with feet shoulder-width apart.')
+      screen.getByText(/Drop into a squat, plant hands, and jump feet back/)
     ).toBeTruthy();
     expect(screen.getByText('Common mistakes')).toBeTruthy();
-    expect(screen.queryByText('AMRAP tip')).toBeNull();
+    expect(screen.getByText('AMRAP tip')).toBeTruthy();
     expect(screen.queryByText('No photos yet')).toBeNull();
     expect(screen.getByRole('img', { name: 'Burpees' })).toBeTruthy();
 
