@@ -2,19 +2,14 @@ import { useState, type FormEvent } from 'react';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 
 interface AuthModalProps {
-  isOpen: boolean;
   onClose: () => void;
 }
 
-export function AuthModal({ isOpen, onClose }: AuthModalProps) {
+export function AuthModal({ onClose }: AuthModalProps) {
   const { signInWithMagicLink } = useAmrapAuth();
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [message, setMessage] = useState<string | null>(null);
-
-  if (!isOpen) {
-    return null;
-  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();

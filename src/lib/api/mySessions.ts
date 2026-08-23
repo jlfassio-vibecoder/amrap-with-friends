@@ -33,88 +33,87 @@ export function countRoundsForSegment(
   return rounds.filter((round) => round.segment_index === segmentIndex).length;
 }
 
-export async function fetchMySessions(userId: string): Promise<{
+function readString(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function readNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function parseMySessionEntry(raw: unknown): MySessionEntry | null {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+
+  const row = raw as Record<string, unknown>;
+  const participantId = readString(row.participant_id);
+  const nickname = readString(row.nickname);
+  const joinedAt = readString(row.joined_at);
+  const role = row.role === 'host' || row.role === 'joiner' ? row.role : null;
+  const sessionId = readString(row.session_id);
+  const createdAt = readString(row.created_at);
+  const durationMinutes = readNumber(row.duration_minutes);
+  const state = readString(row.state);
+  const segmentIndex = readNumber(row.segment_index) ?? 0;
+  const roundCount = readNumber(row.round_count) ?? 0;
+
+  if (
+    !participantId ||
+    !nickname ||
+    !joinedAt ||
+    !role ||
+    !sessionId ||
+    !createdAt ||
+    durationMinutes === null ||
+    !state
+  ) {
+    return null;
+  }
+
+  return {
+    participantId,
+    nickname,
+    joinedAt,
+    role,
+    sessionId,
+    createdAt,
+    durationMinutes,
+    workout: readWorkout(row.workout),
+    state,
+    segmentIndex,
+    roundCount,
+  };
+}
+
+export async function fetchMySessions(): Promise<{
   data: MySessionEntry[] | null;
   error: MySessionsApiError | null;
 }> {
-  const { data, error } = await supabase
-    .from('participants')
-    .select(
-      `
-      id,
-      nickname,
-      joined_at,
-      role,
-      session_id,
-      sessions (
-        id,
-        created_at,
-        duration_minutes,
-        workout,
-        state,
-        segment_index
-      ),
-      rounds ( id, segment_index )
-    `
-    )
-    .eq('user_id', userId)
-    .order('joined_at', { ascending: false });
+  const { data, error } = await supabase.rpc('my_sessions');
 
   if (error) {
     return { data: null, error: { message: error.message } };
   }
 
-  const entries: MySessionEntry[] = [];
+  const raw =
+    data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
 
-  for (const row of data ?? []) {
-    const sessionRaw = row.sessions;
-    const session =
-      sessionRaw && typeof sessionRaw === 'object' && !Array.isArray(sessionRaw)
-        ? sessionRaw
-        : Array.isArray(sessionRaw)
-          ? sessionRaw[0]
-          : null;
-
-    if (!session || typeof session !== 'object') {
-      continue;
-    }
-
-    const sessionRecord = session as Record<string, unknown>;
-    const sessionId = typeof sessionRecord.id === 'string' ? sessionRecord.id : null;
-    const createdAt =
-      typeof sessionRecord.created_at === 'string' ? sessionRecord.created_at : null;
-    const durationMinutes =
-      typeof sessionRecord.duration_minutes === 'number'
-        ? sessionRecord.duration_minutes
-        : null;
-    const state = typeof sessionRecord.state === 'string' ? sessionRecord.state : null;
-    const segmentIndex =
-      typeof sessionRecord.segment_index === 'number'
-        ? sessionRecord.segment_index
-        : 0;
-
-    if (!sessionId || !createdAt || durationMinutes === null || !state) {
-      continue;
-    }
-
-    const rounds = Array.isArray(row.rounds)
-      ? (row.rounds as Array<{ segment_index: number }>)
-      : [];
-
-    entries.push({
-      participantId: row.id,
-      nickname: row.nickname,
-      joinedAt: row.joined_at,
-      role: row.role,
-      sessionId,
-      createdAt,
-      durationMinutes,
-      workout: readWorkout(sessionRecord.workout),
-      state,
-      segmentIndex,
-      roundCount: countRoundsForSegment(rounds, segmentIndex),
-    });
+  if (raw.ok !== true) {
+    return {
+      data: null,
+      error: { message: 'Something went wrong. Please try again.' },
+    };
   }
+
+  const sessions = Array.isArray(raw.sessions) ? raw.sessions : [];
+  const entries = sessions
+    .map((session) => parseMySessionEntry(session))
+    .filter((entry): entry is MySessionEntry => entry !== null);
 
   return { data: entries, error: null };
 }

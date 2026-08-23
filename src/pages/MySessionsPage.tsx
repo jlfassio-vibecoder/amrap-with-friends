@@ -28,7 +28,7 @@ export default function MySessionsPage() {
 
     let cancelled = false;
 
-    fetchMySessions(user.id).then((result) => {
+    fetchMySessions().then((result) => {
       if (cancelled) {
         return;
       }

@@ -30,7 +30,7 @@ export function AuthHeaderActions() {
           Sign in
         </button>
       )}
-      <AuthModal isOpen={authOpen} onClose={() => setAuthOpen(false)} />
+      {authOpen ? <AuthModal onClose={() => setAuthOpen(false)} /> : null}
     </>
   );
 }

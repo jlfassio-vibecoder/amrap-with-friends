@@ -7,7 +7,92 @@ CREATE INDEX IF NOT EXISTS idx_participants_user_id
   ON public.participants (user_id)
   WHERE user_id IS NOT NULL;
 
-GRANT SELECT (user_id) ON public.participants TO authenticated;
+CREATE OR REPLACE FUNCTION public.get_participant_claim_status(p_participant_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public, extensions
+AS $$
+DECLARE
+  v_uid uuid;
+  v_user_id uuid;
+BEGIN
+  v_uid := auth.uid();
+
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'Authentication required';
+  END IF;
+
+  IF p_participant_id IS NULL THEN
+    RAISE EXCEPTION 'Invalid participant';
+  END IF;
+
+  SELECT user_id
+  INTO v_user_id
+  FROM public.participants
+  WHERE id = p_participant_id;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'participant_not_found');
+  END IF;
+
+  IF v_user_id IS NULL THEN
+    RETURN jsonb_build_object('ok', true, 'status', 'claimable');
+  ELSIF v_user_id = v_uid THEN
+    RETURN jsonb_build_object('ok', true, 'status', 'claimed');
+  ELSE
+    RETURN jsonb_build_object('ok', true, 'status', 'claimed_by_other');
+  END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.my_sessions()
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public, extensions
+AS $$
+DECLARE
+  v_uid uuid;
+  v_sessions jsonb;
+BEGIN
+  v_uid := auth.uid();
+
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'Authentication required';
+  END IF;
+
+  SELECT coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'participant_id', p.id,
+        'nickname', p.nickname,
+        'joined_at', p.joined_at,
+        'role', p.role,
+        'session_id', s.id,
+        'created_at', s.created_at,
+        'duration_minutes', s.duration_minutes,
+        'workout', s.workout,
+        'state', s.state,
+        'segment_index', s.segment_index,
+        'round_count', (
+          SELECT count(*)::int
+          FROM public.rounds r
+          WHERE r.participant_id = p.id AND r.segment_index = s.segment_index
+        )
+      )
+      ORDER BY p.joined_at DESC
+    ),
+    '[]'::jsonb
+  )
+  INTO v_sessions
+  FROM public.participants p
+  INNER JOIN public.sessions s ON s.id = p.session_id
+  WHERE p.user_id = v_uid;
+
+  RETURN jsonb_build_object('ok', true, 'sessions', v_sessions);
+END;
+$$;
 
 CREATE OR REPLACE FUNCTION public.claim_participant(
   p_participant_id uuid,
@@ -201,4 +286,6 @@ BEGIN
 END;
 $$;
 
+GRANT EXECUTE ON FUNCTION public.get_participant_claim_status(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.my_sessions() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.claim_participant(uuid, text) TO authenticated;

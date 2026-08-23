@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { claimParticipant, fetchParticipantUserId } from '@/lib/api/claimParticipant';
-import { resolveClaimStatus, type ClaimStatus } from '@/lib/claim/resolveClaimStatus';
+import {
+  claimParticipant,
+  fetchParticipantClaimStatus,
+} from '@/lib/api/claimParticipant';
+import type { ClaimStatus } from '@/lib/claim/resolveClaimStatus';
 import { shouldShowClaimPrompt } from '@/lib/claim/shouldShowClaimPrompt';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import {
@@ -14,9 +17,8 @@ export function useParticipantClaim(sessionId: string) {
   const participantId = getStoredParticipantId(sessionId);
   const claimToken = getStoredClaimToken(sessionId);
 
-  const [participantUserId, setParticipantUserId] = useState<
-    string | null | undefined
-  >(undefined);
+  const [claimStatusFromServer, setClaimStatusFromServer] =
+    useState<ClaimStatus>('unknown');
   const [isClaiming, setIsClaiming] = useState(false);
   const [claimMessage, setClaimMessage] = useState<string | null>(null);
   const [claimError, setClaimError] = useState<string | null>(null);
@@ -28,9 +30,13 @@ export function useParticipantClaim(sessionId: string) {
 
     let cancelled = false;
 
-    fetchParticipantUserId(participantId).then((userId) => {
+    fetchParticipantClaimStatus(participantId).then((result) => {
       if (!cancelled) {
-        setParticipantUserId(userId);
+        if (result.data?.ok === true) {
+          setClaimStatusFromServer(result.data.status);
+        } else {
+          setClaimStatusFromServer('unknown');
+        }
       }
     });
 
@@ -43,11 +49,8 @@ export function useParticipantClaim(sessionId: string) {
     if (isAuthLoading || !isAuthenticated || !user) {
       return 'unknown';
     }
-    if (participantUserId === undefined) {
-      return 'unknown';
-    }
-    return resolveClaimStatus(participantUserId, user.id);
-  }, [isAuthLoading, isAuthenticated, user, participantUserId]);
+    return claimStatusFromServer;
+  }, [isAuthLoading, isAuthenticated, user, claimStatusFromServer]);
 
   const showClaimPrompt = shouldShowClaimPrompt({
     isAuthenticated,
@@ -90,7 +93,7 @@ export function useParticipantClaim(sessionId: string) {
 
     if (result.data?.ok === true) {
       clearStoredClaimToken(sessionId);
-      setParticipantUserId(user?.id ?? null);
+      setClaimStatusFromServer('claimed');
       setClaimMessage(
         result.data.alreadyClaimed
           ? 'This session is already on your account.'

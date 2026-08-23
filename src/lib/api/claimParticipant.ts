@@ -1,3 +1,4 @@
+import type { ClaimStatus } from '@/lib/claim/resolveClaimStatus';
 import { supabase } from '@/lib/supabase';
 
 export interface ClaimParticipantInput {
@@ -98,19 +99,47 @@ export async function claimParticipant(
   };
 }
 
-export async function fetchParticipantUserId(
-  participantId: string
-): Promise<string | null | undefined> {
-  const { data, error } = await supabase
-    .from('participants')
-    .select('user_id')
-    .eq('id', participantId)
-    .maybeSingle();
+type ResolvedClaimStatus = Exclude<ClaimStatus, 'unknown'>;
 
-  if (error || !data) {
-    return undefined;
+function readClaimStatus(value: unknown): ResolvedClaimStatus | null {
+  if (value === 'claimable' || value === 'claimed' || value === 'claimed_by_other') {
+    return value;
+  }
+  return null;
+}
+
+export async function fetchParticipantClaimStatus(
+  participantId: string
+): Promise<{
+  data:
+    | { ok: true; status: ResolvedClaimStatus }
+    | { ok: false; reason: string }
+    | null;
+  error: ClaimParticipantApiError | null;
+}> {
+  const { data, error } = await supabase.rpc('get_participant_claim_status', {
+    p_participant_id: participantId,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapRpcError(error.message) } };
   }
 
-  const userId = data.user_id;
-  return typeof userId === 'string' ? userId : null;
+  const raw =
+    data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+
+  if (raw.ok !== true) {
+    const reason = readString(raw.reason) ?? 'unknown';
+    return { data: { ok: false, reason }, error: null };
+  }
+
+  const status = readClaimStatus(raw.status);
+  if (!status) {
+    return {
+      data: null,
+      error: { message: 'Something went wrong. Please try again.' },
+    };
+  }
+
+  return { data: { ok: true, status }, error: null };
 }
