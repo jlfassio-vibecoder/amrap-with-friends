@@ -8,7 +8,7 @@ afterEach(() => {
 
 describe('ExerciseInfoTrigger', () => {
   it('renders nothing when no library entry exists', () => {
-    const { container } = render(<ExerciseInfoTrigger name="Air Squats" />);
+    const { container } = render(<ExerciseInfoTrigger name="Hollow Rocks" />);
     expect(container.firstChild).toBeNull();
   });
 
@@ -26,10 +26,28 @@ describe('ExerciseInfoTrigger', () => {
     expect(
       screen.getByText('Stand with feet shoulder-width apart.')
     ).toBeTruthy();
+    expect(screen.getByText('Common mistakes')).toBeTruthy();
+    expect(screen.queryByText('AMRAP tip')).toBeNull();
     expect(screen.getByText('No photos yet')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Video' }));
     expect(screen.getByText('No video yet')).toBeTruthy();
+  });
+
+  it('shows AMRAP tip and hides empty common mistakes for Air Squats', () => {
+    render(<ExerciseInfoTrigger name="Air Squats" />);
+    fireEvent.click(screen.getByRole('button', { name: 'About Air Squats' }));
+
+    expect(screen.queryByText('Common mistakes')).toBeNull();
+    expect(screen.getByText('AMRAP tip')).toBeTruthy();
+    expect(
+      screen.getByText(/Let gravity do the work on the way down/)
+    ).toBeTruthy();
+  });
+
+  it('resolves parenthetical movement names for the trigger', () => {
+    render(<ExerciseInfoTrigger name="Commando Planks (Up-Downs)" />);
+    expect(screen.getByRole('button', { name: 'About Commando Planks' })).toBeTruthy();
   });
 
   it('closes the modal via the Close button', () => {

@@ -146,14 +146,16 @@ export function ExerciseInfoModal({ info, onClose }: ExerciseInfoModalProps) {
           </ol>
         </section>
 
-        <section className="space-y-2">
-          <h3 className="text-sm font-semibold text-ink">Common mistakes</h3>
-          <ul className="list-disc space-y-1 pl-5 text-sm text-ink">
-            {info.commonMistakes.map((mistake) => (
-              <li key={mistake}>{mistake}</li>
-            ))}
-          </ul>
-        </section>
+        {info.commonMistakes.length > 0 ? (
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold text-ink">Common mistakes</h3>
+            <ul className="list-disc space-y-1 pl-5 text-sm text-ink">
+              {info.commonMistakes.map((mistake) => (
+                <li key={mistake}>{mistake}</li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         <section className="rounded-card border border-[color:color-mix(in_srgb,var(--color-accent)_35%,transparent)] bg-accent-tint p-3">
           <h3 className="text-xs font-bold uppercase tracking-wide text-accent">
@@ -161,6 +163,15 @@ export function ExerciseInfoModal({ info, onClose }: ExerciseInfoModalProps) {
           </h3>
           <p className="mt-1 text-sm italic text-ink">{info.coachingCue}</p>
         </section>
+
+        {info.amrapTip ? (
+          <section className="rounded-card border border-border bg-page p-3">
+            <h3 className="text-xs font-bold uppercase tracking-wide text-secondary">
+              AMRAP tip
+            </h3>
+            <p className="mt-1 text-sm text-ink">{info.amrapTip}</p>
+          </section>
+        ) : null}
       </div>
     </div>
   );
