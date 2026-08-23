@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { ExerciseInfo } from '@/data/exerciseLibrary';
 import { getExerciseMediaUrl } from '@/lib/media/getExerciseMediaUrl';
 import { getPhotoGridColumnCount } from '@/components/exerciseInfo/getPhotoGridColumnCount';
@@ -25,7 +25,7 @@ function PhotoPlaceholder({ caption }: { caption?: string }) {
 }
 
 export function ExerciseInfoModal({ info, onClose }: ExerciseInfoModalProps) {
-  const titleId = 'exercise-info-title';
+  const titleId = useId();
   const [mediaTab, setMediaTab] = useState<MediaTab>('photos');
   const [failedPhotoUrls, setFailedPhotoUrls] = useState<Record<string, true>>({});
 

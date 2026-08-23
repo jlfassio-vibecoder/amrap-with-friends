@@ -51,8 +51,7 @@ export default function CreateSessionPage() {
   }
 
   function handleSummaryDurationChange(duration: number) {
-    setDurationMinutes(duration);
-    setSelectedTemplateId(null);
+    handleDurationChange(duration as TimeDomain);
   }
 
   function handleTemplateSelect(template: WorkoutTemplate) {
@@ -80,6 +79,11 @@ export default function CreateSessionPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+
+    if (workoutSource === 'library' && !selectedTemplate) {
+      setError('Select a workout from the library before creating a session.');
+      return;
+    }
 
     const configError = getSupabaseConfigError();
     if (configError) {
