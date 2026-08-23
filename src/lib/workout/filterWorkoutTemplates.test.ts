@@ -50,6 +50,15 @@ describe('filterWorkoutTemplates', () => {
     ).toHaveLength(10);
   });
 
+  it('returns 10 Localized Trap templates at 10 minutes', () => {
+    expect(
+      filterWorkoutTemplates(WORKOUT_TEMPLATES, {
+        durationMinutes: 10,
+        category: 'localized-trap',
+      })
+    ).toHaveLength(10);
+  });
+
   it('returns 10 Engine Room templates at 5 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
@@ -104,6 +113,18 @@ describe('WORKOUT_TEMPLATES data integrity', () => {
       WORKOUT_TEMPLATES.find((template) => template.id === 'the-metronome-endurance')?.durationMinutes
     ).toBe(15);
   });
+
+  it('keeps distinct ids for The See-Saw across durations', () => {
+    expect(WORKOUT_TEMPLATES.filter((template) => template.name === 'The See-Saw')).toHaveLength(
+      2
+    );
+    expect(WORKOUT_TEMPLATES.find((template) => template.id === 'the-see-saw')?.durationMinutes).toBe(
+      5
+    );
+    expect(
+      WORKOUT_TEMPLATES.find((template) => template.id === 'the-see-saw-push-pull')?.durationMinutes
+    ).toBe(10);
+  });
 });
 
 describe('isDurationAvailable', () => {
@@ -128,8 +149,8 @@ describe('isCategoryAvailable', () => {
     expect(isCategoryAvailable(bloodShunt, 15, WORKOUT_TEMPLATES)).toBe(true);
   });
 
-  it('is false for non-blood-shunt categories at 10 minutes', () => {
-    for (const categoryId of ['localized-trap', 'engine-room', 'midline-tension'] as const) {
+  it('is false for engine-room and midline-tension at 10 minutes', () => {
+    for (const categoryId of ['engine-room', 'midline-tension'] as const) {
       const category = WORKOUT_CATEGORIES.find((entry) => entry.id === categoryId);
       expect(category).toBeDefined();
       if (!category) {
@@ -193,6 +214,18 @@ describe('isCategoryAvailable', () => {
     }
 
     expect(isCategoryAvailable(localizedTrap, 5, WORKOUT_TEMPLATES)).toBe(true);
+  });
+
+  it('is true for localized-trap at 10 minutes', () => {
+    const localizedTrap = WORKOUT_CATEGORIES.find(
+      (category) => category.id === 'localized-trap'
+    );
+    expect(localizedTrap).toBeDefined();
+    if (!localizedTrap) {
+      return;
+    }
+
+    expect(isCategoryAvailable(localizedTrap, 10, WORKOUT_TEMPLATES)).toBe(true);
   });
 
   it('is true for engine-room at 5 minutes', () => {
@@ -278,6 +311,11 @@ describe('categoriesForDuration', () => {
       expect(ids).toContain('blood-shunt');
     }
   });
+
+  it('includes localized-trap at 10 minutes', () => {
+    const ids = categoriesForDuration(WORKOUT_CATEGORIES, 10).map((category) => category.id);
+    expect(ids).toContain('localized-trap');
+  });
 });
 
 describe('categoryDisplayForDuration', () => {
@@ -320,6 +358,22 @@ describe('categoryDisplayForDuration', () => {
     expect(categoryDisplayForDuration(localizedTrap, 5)).toEqual({
       label: 'Localized Trap',
       description: localizedTrap.description,
+    });
+  });
+
+  it('returns override label and description for localized-trap at 10 minutes', () => {
+    const localizedTrap = WORKOUT_CATEGORIES.find(
+      (category) => category.id === 'localized-trap'
+    );
+    expect(localizedTrap).toBeDefined();
+    if (!localizedTrap) {
+      return;
+    }
+
+    expect(categoryDisplayForDuration(localizedTrap, 10)).toEqual({
+      label: 'Push-Pull',
+      description:
+        'Anterior Chain versus Posterior Chain — without equipment, true pulling is a hinge-and-spinal-erector puzzle. Pair aggressive chest, shoulder, and quad pushing with heavy glute, hamstring, and posterior tension for a relentless 10-minute equilibrium that protects the joints while keeping the heart rate pinned.',
     });
   });
 });

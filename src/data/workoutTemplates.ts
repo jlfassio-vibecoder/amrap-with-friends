@@ -61,7 +61,14 @@ export const WORKOUT_CATEGORIES: WorkoutCategoryMeta[] = [
     label: 'Localized Trap',
     description:
       'Muscular Overload — stacks two or three movements targeting the same primary movers to force local muscular failure before cardiovascular failure.',
-    availableForDurations: [5],
+    availableForDurations: [5, 10],
+    overridesByDuration: {
+      10: {
+        label: 'Push-Pull',
+        description:
+          'Anterior Chain versus Posterior Chain — without equipment, true pulling is a hinge-and-spinal-erector puzzle. Pair aggressive chest, shoulder, and quad pushing with heavy glute, hamstring, and posterior tension for a relentless 10-minute equilibrium that protects the joints while keeping the heart rate pinned.',
+      },
+    },
   },
   {
     id: 'engine-room',
@@ -595,6 +602,127 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     ],
     tacticalNote:
       'Legs stay perfectly straight on the pogos; bounce strictly from the ankles.',
+  },
+  {
+    id: 'the-see-saw-push-pull',
+    name: 'The See-Saw',
+    durationMinutes: 10,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Hand-Release Push-ups', reps: 10 },
+      { name: 'Supermans', reps: 15 },
+      { name: 'Air Squats', reps: 20 },
+    ],
+    tacticalNote:
+      'The squats act as an active flush while transitioning from anterior to posterior focus.',
+  },
+  {
+    id: 'counterbalance',
+    name: 'Counterbalance',
+    durationMinutes: 10,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Pike Push-ups', reps: 10 },
+      { name: 'Glute Bridges', reps: 20 },
+    ],
+    tacticalNote:
+      'Heavy shoulder pressing directly paired with heavy hamstring/glute hinging.',
+  },
+  {
+    id: 'equilibrium',
+    name: 'Equilibrium',
+    durationMinutes: 10,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Standard Push-ups', reps: 12 },
+      { name: 'Reverse Snow Angels', reps: 15 },
+    ],
+    tacticalNote:
+      'Squeeze the shoulder blades aggressively on the snow angels to simulate a vertical pull.',
+  },
+  {
+    id: 'the-hinge-and-press',
+    name: 'The Hinge & Press',
+    durationMinutes: 10,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Dive-Bomber Push-ups', reps: 10 },
+      { name: 'Bodyweight Good Mornings', reps: 15 },
+    ],
+    tacticalNote:
+      'Hands behind the head on the good mornings; hinge slowly until the hamstrings scream.',
+  },
+  {
+    id: 'tension-shift',
+    name: 'Tension Shift',
+    durationMinutes: 10,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Diamond Push-ups', reps: 10 },
+      { name: 'Single-Leg Glute Bridges (Total)', reps: 16 },
+    ],
+    tacticalNote:
+      'Triceps isolate the front; single-leg bridges violently isolate the back.',
+  },
+  {
+    id: 'the-fulcrum',
+    name: 'The Fulcrum',
+    durationMinutes: 10,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Wide Push-ups', reps: 12 },
+      { name: 'Alternating Bird-Dogs', reps: 16 },
+    ],
+    tacticalNote:
+      'A heavy chest press followed by slow, deliberate posterior anti-rotation.',
+  },
+  {
+    id: 'posterior-strike',
+    name: 'Posterior Strike',
+    durationMinutes: 10,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Sphinx Push-ups', reps: 10 },
+      { name: 'Glute Bridge Walkouts', reps: 10 },
+    ],
+    tacticalNote:
+      'Walk the heels out away from the hips on the bridges to torch the hamstrings.',
+  },
+  {
+    id: 'anterior-retreat',
+    name: 'Anterior Retreat',
+    durationMinutes: 10,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Commando Planks', reps: 12 },
+      { name: 'Superman Pull-downs', reps: 15 },
+    ],
+    tacticalNote:
+      'On the supermans, pull the elbows down to the ribs as if pulling a heavy lat bar.',
+  },
+  {
+    id: 'the-tug-of-war',
+    name: 'The Tug-of-War',
+    durationMinutes: 10,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Burpees', reps: 8 },
+      { name: 'Strict Reverse Lunges', reps: 16 },
+    ],
+    tacticalNote:
+      'Explosive anterior chain movement followed by strict, controlled posterior deceleration.',
+  },
+  {
+    id: 'symmetry',
+    name: 'Symmetry',
+    durationMinutes: 10,
+    category: 'localized-trap',
+    movements: [
+      { name: 'T-Push-ups', reps: 10 },
+      { name: 'Plank Reaches (Total)', reps: 20 },
+    ],
+    tacticalNote:
+      'Reach the arms straight forward during the plank to engage the lats and upper back.',
   },
   {
     id: 'the-gas-pedal',
