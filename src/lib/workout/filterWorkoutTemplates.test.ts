@@ -86,6 +86,15 @@ describe('filterWorkoutTemplates', () => {
     ).toHaveLength(10);
   });
 
+  it('returns 10 Midline Tension templates at 10 minutes', () => {
+    expect(
+      filterWorkoutTemplates(WORKOUT_TEMPLATES, {
+        durationMinutes: 10,
+        category: 'midline-tension',
+      })
+    ).toHaveLength(10);
+  });
+
   it('returns empty for 20 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
@@ -158,7 +167,7 @@ describe('isCategoryAvailable', () => {
     expect(isCategoryAvailable(bloodShunt, 15, WORKOUT_TEMPLATES)).toBe(true);
   });
 
-  it('is false for midline-tension at 10 minutes', () => {
+  it('is true for midline-tension at 10 minutes', () => {
     const midlineTension = WORKOUT_CATEGORIES.find(
       (category) => category.id === 'midline-tension'
     );
@@ -167,7 +176,7 @@ describe('isCategoryAvailable', () => {
       return;
     }
 
-    expect(isCategoryAvailable(midlineTension, 10, WORKOUT_TEMPLATES)).toBe(false);
+    expect(isCategoryAvailable(midlineTension, 10, WORKOUT_TEMPLATES)).toBe(true);
   });
 
   it('is true for aerobic-matrix at 20 minutes', () => {
@@ -340,6 +349,11 @@ describe('categoriesForDuration', () => {
     const ids = categoriesForDuration(WORKOUT_CATEGORIES, 10).map((category) => category.id);
     expect(ids).toContain('engine-room');
   });
+
+  it('includes midline-tension at 10 minutes', () => {
+    const ids = categoriesForDuration(WORKOUT_CATEGORIES, 10).map((category) => category.id);
+    expect(ids).toContain('midline-tension');
+  });
 });
 
 describe('categoryDisplayForDuration', () => {
@@ -412,6 +426,22 @@ describe('categoryDisplayForDuration', () => {
       label: 'Sustained Engine',
       description:
         'Gravity and impact are the enemy at 10 minutes — bounce for 600 seconds and your Achilles fail before your lungs. Sustained Engine swaps joint-destroying plyometrics for sweeping, rhythmic compound work to keep the heart rate redlined safely.',
+    });
+  });
+
+  it('returns override label and description for midline-tension at 10 minutes', () => {
+    const midlineTension = WORKOUT_CATEGORIES.find(
+      (category) => category.id === 'midline-tension'
+    );
+    expect(midlineTension).toBeDefined();
+    if (!midlineTension) {
+      return;
+    }
+
+    expect(categoryDisplayForDuration(midlineTension, 10)).toEqual({
+      label: 'Structural Grind',
+      description:
+        'Continuous spinal flexion for 10 minutes is a recipe for disaster. Structural Grind pairs rigid isometrics and slow anti-rotation with steady lower-body engine work so the abdominal wall stabilizes the spine under shifting loads and protects the lower back.',
     });
   });
 });
