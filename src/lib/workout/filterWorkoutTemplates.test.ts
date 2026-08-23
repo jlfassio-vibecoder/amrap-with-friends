@@ -86,6 +86,15 @@ describe('filterWorkoutTemplates', () => {
     ).toHaveLength(10);
   });
 
+  it('returns 10 Engine Room templates at 15 minutes', () => {
+    expect(
+      filterWorkoutTemplates(WORKOUT_TEMPLATES, {
+        durationMinutes: 15,
+        category: 'engine-room',
+      })
+    ).toHaveLength(10);
+  });
+
   it('returns 10 Midline Tension templates at 5 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
@@ -163,6 +172,29 @@ describe('WORKOUT_TEMPLATES data integrity', () => {
     expect(
       WORKOUT_TEMPLATES.find((template) => template.id === 'the-fulcrum-systemic-shift')
         ?.durationMinutes
+    ).toBe(15);
+  });
+
+  it('keeps distinct ids for The Long Stride across durations', () => {
+    expect(WORKOUT_TEMPLATES.filter((template) => template.name === 'The Long Stride')).toHaveLength(
+      2
+    );
+    expect(
+      WORKOUT_TEMPLATES.find((template) => template.id === 'the-long-stride')?.durationMinutes
+    ).toBe(10);
+    expect(
+      WORKOUT_TEMPLATES.find((template) => template.id === 'the-long-stride-endurance')
+        ?.durationMinutes
+    ).toBe(15);
+  });
+
+  it('keeps distinct ids for The Cruiser across durations', () => {
+    expect(WORKOUT_TEMPLATES.filter((template) => template.name === 'The Cruiser')).toHaveLength(2);
+    expect(WORKOUT_TEMPLATES.find((template) => template.id === 'the-cruiser')?.durationMinutes).toBe(
+      10
+    );
+    expect(
+      WORKOUT_TEMPLATES.find((template) => template.id === 'the-cruiser-endurance')?.durationMinutes
     ).toBe(15);
   });
 });
@@ -300,6 +332,16 @@ describe('isCategoryAvailable', () => {
     expect(isCategoryAvailable(engineRoom, 10, WORKOUT_TEMPLATES)).toBe(true);
   });
 
+  it('is true for engine-room at 15 minutes', () => {
+    const engineRoom = WORKOUT_CATEGORIES.find((category) => category.id === 'engine-room');
+    expect(engineRoom).toBeDefined();
+    if (!engineRoom) {
+      return;
+    }
+
+    expect(isCategoryAvailable(engineRoom, 15, WORKOUT_TEMPLATES)).toBe(true);
+  });
+
   it('is true for midline-tension at 5 minutes', () => {
     const midlineTension = WORKOUT_CATEGORIES.find(
       (category) => category.id === 'midline-tension'
@@ -386,6 +428,11 @@ describe('categoriesForDuration', () => {
 
   it('includes engine-room at 10 minutes', () => {
     const ids = categoriesForDuration(WORKOUT_CATEGORIES, 10).map((category) => category.id);
+    expect(ids).toContain('engine-room');
+  });
+
+  it('includes engine-room at 15 minutes', () => {
+    const ids = categoriesForDuration(WORKOUT_CATEGORIES, 15).map((category) => category.id);
     expect(ids).toContain('engine-room');
   });
 
@@ -481,6 +528,20 @@ describe('categoryDisplayForDuration', () => {
       label: 'Sustained Engine',
       description:
         'Gravity and impact are the enemy at 10 minutes — bounce for 600 seconds and your Achilles fail before your lungs. Sustained Engine swaps joint-destroying plyometrics for sweeping, rhythmic compound work to keep the heart rate redlined safely.',
+    });
+  });
+
+  it('returns override label and description for engine-room at 15 minutes', () => {
+    const engineRoom = WORKOUT_CATEGORIES.find((category) => category.id === 'engine-room');
+    expect(engineRoom).toBeDefined();
+    if (!engineRoom) {
+      return;
+    }
+
+    expect(categoryDisplayForDuration(engineRoom, 15)).toEqual({
+      label: 'Sustained Engine',
+      description:
+        'Gravity and repetitive impact are the enemies at 15 minutes — pure plyometric bouncing will snap Achilles tendons before lungs fail. Sustained Engine uses sweeping, rhythmic compound triplets that demand heavy oxygen intake while protecting the joints.',
     });
   });
 

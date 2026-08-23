@@ -80,12 +80,17 @@ export const WORKOUT_CATEGORIES: WorkoutCategoryMeta[] = [
     label: 'Engine Room',
     description:
       'Pure Cardio — zero muscular bottlenecks, only lung capacity and mental fortitude. High-velocity, low-resistance movements requiring constant, unbroken rhythm.',
-    availableForDurations: [5, 10],
+    availableForDurations: [5, 10, 15],
     overridesByDuration: {
       10: {
         label: 'Sustained Engine',
         description:
           'Gravity and impact are the enemy at 10 minutes — bounce for 600 seconds and your Achilles fail before your lungs. Sustained Engine swaps joint-destroying plyometrics for sweeping, rhythmic compound work to keep the heart rate redlined safely.',
+      },
+      15: {
+        label: 'Sustained Engine',
+        description:
+          'Gravity and repetitive impact are the enemies at 15 minutes — pure plyometric bouncing will snap Achilles tendons before lungs fail. Sustained Engine uses sweeping, rhythmic compound triplets that demand heavy oxygen intake while protecting the joints.',
       },
     },
   },
@@ -300,7 +305,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     durationMinutes: 10,
     category: 'blood-shunt',
     movements: [
-      { name: 'Gorilla Sprawls', reps: 10 },
+      { name: 'Combat Sprawls', reps: 10 },
       { name: 'Plank Shoulder Taps', reps: 12 },
       { name: 'Air Squats', reps: 15 },
     ],
@@ -417,7 +422,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     durationMinutes: 15,
     category: 'blood-shunt',
     movements: [
-      { name: 'Gorilla Sprawls', reps: 10 },
+      { name: 'Combat Sprawls', reps: 10 },
       { name: 'Commando Planks', reps: 16 },
       { name: 'Skater Jumps', reps: 30 },
     ],
@@ -1061,7 +1066,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     durationMinutes: 10,
     category: 'engine-room',
     movements: [
-      { name: 'Gorilla Sprawls', reps: 10 },
+      { name: 'Combat Sprawls', reps: 10 },
       { name: 'Jumping Jacks', reps: 20 },
     ],
     tacticalNote:
@@ -1115,6 +1120,136 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     ],
     tacticalNote:
       'Explode on the knees, but pace the down-ups to avoid central nervous system burnout.',
+  },
+  {
+    id: 'the-pacesetter',
+    name: 'The Pacesetter',
+    durationMinutes: 15,
+    category: 'engine-room',
+    movements: [
+      { name: 'Combat Sprawls', reps: 10 },
+      { name: 'Air Squats', reps: 20 },
+      { name: 'Mountain Climbers', reps: 30 },
+    ],
+    tacticalNote:
+      'Find your breathing rhythm on the squats. Lock the plank tight on the sprawls.',
+  },
+  {
+    id: 'steady-altitude',
+    name: 'Steady Altitude',
+    durationMinutes: 15,
+    category: 'engine-room',
+    movements: [
+      { name: 'Burpees', reps: 8 },
+      { name: 'Alternating Lunges', reps: 16 },
+      { name: 'Jumping Jacks', reps: 30 },
+    ],
+    tacticalNote:
+      'Use the jumping jacks as active recovery to flush the legs before hitting the deck again.',
+  },
+  {
+    id: 'the-rhythmic-grind',
+    name: 'The Rhythmic Grind',
+    durationMinutes: 15,
+    category: 'engine-room',
+    movements: [
+      { name: 'Down-Ups', reps: 10 },
+      { name: 'Skater Jumps (Total)', reps: 20 },
+      { name: 'Butt Kicks', reps: 30 },
+    ],
+    tacticalNote:
+      'Lateral bounding shifts the impact away from the sagittal plane, saving the knees.',
+  },
+  {
+    id: 'aerobic-threshold',
+    name: 'Aerobic Threshold',
+    durationMinutes: 15,
+    category: 'engine-room',
+    movements: [
+      { name: 'Sprawls (Standard)', reps: 12 },
+      { name: 'Air Squats', reps: 24 },
+      { name: 'Lateral Line Hops', reps: 24 },
+    ],
+    tacticalNote:
+      'A high-turnover piston. Keep the line hops incredibly low to the ground to save the calves.',
+  },
+  {
+    id: 'the-long-stride-endurance',
+    name: 'The Long Stride',
+    durationMinutes: 15,
+    category: 'engine-room',
+    movements: [
+      { name: 'Combat Sprawls', reps: 15 },
+      { name: 'Reverse Lunges', reps: 15 },
+      { name: 'High Knees', reps: 30 },
+    ],
+    tacticalNote:
+      'Combat sprawls into reverse lunges will torch the quads. Push the pace on the high knees.',
+  },
+  {
+    id: 'the-cadence',
+    name: 'The Cadence',
+    durationMinutes: 15,
+    category: 'engine-room',
+    movements: [
+      { name: 'Half-Burpees', reps: 10 },
+      { name: 'Air Squats', reps: 20 },
+      { name: 'Cross-Body Mountain Climbers', reps: 30 },
+    ],
+    tacticalNote:
+      'Heavy hip-hinge demand. Do not let the lower back sag during the half-burpees.',
+  },
+  {
+    id: 'endurance-protocol',
+    name: 'Endurance Protocol',
+    durationMinutes: 15,
+    category: 'engine-room',
+    movements: [
+      { name: 'Bear Crawl to Broad Jumps', reps: 5 },
+      { name: 'Air Squats', reps: 15 },
+      { name: 'Double-Tap Jumps', reps: 40 },
+    ],
+    tacticalNote:
+      'The double-taps enforce a steady rhythm. The squats act as the bridge between crawling and jumping.',
+  },
+  {
+    id: 'the-cruiser-endurance',
+    name: 'The Cruiser',
+    durationMinutes: 15,
+    category: 'engine-room',
+    movements: [
+      { name: 'Burpees', reps: 10 },
+      { name: 'Skater Jumps', reps: 20 },
+      { name: 'Mountain Climbers', reps: 30 },
+    ],
+    tacticalNote:
+      'Constant directional changes. Breathe in through the nose, out through the mouth.',
+  },
+  {
+    id: 'systemic-flush',
+    name: 'Systemic Flush',
+    durationMinutes: 15,
+    category: 'engine-room',
+    movements: [
+      { name: 'Jump Squats', reps: 15 },
+      { name: 'Sprawls (Standard)', reps: 15 },
+      { name: 'Butt Kicks', reps: 30 },
+    ],
+    tacticalNote:
+      'Only jump an inch off the floor on the squats. It is about hip extension, not vertical height.',
+  },
+  {
+    id: 'the-engine-block',
+    name: 'The Engine Block',
+    durationMinutes: 15,
+    category: 'engine-room',
+    movements: [
+      { name: 'Down-Ups', reps: 12 },
+      { name: 'Alternating Lunges', reps: 24 },
+      { name: 'Jumping Jacks', reps: 30 },
+    ],
+    tacticalNote:
+      'The ultimate test of consistency. If your round times vary by more than 10 seconds, you are failing the pace.',
   },
   {
     id: 'the-folding-knife',
@@ -1400,7 +1535,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     durationMinutes: 20,
     category: 'aerobic-matrix',
     movements: [
-      { name: 'Gorilla Sprawls', reps: 10 },
+      { name: 'Combat Sprawls', reps: 10 },
       { name: 'Leg Raises', reps: 15 },
       { name: 'Glute Bridges', reps: 20 },
       { name: 'High Knees', reps: 30 },
