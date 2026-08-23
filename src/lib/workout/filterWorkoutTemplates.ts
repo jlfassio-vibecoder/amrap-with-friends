@@ -62,3 +62,14 @@ export function categoriesForDuration(
     category.availableForDurations.includes(durationMinutes)
   );
 }
+
+export function categoryDisplayForDuration(
+  category: WorkoutCategoryMeta,
+  durationMinutes: TimeDomain
+): { label: string; description: string } {
+  const override = category.overridesByDuration?.[durationMinutes];
+  return {
+    label: override?.label ?? category.label,
+    description: override?.description ?? category.description,
+  };
+}

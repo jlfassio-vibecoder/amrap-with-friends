@@ -12,6 +12,15 @@ export interface WorkoutCategoryMeta {
   label: string;
   description: string;
   availableForDurations: TimeDomain[];
+  overridesByDuration?: Partial<
+    Record<
+      TimeDomain,
+      {
+        label: string;
+        description: string;
+      }
+    >
+  >;
 }
 
 export interface WorkoutTemplateMovement {
@@ -39,6 +48,13 @@ export const WORKOUT_CATEGORIES: WorkoutCategoryMeta[] = [
     description:
       'Peripheral Heart Action — pairs a high-output lower body movement directly with an upper body movement. Fast, breathless, chaotic.',
     availableForDurations: [5, 10, 15],
+    overridesByDuration: {
+      10: {
+        label: 'Aerobic Blood Shunt',
+        description:
+          'The format survives the time jump by shifting from couplets to triplets — a low-interference bridge movement keeps the heart rate redlined while blood physically travels from the upper to the lower extremities.',
+      },
+    },
   },
   {
     id: 'localized-trap',

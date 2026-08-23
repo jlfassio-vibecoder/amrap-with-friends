@@ -11,6 +11,7 @@ import {
   isCategoryAvailable,
   isDurationAvailable,
   categoriesForDuration,
+  categoryDisplayForDuration,
 } from '@/lib/workout/filterWorkoutTemplates';
 import { WorkoutTemplateCard } from '@/components/createSession/WorkoutTemplateCard';
 
@@ -39,6 +40,9 @@ export function WorkoutTemplatePicker({
   const selectedCategoryMeta = visibleCategories.find(
     (category) => category.id === selectedCategory
   );
+  const selectedCategoryDisplay = selectedCategoryMeta
+    ? categoryDisplayForDuration(selectedCategoryMeta, durationMinutes)
+    : null;
 
   return (
     <div className="space-y-6">
@@ -98,14 +102,14 @@ export function WorkoutTemplatePicker({
                 }
                 onClick={() => onCategoryChange(category.id)}
               >
-                {category.label}
+                {categoryDisplayForDuration(category, durationMinutes).label}
                 {!available ? <span className="ml-1 text-xs uppercase">Soon</span> : null}
               </button>
             );
           })}
         </div>
-        {selectedCategoryMeta ? (
-          <p className="text-sm text-secondary">{selectedCategoryMeta.description}</p>
+        {selectedCategoryDisplay ? (
+          <p className="text-sm text-secondary">{selectedCategoryDisplay.description}</p>
         ) : null}
       </div>
 

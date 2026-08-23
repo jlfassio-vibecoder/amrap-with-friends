@@ -10,6 +10,7 @@ import {
   isCategoryAvailable,
   isDurationAvailable,
   categoriesForDuration,
+  categoryDisplayForDuration,
 } from './filterWorkoutTemplates';
 
 describe('filterWorkoutTemplates', () => {
@@ -276,5 +277,49 @@ describe('categoriesForDuration', () => {
       );
       expect(ids).toContain('blood-shunt');
     }
+  });
+});
+
+describe('categoryDisplayForDuration', () => {
+  it('returns base label and description for blood-shunt at 5 minutes', () => {
+    const bloodShunt = WORKOUT_CATEGORIES.find((category) => category.id === 'blood-shunt');
+    expect(bloodShunt).toBeDefined();
+    if (!bloodShunt) {
+      return;
+    }
+
+    expect(categoryDisplayForDuration(bloodShunt, 5)).toEqual({
+      label: 'Blood Shunt',
+      description: bloodShunt.description,
+    });
+  });
+
+  it('returns override label and description for blood-shunt at 10 minutes', () => {
+    const bloodShunt = WORKOUT_CATEGORIES.find((category) => category.id === 'blood-shunt');
+    expect(bloodShunt).toBeDefined();
+    if (!bloodShunt) {
+      return;
+    }
+
+    expect(categoryDisplayForDuration(bloodShunt, 10)).toEqual({
+      label: 'Aerobic Blood Shunt',
+      description:
+        'The format survives the time jump by shifting from couplets to triplets — a low-interference bridge movement keeps the heart rate redlined while blood physically travels from the upper to the lower extremities.',
+    });
+  });
+
+  it('returns base label and description for categories without overrides', () => {
+    const localizedTrap = WORKOUT_CATEGORIES.find(
+      (category) => category.id === 'localized-trap'
+    );
+    expect(localizedTrap).toBeDefined();
+    if (!localizedTrap) {
+      return;
+    }
+
+    expect(categoryDisplayForDuration(localizedTrap, 5)).toEqual({
+      label: 'Localized Trap',
+      description: localizedTrap.description,
+    });
   });
 });
