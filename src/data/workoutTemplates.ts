@@ -37,7 +37,7 @@ export const WORKOUT_CATEGORIES: WorkoutCategoryMeta[] = [
     label: 'Blood Shunt',
     description:
       'Peripheral Heart Action — pairs a high-output lower body movement directly with an upper body movement. Fast, breathless, chaotic.',
-    availableForDurations: [5],
+    availableForDurations: [5, 10],
   },
   {
     id: 'localized-trap',
@@ -178,6 +178,136 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Standard Push-ups', reps: 12 },
     ],
     tacticalNote: 'Pure explosive power. Land soft on the jumps, rigid body on the push-ups.',
+  },
+  {
+    id: 'the-valve',
+    name: 'The Valve',
+    durationMinutes: 10,
+    category: 'blood-shunt',
+    movements: [
+      { name: 'Air Squats', reps: 15 },
+      { name: 'Hand-Release Push-ups', reps: 10 },
+      { name: 'Mountain Climbers', reps: 30 },
+    ],
+    tacticalNote:
+      'The mountain climbers act as an active flush. Breathe rhythmically while in the plank.',
+  },
+  {
+    id: 'arterial-shift',
+    name: 'Arterial Shift',
+    durationMinutes: 10,
+    category: 'blood-shunt',
+    movements: [
+      { name: 'Alternating Lunges (Total)', reps: 20 },
+      { name: 'Pike Push-ups', reps: 10 },
+      { name: 'Jumping Jacks', reps: 30 },
+    ],
+    tacticalNote:
+      'Heavy leg volume followed by shoulder isolation. The jacks are pure active recovery.',
+  },
+  {
+    id: 'the-regulator',
+    name: 'The Regulator',
+    durationMinutes: 10,
+    category: 'blood-shunt',
+    movements: [
+      { name: 'Glute Bridges', reps: 20 },
+      { name: 'Standard Push-ups', reps: 10 },
+      { name: 'High Knees', reps: 20 },
+    ],
+    tacticalNote:
+      'Transitions smoothly from supine to prone to standing. Explode on the high knees.',
+  },
+  {
+    id: 'high-tide',
+    name: 'High Tide',
+    durationMinutes: 10,
+    category: 'blood-shunt',
+    movements: [
+      { name: 'Jump Squats', reps: 12 },
+      { name: 'Commando Planks', reps: 12 },
+      { name: 'Lateral Line Hops', reps: 20 },
+    ],
+    tacticalNote:
+      'High neurological fatigue. Focus on light, fast feet during the line hops to rest the quads.',
+  },
+  {
+    id: 'the-centrifuge',
+    name: 'The Centrifuge',
+    durationMinutes: 10,
+    category: 'blood-shunt',
+    movements: [
+      { name: 'Surrenders', reps: 10 },
+      { name: 'Dive-Bomber Push-ups', reps: 8 },
+      { name: 'Double-Tap Jumps', reps: 30 },
+    ],
+    tacticalNote:
+      'A devastating mix of slow, heavy tension and rapid plyometrics. Pace the surrenders.',
+  },
+  {
+    id: 'vascular-drive',
+    name: 'Vascular Drive',
+    durationMinutes: 10,
+    category: 'blood-shunt',
+    movements: [
+      { name: 'Gorilla Sprawls', reps: 10 },
+      { name: 'Plank Shoulder Taps', reps: 12 },
+      { name: 'Air Squats', reps: 15 },
+    ],
+    tacticalNote:
+      'The air squats will feel surprisingly difficult after the sprawls. Push through the burn.',
+  },
+  {
+    id: 'pressure-cooker',
+    name: 'Pressure Cooker',
+    durationMinutes: 10,
+    category: 'blood-shunt',
+    movements: [
+      { name: 'Broad Jumps', reps: 8 },
+      { name: 'Wide Push-ups', reps: 10 },
+      { name: 'Skater Jumps (Total)', reps: 20 },
+    ],
+    tacticalNote:
+      'Explode horizontally, press horizontally, bound laterally. Multidirectional blood flow.',
+  },
+  {
+    id: 'crimson-flow',
+    name: 'Crimson Flow',
+    durationMinutes: 10,
+    category: 'blood-shunt',
+    movements: [
+      { name: 'Bear Crawl to Broad Jumps', reps: 5 },
+      { name: 'T-Push-ups', reps: 10 },
+      { name: 'Butt Kicks', reps: 30 },
+    ],
+    tacticalNote:
+      'The butt kicks provide a necessary break for the upper body after the crawling and pressing.',
+  },
+  {
+    id: 'the-diverter',
+    name: 'The Diverter',
+    durationMinutes: 10,
+    category: 'blood-shunt',
+    movements: [
+      { name: 'Reverse Lunges (Total)', reps: 16 },
+      { name: 'Diamond Push-ups', reps: 8 },
+      { name: 'Sprawls', reps: 10 },
+    ],
+    tacticalNote:
+      'The sprawls will tax the core right after the triceps fail. Lock the plank tightly.',
+  },
+  {
+    id: 'the-hemodynamic',
+    name: 'The Hemodynamic',
+    durationMinutes: 10,
+    category: 'blood-shunt',
+    movements: [
+      { name: 'Fast Air Squats', reps: 15 },
+      { name: 'Down-Ups', reps: 10 },
+      { name: 'Fast Calf Raises', reps: 20 },
+    ],
+    tacticalNote:
+      'Constant up-and-down motion. The calf raises trap blood in the extreme lower leg before forcing it back to the chest.',
   },
   {
     id: 'the-acid-bath',
