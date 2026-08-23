@@ -148,6 +148,15 @@ describe('filterWorkoutTemplates', () => {
       })
     ).toHaveLength(10);
   });
+
+  it('returns 10 Armor Protocol templates at 20 minutes', () => {
+    expect(
+      filterWorkoutTemplates(WORKOUT_TEMPLATES, {
+        durationMinutes: 20,
+        category: 'armor-protocol',
+      })
+    ).toHaveLength(10);
+  });
 });
 
 describe('WORKOUT_TEMPLATES data integrity', () => {
@@ -309,6 +318,16 @@ describe('isCategoryAvailable', () => {
     expect(isCategoryAvailable(fourPointCascade, 20, WORKOUT_TEMPLATES)).toBe(true);
   });
 
+  it('is true for armor-protocol at 20 minutes', () => {
+    const armorProtocol = WORKOUT_CATEGORIES.find((category) => category.id === 'armor-protocol');
+    expect(armorProtocol).toBeDefined();
+    if (!armorProtocol) {
+      return;
+    }
+
+    expect(isCategoryAvailable(armorProtocol, 20, WORKOUT_TEMPLATES)).toBe(true);
+  });
+
   it('is false for aerobic-matrix at 5, 10, and 15 minutes', () => {
     const aerobicMatrix = WORKOUT_CATEGORIES.find(
       (category) => category.id === 'aerobic-matrix'
@@ -335,6 +354,18 @@ describe('isCategoryAvailable', () => {
     expect(isCategoryAvailable(fourPointCascade, 5, WORKOUT_TEMPLATES)).toBe(false);
     expect(isCategoryAvailable(fourPointCascade, 10, WORKOUT_TEMPLATES)).toBe(false);
     expect(isCategoryAvailable(fourPointCascade, 15, WORKOUT_TEMPLATES)).toBe(false);
+  });
+
+  it('is false for armor-protocol at 5, 10, and 15 minutes', () => {
+    const armorProtocol = WORKOUT_CATEGORIES.find((category) => category.id === 'armor-protocol');
+    expect(armorProtocol).toBeDefined();
+    if (!armorProtocol) {
+      return;
+    }
+
+    expect(isCategoryAvailable(armorProtocol, 5, WORKOUT_TEMPLATES)).toBe(false);
+    expect(isCategoryAvailable(armorProtocol, 10, WORKOUT_TEMPLATES)).toBe(false);
+    expect(isCategoryAvailable(armorProtocol, 15, WORKOUT_TEMPLATES)).toBe(false);
   });
 
   it('is false for legacy categories at 20 minutes', () => {
@@ -477,13 +508,15 @@ describe('categoriesForDuration', () => {
       );
       expect(ids).not.toContain('aerobic-matrix');
       expect(ids).not.toContain('four-point-cascade');
+      expect(ids).not.toContain('armor-protocol');
     }
   });
 
-  it('includes aerobic-matrix and four-point-cascade at 20 minutes', () => {
+  it('includes all 20-minute categories at 20 minutes', () => {
     expect(categoriesForDuration(WORKOUT_CATEGORIES, 20).map((category) => category.id)).toEqual([
       'aerobic-matrix',
       'four-point-cascade',
+      'armor-protocol',
     ]);
   });
 

@@ -6,7 +6,8 @@ export type WorkoutCategory =
   | 'engine-room'
   | 'midline-tension'
   | 'aerobic-matrix'
-  | 'four-point-cascade';
+  | 'four-point-cascade'
+  | 'armor-protocol';
 
 export interface WorkoutCategoryMeta {
   id: WorkoutCategory;
@@ -126,6 +127,13 @@ export const WORKOUT_CATEGORIES: WorkoutCategoryMeta[] = [
     label: '4-Point Cascade',
     description:
       'The Cascade — four movements sequenced to rotate stress through engine, push, legs, and midline so fatigue cascades through the body instead of pooling in one muscle group, keeping you moving for the full 20 minutes.',
+    availableForDurations: [20],
+  },
+  {
+    id: 'armor-protocol',
+    label: 'Armor Protocol',
+    description:
+      'The Armor Protocol — every round begins with a rigid isometric hold that armors the spine and joints before dynamic work spikes the heart rate, turning structural tension into the pacing anchor for the full 20 minutes.',
     availableForDurations: [20],
   },
 ];
@@ -1923,5 +1931,145 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     ],
     tacticalNote:
       'The heart rate will spike violently on the sprawls and jumps; control your breathing on the floor.',
+  },
+  {
+    id: 'the-phalanx',
+    name: 'The Phalanx',
+    durationMinutes: 20,
+    category: 'armor-protocol',
+    movements: [
+      { name: 'Bottom Squat Hold', reps: 20, unit: 'sec' },
+      { name: 'Hand-Release Push-ups', reps: 10 },
+      { name: 'Strict Sit-ups', reps: 15 },
+      { name: 'Jumping Jacks', reps: 20 },
+    ],
+    tacticalNote:
+      'Pry the floor apart during the squat hold. Do not rest on your knee joints; keep the quads violently engaged.',
+  },
+  {
+    id: 'iron-will',
+    name: 'Iron Will',
+    durationMinutes: 20,
+    category: 'armor-protocol',
+    movements: [
+      { name: 'Hollow Hold', reps: 20, unit: 'sec' },
+      { name: 'Combat Sprawls', reps: 15 },
+      { name: 'T-Push-ups', reps: 10 },
+      { name: 'Skater Jumps', reps: 20 },
+    ],
+    tacticalNote:
+      'The hollow hold pre-exhausts the core, making the combat sprawls feel twice as heavy.',
+  },
+  {
+    id: 'the-garrison',
+    name: 'The Garrison',
+    durationMinutes: 20,
+    category: 'armor-protocol',
+    movements: [
+      { name: 'High Plank Hold', reps: 20, unit: 'sec' },
+      { name: 'Alternating Lunges', reps: 20 },
+      { name: 'V-Ups', reps: 15 },
+      { name: 'High Knees', reps: 20 },
+    ],
+    tacticalNote:
+      'Actively push the floor away during the plank to protract the shoulder blades.',
+  },
+  {
+    id: 'the-stronghold',
+    name: 'The Stronghold',
+    durationMinutes: 20,
+    category: 'armor-protocol',
+    movements: [
+      { name: 'Glute Bridge Hold', reps: 20, unit: 'sec' },
+      { name: 'Pike Push-ups', reps: 10 },
+      { name: 'Down-Ups', reps: 15 },
+      { name: 'Lateral Line Hops', reps: 20 },
+    ],
+    tacticalNote:
+      'Squeeze the glutes at absolute maximum tension during the hold to protect the lower back on the down-ups.',
+  },
+  {
+    id: 'the-barricade',
+    name: 'The Barricade',
+    durationMinutes: 20,
+    category: 'armor-protocol',
+    movements: [
+      { name: 'Side Plank Hold (Switch sides each round)', reps: 20, unit: 'sec' },
+      { name: 'Air Squats', reps: 15 },
+      { name: 'Dive-Bomber Push-ups', reps: 10 },
+      { name: 'Mountain Climbers', reps: 20 },
+    ],
+    tacticalNote:
+      'Pure anti-rotation followed immediately by heavy sagittal plane movement.',
+  },
+  {
+    id: 'the-fortress',
+    name: 'The Fortress',
+    durationMinutes: 20,
+    category: 'armor-protocol',
+    movements: [
+      { name: 'Superman Hold', reps: 20, unit: 'sec' },
+      { name: 'Commando Planks', reps: 10 },
+      { name: 'Reverse Lunges', reps: 20 },
+      { name: 'Butt Kicks', reps: 20 },
+    ],
+    tacticalNote:
+      'The Superman hold locks the posterior chain, providing a rigid foundation for the heavy lunges that follow.',
+  },
+  {
+    id: 'the-trench',
+    name: 'The Trench',
+    durationMinutes: 20,
+    category: 'armor-protocol',
+    movements: [
+      { name: 'Bear Crawl Hover', reps: 20, unit: 'sec' },
+      { name: 'Wide Push-ups', reps: 10 },
+      { name: 'Jump Squats', reps: 15 },
+      { name: 'Double-Tap Jumps', reps: 20 },
+    ],
+    tacticalNote:
+      'Keep the knees exactly one inch off the floor during the hover. Your quads will scream.',
+  },
+  {
+    id: 'the-bastion',
+    name: 'The Bastion',
+    durationMinutes: 20,
+    category: 'armor-protocol',
+    movements: [
+      { name: 'V-Sit Hold', reps: 20, unit: 'sec' },
+      { name: 'Glute Bridges', reps: 15 },
+      { name: 'Sphinx Push-ups', reps: 10 },
+      { name: 'Cross-Body Climbers', reps: 20 },
+    ],
+    tacticalNote:
+      'Balance strictly on the sit bones. The cross-body climbers flush the midline after the heavy isometric hold.',
+  },
+  {
+    id: 'the-shield',
+    name: 'The Shield',
+    durationMinutes: 20,
+    category: 'armor-protocol',
+    movements: [
+      { name: 'Hollow Hold', reps: 20, unit: 'sec' },
+      { name: 'Diamond Push-ups', reps: 10 },
+      { name: 'Fast Calf Raises', reps: 20 },
+      { name: 'Combat Sprawls', reps: 15 },
+    ],
+    tacticalNote:
+      'Core tension immediately followed by tricep isolation. The combat sprawls drive the aerobic response.',
+  },
+  {
+    id: 'the-wall',
+    name: 'The Wall',
+    durationMinutes: 20,
+    category: 'armor-protocol',
+    movements: [
+      { name: 'Bottom Squat Hold', reps: 20, unit: 'sec' },
+      { name: 'Dead Bugs', reps: 15 },
+      { name: 'Standard Push-ups', reps: 10 },
+      { name: 'Jumping Jacks', reps: 20 },
+    ],
+    tacticalNote:
+      'The bottom hold taxes the quads before slow dead bugs reset the spine. Stay rigid through the push-ups so the jacks do not collapse your posture.',
   },
 ];
