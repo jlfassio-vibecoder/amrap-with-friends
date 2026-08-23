@@ -23,6 +23,7 @@ describe('validateMessageBody', () => {
   it('rejects empty and whitespace-only bodies', () => {
     expect(validateMessageBody('')).toEqual({ ok: false, reason: 'empty_body' });
     expect(validateMessageBody('   ')).toEqual({ ok: false, reason: 'empty_body' });
+    expect(validateMessageBody('\n\t')).toEqual({ ok: false, reason: 'empty_body' });
   });
 
   it('rejects bodies longer than max length', () => {
@@ -48,7 +49,7 @@ describe('sendMessage API', () => {
     vi.clearAllMocks();
   });
 
-  it('calls send_message RPC with trimmed body', async () => {
+  it('calls send_message RPC with provided body and parses trimmed response', async () => {
     rpcMock.mockResolvedValue({
       data: {
         ok: true,
@@ -132,5 +133,38 @@ describe('sendMessage API', () => {
     });
 
     expect(result.data).toEqual({ ok: false, reason: 'invalid_claim_token' });
+  });
+
+  it('returns generic message for unknown RPC errors', async () => {
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: {
+        message: 'column "foo" does not exist',
+        name: 'PostgrestError',
+        details: '',
+        hint: '',
+        code: '42703',
+        toJSON: () => ({
+          name: 'PostgrestError',
+          message: 'column "foo" does not exist',
+          details: '',
+          hint: '',
+          code: '42703',
+        }),
+      },
+      success: false,
+      count: null,
+      status: 400,
+      statusText: 'Bad Request',
+    });
+
+    const result = await sendMessage({
+      sessionId: SESSION_ID,
+      participantId: PARTICIPANT_ID,
+      claimToken: 'claim-token',
+      body: 'hello',
+    });
+
+    expect(result.error?.message).toBe('Something went wrong. Please try again.');
   });
 });

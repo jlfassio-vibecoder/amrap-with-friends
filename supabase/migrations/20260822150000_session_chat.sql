@@ -18,7 +18,7 @@ ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY messages_select_anon ON public.messages
   FOR SELECT TO anon, authenticated
-  -- Copilot suggestion ignored: guest-first lobby needs permissive SELECT for anon Realtime; scope via claim tokens in a hardening PR.
+  -- Copilot suggestion ignored: guest-first lobby needs permissive SELECT for anon Realtime; chat bodies share this tradeoff until a hardening PR.
   USING (true);
 
 GRANT SELECT (
@@ -76,7 +76,7 @@ BEGIN
     RAISE EXCEPTION 'Invalid message';
   END IF;
 
-  v_body := trim(both from p_body);
+  v_body := btrim(p_body, E' \t\n\r');
 
   IF v_body = '' THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'empty_body');

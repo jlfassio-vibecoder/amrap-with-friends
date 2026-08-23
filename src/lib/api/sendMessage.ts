@@ -77,7 +77,7 @@ function mapRpcError(message: string | undefined): string {
   if (message.includes('Session not found')) {
     return 'Session not found.';
   }
-  return message;
+  return 'Something went wrong. Please try again.';
 }
 
 export function mapSendMessageReason(reason: string): string {
