@@ -59,6 +59,15 @@ describe('filterWorkoutTemplates', () => {
     ).toHaveLength(10);
   });
 
+  it('returns 10 Localized Trap templates at 15 minutes', () => {
+    expect(
+      filterWorkoutTemplates(WORKOUT_TEMPLATES, {
+        durationMinutes: 15,
+        category: 'localized-trap',
+      })
+    ).toHaveLength(10);
+  });
+
   it('returns 10 Engine Room templates at 5 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
@@ -142,6 +151,19 @@ describe('WORKOUT_TEMPLATES data integrity', () => {
     expect(
       WORKOUT_TEMPLATES.find((template) => template.id === 'the-see-saw-push-pull')?.durationMinutes
     ).toBe(10);
+  });
+
+  it('keeps distinct ids for The Fulcrum across durations', () => {
+    expect(WORKOUT_TEMPLATES.filter((template) => template.name === 'The Fulcrum')).toHaveLength(
+      2
+    );
+    expect(WORKOUT_TEMPLATES.find((template) => template.id === 'the-fulcrum')?.durationMinutes).toBe(
+      10
+    );
+    expect(
+      WORKOUT_TEMPLATES.find((template) => template.id === 'the-fulcrum-systemic-shift')
+        ?.durationMinutes
+    ).toBe(15);
   });
 });
 
@@ -246,6 +268,18 @@ describe('isCategoryAvailable', () => {
     expect(isCategoryAvailable(localizedTrap, 10, WORKOUT_TEMPLATES)).toBe(true);
   });
 
+  it('is true for localized-trap at 15 minutes', () => {
+    const localizedTrap = WORKOUT_CATEGORIES.find(
+      (category) => category.id === 'localized-trap'
+    );
+    expect(localizedTrap).toBeDefined();
+    if (!localizedTrap) {
+      return;
+    }
+
+    expect(isCategoryAvailable(localizedTrap, 15, WORKOUT_TEMPLATES)).toBe(true);
+  });
+
   it('is true for engine-room at 5 minutes', () => {
     const engineRoom = WORKOUT_CATEGORIES.find((category) => category.id === 'engine-room');
     expect(engineRoom).toBeDefined();
@@ -345,6 +379,11 @@ describe('categoriesForDuration', () => {
     expect(ids).toContain('localized-trap');
   });
 
+  it('includes localized-trap at 15 minutes', () => {
+    const ids = categoriesForDuration(WORKOUT_CATEGORIES, 15).map((category) => category.id);
+    expect(ids).toContain('localized-trap');
+  });
+
   it('includes engine-room at 10 minutes', () => {
     const ids = categoriesForDuration(WORKOUT_CATEGORIES, 10).map((category) => category.id);
     expect(ids).toContain('engine-room');
@@ -412,6 +451,22 @@ describe('categoryDisplayForDuration', () => {
       label: 'Push-Pull',
       description:
         'Anterior Chain versus Posterior Chain — without equipment, true pulling is a hinge-and-spinal-erector puzzle. Pair aggressive chest, shoulder, and quad pushing with heavy glute, hamstring, and posterior tension for a relentless 10-minute equilibrium that protects the joints while keeping the heart rate pinned.',
+    });
+  });
+
+  it('returns override label and description for localized-trap at 15 minutes', () => {
+    const localizedTrap = WORKOUT_CATEGORIES.find(
+      (category) => category.id === 'localized-trap'
+    );
+    expect(localizedTrap).toBeDefined();
+    if (!localizedTrap) {
+      return;
+    }
+
+    expect(categoryDisplayForDuration(localizedTrap, 15)).toEqual({
+      label: 'Systemic Shift',
+      description:
+        'Strict triplets hit upper body, lower body, and midline sequentially so no single muscle group fails completely — systemic fatigue and the central nervous system strain of constantly shifting load become the ultimate crucible.',
     });
   });
 

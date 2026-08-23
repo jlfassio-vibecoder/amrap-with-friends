@@ -61,12 +61,17 @@ export const WORKOUT_CATEGORIES: WorkoutCategoryMeta[] = [
     label: 'Localized Trap',
     description:
       'Muscular Overload — stacks two or three movements targeting the same primary movers to force local muscular failure before cardiovascular failure.',
-    availableForDurations: [5, 10],
+    availableForDurations: [5, 10, 15],
     overridesByDuration: {
       10: {
         label: 'Push-Pull',
         description:
           'Anterior Chain versus Posterior Chain — without equipment, true pulling is a hinge-and-spinal-erector puzzle. Pair aggressive chest, shoulder, and quad pushing with heavy glute, hamstring, and posterior tension for a relentless 10-minute equilibrium that protects the joints while keeping the heart rate pinned.',
+      },
+      15: {
+        label: 'Systemic Shift',
+        description:
+          'Strict triplets hit upper body, lower body, and midline sequentially so no single muscle group fails completely — systemic fatigue and the central nervous system strain of constantly shifting load become the ultimate crucible.',
       },
     },
   },
@@ -737,6 +742,136 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     ],
     tacticalNote:
       'Reach the arms straight forward during the plank to engage the lats and upper back.',
+  },
+  {
+    id: 'the-trinity',
+    name: 'The Trinity',
+    durationMinutes: 15,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Air Squats', reps: 20 },
+      { name: 'Hand-Release Push-ups', reps: 10 },
+      { name: 'V-Ups', reps: 15 },
+    ],
+    tacticalNote:
+      'The gold standard. Distributes the load evenly across all three regions.',
+  },
+  {
+    id: 'the-fulcrum-systemic-shift',
+    name: 'The Fulcrum',
+    durationMinutes: 15,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Reverse Lunges (Total)', reps: 24 },
+      { name: 'Pike Push-ups', reps: 10 },
+      { name: 'Russian Twists', reps: 20 },
+    ],
+    tacticalNote:
+      'Heavy shoulder isolation followed immediately by rotational core control.',
+  },
+  {
+    id: 'global-warning',
+    name: 'Global Warning',
+    durationMinutes: 15,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Jump Squats', reps: 15 },
+      { name: 'Commando Planks', reps: 12 },
+      { name: 'Dead Bugs', reps: 16 },
+    ],
+    tacticalNote:
+      'The dead bugs require immense concentration after the plyometric leg demand.',
+  },
+  {
+    id: 'the-apex',
+    name: 'The Apex',
+    durationMinutes: 15,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Glute Bridges', reps: 20 },
+      { name: 'Dive-Bomber Push-ups', reps: 10 },
+      { name: 'Butterfly Sit-ups', reps: 20 },
+    ],
+    tacticalNote:
+      'A massive demand on the posterior chain transitioning directly into anterior flexion.',
+  },
+  {
+    id: 'the-axis',
+    name: 'The Axis',
+    durationMinutes: 15,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Surrenders', reps: 16 },
+      { name: 'T-Push-ups', reps: 10 },
+      { name: 'Plank Jacks', reps: 20 },
+    ],
+    tacticalNote:
+      'Keep the chest proud on the surrenders to save your lower back for the plank jacks.',
+  },
+  {
+    id: 'the-triad',
+    name: 'The Triad',
+    durationMinutes: 15,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Wide Push-ups', reps: 12 },
+      { name: 'Single-Leg Glute Bridges', reps: 20 },
+      { name: 'Leg Raises', reps: 15 },
+    ],
+    tacticalNote:
+      'Pectoral isolation, unilateral glute isolation, and strict lower abdominal bracing.',
+  },
+  {
+    id: 'perimeter-defense',
+    name: 'Perimeter Defense',
+    durationMinutes: 15,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Skater Jumps (Total)', reps: 20 },
+      { name: 'Sphinx Push-ups', reps: 10 },
+      { name: 'Plank Shoulder Taps', reps: 16 },
+    ],
+    tacticalNote:
+      'Lateral power shifting instantly into heavy triceps and anti-rotational stability.',
+  },
+  {
+    id: 'base-camp',
+    name: 'Base Camp',
+    durationMinutes: 15,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Fast Air Squats', reps: 15 },
+      { name: 'Standard Push-ups', reps: 10 },
+      { name: 'Strict Sit-ups', reps: 15 },
+    ],
+    tacticalNote:
+      'A classic mechanical grinder. Do not use momentum to swing up on the sit-ups.',
+  },
+  {
+    id: 'the-equalizer',
+    name: 'The Equalizer',
+    durationMinutes: 15,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Down-Ups', reps: 10 },
+      { name: 'Alternating Lunges', reps: 20 },
+      { name: 'Plank Knee-to-Elbows', reps: 16 },
+    ],
+    tacticalNote:
+      'Getting off the floor is the tax here. Use the lunges to steady your breathing.',
+  },
+  {
+    id: 'the-spire',
+    name: 'The Spire',
+    durationMinutes: 15,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Diamond Push-ups', reps: 10 },
+      { name: 'Fast Calf Raises', reps: 20 },
+      { name: 'Bicycle Crunches', reps: 20 },
+    ],
+    tacticalNote:
+      'Protects the heavy quad/hamstring musculature but aggressively torches the extremities.',
   },
   {
     id: 'the-gas-pedal',
