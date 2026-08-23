@@ -17,7 +17,7 @@ describe('ExerciseInfoTrigger', () => {
     expect(screen.getByRole('button', { name: 'About Burpees' })).toBeTruthy();
   });
 
-  it('opens the modal showing setup steps and empty media states', () => {
+  it('opens the modal showing setup steps, sequence photo, and empty video', () => {
     render(<ExerciseInfoTrigger name="Burpees" />);
     fireEvent.click(screen.getByRole('button', { name: 'About Burpees' }));
 
@@ -28,7 +28,8 @@ describe('ExerciseInfoTrigger', () => {
     ).toBeTruthy();
     expect(screen.getByText('Common mistakes')).toBeTruthy();
     expect(screen.queryByText('AMRAP tip')).toBeNull();
-    expect(screen.getByText('No photos yet')).toBeTruthy();
+    expect(screen.queryByText('No photos yet')).toBeNull();
+    expect(screen.getByRole('img', { name: 'Burpees' })).toBeTruthy();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Video' }));
     expect(screen.getByText('No video yet')).toBeTruthy();

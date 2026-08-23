@@ -1,5 +1,9 @@
 export interface ExercisePhoto {
-  /** Relative path in the `exercise-media` Storage bucket (e.g. "burpees/1-setup.jpg"). Empty = placeholder cell. */
+  /**
+   * Relative path in the `exercise-media` Storage bucket.
+   * Convention: `{exerciseId}/sequence.jpeg` (use `.jpeg`, not `.jpg`).
+   * Empty = placeholder cell.
+   */
   url: string;
   /** Optional label for what the photo shows; omit when not needed. */
   caption?: string;
@@ -15,6 +19,13 @@ export interface ExerciseInfo {
   photos: ExercisePhoto[];
   /** Relative path in the `exercise-media` bucket (e.g. "burpees/video.mp4"). Absent = "No video yet". */
   videoUrl?: string;
+}
+
+/** Default sequence still path: `{id}/sequence.jpeg` in the exercise-media bucket. */
+function sequencePhotos(id: string, caption?: string): ExercisePhoto[] {
+  return caption
+    ? [{ url: `${id}/sequence.jpeg`, caption }]
+    : [{ url: `${id}/sequence.jpeg` }];
 }
 
 function findByNormalizedName(normalized: string): ExerciseInfo | undefined {
@@ -58,7 +69,7 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     ],
     coachingCue:
       "Land soft, chest up. If your lower back rounds on the way down, slow down — form breaks down fast when you're gassed.",
-    photos: [],
+    photos: sequencePhotos('burpees'),
   },
   {
     id: 'air-squat',
@@ -71,7 +82,10 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
       '"Tear the floor apart with your feet." This externally rotates the femur, activating the glutes and preventing the knees from caving in.',
     amrapTip:
       'Let gravity do the work on the way down. Pull yourself into the bottom quickly, then explode up. Use your arms for rhythm.',
-    photos: [],
+    photos: sequencePhotos(
+      'air-squat',
+      'Full squat sequence — stand, descent, ascent'
+    ),
   },
   {
     id: 'alternating-lunges',
@@ -84,7 +98,7 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
       '"Ride the elevator, not the escalator." Drop straight down. Do not shift your bodyweight aggressively forward over your toes.',
     amrapTip:
       'Reverse lunges are superior for AMRAPs. They protect the deceleration forces on the knee and allow for a faster, springier return to the standing position.',
-    photos: [],
+    photos: sequencePhotos('alternating-lunges'),
   },
   {
     id: 'surrenders',
@@ -97,7 +111,7 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
       '"Keep a proud chest." The moment you fold forward at the waist, you transfer the load from your quads to your lower back.',
     amrapTip:
       "Alternate your lead leg every round, not every rep, so you don't have to waste mental energy remembering which leg goes first.",
-    photos: [],
+    photos: sequencePhotos('surrenders'),
   },
   {
     id: 'glute-bridges',
@@ -110,7 +124,7 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
       '"Pinch a coin between your glutes at the top." If you just thrust your hips recklessly, you will hyper-extend your lumbar spine.',
     amrapTip:
       'Keep your toes slightly elevated off the floor to force the drive exclusively through your heels and hamstrings.',
-    photos: [],
+    photos: sequencePhotos('glute-bridges'),
   },
   {
     id: 'standard-push-ups',
@@ -123,7 +137,7 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
       '"Screw your hands into the floor." Point your index fingers straight ahead and twist outward to create torque in the shoulder capsule.',
     amrapTip:
       'Breathe in on the descent, aggressively exhale on the press. Do not hold your breath, or your heart rate will redline instantly.',
-    photos: [],
+    photos: sequencePhotos('standard-push-ups'),
   },
   {
     id: 'wide-grip-push-ups',
@@ -136,7 +150,7 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
       '"Screw your hands into the floor." Point your index fingers straight ahead and twist outward to create torque in the shoulder capsule.',
     amrapTip:
       'Breathe in on the descent, aggressively exhale on the press. Do not hold your breath, or your heart rate will redline instantly.',
-    photos: [],
+    photos: sequencePhotos('wide-grip-push-ups'),
   },
   {
     id: 'hand-release-push-ups',
@@ -149,7 +163,7 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
       '"Squeeze the shoulder blades together." Lifting the hands isn\'t a rest; it\'s an active contraction of the upper back.',
     amrapTip:
       'This enforces a dead-stop and prevents cheating the depth. Use this variation to humble users who claim they can do 50 push-ups unbroken.',
-    photos: [],
+    photos: sequencePhotos('hand-release-push-ups'),
   },
   {
     id: 'diamond-push-ups',
@@ -161,7 +175,7 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     coachingCue:
       '"Shave your ribs with your elbows." If your elbows flare out on a diamond push-up, you will destroy your rotator cuff.',
     amrapTip: 'Muscular failure happens suddenly here. Break your sets earlier than you think you need to.',
-    photos: [],
+    photos: sequencePhotos('diamond-push-ups'),
   },
   {
     id: 'pike-push-ups',
@@ -174,7 +188,7 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
       '"Look at your toes, not the floor." Tucking the chin keeps the cervical spine neutral and targets the deltoids correctly.',
     amrapTip:
       'Keep your legs straight. If your hamstrings are tight, widen your foot stance to maintain the high hip position.',
-    photos: [],
+    photos: sequencePhotos('pike-push-ups'),
   },
   {
     id: 'dive-bomber-push-ups',
@@ -186,7 +200,7 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     coachingCue: '"Slide under the barbed wire, then back out." It is a two-way fluid motion.',
     amrapTip:
       'This is a slow, tension-heavy movement. Focus on continuous, unbroken motion rather than speed.',
-    photos: [],
+    photos: sequencePhotos('dive-bomber-push-ups'),
   },
   {
     id: 't-push-ups',
@@ -199,7 +213,7 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
       '"Eyes follow the hand." Tracking your reaching hand with your eyes ensures your thoracic spine rotates fully.',
     amrapTip:
       'Widen your foot stance slightly to provide a more stable base during the rotational phase.',
-    photos: [],
+    photos: sequencePhotos('t-push-ups'),
   },
   {
     id: 'plank-shoulder-taps',
@@ -212,7 +226,7 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
       '"Balance a glass of water on your lower back." Your hips should not rock side-to-side.',
     amrapTip:
       'Widen your feet. A wider base of support kills the rotation in the hips, making the core work harder but the movement faster.',
-    photos: [],
+    photos: sequencePhotos('plank-shoulder-taps'),
   },
   {
     id: 'commando-planks',
@@ -225,7 +239,7 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
       '"Balance a glass of water on your lower back." Your hips should not rock side-to-side.',
     amrapTip:
       'Widen your feet. A wider base of support kills the rotation in the hips, making the core work harder but the movement faster.',
-    photos: [],
+    photos: sequencePhotos('commando-planks'),
   },
   {
     id: 'plank-jacks',
@@ -237,7 +251,7 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     coachingCue: '"Lock the hips in space." Do not let the hips bounce up and down with the jumps.',
     amrapTip:
       'Keep the jumps small and fast. A massive lateral jump slows down the transition and compromises the spine.',
-    photos: [],
+    photos: sequencePhotos('plank-jacks'),
   },
   {
     id: 'jump-squats',
@@ -250,7 +264,7 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
       '"Land like a ninja." Absorb the impact by landing on the mid-foot and instantly bending the knees. Never land with locked joints.',
     amrapTip:
       "You only need an inch of air to make it plyometric. Don't waste energy jumping for the ceiling.",
-    photos: [],
+    photos: sequencePhotos('jump-squats'),
   },
   {
     id: 'jumping-lunges',
@@ -263,7 +277,7 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
       '"Vertical force, not horizontal." Drive straight up. If you travel forward, you lose balance and waste time.',
     amrapTip:
       'Use your arms as a counterweight. Pumping the opposite arm forward provides stability and upward momentum.',
-    photos: [],
+    photos: sequencePhotos('jumping-lunges'),
   },
   {
     id: 'skater-jumps',
@@ -275,7 +289,7 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     coachingCue:
       '"Load the hip, explode off the edge." Think of a speed skater pushing off the ice.',
     amrapTip: 'Keep the chest up. Looking down at the floor rounds the back and cuts off your airway.',
-    photos: [],
+    photos: sequencePhotos('skater-jumps'),
   },
   {
     id: 'tuck-jumps',
@@ -288,7 +302,7 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
       '"Bring the knees to the chest, not the chest to the knees." Do not fold forward in the air.',
     amrapTip:
       'This is incredibly demanding neurologically. Do these in small, unbroken bursts (e.g., 5 reps) and take a two-second reset.',
-    photos: [],
+    photos: sequencePhotos('tuck-jumps'),
   },
   {
     id: 'broad-jumps',
@@ -301,6 +315,14 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
       '"Extend the hips fully in the air." The power comes from the glutes firing, not just the quads.',
     amrapTip:
       'For an AMRAP, do not aim for maximum distance on every jump. Aim for a consistent, sustainable 4-5 foot bound that allows for rapid turnarounds.',
-    photos: [],
+    photos: sequencePhotos('broad-jumps'),
   },
 ];
+
+// Force a full reload when this data module changes — partial HMR can leave
+// photo paths stuck as the previous empty arrays in the browser.
+if (import.meta.hot) {
+  import.meta.hot.accept(() => {
+    import.meta.hot?.invalidate();
+  });
+}

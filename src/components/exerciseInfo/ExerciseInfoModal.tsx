@@ -137,7 +137,7 @@ export function ExerciseInfoModal({ info, onClose }: ExerciseInfoModalProps) {
                       <img
                         src={getExerciseMediaUrl(photo.url)}
                         alt={photo.caption || info.name}
-                        className="aspect-square w-full rounded-card border border-border object-cover"
+                        className="h-auto w-full rounded-card border border-border object-contain"
                         onError={() => {
                           setFailedPhotoUrls((prev) => ({
                             ...prev,
