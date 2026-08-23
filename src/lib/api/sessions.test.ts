@@ -69,14 +69,14 @@ describe('sessions API', () => {
     rpcMock.mockResolvedValue({
       data: null,
       error: {
-        message: 'Session is full (max 6 participants)',
+        message: 'Session is full',
         name: 'PostgrestError',
         details: '',
         hint: '',
         code: 'P0001',
         toJSON: () => ({
           name: 'PostgrestError',
-          message: 'Session is full (max 6 participants)',
+          message: 'Session is full',
           details: '',
           hint: '',
           code: 'P0001',
@@ -95,7 +95,7 @@ describe('sessions API', () => {
     });
 
     expect(result.data).toBeNull();
-    expect(result.error?.message).toBe('This session is full (max 6 participants).');
+    expect(result.error?.message).toBe('This session is full.');
   });
 
   it('joinSession rejects invalid session ID before RPC', async () => {
@@ -107,6 +107,75 @@ describe('sessions API', () => {
     expect(rpcMock).not.toHaveBeenCalled();
     expect(result.data).toBeNull();
     expect(result.error?.message).toBe('Enter a valid session ID (UUID format).');
+  });
+
+  it('joinSession maps full-session RPC error', async () => {
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: {
+        message: 'Session is full',
+        name: 'PostgrestError',
+        details: '',
+        hint: '',
+        code: 'P0001',
+        toJSON: () => ({
+          name: 'PostgrestError',
+          message: 'Session is full',
+          details: '',
+          hint: '',
+          code: 'P0001',
+        }),
+      },
+      success: false,
+      count: null,
+      status: 400,
+      statusText: 'Bad Request',
+    });
+
+    const result = await joinSession({
+      sessionId: SESSION_ID,
+      nickname: 'Guest',
+    });
+
+    expect(result.data).toBeNull();
+    expect(result.error?.message).toBe('This session is full.');
+    expect(persistMock).not.toHaveBeenCalled();
+  });
+
+  it('joinSession surfaces generic full error when session already has 100 participants (101st join)', async () => {
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: {
+        message: 'Session is full',
+        name: 'PostgrestError',
+        details: '',
+        hint: '',
+        code: 'P0001',
+        toJSON: () => ({
+          name: 'PostgrestError',
+          message: 'Session is full',
+          details: '',
+          hint: '',
+          code: 'P0001',
+        }),
+      },
+      success: false,
+      count: null,
+      status: 400,
+      statusText: 'Bad Request',
+    });
+
+    const result = await joinSession({
+      sessionId: SESSION_ID,
+      nickname: 'Guest 101',
+    });
+
+    expect(rpcMock).toHaveBeenCalledWith('join_session', {
+      p_session_id: SESSION_ID,
+      p_nickname: 'Guest 101',
+    });
+    expect(result.data).toBeNull();
+    expect(result.error?.message).toBe('This session is full.');
   });
 
   it('joinSession calls RPC and never accepts host_token in response', async () => {

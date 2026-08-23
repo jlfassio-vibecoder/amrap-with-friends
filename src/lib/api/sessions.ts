@@ -29,7 +29,7 @@ function mapRpcError(message: string | undefined): string {
     return 'Enter a valid session ID (UUID format).';
   }
   if (message.includes('Session is full')) {
-    return 'This session is full (max 6 participants).';
+    return 'This session is full.';
   }
   if (message.includes('Session not found')) {
     return 'Session not found. Check the session ID and try again.';

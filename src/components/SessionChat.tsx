@@ -13,6 +13,7 @@ interface SessionChatProps {
   claimToken: string | null;
   isAuthenticated: boolean;
   messages: MessageRow[];
+  className?: string;
 }
 
 export function SessionChat({
@@ -21,6 +22,7 @@ export function SessionChat({
   claimToken,
   isAuthenticated,
   messages,
+  className,
 }: SessionChatProps) {
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -76,12 +78,14 @@ export function SessionChat({
   }
 
   return (
-    <section className="space-y-3 rounded border border-gray-300 p-4">
-      <h2 className="text-sm font-semibold">Chat</h2>
+    <section
+      className={`space-y-3 rounded border border-gray-300 p-4 ${className ?? ''}`}
+    >
+      <h2 className="text-sm font-semibold lg:text-base">Chat</h2>
 
       <div
         ref={listRef}
-        className="max-h-48 space-y-2 overflow-y-auto rounded border border-gray-200 bg-gray-50 p-3 text-sm"
+        className="max-h-48 space-y-2 overflow-y-auto rounded border border-gray-200 bg-gray-50 p-3 text-sm lg:max-h-none lg:min-h-0 lg:flex-1"
       >
         {messages.length === 0 ? (
           <p className="text-gray-600">No messages yet.</p>

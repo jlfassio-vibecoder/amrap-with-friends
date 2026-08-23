@@ -219,6 +219,36 @@ export function sortMessagesByCreatedAt(messages: MessageRow[]): MessageRow[] {
   return [...messages].sort((a, b) => a.created_at.localeCompare(b.created_at));
 }
 
+export function buildParticipantRoundSummaries(
+  rounds: RoundRow[],
+  participantId: string,
+  segmentIndex: number
+): Array<{ roundNumber: number; durationSec: number }> {
+  const participantRounds = rounds
+    .filter(
+      (round) =>
+        round.participant_id === participantId &&
+        round.segment_index === segmentIndex
+    )
+    .sort((a, b) => a.round_index - b.round_index);
+
+  return summarizeSortedParticipantRounds(participantRounds);
+}
+
+function summarizeSortedParticipantRounds(
+  participantRounds: RoundRow[]
+): Array<{ roundNumber: number; durationSec: number }> {
+  return participantRounds.map((round, index) => {
+    const previousElapsed =
+      index > 0 ? participantRounds[index - 1].elapsed_sec_at_round : 0;
+
+    return {
+      roundNumber: round.round_index + 1,
+      durationSec: Math.max(0, round.elapsed_sec_at_round - previousElapsed),
+    };
+  });
+}
+
 export function buildLeaderboard(
   participants: ParticipantRow[],
   rounds: RoundRow[],
@@ -228,24 +258,40 @@ export function buildLeaderboard(
   participantId: string;
   nickname: string;
   roundCount: number;
+  rounds: Array<{ roundNumber: number; durationSec: number }>;
   isSelf: boolean;
 }> {
   const counts = new Map<string, number>();
+  const roundsByParticipant = new Map<string, RoundRow[]>();
 
   for (const round of rounds) {
     if (round.segment_index !== segmentIndex) {
       continue;
     }
+
     counts.set(round.participant_id, (counts.get(round.participant_id) ?? 0) + 1);
+
+    const participantRounds = roundsByParticipant.get(round.participant_id) ?? [];
+    participantRounds.push(round);
+    roundsByParticipant.set(round.participant_id, participantRounds);
+  }
+
+  for (const participantRounds of roundsByParticipant.values()) {
+    participantRounds.sort((a, b) => a.round_index - b.round_index);
   }
 
   return participants
-    .map((participant) => ({
-      participantId: participant.id,
-      nickname: participant.nickname,
-      roundCount: counts.get(participant.id) ?? 0,
-      isSelf: participant.id === selfParticipantId,
-    }))
+    .map((participant) => {
+      const participantRounds = roundsByParticipant.get(participant.id) ?? [];
+
+      return {
+        participantId: participant.id,
+        nickname: participant.nickname,
+        roundCount: counts.get(participant.id) ?? 0,
+        rounds: summarizeSortedParticipantRounds(participantRounds),
+        isSelf: participant.id === selfParticipantId,
+      };
+    })
     .sort((a, b) => {
       if (b.roundCount !== a.roundCount) {
         return b.roundCount - a.roundCount;

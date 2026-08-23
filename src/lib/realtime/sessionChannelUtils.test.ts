@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildLeaderboard,
+  buildParticipantRoundSummaries,
   buildPresenceList,
   mergePresenceState,
   parseMessageRow,
@@ -126,6 +127,62 @@ describe('sessionChannelUtils', () => {
     expect(leaderboard[0].roundCount).toBe(2);
     expect(leaderboard[1].participantId).toBe(JOINER_ID);
     expect(leaderboard[1].roundCount).toBe(1);
+  });
+
+  it('buildParticipantRoundSummaries computes per-round durations from elapsed timestamps', () => {
+    const rounds = [
+      parseRoundRow({
+        id: 'aaaa1111-1111-4111-8111-111111111111',
+        session_id: SESSION_ID,
+        participant_id: HOST_ID,
+        round_index: 0,
+        elapsed_sec_at_round: 12,
+        segment_index: 0,
+        created_at: '2026-08-22T12:00:00.000Z',
+      })!,
+      parseRoundRow({
+        id: 'bbbb2222-2222-4222-8222-222222222222',
+        session_id: SESSION_ID,
+        participant_id: HOST_ID,
+        round_index: 1,
+        elapsed_sec_at_round: 30,
+        segment_index: 0,
+        created_at: '2026-08-22T12:00:01.000Z',
+      })!,
+    ];
+
+    expect(buildParticipantRoundSummaries(rounds, HOST_ID, 0)).toEqual([
+      { roundNumber: 1, durationSec: 12 },
+      { roundNumber: 2, durationSec: 18 },
+    ]);
+  });
+
+  it('buildLeaderboard includes per-round summaries', () => {
+    const participants = [
+      parseParticipantRow({
+        id: HOST_ID,
+        session_id: SESSION_ID,
+        nickname: 'Host',
+        role: 'host',
+        joined_at: '2026-08-22T12:00:00.000Z',
+      })!,
+    ];
+
+    const rounds = [
+      parseRoundRow({
+        id: 'aaaa1111-1111-4111-8111-111111111111',
+        session_id: SESSION_ID,
+        participant_id: HOST_ID,
+        round_index: 0,
+        elapsed_sec_at_round: 45,
+        segment_index: 0,
+        created_at: '2026-08-22T12:00:00.000Z',
+      })!,
+    ];
+
+    expect(buildLeaderboard(participants, rounds, 0, HOST_ID)[0].rounds).toEqual([
+      { roundNumber: 1, durationSec: 45 },
+    ]);
   });
 
   it('upsertParticipant and upsertRound avoid duplicates', () => {

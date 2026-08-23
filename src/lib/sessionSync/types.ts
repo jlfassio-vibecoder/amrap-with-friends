@@ -100,9 +100,15 @@ export interface SessionPresenceEntry {
   isOnline: boolean;
 }
 
+export interface LeaderboardRoundEntry {
+  roundNumber: number;
+  durationSec: number;
+}
+
 export interface LeaderboardEntry {
   participantId: string;
   nickname: string;
   roundCount: number;
+  rounds: LeaderboardRoundEntry[];
   isSelf: boolean;
 }
