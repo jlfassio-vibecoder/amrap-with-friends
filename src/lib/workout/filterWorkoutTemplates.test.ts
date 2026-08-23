@@ -30,6 +30,15 @@ describe('filterWorkoutTemplates', () => {
     ).toHaveLength(10);
   });
 
+  it('returns 10 Blood Shunt templates at 15 minutes', () => {
+    expect(
+      filterWorkoutTemplates(WORKOUT_TEMPLATES, {
+        durationMinutes: 15,
+        category: 'blood-shunt',
+      })
+    ).toHaveLength(10);
+  });
+
   it('returns 10 Localized Trap templates at 5 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
@@ -57,23 +66,40 @@ describe('filterWorkoutTemplates', () => {
     ).toHaveLength(10);
   });
 
-  it('returns empty for 15 and 20 minutes', () => {
-    for (const duration of [15, 20] as TimeDomain[]) {
-      expect(
-        filterWorkoutTemplates(WORKOUT_TEMPLATES, {
-          durationMinutes: duration,
-          category: 'blood-shunt',
-        })
-      ).toEqual([]);
-    }
+  it('returns empty for 20 minutes', () => {
+    expect(
+      filterWorkoutTemplates(WORKOUT_TEMPLATES, {
+        durationMinutes: 20,
+        category: 'blood-shunt',
+      })
+    ).toEqual([]);
+  });
+});
+
+describe('WORKOUT_TEMPLATES data integrity', () => {
+  it('uses unique ids across all templates', () => {
+    const ids = WORKOUT_TEMPLATES.map((template) => template.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('keeps distinct ids for The Metronome across durations', () => {
+    expect(WORKOUT_TEMPLATES.filter((template) => template.name === 'The Metronome')).toHaveLength(
+      2
+    );
+    expect(WORKOUT_TEMPLATES.find((template) => template.id === 'the-metronome')?.durationMinutes).toBe(
+      5
+    );
+    expect(
+      WORKOUT_TEMPLATES.find((template) => template.id === 'the-metronome-endurance')?.durationMinutes
+    ).toBe(15);
   });
 });
 
 describe('isDurationAvailable', () => {
-  it('is true for 5 and 10 minutes', () => {
+  it('is true for 5, 10, and 15 minutes', () => {
     expect(isDurationAvailable(5, WORKOUT_TEMPLATES)).toBe(true);
     expect(isDurationAvailable(10, WORKOUT_TEMPLATES)).toBe(true);
-    expect(isDurationAvailable(15, WORKOUT_TEMPLATES)).toBe(false);
+    expect(isDurationAvailable(15, WORKOUT_TEMPLATES)).toBe(true);
     expect(isDurationAvailable(20, WORKOUT_TEMPLATES)).toBe(false);
   });
 });
@@ -88,6 +114,7 @@ describe('isCategoryAvailable', () => {
 
     expect(isCategoryAvailable(bloodShunt, 5, WORKOUT_TEMPLATES)).toBe(true);
     expect(isCategoryAvailable(bloodShunt, 10, WORKOUT_TEMPLATES)).toBe(true);
+    expect(isCategoryAvailable(bloodShunt, 15, WORKOUT_TEMPLATES)).toBe(true);
   });
 
   it('is false for non-blood-shunt categories at 10 minutes', () => {
@@ -156,8 +183,14 @@ describe('firstAvailableCategoryForDuration', () => {
     );
   });
 
-  it('returns null for 15 minutes when no category has templates', () => {
+  it('returns blood-shunt for 15 minutes', () => {
     expect(firstAvailableCategoryForDuration(WORKOUT_CATEGORIES, 15, WORKOUT_TEMPLATES)).toBe(
+      'blood-shunt'
+    );
+  });
+
+  it('returns null for 20 minutes when no category has templates', () => {
+    expect(firstAvailableCategoryForDuration(WORKOUT_CATEGORIES, 20, WORKOUT_TEMPLATES)).toBe(
       null
     );
   });

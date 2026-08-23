@@ -37,7 +37,7 @@ export const WORKOUT_CATEGORIES: WorkoutCategoryMeta[] = [
     label: 'Blood Shunt',
     description:
       'Peripheral Heart Action — pairs a high-output lower body movement directly with an upper body movement. Fast, breathless, chaotic.',
-    availableForDurations: [5, 10],
+    availableForDurations: [5, 10, 15],
   },
   {
     id: 'localized-trap',
@@ -308,6 +308,136 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     ],
     tacticalNote:
       'Constant up-and-down motion. The calf raises trap blood in the extreme lower leg before forcing it back to the chest.',
+  },
+  {
+    id: 'the-long-haul',
+    name: 'The Long Haul',
+    durationMinutes: 15,
+    category: 'blood-shunt',
+    movements: [
+      { name: 'Air Squats', reps: 20 },
+      { name: 'Pike Push-ups', reps: 10 },
+      { name: 'Jumping Jacks', reps: 40 },
+    ],
+    tacticalNote:
+      'A pure aerobic triplet. Settle into a conversational pace immediately.',
+  },
+  {
+    id: 'deep-circulation',
+    name: 'Deep Circulation',
+    durationMinutes: 15,
+    category: 'blood-shunt',
+    movements: [
+      { name: 'Reverse Lunges (Total)', reps: 20 },
+      { name: 'Hand-Release Push-ups', reps: 12 },
+      { name: 'Sprawls', reps: 20 },
+    ],
+    tacticalNote:
+      'The sprawls will spike the heart rate; recover your breath during the lunges.',
+  },
+  {
+    id: 'the-piston-grind',
+    name: 'The Piston Grind',
+    durationMinutes: 15,
+    category: 'blood-shunt',
+    movements: [
+      { name: 'Glute Bridges', reps: 20 },
+      { name: 'Dive-Bomber Push-ups', reps: 10 },
+      { name: 'Mountain Climbers', reps: 30 },
+    ],
+    tacticalNote:
+      'Slow, heavy tension on the floor before a rapid core flush.',
+  },
+  {
+    id: 'sustained-pressure',
+    name: 'Sustained Pressure',
+    durationMinutes: 15,
+    category: 'blood-shunt',
+    movements: [
+      { name: 'Surrenders', reps: 16 },
+      { name: 'Wide Push-ups', reps: 12 },
+      { name: 'High Knees', reps: 30 },
+    ],
+    tacticalNote:
+      'Manage your breathing on the surrenders. Keep the chest completely open.',
+  },
+  {
+    id: 'the-marathon-shunt',
+    name: 'The Marathon Shunt',
+    durationMinutes: 15,
+    category: 'blood-shunt',
+    movements: [
+      { name: 'Gorilla Sprawls', reps: 10 },
+      { name: 'Commando Planks', reps: 16 },
+      { name: 'Skater Jumps', reps: 30 },
+    ],
+    tacticalNote:
+      'Constant elevation changes. Do not rush the commando planks.',
+  },
+  {
+    id: 'aerobic-shift',
+    name: 'Aerobic Shift',
+    durationMinutes: 15,
+    category: 'blood-shunt',
+    movements: [
+      { name: 'Alternating Lunges', reps: 20 },
+      { name: 'T-Push-ups', reps: 10 },
+      { name: 'Double-Tap Jumps', reps: 40 },
+    ],
+    tacticalNote:
+      'Rotational pressing prevents early shoulder fatigue in this long domain.',
+  },
+  {
+    id: 'the-steady-state',
+    name: 'The Steady State',
+    durationMinutes: 15,
+    category: 'blood-shunt',
+    movements: [
+      { name: 'Air Squats', reps: 20 },
+      { name: 'Diamond Push-ups', reps: 10 },
+      { name: 'Down-Ups', reps: 20 },
+    ],
+    tacticalNote:
+      'Triceps will fatigue late. Break the push-ups into two sets of 5 early on.',
+  },
+  {
+    id: 'arterial-endurance',
+    name: 'Arterial Endurance',
+    durationMinutes: 15,
+    category: 'blood-shunt',
+    movements: [
+      { name: 'Bear Crawl to Broad Jumps', reps: 8 },
+      { name: 'Plank Shoulder Taps', reps: 16 },
+      { name: 'Butt Kicks', reps: 40 },
+    ],
+    tacticalNote:
+      'High time-under-tension. Keep the crawling deliberate and flat-backed.',
+  },
+  {
+    id: 'the-metronome-endurance',
+    name: 'The Metronome',
+    durationMinutes: 15,
+    category: 'blood-shunt',
+    movements: [
+      { name: 'Single-Leg Glute Bridges (10/leg)', reps: 20 },
+      { name: 'Standard Push-ups', reps: 10 },
+      { name: 'Jumping Jacks', reps: 40 },
+    ],
+    tacticalNote:
+      'Isolate the glutes, then use the jacks to flush the entire system.',
+  },
+  {
+    id: 'system-flush',
+    name: 'System Flush',
+    durationMinutes: 15,
+    category: 'blood-shunt',
+    movements: [
+      { name: 'Reverse Lunges', reps: 16 },
+      { name: 'Pike Push-ups', reps: 10 },
+      { name: 'Mountain Climbers', reps: 30 },
+    ],
+    tacticalNote:
+      'The shoulders will bear the brunt here. Stay stacked perfectly over your wrists.',
   },
   {
     id: 'the-acid-bath',
