@@ -139,6 +139,15 @@ describe('filterWorkoutTemplates', () => {
       })
     ).toHaveLength(10);
   });
+
+  it('returns 10 4-Point Cascade templates at 20 minutes', () => {
+    expect(
+      filterWorkoutTemplates(WORKOUT_TEMPLATES, {
+        durationMinutes: 20,
+        category: 'four-point-cascade',
+      })
+    ).toHaveLength(10);
+  });
 });
 
 describe('WORKOUT_TEMPLATES data integrity', () => {
@@ -206,6 +215,28 @@ describe('WORKOUT_TEMPLATES data integrity', () => {
       WORKOUT_TEMPLATES.find((template) => template.id === 'the-cruiser-endurance')?.durationMinutes
     ).toBe(15);
   });
+
+  it('keeps distinct ids for The Piston across durations', () => {
+    expect(WORKOUT_TEMPLATES.filter((template) => template.name === 'The Piston')).toHaveLength(2);
+    expect(WORKOUT_TEMPLATES.find((template) => template.id === 'the-piston')?.durationMinutes).toBe(
+      5
+    );
+    expect(
+      WORKOUT_TEMPLATES.find((template) => template.id === 'the-piston-cascade')?.durationMinutes
+    ).toBe(20);
+  });
+
+  it('keeps distinct ids for The Sentinel across 20-minute categories', () => {
+    expect(WORKOUT_TEMPLATES.filter((template) => template.name === 'The Sentinel')).toHaveLength(
+      2
+    );
+    expect(
+      WORKOUT_TEMPLATES.find((template) => template.id === 'the-sentinel')?.category
+    ).toBe('aerobic-matrix');
+    expect(
+      WORKOUT_TEMPLATES.find((template) => template.id === 'the-sentinel-cascade')?.category
+    ).toBe('four-point-cascade');
+  });
 });
 
 describe('isDurationAvailable', () => {
@@ -266,6 +297,18 @@ describe('isCategoryAvailable', () => {
     expect(isCategoryAvailable(aerobicMatrix, 20, WORKOUT_TEMPLATES)).toBe(true);
   });
 
+  it('is true for four-point-cascade at 20 minutes', () => {
+    const fourPointCascade = WORKOUT_CATEGORIES.find(
+      (category) => category.id === 'four-point-cascade'
+    );
+    expect(fourPointCascade).toBeDefined();
+    if (!fourPointCascade) {
+      return;
+    }
+
+    expect(isCategoryAvailable(fourPointCascade, 20, WORKOUT_TEMPLATES)).toBe(true);
+  });
+
   it('is false for aerobic-matrix at 5, 10, and 15 minutes', () => {
     const aerobicMatrix = WORKOUT_CATEGORIES.find(
       (category) => category.id === 'aerobic-matrix'
@@ -278,6 +321,20 @@ describe('isCategoryAvailable', () => {
     expect(isCategoryAvailable(aerobicMatrix, 5, WORKOUT_TEMPLATES)).toBe(false);
     expect(isCategoryAvailable(aerobicMatrix, 10, WORKOUT_TEMPLATES)).toBe(false);
     expect(isCategoryAvailable(aerobicMatrix, 15, WORKOUT_TEMPLATES)).toBe(false);
+  });
+
+  it('is false for four-point-cascade at 5, 10, and 15 minutes', () => {
+    const fourPointCascade = WORKOUT_CATEGORIES.find(
+      (category) => category.id === 'four-point-cascade'
+    );
+    expect(fourPointCascade).toBeDefined();
+    if (!fourPointCascade) {
+      return;
+    }
+
+    expect(isCategoryAvailable(fourPointCascade, 5, WORKOUT_TEMPLATES)).toBe(false);
+    expect(isCategoryAvailable(fourPointCascade, 10, WORKOUT_TEMPLATES)).toBe(false);
+    expect(isCategoryAvailable(fourPointCascade, 15, WORKOUT_TEMPLATES)).toBe(false);
   });
 
   it('is false for legacy categories at 20 minutes', () => {
@@ -419,12 +476,14 @@ describe('categoriesForDuration', () => {
         (category) => category.id
       );
       expect(ids).not.toContain('aerobic-matrix');
+      expect(ids).not.toContain('four-point-cascade');
     }
   });
 
-  it('includes only aerobic-matrix at 20 minutes', () => {
+  it('includes aerobic-matrix and four-point-cascade at 20 minutes', () => {
     expect(categoriesForDuration(WORKOUT_CATEGORIES, 20).map((category) => category.id)).toEqual([
       'aerobic-matrix',
+      'four-point-cascade',
     ]);
   });
 

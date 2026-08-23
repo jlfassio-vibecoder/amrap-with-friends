@@ -5,7 +5,8 @@ export type WorkoutCategory =
   | 'localized-trap'
   | 'engine-room'
   | 'midline-tension'
-  | 'aerobic-matrix';
+  | 'aerobic-matrix'
+  | 'four-point-cascade';
 
 export interface WorkoutCategoryMeta {
   id: WorkoutCategory;
@@ -118,6 +119,13 @@ export const WORKOUT_CATEGORIES: WorkoutCategoryMeta[] = [
     label: 'Aerobic Matrix',
     description:
       'The Quadruplet — four movements distribute fatigue globally so the cardiovascular system stays the sole bottleneck, letting you keep moving for the full 20 minutes without hitting a localized muscular wall.',
+    availableForDurations: [20],
+  },
+  {
+    id: 'four-point-cascade',
+    label: '4-Point Cascade',
+    description:
+      'The Cascade — four movements sequenced to rotate stress through engine, push, legs, and midline so fatigue cascades through the body instead of pooling in one muscle group, keeping you moving for the full 20 minutes.',
     availableForDurations: [20],
   },
 ];
@@ -1775,5 +1783,145 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     ],
     tacticalNote:
       'Attacks the posterior chain heavily. Squeeze the glutes aggressively on the Supermans.',
+  },
+  {
+    id: 'the-baseline',
+    name: 'The Baseline',
+    durationMinutes: 20,
+    category: 'four-point-cascade',
+    movements: [
+      { name: 'Jumping Jacks', reps: 20 },
+      { name: 'Hand-Release Push-ups', reps: 10 },
+      { name: 'Air Squats', reps: 20 },
+      { name: 'V-Ups', reps: 10 },
+    ],
+    tacticalNote:
+      'The gold standard of global distribution. Breathe easily on the jacks, brace hard on the V-Ups.',
+  },
+  {
+    id: 'tactical-shift',
+    name: 'Tactical Shift',
+    durationMinutes: 20,
+    category: 'four-point-cascade',
+    movements: [
+      { name: 'High Knees', reps: 20 },
+      { name: 'Pike Push-ups', reps: 10 },
+      { name: 'Reverse Lunges', reps: 20 },
+      { name: 'Plank Shoulder Taps', reps: 10 },
+    ],
+    tacticalNote:
+      'Vertical engine, vertical press, heavy leg tension, and rigid anti-rotation.',
+  },
+  {
+    id: 'the-vanguard',
+    name: 'The Vanguard',
+    durationMinutes: 20,
+    category: 'four-point-cascade',
+    movements: [
+      { name: 'Combat Sprawls', reps: 15 },
+      { name: 'Glute Bridges', reps: 15 },
+      { name: 'Skater Jumps', reps: 20 },
+      { name: 'Dead Bugs', reps: 10 },
+    ],
+    tacticalNote:
+      'A heavy tax on the posterior chain. Use the skater jumps to flush the lactic acid from the glutes.',
+  },
+  {
+    id: 'overwatch',
+    name: 'Overwatch',
+    durationMinutes: 20,
+    category: 'four-point-cascade',
+    movements: [
+      { name: 'Mountain Climbers', reps: 20 },
+      { name: 'T-Push-ups', reps: 10 },
+      { name: 'Jump Squats', reps: 15 },
+      { name: 'Strict Sit-ups', reps: 10 },
+    ],
+    tacticalNote:
+      'Rotational pressing and explosive legs, sandwiched by core work. Pace the jump squats.',
+  },
+  {
+    id: 'the-perimeter',
+    name: 'The Perimeter',
+    durationMinutes: 20,
+    category: 'four-point-cascade',
+    movements: [
+      { name: 'Lateral Line Hops', reps: 20 },
+      { name: 'Dive-Bomber Push-ups', reps: 10 },
+      { name: 'Alternating Lunges', reps: 20 },
+      { name: 'Commando Planks', reps: 10 },
+    ],
+    tacticalNote:
+      'Moving side-to-side, swooping low, striding forward, and pressing up. Total 3D movement.',
+  },
+  {
+    id: 'shockwave',
+    name: 'Shockwave',
+    durationMinutes: 20,
+    category: 'four-point-cascade',
+    movements: [
+      { name: 'Down-Ups', reps: 15 },
+      { name: 'Diamond Push-ups', reps: 10 },
+      { name: 'Fast Calf Raises', reps: 15 },
+      { name: 'Butterfly Sit-ups', reps: 15 },
+    ],
+    tacticalNote:
+      'Triceps and calves are heavily isolated here, but the 15-rep cap prevents total burnout.',
+  },
+  {
+    id: 'the-sentinel-cascade',
+    name: 'The Sentinel',
+    durationMinutes: 20,
+    category: 'four-point-cascade',
+    movements: [
+      { name: 'Butt Kicks', reps: 20 },
+      { name: 'Sphinx Push-ups', reps: 10 },
+      { name: 'Single-Leg Glute Bridges (Total)', reps: 20 },
+      { name: 'Russian Twists', reps: 10 },
+    ],
+    tacticalNote:
+      'Heavy triceps and hamstring focus. The butt kicks keep the engine running while standing.',
+  },
+  {
+    id: 'crossfire',
+    name: 'Crossfire',
+    durationMinutes: 20,
+    category: 'four-point-cascade',
+    movements: [
+      { name: 'Cross-Body Climbers', reps: 20 },
+      { name: 'Standard Push-ups', reps: 10 },
+      { name: 'Bodyweight Good Mornings', reps: 15 },
+      { name: 'Double-Tap Jumps', reps: 20 },
+    ],
+    tacticalNote:
+      'Huge demand on the midline and hamstrings. Keep the back perfectly flat on the good mornings.',
+  },
+  {
+    id: 'the-piston-cascade',
+    name: 'The Piston',
+    durationMinutes: 20,
+    category: 'four-point-cascade',
+    movements: [
+      { name: 'Half-Burpees', reps: 15 },
+      { name: 'Wide Push-ups', reps: 10 },
+      { name: 'Air Squats', reps: 20 },
+      { name: 'Alternating Bird-Dogs', reps: 10 },
+    ],
+    tacticalNote:
+      'Unrelenting quad and chest pressure. The bird-dogs at the end are a necessary spinal reset.',
+  },
+  {
+    id: 'atmosphere',
+    name: 'Atmosphere',
+    durationMinutes: 20,
+    category: 'four-point-cascade',
+    movements: [
+      { name: 'Skater Jumps', reps: 20 },
+      { name: 'Superman Raises', reps: 15 },
+      { name: 'Combat Sprawls', reps: 15 },
+      { name: 'Plank Knee-to-Elbows', reps: 10 },
+    ],
+    tacticalNote:
+      'The heart rate will spike violently on the sprawls and jumps; control your breathing on the floor.',
   },
 ];
