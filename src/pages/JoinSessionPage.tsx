@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { joinSession } from '@/lib/api/sessions';
 import { getSupabaseConfigError } from '@/lib/supabase';
 
@@ -44,17 +45,23 @@ export default function JoinSessionPage() {
   }
 
   return (
-    <main className="mx-auto max-w-lg space-y-6 p-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Join session</h1>
-        <p className="text-sm text-gray-600">Enter the session ID shared by your host.</p>
+    <NarrowPageLayout title="Join session" subtitle="Enter a session ID">
+      <p className="text-sm text-secondary lg:hidden">
+        Enter the session ID shared by your host.
+      </p>
+
+      <div className="hidden space-y-2 lg:block">
+        <h1 className="text-display text-5xl text-ink">Join session</h1>
+        <p className="text-sm text-secondary">
+          Enter the session ID shared by your host.
+        </p>
       </div>
 
-      <form className="space-y-4" onSubmit={handleSubmit}>
+      <form className="card space-y-4 p-6" onSubmit={handleSubmit}>
         <label className="block space-y-1">
-          <span className="text-sm font-medium">Session ID</span>
+          <span className="text-sm font-semibold">Session ID</span>
           <input
-            className="w-full rounded border border-gray-300 px-3 py-2"
+            className="input-field"
             value={sessionId}
             onChange={(e) => setSessionId(e.target.value)}
             placeholder="Paste session ID"
@@ -63,9 +70,9 @@ export default function JoinSessionPage() {
         </label>
 
         <label className="block space-y-1">
-          <span className="text-sm font-medium">Your nickname</span>
+          <span className="text-sm font-semibold">Your nickname</span>
           <input
-            className="w-full rounded border border-gray-300 px-3 py-2"
+            className="input-field"
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
             placeholder="Your nickname"
@@ -74,20 +81,16 @@ export default function JoinSessionPage() {
           />
         </label>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-error">Error: {error}</p>}
 
-        <button
-          type="submit"
-          className="rounded bg-gray-900 px-4 py-2 text-white disabled:opacity-50"
-          disabled={loading}
-        >
+        <button type="submit" className="btn-primary" disabled={loading}>
           {loading ? 'Joining…' : 'Join session'}
         </button>
       </form>
 
-      <p className="text-sm">
-        <Link to="/create">Create a new session</Link>
+      <p className="text-center text-sm">
+        <Link className="link-accent" to="/create">Create a new session</Link>
       </p>
-    </main>
+    </NarrowPageLayout>
   );
 }

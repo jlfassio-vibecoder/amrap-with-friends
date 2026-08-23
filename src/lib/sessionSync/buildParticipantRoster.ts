@@ -13,14 +13,12 @@ export interface ParticipantRosterEntry {
 }
 
 const AVATAR_PALETTE = [
-  'bg-violet-600',
-  'bg-pink-600',
-  'bg-teal-600',
-  'bg-orange-600',
-  'bg-blue-600',
-  'bg-indigo-600',
-  'bg-rose-600',
-  'bg-cyan-600',
+  'bg-avatar-coral',
+  'bg-avatar-plum',
+  'bg-avatar-teal',
+  'bg-avatar-ochre',
+  'bg-avatar-sage',
+  'bg-avatar-slate',
 ] as const;
 
 function hashParticipantId(participantId: string): number {

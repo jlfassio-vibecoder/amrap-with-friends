@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { createSession } from '@/lib/api/sessions';
 import { getSupabaseConfigError } from '@/lib/supabase';
 import { parseWorkoutText } from '@/lib/workout/parseWorkoutLines';
 
-const DURATION_OPTIONS = [5, 15, 20] as const;
+const DURATION_OPTIONS = [5, 10, 15, 20] as const;
 
 export default function CreateSessionPage() {
   const navigate = useNavigate();
@@ -50,17 +51,23 @@ export default function CreateSessionPage() {
   }
 
   return (
-    <main className="mx-auto max-w-lg space-y-6 p-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Create session</h1>
-        <p className="text-sm text-gray-600">Start an AMRAP session and invite friends to join.</p>
+    <NarrowPageLayout title="Create session" subtitle="Start a new AMRAP">
+      <p className="text-sm text-secondary lg:hidden">
+        Start an AMRAP session and invite friends to join.
+      </p>
+
+      <div className="hidden space-y-2 lg:block">
+        <h1 className="text-display text-5xl text-ink">Create session</h1>
+        <p className="text-sm text-secondary">
+          Start an AMRAP session and invite friends to join.
+        </p>
       </div>
 
-      <form className="space-y-4" onSubmit={handleSubmit}>
+      <form className="card space-y-4 p-6" onSubmit={handleSubmit}>
         <label className="block space-y-1">
-          <span className="text-sm font-medium">Your nickname</span>
+          <span className="text-sm font-semibold">Your nickname</span>
           <input
-            className="w-full rounded border border-gray-300 px-3 py-2"
+            className="input-field"
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
             placeholder="Host nickname"
@@ -70,9 +77,9 @@ export default function CreateSessionPage() {
         </label>
 
         <label className="block space-y-1">
-          <span className="text-sm font-medium">Duration (minutes)</span>
+          <span className="text-sm font-semibold">Duration (minutes)</span>
           <select
-            className="w-full rounded border border-gray-300 px-3 py-2"
+            className="input-field"
             value={durationMinutes}
             onChange={(e) => setDurationMinutes(Number(e.target.value))}
           >
@@ -83,9 +90,9 @@ export default function CreateSessionPage() {
         </label>
 
         <label className="block space-y-1">
-          <span className="text-sm font-medium">Workout (one exercise per line)</span>
+          <span className="text-sm font-semibold">Workout (one exercise per line)</span>
           <textarea
-            className="min-h-32 w-full rounded border border-gray-300 px-3 py-2"
+            className="input-field min-h-32"
             value={workoutText}
             onChange={(e) => setWorkoutText(e.target.value)}
             placeholder="10 Burpees&#10;Row 200m&#10;Squats"
@@ -93,20 +100,16 @@ export default function CreateSessionPage() {
           />
         </label>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-error">Error: {error}</p>}
 
-        <button
-          type="submit"
-          className="rounded bg-gray-900 px-4 py-2 text-white disabled:opacity-50"
-          disabled={loading}
-        >
+        <button type="submit" className="btn-primary" disabled={loading}>
           {loading ? 'Creating…' : 'Create session'}
         </button>
       </form>
 
-      <p className="text-sm">
-        <Link to="/join">Join an existing session</Link>
+      <p className="text-center text-sm">
+        <Link className="link-accent" to="/join">Join an existing session</Link>
       </p>
-    </main>
+    </NarrowPageLayout>
   );
 }

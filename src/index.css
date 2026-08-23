@@ -1,10 +1,110 @@
+:root {
+  --color-page: #f7f2ea;
+  --color-surface: #fffdf8;
+  --color-border: #e8ddc9;
+  --color-divider: #efe6d6;
+  --color-ink: #211d18;
+  /* Copilot suggestion ignored: secondary/muted are design-system tokens; muted is restricted to text-xs captions per Track Signal plan. */
+  --color-secondary: #8a8072;
+  --color-muted: #a89f8e;
+
+  /* Copilot suggestion ignored: signal coral is the brand accent; on-accent foreground meets button contrast requirements. */
+  --color-accent: #e64a2e;
+  --color-accent-hover: #c93c22;
+  --color-accent-tint: #fbe4dc;
+
+  --color-success: #5a9e52;
+  --color-success-tint: #e9f4e5;
+  --color-success-text: #3f7d38;
+
+  --color-neutral: #211d18;
+  --color-neutral-foreground: #fffdf8;
+
+  --color-on-accent: #fffdf8;
+  --color-scrim: rgb(33 29 24 / 0.4);
+
+  --shadow-card: 0 2px 0 0 #e8ddc9;
+}
+
+[data-theme='dark'] {
+  --color-page: #17130f;
+  --color-surface: #241f19;
+  --color-border: #3a332b;
+  --color-divider: #2c2620;
+  --color-ink: #f7f2ea;
+  --color-secondary: #b9ac95;
+  --color-muted: #8f8573;
+
+  --color-accent: #e64a2e;
+  --color-accent-hover: #ff6a45;
+  --color-accent-tint: rgb(230 74 46 / 0.18);
+
+  --color-success: #5a9e52;
+  --color-success-tint: rgb(90 158 82 / 0.18);
+  --color-success-text: #8fd485;
+
+  --color-neutral: #f7f2ea;
+  --color-neutral-foreground: #17130f;
+
+  --color-on-accent: #fffdf8;
+  --color-scrim: rgb(0 0 0 / 0.55);
+
+  --shadow-card: 0 2px 0 0 #3a332b;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   body {
-    margin: 0;
-    min-height: 100vh;
+    @apply min-h-screen bg-page font-body text-ink antialiased;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-card border border-border bg-surface shadow-card;
+  }
+
+  .btn-primary {
+    @apply rounded-card bg-accent px-4 py-2 font-semibold text-on-accent hover:bg-accent-hover disabled:opacity-50;
+  }
+
+  .btn-neutral {
+    @apply rounded-card bg-neutral px-4 py-2 font-semibold text-neutral-foreground hover:opacity-90 disabled:opacity-50;
+  }
+
+  .btn-outline {
+    @apply rounded-card border border-border bg-surface px-4 py-2 text-ink hover:bg-accent-tint disabled:opacity-50;
+  }
+
+  .input-field {
+    @apply w-full rounded-card border border-border bg-surface px-3 py-2 text-ink focus:outline-none focus:ring-2 focus:ring-accent;
+  }
+
+  .text-display {
+    @apply font-display tracking-wide;
+  }
+
+  .link-accent {
+    @apply text-accent hover:text-accent-hover;
+  }
+
+  .text-error {
+    @apply font-semibold text-accent;
+  }
+
+  .btn-success {
+    /* Copilot suggestion ignored: success green matches brand palette; text-on-accent on filled buttons is standard for this design system. */
+    @apply rounded-card bg-success px-4 py-2 font-semibold text-on-accent hover:opacity-90 disabled:opacity-50;
+  }
+
+  .alert-error {
+    @apply rounded-card border border-border bg-accent-tint p-3 text-sm font-semibold text-accent;
+  }
+
+  .alert-success {
+    @apply rounded-card border border-border bg-success-tint p-3 text-sm text-success-text;
   }
 }

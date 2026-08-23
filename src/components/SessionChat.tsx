@@ -78,21 +78,19 @@ export function SessionChat({
   }
 
   return (
-    <section
-      className={`space-y-3 rounded border border-gray-300 p-4 ${className ?? ''}`}
-    >
-      <h2 className="text-sm font-semibold lg:text-base">Chat</h2>
+    <section className={`card space-y-3 p-4 ${className ?? ''}`}>
+      <h2 className="text-display text-sm text-ink lg:text-base">Chat</h2>
 
       <div
         ref={listRef}
-        className="max-h-48 space-y-2 overflow-y-auto rounded border border-gray-200 bg-gray-50 p-3 text-sm lg:max-h-none lg:min-h-0 lg:flex-1"
+        className="max-h-48 space-y-2 overflow-y-auto rounded-card border border-divider bg-page p-3 text-sm lg:max-h-none lg:min-h-0 lg:flex-1"
       >
         {messages.length === 0 ? (
-          <p className="text-gray-600">No messages yet.</p>
+          <p className="text-secondary">No messages yet.</p>
         ) : (
           messages.map((message) => (
             <div key={message.id} className="space-y-0.5">
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted">
                 {message.nickname} · {new Date(message.created_at).toLocaleTimeString()}
               </p>
               <p>{message.body}</p>
@@ -101,12 +99,12 @@ export function SessionChat({
         )}
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-error text-sm">Error: {error}</p>}
 
       <form className="flex gap-2" onSubmit={handleSubmit}>
         <input
           type="text"
-          className="min-w-0 flex-1 rounded border border-gray-300 px-3 py-2 text-sm"
+          className="input-field min-w-0 flex-1 text-sm"
           placeholder="Type a message…"
           value={input}
           maxLength={MESSAGE_MAX_LENGTH}
@@ -115,7 +113,7 @@ export function SessionChat({
         />
         <button
           type="submit"
-          className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-neutral text-sm"
           disabled={isSending}
         >
           {isSending ? 'Sending…' : 'Send'}
