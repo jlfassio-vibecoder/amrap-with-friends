@@ -19,6 +19,22 @@ export function templateToExercises(template: WorkoutTemplate): WorkoutExercise[
   return template.movements.map(templateMovementToExercise);
 }
 
+export function formatTemplateMovementLine(movement: WorkoutTemplateMovement): string {
+  if (movement.reps === undefined) {
+    return movement.name;
+  }
+
+  if (movement.unit === 'sec') {
+    return `${movement.reps}-Sec ${movement.name}`;
+  }
+
+  if (movement.unit && movement.unit !== 'reps') {
+    return `${movement.name} ${movement.reps}${movement.unit}`;
+  }
+
+  return `${movement.reps} ${movement.name}`;
+}
+
 export function exercisesToWorkoutText(exercises: WorkoutExercise[]): string {
   return exercises
     .map((exercise) => {

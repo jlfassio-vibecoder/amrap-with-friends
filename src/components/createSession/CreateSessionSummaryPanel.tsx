@@ -1,5 +1,6 @@
 import type { FormEvent, ReactNode } from 'react';
 import type { WorkoutTemplate } from '@/data/workoutTemplates';
+import { formatTemplateMovementLine } from '@/lib/workout/templateToExercises';
 
 const DURATION_OPTIONS = [5, 10, 15, 20] as const;
 
@@ -13,14 +14,6 @@ interface CreateSessionSummaryPanelProps {
   onNicknameChange: (value: string) => void;
   onDurationChange: (value: number) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-}
-
-function formatMovementLine(movement: WorkoutTemplate['movements'][number]): string {
-  if (movement.reps === undefined) {
-    return movement.name;
-  }
-
-  return `${movement.reps} ${movement.name}`;
 }
 
 function SummaryField({ label, children }: { label: string; children: ReactNode }) {
@@ -87,7 +80,7 @@ export function CreateSessionSummaryPanel({
             <ul className="space-y-1 text-sm text-ink">
               {selectedTemplate.movements.map((movement) => (
                 <li key={`${selectedTemplate.id}-${movement.name}`}>
-                  {formatMovementLine(movement)}
+                  {formatTemplateMovementLine(movement)}
                 </li>
               ))}
             </ul>

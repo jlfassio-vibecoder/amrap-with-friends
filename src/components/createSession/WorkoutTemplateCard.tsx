@@ -1,17 +1,10 @@
 import type { WorkoutTemplate } from '@/data/workoutTemplates';
+import { formatTemplateMovementLine } from '@/lib/workout/templateToExercises';
 
 interface WorkoutTemplateCardProps {
   template: WorkoutTemplate;
   selected: boolean;
   onSelect: (template: WorkoutTemplate) => void;
-}
-
-function formatMovementLine(movement: WorkoutTemplate['movements'][number]): string {
-  if (movement.reps === undefined) {
-    return movement.name;
-  }
-
-  return `${movement.reps} ${movement.name}`;
 }
 
 export function WorkoutTemplateCard({ template, selected, onSelect }: WorkoutTemplateCardProps) {
@@ -34,10 +27,19 @@ export function WorkoutTemplateCard({ template, selected, onSelect }: WorkoutTem
           ✓
         </span>
       ) : null}
-      <h3 className="text-display text-base text-ink">{template.name}</h3>
+      <div className="space-y-1">
+        <h3 className="text-display text-base text-ink">{template.name}</h3>
+        {template.focus ? (
+          <span className="inline-block rounded-full border border-border bg-page px-2 py-0.5 text-xs font-semibold text-secondary">
+            {template.focus}
+          </span>
+        ) : null}
+      </div>
       <ul className="space-y-1 text-sm text-ink">
         {template.movements.map((movement) => (
-          <li key={`${template.id}-${movement.name}`}>{formatMovementLine(movement)}</li>
+          <li key={`${template.id}-${movement.name}`}>
+            {formatTemplateMovementLine(movement)}
+          </li>
         ))}
       </ul>
       <p className="text-xs italic text-secondary">{template.tacticalNote}</p>

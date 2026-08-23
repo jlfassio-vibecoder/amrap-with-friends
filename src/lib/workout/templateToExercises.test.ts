@@ -4,6 +4,7 @@ import { parseWorkoutText } from './parseWorkoutLines';
 import {
   applyTemplate,
   exercisesToWorkoutText,
+  formatTemplateMovementLine,
   templateMovementToExercise,
   templateToExercises,
 } from './templateToExercises';
@@ -56,6 +57,59 @@ describe('exercisesToWorkoutText', () => {
 
   it('formats name-only lines', () => {
     expect(exercisesToWorkoutText([{ name: 'Burpees' }])).toBe('Burpees');
+  });
+
+  it('formats timed holds with trailing sec unit', () => {
+    expect(
+      exercisesToWorkoutText([{ name: 'Bottom Squat Hold', target: 10, unit: 'sec' }])
+    ).toBe('Bottom Squat Hold 10sec');
+  });
+});
+
+describe('formatTemplateMovementLine', () => {
+  it('displays sec holds with a readable prefix', () => {
+    expect(
+      formatTemplateMovementLine({ name: 'Bottom Squat Hold', reps: 10, unit: 'sec' })
+    ).toBe('10-Sec Bottom Squat Hold');
+    expect(formatTemplateMovementLine({ name: 'Hollow Hold', reps: 15, unit: 'sec' })).toBe(
+      '15-Sec Hollow Hold'
+    );
+  });
+});
+
+describe('timed hold round-trip', () => {
+  it('round-trips Bottom Squat Hold through parseWorkoutText', () => {
+    const movement = templateMovementToExercise({
+      name: 'Bottom Squat Hold',
+      reps: 10,
+      unit: 'sec',
+    });
+    const text = exercisesToWorkoutText([movement]);
+    expect(text).toBe('Bottom Squat Hold 10sec');
+    expect(parseWorkoutText(text)).toEqual([movement]);
+  });
+
+  it('round-trips Hollow Hold through parseWorkoutText', () => {
+    const movement = templateMovementToExercise({
+      name: 'Hollow Hold',
+      reps: 15,
+      unit: 'sec',
+    });
+    const text = exercisesToWorkoutText([movement]);
+    expect(text).toBe('Hollow Hold 15sec');
+    expect(parseWorkoutText(text)).toEqual([movement]);
+  });
+
+  it('round-trips The Acid Bath template including sec hold', () => {
+    const template = WORKOUT_TEMPLATES.find((entry) => entry.id === 'the-acid-bath');
+    expect(template).toBeDefined();
+    if (!template) {
+      return;
+    }
+
+    const text = exercisesToWorkoutText(templateToExercises(template));
+    expect(text).toBe('8 Jump Squats\n12 Air Squats\nBottom Squat Hold 10sec');
+    expect(parseWorkoutText(text)).toEqual(templateToExercises(template));
   });
 });
 

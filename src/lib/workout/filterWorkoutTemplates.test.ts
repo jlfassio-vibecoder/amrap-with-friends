@@ -21,11 +21,20 @@ describe('filterWorkoutTemplates', () => {
     ).toHaveLength(10);
   });
 
-  it('returns empty for categories with no seeded content', () => {
+  it('returns 10 Localized Trap templates at 5 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
         durationMinutes: 5,
         category: 'localized-trap',
+      })
+    ).toHaveLength(10);
+  });
+
+  it('returns empty for categories with no seeded content', () => {
+    expect(
+      filterWorkoutTemplates(WORKOUT_TEMPLATES, {
+        durationMinutes: 5,
+        category: 'engine-room',
       })
     ).toEqual([]);
   });
@@ -62,7 +71,7 @@ describe('isCategoryAvailable', () => {
     expect(isCategoryAvailable(bloodShunt, 5, WORKOUT_TEMPLATES)).toBe(true);
   });
 
-  it('is false for categories without templates at the duration', () => {
+  it('is true for localized-trap at 5 minutes', () => {
     const localizedTrap = WORKOUT_CATEGORIES.find(
       (category) => category.id === 'localized-trap'
     );
@@ -71,7 +80,17 @@ describe('isCategoryAvailable', () => {
       return;
     }
 
-    expect(isCategoryAvailable(localizedTrap, 5, WORKOUT_TEMPLATES)).toBe(false);
+    expect(isCategoryAvailable(localizedTrap, 5, WORKOUT_TEMPLATES)).toBe(true);
+  });
+
+  it('is false for categories without templates at the duration', () => {
+    const engineRoom = WORKOUT_CATEGORIES.find((category) => category.id === 'engine-room');
+    expect(engineRoom).toBeDefined();
+    if (!engineRoom) {
+      return;
+    }
+
+    expect(isCategoryAvailable(engineRoom, 5, WORKOUT_TEMPLATES)).toBe(false);
   });
 });
 

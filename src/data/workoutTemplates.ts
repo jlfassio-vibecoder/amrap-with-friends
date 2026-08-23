@@ -22,6 +22,7 @@ export interface WorkoutTemplateMovement {
 export interface WorkoutTemplate {
   id: string;
   name: string;
+  focus?: string;
   durationMinutes: TimeDomain;
   category: WorkoutCategory | null;
   movements: WorkoutTemplateMovement[];
@@ -41,8 +42,9 @@ export const WORKOUT_CATEGORIES: WorkoutCategoryMeta[] = [
   {
     id: 'localized-trap',
     label: 'Localized Trap',
-    description: 'Muscular overload — isolate and fatigue specific muscle groups under time pressure.',
-    availableForDurations: [],
+    description:
+      'Muscular Overload — stacks two or three movements targeting the same primary movers to force local muscular failure before cardiovascular failure.',
+    availableForDurations: [5],
   },
   {
     id: 'engine-room',
@@ -174,5 +176,138 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Standard Push-ups', reps: 12 },
     ],
     tacticalNote: 'Pure explosive power. Land soft on the jumps, rigid body on the push-ups.',
+  },
+  {
+    id: 'the-acid-bath',
+    name: 'The Acid Bath',
+    focus: 'Quads',
+    durationMinutes: 5,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Jump Squats', reps: 8 },
+      { name: 'Air Squats', reps: 12 },
+      { name: 'Bottom Squat Hold', reps: 10, unit: 'sec' },
+    ],
+    tacticalNote:
+      'The active hold at the end traps lactic acid. Keep the chest tall during the hold.',
+  },
+  {
+    id: 'the-press-gauntlet',
+    name: 'The Press Gauntlet',
+    focus: 'Chest/Tris',
+    durationMinutes: 5,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Hand-Release Push-ups', reps: 6 },
+      { name: 'Standard Push-ups', reps: 8 },
+    ],
+    tacticalNote:
+      'The moment your hips sag, drop to your knees. Intensity requires integrity of the spine.',
+  },
+  {
+    id: 'deltoid-demise',
+    name: 'Deltoid Demise',
+    focus: 'Shoulders',
+    durationMinutes: 5,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Pike Push-ups', reps: 8 },
+      { name: 'Commando Planks', reps: 12 },
+    ],
+    tacticalNote:
+      'Brutal on the anterior shoulder. Lock the elbows out completely at the top of every rep.',
+  },
+  {
+    id: 'core-melt',
+    name: 'Core Melt',
+    focus: 'Midline',
+    durationMinutes: 5,
+    category: 'localized-trap',
+    movements: [
+      { name: 'V-Ups', reps: 10 },
+      { name: 'Butterfly Sit-ups', reps: 15 },
+      { name: 'Hollow Hold', reps: 15, unit: 'sec' },
+    ],
+    tacticalNote:
+      'The hollow hold must be strictly enforced: lower back pinned violently to the floor.',
+  },
+  {
+    id: 'quadra-kill',
+    name: 'Quadra-Kill',
+    focus: 'Legs',
+    durationMinutes: 5,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Jumping Lunges (Total)', reps: 12 },
+      { name: 'Reverse Lunges (Total)', reps: 12 },
+    ],
+    tacticalNote:
+      'Going from plyometric to static destroys the legs. Do not rest at the top; drop right back down.',
+  },
+  {
+    id: 'tricep-guillotine',
+    name: 'Tricep Guillotine',
+    focus: 'Arms',
+    durationMinutes: 5,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Sphinx Push-ups (Forearm to hand)', reps: 6 },
+      { name: 'Floor Dips', reps: 12 },
+    ],
+    tacticalNote:
+      'Triceps will fail suddenly. Keep the hands under the shoulders, not out wide.',
+  },
+  {
+    id: 'posterior-panic',
+    name: 'Posterior Panic',
+    focus: 'Glutes',
+    durationMinutes: 5,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Single-Leg Glute Bridges (5/leg)', reps: 10 },
+      { name: 'Standard Glute Bridges', reps: 15 },
+    ],
+    tacticalNote:
+      'Squeeze at the top of every rep. If you feel this in your lower back, your core is disengaged.',
+  },
+  {
+    id: 'the-sidewinder',
+    name: 'The Sidewinder',
+    focus: 'Obliques',
+    durationMinutes: 5,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Side Plank Dips (Left)', reps: 10 },
+      { name: 'Side Plank Dips (Right)', reps: 10 },
+    ],
+    tacticalNote:
+      'Stack the feet and drop the hip fully to the floor. No flopping. Control the descent.',
+  },
+  {
+    id: 'pectoral-panic',
+    name: 'Pectoral Panic',
+    focus: 'Chest',
+    durationMinutes: 5,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Diamond Push-ups', reps: 5 },
+      { name: 'Standard Push-ups', reps: 5 },
+      { name: 'Wide Push-ups', reps: 5 },
+    ],
+    tacticalNote:
+      'A mechanical drop-set. Try to complete all 15 reps unbroken before resting on your knees.',
+  },
+  {
+    id: 'the-springboard',
+    name: 'The Springboard',
+    focus: 'Calves',
+    durationMinutes: 5,
+    category: 'localized-trap',
+    movements: [
+      { name: 'Pogo Jumps', reps: 20 },
+      { name: 'Fast Calf Raises', reps: 20 },
+    ],
+    tacticalNote:
+      'Legs stay perfectly straight on the pogos; bounce strictly from the ankles.',
   },
 ];
