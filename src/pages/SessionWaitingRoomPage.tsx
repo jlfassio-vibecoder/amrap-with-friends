@@ -1,8 +1,11 @@
 import { Link, useParams } from 'react-router-dom';
-import { getStoredParticipantId } from '@/lib/sessionIdentity';
+import { getStoredParticipantId, getStoredClaimToken, getStoredNickname } from '@/lib/sessionIdentity';
 import { useLiveAmrapSession } from '@/hooks/useLiveAmrapSession';
 import { useParticipantClaim } from '@/hooks/useParticipantClaim';
+import { useAmrapAuth } from '@/hooks/useAmrapAuth';
+import { useSessionChannel } from '@/lib/realtime/useSessionChannel';
 import { AuthHeaderActions } from '@/components/AuthHeaderActions';
+import { SessionChat } from '@/components/SessionChat';
 
 function formatTime(totalSec: number): string {
   const minutes = Math.floor(totalSec / 60);
@@ -56,7 +59,13 @@ export default function SessionWaitingRoomPage() {
 }
 
 function LiveSessionView({ sessionId }: { sessionId: string }) {
-  const live = useLiveAmrapSession(sessionId);
+  const participantId = getStoredParticipantId(sessionId) ?? '';
+  const nickname = getStoredNickname(sessionId) ?? 'Unknown';
+  const claimToken = getStoredClaimToken(sessionId);
+  const { isAuthenticated } = useAmrapAuth();
+
+  const channel = useSessionChannel(sessionId, { participantId, nickname });
+  const live = useLiveAmrapSession(sessionId, channel);
   const claim = useParticipantClaim(sessionId);
 
   const showStart = live.isHost && live.phase === 'waiting';
@@ -220,6 +229,14 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
           ))}
         </ul>
       </section>
+
+      <SessionChat
+        sessionId={sessionId}
+        participantId={participantId}
+        claimToken={claimToken}
+        isAuthenticated={isAuthenticated}
+        messages={channel.messages}
+      />
 
       {live.workout.length > 0 && (
         <section className="space-y-2 rounded border border-gray-300 p-4">

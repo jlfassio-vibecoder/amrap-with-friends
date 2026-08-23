@@ -3,9 +3,12 @@ import {
   buildLeaderboard,
   buildPresenceList,
   mergePresenceState,
+  parseMessageRow,
   parseParticipantRow,
   parseRoundRow,
   parseSessionRow,
+  sortMessagesByCreatedAt,
+  upsertMessage,
   upsertParticipant,
   upsertRound,
 } from './sessionChannelUtils';
@@ -157,5 +160,34 @@ describe('sessionChannelUtils', () => {
 
     expect(upsertRound([round], round)).toHaveLength(1);
     expect(upsertRound([], round)).toHaveLength(1);
+  });
+
+  it('parseMessageRow, upsertMessage, and sortMessagesByCreatedAt handle chat rows', () => {
+    const messageA = parseMessageRow({
+      id: 'dddd4444-4444-4444-8444-444444444444',
+      session_id: SESSION_ID,
+      participant_id: HOST_ID,
+      nickname: 'Host',
+      body: 'First',
+      segment_index: 0,
+      created_at: '2026-08-22T12:00:00.000Z',
+    })!;
+
+    const messageB = parseMessageRow({
+      id: 'eeee5555-5555-4555-8555-555555555555',
+      session_id: SESSION_ID,
+      participant_id: JOINER_ID,
+      nickname: 'Joiner',
+      body: 'Second',
+      segment_index: 0,
+      created_at: '2026-08-22T12:00:01.000Z',
+    })!;
+
+    expect(upsertMessage([messageA], messageA)).toHaveLength(1);
+    expect(upsertMessage([messageA], messageB)).toHaveLength(2);
+
+    const sorted = sortMessagesByCreatedAt([messageB, messageA]);
+    expect(sorted[0].id).toBe(messageA.id);
+    expect(sorted[1].id).toBe(messageB.id);
   });
 });

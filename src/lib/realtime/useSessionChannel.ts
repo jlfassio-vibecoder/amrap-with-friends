@@ -3,14 +3,18 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { getSupabaseClient } from '@/lib/supabase';
 import {
   mergePresenceState,
+  parseMessageRow,
   parseParticipantRow,
   parseRoundRow,
   parseSessionRow,
+  sortMessagesByCreatedAt,
+  upsertMessage,
   upsertParticipant,
   upsertRound,
   type PresenceByParticipantId,
 } from '@/lib/realtime/sessionChannelUtils';
 import type {
+  MessageRow,
   ParticipantRow,
   RoundRow,
   SessionRow,
@@ -25,6 +29,7 @@ export interface UseSessionChannelResult {
   session: SessionRow | null;
   participants: ParticipantRow[];
   rounds: RoundRow[];
+  messages: MessageRow[];
   presenceByParticipantId: PresenceByParticipantId;
   isConnected: boolean;
   error: string | null;
@@ -37,6 +42,7 @@ export function useSessionChannel(
   const [session, setSession] = useState<SessionRow | null>(null);
   const [participants, setParticipants] = useState<ParticipantRow[]>([]);
   const [rounds, setRounds] = useState<RoundRow[]>([]);
+  const [messages, setMessages] = useState<MessageRow[]>([]);
   const [presenceByParticipantId, setPresenceByParticipantId] =
     useState<PresenceByParticipantId>({});
   const [isConnected, setIsConnected] = useState(false);
@@ -55,7 +61,8 @@ export function useSessionChannel(
     let cancelled = false;
 
     async function loadInitial() {
-      const [sessionResult, participantsResult, roundsResult] = await Promise.all([
+      const [sessionResult, participantsResult, roundsResult, messagesResult] =
+        await Promise.all([
         supabase
           .from('sessions')
           .select(
@@ -73,6 +80,13 @@ export function useSessionChannel(
             'id, session_id, participant_id, round_index, elapsed_sec_at_round, segment_index, created_at'
           )
           .eq('session_id', sessionId),
+        supabase
+          .from('messages')
+          .select(
+            'id, session_id, participant_id, nickname, body, segment_index, created_at'
+          )
+          .eq('session_id', sessionId)
+          .order('created_at', { ascending: true }),
       ]);
 
       if (cancelled) {
@@ -94,6 +108,11 @@ export function useSessionChannel(
         return;
       }
 
+      if (messagesResult.error) {
+        setError(messagesResult.error.message);
+        return;
+      }
+
       setError(null);
 
       if (sessionResult.data) {
@@ -112,6 +131,13 @@ export function useSessionChannel(
         .map((row) => parseRoundRow(row as Record<string, unknown>))
         .filter((row): row is RoundRow => row !== null);
       setRounds(parsedRounds);
+
+      const parsedMessages = sortMessagesByCreatedAt(
+        (messagesResult.data ?? [])
+          .map((row) => parseMessageRow(row as Record<string, unknown>))
+          .filter((row): row is MessageRow => row !== null)
+      );
+      setMessages(parsedMessages);
     }
 
     loadInitial();
@@ -170,6 +196,21 @@ export function useSessionChannel(
           }
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `session_id=eq.${sessionId}`,
+        },
+        (payload) => {
+          const parsed = parseMessageRow(payload.new as Record<string, unknown>);
+          if (parsed) {
+            setMessages((prev) => sortMessagesByCreatedAt(upsertMessage(prev, parsed)));
+          }
+        }
+      )
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
         setPresenceByParticipantId(mergePresenceState(state));
@@ -213,6 +254,7 @@ export function useSessionChannel(
     session,
     participants,
     rounds,
+    messages,
     presenceByParticipantId,
     isConnected,
     error,

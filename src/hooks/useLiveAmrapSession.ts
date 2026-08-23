@@ -9,7 +9,7 @@ import {
   buildLeaderboard,
   buildPresenceList,
 } from '@/lib/realtime/sessionChannelUtils';
-import { useSessionChannel } from '@/lib/realtime/useSessionChannel';
+import type { UseSessionChannelResult } from '@/lib/realtime/useSessionChannel';
 import {
   createAuthoritativeSnapshot,
   getSetupDurationSec,
@@ -74,7 +74,10 @@ function mapHostDisplayPhase(
   return timerPhase;
 }
 
-export function useLiveAmrapSession(sessionId: string): UseLiveAmrapSessionReturn {
+export function useLiveAmrapSession(
+  sessionId: string,
+  channel: UseSessionChannelResult
+): UseLiveAmrapSessionReturn {
   const participantId = getStoredParticipantId(sessionId) ?? '';
   const nickname = getStoredNickname(sessionId) ?? 'Unknown';
   const hostToken = getStoredHostToken(sessionId);
@@ -83,12 +86,6 @@ export function useLiveAmrapSession(sessionId: string): UseLiveAmrapSessionRetur
 
   const timer = useAmrapTimer();
   const { isAuthenticated } = useAmrapAuth();
-  const channelPresence = useMemo(
-    () =>
-      participantId ? { participantId, nickname } : null,
-    [participantId, nickname]
-  );
-  const channel = useSessionChannel(sessionId, channelPresence);
 
   const [joinerSnapshot, setJoinerSnapshot] = useState<AuthoritativeSnapshot | null>(
     null

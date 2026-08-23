@@ -32,6 +32,16 @@ export interface RoundRow {
   created_at: string;
 }
 
+export interface MessageRow {
+  id: string;
+  session_id: string;
+  participant_id: string;
+  nickname: string;
+  body: string;
+  segment_index: number;
+  created_at: string;
+}
+
 export interface UpdateSessionStateInput {
   sessionId: string;
   hostToken: string;

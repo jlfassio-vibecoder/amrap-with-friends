@@ -1,4 +1,4 @@
-import type { ParticipantRow, RoundRow, SessionRow } from '@/lib/sessionSync/types';
+import type { ParticipantRow, RoundRow, SessionRow, MessageRow } from '@/lib/sessionSync/types';
 
 export interface PresenceTrackPayload {
   participant_id: string;
@@ -126,6 +126,40 @@ export function parseRoundRow(record: Record<string, unknown>): RoundRow | null 
   };
 }
 
+export function parseMessageRow(record: Record<string, unknown>): MessageRow | null {
+  const id = typeof record.id === 'string' ? record.id : null;
+  const sessionId = typeof record.session_id === 'string' ? record.session_id : null;
+  const participantId =
+    typeof record.participant_id === 'string' ? record.participant_id : null;
+  const nickname = typeof record.nickname === 'string' ? record.nickname : null;
+  const body = typeof record.body === 'string' ? record.body : null;
+  const segmentIndex =
+    typeof record.segment_index === 'number' ? record.segment_index : null;
+  const createdAt = typeof record.created_at === 'string' ? record.created_at : null;
+
+  if (
+    !id ||
+    !sessionId ||
+    !participantId ||
+    !nickname ||
+    !body ||
+    segmentIndex === null ||
+    !createdAt
+  ) {
+    return null;
+  }
+
+  return {
+    id,
+    session_id: sessionId,
+    participant_id: participantId,
+    nickname,
+    body,
+    segment_index: segmentIndex,
+    created_at: createdAt,
+  };
+}
+
 export function mergePresenceState(
   presenceState: Record<string, unknown>
 ): PresenceByParticipantId {
@@ -171,6 +205,18 @@ export function upsertRound(rounds: RoundRow[], row: RoundRow): RoundRow[] {
     return rounds.map((r) => (r.id === row.id ? row : r));
   }
   return [...rounds, row];
+}
+
+export function upsertMessage(messages: MessageRow[], row: MessageRow): MessageRow[] {
+  const existing = messages.find((m) => m.id === row.id);
+  if (existing) {
+    return messages.map((m) => (m.id === row.id ? row : m));
+  }
+  return [...messages, row];
+}
+
+export function sortMessagesByCreatedAt(messages: MessageRow[]): MessageRow[] {
+  return [...messages].sort((a, b) => a.created_at.localeCompare(b.created_at));
 }
 
 export function buildLeaderboard(
