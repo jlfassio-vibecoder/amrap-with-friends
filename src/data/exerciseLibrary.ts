@@ -317,6 +317,149 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
       'For an AMRAP, do not aim for maximum distance on every jump. Aim for a consistent, sustainable 4-5 foot bound that allows for rapid turnarounds.',
     photos: sequencePhotos('broad-jumps'),
   },
+  {
+    id: 'bottom-squat-hold',
+    name: 'Bottom Squat Hold',
+    setupAndExecution: [
+      'Descend until the hip crease is below the knee. Maintain an upright torso and keep the weight evenly distributed across the full foot.',
+    ],
+    commonMistakes: [],
+    coachingCue:
+      '"Pry the floor apart." Do not rest passively on your joints; maintain violent muscular tension in the glutes and quads.',
+    amrapTip:
+      'Lactic acid floods the legs rapidly here. Breathe deep into your diaphragm to delay the panic reflex.',
+    photos: sequencePhotos('bottom-squat-hold'),
+  },
+  {
+    id: 'sphinx-push-ups',
+    name: 'Sphinx Push-ups',
+    setupAndExecution: [
+      'Begin in a forearm plank. Press both palms into the floor and extend the elbows simultaneously to rise into a high plank.',
+    ],
+    commonMistakes: [],
+    coachingCue:
+      '"Move as one sheet of glass." If your hips sag or you press up one arm at a time, you are leaking kinetic energy.',
+    amrapTip:
+      'Keep your elbows tucked tight to your ribs to maximize triceps recruitment and protect the shoulder joint.',
+    photos: sequencePhotos('sphinx-push-ups'),
+  },
+  {
+    id: 'floor-dips',
+    name: 'Floor Dips',
+    setupAndExecution: [
+      'Sit on the floor with knees bent and hands behind you, fingers facing the heels. Elevate hips slightly, bend elbows to lower, and press to lockout.',
+    ],
+    commonMistakes: [],
+    coachingCue:
+      '"Pin your shoulder blades into your back pockets." Rolling shoulders forward transfers load to the vulnerable anterior shoulder capsule.',
+    amrapTip:
+      'Keep your hips planted close to your wrists to prevent shifting the workload away from the arms.',
+    photos: sequencePhotos('floor-dips'),
+  },
+  {
+    id: 'hollow-hold',
+    name: 'Hollow Hold',
+    setupAndExecution: [
+      'Lie supine. Squeeze the legs together, lift the shoulders, and elevate the heels six inches, creating a rigid crescent moon shape.',
+    ],
+    commonMistakes: [],
+    coachingCue:
+      '"Crush the floorboard with your lower back." If any daylight passes beneath your lumbar spine, the hold is void.',
+    amrapTip:
+      'Fatigue causes the back to arch. Regress the movement immediately by tucking your knees toward your chest when this happens.',
+    photos: sequencePhotos('hollow-hold'),
+  },
+  {
+    id: 'reverse-lunges',
+    name: 'Reverse Lunges',
+    setupAndExecution: [
+      'From a standing position, step one foot directly backward. Lower your hips straight down until the trailing knee gently kisses the floor. The front shin remains vertical. Drive powerfully through the front heel to return to a standing position.',
+    ],
+    commonMistakes: [],
+    coachingCue:
+      '"Pull yourself up with the front hamstring." Do not just push off the back toe; use the front leg to actively drag your bodyweight back to the starting position.',
+    amrapTip:
+      'Keep your torso completely upright. Leaning forward shifts the load to the lower back and robs the quads of the intended tension.',
+    photos: sequencePhotos('reverse-lunges'),
+  },
+  {
+    id: 'single-leg-glute-bridges',
+    name: 'Single-Leg Glute Bridges',
+    setupAndExecution: [
+      'Lie supine with one knee bent and that foot flat on the floor. Extend the opposite leg completely straight. Drive through the planted heel to lift the hips until the shoulders, hips, and knees form a straight line. Lower with control.',
+    ],
+    commonMistakes: [],
+    coachingCue:
+      '"Punch the ceiling with your floating heel." This keeps the extended leg active and prevents the pelvis from violently twisting under the unilateral load.',
+    amrapTip:
+      'Keep both thighs parallel to each other throughout the entire movement. Do not let the extended leg drift up or drop down.',
+    photos: sequencePhotos('single-leg-glute-bridges'),
+  },
+  {
+    id: 'standard-glute-bridges',
+    name: 'Standard Glute Bridges',
+    setupAndExecution: [
+      'Lie on your back, knees bent, feet flat on the floor hip-width apart. Drive through your heels to bridge your hips upward. Hold for a micro-second at maximum extension, then lower under tension.',
+    ],
+    commonMistakes: [],
+    coachingCue:
+      '"Crack a walnut between your glutes at the top." We are chasing maximum muscular contraction, not just mindless hip thrusting.',
+    amrapTip:
+      'If you begin to feel a deep ache in your lower back, your abdominals have turned off. Brace your core tightly before initiating the bridge.',
+    photos: sequencePhotos('standard-glute-bridges'),
+  },
+  {
+    id: 'wide-push-ups',
+    name: 'Wide Push-ups',
+    setupAndExecution: [
+      'Start in a high plank with hands placed significantly wider than shoulder-width. Lower the chest to the floor, keeping the body in a rigid line, then press back to full lockout.',
+    ],
+    commonMistakes: [],
+    coachingCue:
+      '"Try to tear the floor apart horizontally." Actively pulling your hands away from each other creates massive tension across the pectoral muscles.',
+    amrapTip:
+      'This angle completely isolates the chest and removes the triceps from the equation. When pectoral failure hits, it hits instantly. Break your sets into 3s or 4s before the muscle completely shuts down.',
+    photos: sequencePhotos('wide-push-ups'),
+  },
+  {
+    id: 'side-plank-dips',
+    name: 'Side Plank Dips',
+    setupAndExecution: [
+      'Prop yourself up on one forearm, stacking your feet so your body forms a straight, diagonal line. Lower your bottom hip until it lightly taps the floor, then aggressively contract the obliques to lift the hip back up to the starting position (or slightly higher).',
+    ],
+    commonMistakes: [],
+    coachingCue:
+      '"Imagine a heavy cable pulling your top hip directly to the ceiling."',
+    amrapTip:
+      'Do not let the top shoulder roll forward toward the floor. Keep the chest completely open to keep the tension locked entirely on the obliques.',
+    photos: sequencePhotos('side-plank-dips'),
+  },
+  {
+    id: 'pogo-jumps',
+    name: 'Pogo Jumps',
+    setupAndExecution: [
+      'Stand tall with feet together. Keeping the knees nearly locked (only a micro-bend), bounce rapidly off the balls of the feet. The power is generated exclusively from the ankles and calves.',
+    ],
+    commonMistakes: [],
+    coachingCue:
+      '"Your ankles are steel springs. Punch the ground away."',
+    amrapTip:
+      'Minimize ground contact time. The heels should never touch the floor. The moment the ball of the foot strikes the mat, rebound instantly.',
+    photos: sequencePhotos('pogo-jumps'),
+  },
+  {
+    id: 'fast-calf-raises',
+    name: 'Fast Calf Raises',
+    setupAndExecution: [
+      'Stand perfectly tall with feet shoulder-width. Explosively drive up onto the balls of the feet, lifting the heels as high as mechanically possible, then rapidly drop back down, stopping just millimeters before the heels touch the floor.',
+    ],
+    commonMistakes: [],
+    coachingCue:
+      '"Spike the heels up, control the crash down." Do not just bounce mindlessly; force full plantar flexion at the top of every single rep.',
+    amrapTip:
+      'As the calves fill with lactic acid, your body will naturally try to shorten the range of motion. Fight for maximum height on the 20th rep just like you did on the 1st rep.',
+    photos: sequencePhotos('fast-calf-raises'),
+  },
 ];
 
 // Force a full reload when this data module changes — partial HMR can leave
