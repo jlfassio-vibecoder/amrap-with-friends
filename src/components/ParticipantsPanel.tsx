@@ -21,7 +21,7 @@ function RankBadge({
 }) {
   if (variant === 'pinned') {
     return (
-      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-semibold text-surface tabular-nums">
+      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-semibold text-on-accent tabular-nums">
         {rank}
       </span>
     );
@@ -97,7 +97,7 @@ export function ParticipantsPanel({ roster, className }: ParticipantsPanelProps)
           {visibleAvatars.map((entry, index) => (
             <span
               key={entry.participantId}
-              className={`inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-surface text-xs font-semibold text-surface ${getParticipantAvatarColor(entry.participantId)} ${
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-page text-xs font-semibold text-on-accent ${getParticipantAvatarColor(entry.participantId)} ${
                 index > 0 ? '-ml-2' : ''
               }`}
               title={entry.nickname}
@@ -106,7 +106,7 @@ export function ParticipantsPanel({ roster, className }: ParticipantsPanelProps)
             </span>
           ))}
           {overflowCount > 0 ? (
-            <span className="-ml-2 inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-surface bg-ink text-xs font-semibold text-surface">
+            <span className="-ml-2 inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-page bg-neutral text-xs font-semibold text-neutral-foreground">
               +{overflowCount}
             </span>
           ) : null}

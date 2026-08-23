@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { createSession } from '@/lib/api/sessions';
 import { getSupabaseConfigError } from '@/lib/supabase';
 import { parseWorkoutText } from '@/lib/workout/parseWorkoutLines';
 
-const DURATION_OPTIONS = [5, 15, 20] as const;
+const DURATION_OPTIONS = [5, 10, 15, 20] as const;
 
 export default function CreateSessionPage() {
   const navigate = useNavigate();
@@ -50,9 +51,13 @@ export default function CreateSessionPage() {
   }
 
   return (
-    <main className="mx-auto max-w-lg space-y-6 p-6">
-      <div className="space-y-2">
-        <h1 className="text-display text-3xl text-ink">Create session</h1>
+    <NarrowPageLayout title="Create session" subtitle="Start a new AMRAP">
+      <p className="text-sm text-secondary lg:hidden">
+        Start an AMRAP session and invite friends to join.
+      </p>
+
+      <div className="hidden space-y-2 lg:block">
+        <h1 className="text-display text-5xl text-ink">Create session</h1>
         <p className="text-sm text-secondary">
           Start an AMRAP session and invite friends to join.
         </p>
@@ -102,9 +107,9 @@ export default function CreateSessionPage() {
         </button>
       </form>
 
-      <p className="text-sm">
+      <p className="text-center text-sm">
         <Link className="link-accent" to="/join">Join an existing session</Link>
       </p>
-    </main>
+    </NarrowPageLayout>
   );
 }

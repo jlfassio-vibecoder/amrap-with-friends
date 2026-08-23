@@ -4,7 +4,7 @@ import { useLiveAmrapSession } from '@/hooks/useLiveAmrapSession';
 import { useParticipantClaim } from '@/hooks/useParticipantClaim';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useSessionChannel } from '@/lib/realtime/useSessionChannel';
-import { AuthHeaderActions } from '@/components/AuthHeaderActions';
+import { AppHeader } from '@/components/AppHeader';
 import { ParticipantsPanel } from '@/components/ParticipantsPanel';
 import { SessionChat } from '@/components/SessionChat';
 import { buildParticipantRoster } from '@/lib/sessionSync/buildParticipantRoster';
@@ -95,24 +95,7 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
 
   return (
     <main className="mx-auto max-w-lg space-y-6 bg-page p-6 lg:max-w-none lg:space-y-0 lg:p-0 lg:min-h-screen lg:flex lg:flex-col">
-      <header className="hidden items-center justify-between gap-4 border-b border-divider bg-surface px-8 py-4 lg:flex">
-        <Link className="text-display text-xl text-ink" to="/">
-          AMRAP With Friends
-        </Link>
-        <div className="text-center">
-          <p className="text-display text-xl text-ink">Live session</p>
-          <p className="text-sm text-secondary">{hostStatusText}</p>
-        </div>
-        <AuthHeaderActions />
-      </header>
-
-      <div className="flex items-start justify-between gap-4 lg:hidden">
-        <div className="space-y-2">
-          <h1 className="text-display text-3xl text-ink">Live session</h1>
-          <p className="text-sm text-secondary">{hostStatusText}</p>
-        </div>
-        <AuthHeaderActions />
-      </div>
+      <AppHeader title="Live session" subtitle={hostStatusText} />
 
       <div className="space-y-6 lg:mx-auto lg:w-full lg:max-w-7xl lg:space-y-4 lg:px-8 lg:pt-6">
         {live.syncError && (
@@ -244,7 +227,7 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
                   key={`${exercise.name}-${index}`}
                   className="lg:flex lg:items-center lg:gap-4"
                 >
-                  <span className="hidden lg:flex lg:h-12 lg:w-12 lg:shrink-0 lg:items-center lg:justify-center lg:rounded-full lg:bg-accent lg:text-xl lg:font-semibold lg:text-surface">
+                  <span className="hidden lg:flex lg:h-12 lg:w-12 lg:shrink-0 lg:items-center lg:justify-center lg:rounded-full lg:bg-accent lg:text-xl lg:font-semibold lg:text-on-accent">
                     {index + 1}
                   </span>
                   <span className="lg:text-2xl lg:leading-snug xl:text-3xl">

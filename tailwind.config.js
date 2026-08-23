@@ -4,27 +4,29 @@ export default {
   theme: {
     extend: {
       colors: {
-        page: '#f7f2ea',
-        surface: '#fffdf8',
-        border: '#e8ddc9',
-        divider: '#efe6d6',
-        ink: '#211d18',
-        secondary: '#8a8072',
-        muted: '#a89f8e',
+        page: 'var(--color-page)',
+        surface: 'var(--color-surface)',
+        border: 'var(--color-border)',
+        divider: 'var(--color-divider)',
+        ink: 'var(--color-ink)',
+        secondary: 'var(--color-secondary)',
+        muted: 'var(--color-muted)',
+        scrim: 'var(--color-scrim)',
         accent: {
-          DEFAULT: '#e64a2e',
-          hover: '#c93c22',
-          tint: '#fbe4dc',
+          DEFAULT: 'var(--color-accent)',
+          hover: 'var(--color-accent-hover)',
+          tint: 'var(--color-accent-tint)',
         },
         success: {
-          DEFAULT: '#5a9e52',
-          tint: '#e9f4e5',
-          text: '#3f7d38',
+          DEFAULT: 'var(--color-success)',
+          tint: 'var(--color-success-tint)',
+          text: 'var(--color-success-text)',
         },
         neutral: {
-          DEFAULT: '#211d18',
-          foreground: '#fffdf8',
+          DEFAULT: 'var(--color-neutral)',
+          foreground: 'var(--color-neutral-foreground)',
         },
+        'on-accent': 'var(--color-on-accent)',
         avatar: {
           coral: '#e64a2e',
           sage: '#5a9e52',
@@ -42,7 +44,7 @@ export default {
         card: '20px',
       },
       boxShadow: {
-        card: '0 2px 0 0 #e8ddc9',
+        card: 'var(--shadow-card)',
       },
     },
   },

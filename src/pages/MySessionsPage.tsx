@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { fetchMySessions, type MySessionEntry } from '@/lib/api/mySessions';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
-import { AuthHeaderActions } from '@/components/AuthHeaderActions';
 
 function formatWorkoutSummary(workout: MySessionEntry['workout']): string {
   if (workout.length === 0) {
@@ -48,15 +48,16 @@ export default function MySessionsPage() {
   const loading = isAuthLoading || (isAuthenticated && user !== null && !hasLoaded);
 
   return (
-    <main className="mx-auto max-w-lg space-y-6 p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-display text-3xl text-ink">My sessions</h1>
-          <p className="text-sm text-secondary">
-            Sessions you saved to your account.
-          </p>
-        </div>
-        <AuthHeaderActions />
+    <NarrowPageLayout title="My sessions" subtitle="Saved to your account">
+      <p className="text-sm text-secondary lg:hidden">
+        Sessions you saved to your account.
+      </p>
+
+      <div className="hidden space-y-2 lg:block">
+        <h1 className="text-display text-5xl text-ink">My sessions</h1>
+        <p className="text-sm text-secondary">
+          Sessions you saved to your account.
+        </p>
       </div>
 
       {loading ? <p className="text-sm text-secondary">Loading…</p> : null}
@@ -92,7 +93,9 @@ export default function MySessionsPage() {
         </ul>
       )}
 
-      <Link className="link-accent text-sm" to="/">Back home</Link>
-    </main>
+      <p className="text-center text-sm">
+        <Link className="link-accent" to="/">Back home</Link>
+      </p>
+    </NarrowPageLayout>
   );
 }

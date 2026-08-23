@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { joinSession } from '@/lib/api/sessions';
 import { getSupabaseConfigError } from '@/lib/supabase';
 
@@ -44,9 +45,13 @@ export default function JoinSessionPage() {
   }
 
   return (
-    <main className="mx-auto max-w-lg space-y-6 p-6">
-      <div className="space-y-2">
-        <h1 className="text-display text-3xl text-ink">Join session</h1>
+    <NarrowPageLayout title="Join session" subtitle="Enter a session ID">
+      <p className="text-sm text-secondary lg:hidden">
+        Enter the session ID shared by your host.
+      </p>
+
+      <div className="hidden space-y-2 lg:block">
+        <h1 className="text-display text-5xl text-ink">Join session</h1>
         <p className="text-sm text-secondary">
           Enter the session ID shared by your host.
         </p>
@@ -83,9 +88,9 @@ export default function JoinSessionPage() {
         </button>
       </form>
 
-      <p className="text-sm">
+      <p className="text-center text-sm">
         <Link className="link-accent" to="/create">Create a new session</Link>
       </p>
-    </main>
+    </NarrowPageLayout>
   );
 }

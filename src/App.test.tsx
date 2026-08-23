@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { ThemeProvider } from '@/contexts/ThemeProvider';
 import { AmrapAuthProvider } from '@/contexts/AmrapAuthProvider';
 import App from './App';
 
@@ -28,9 +29,11 @@ describe('App', () => {
   it('renders the home page heading', () => {
     render(
       <MemoryRouter>
-        <AmrapAuthProvider>
-          <App />
-        </AmrapAuthProvider>
+        <ThemeProvider>
+          <AmrapAuthProvider>
+            <App />
+          </AmrapAuthProvider>
+        </ThemeProvider>
       </MemoryRouter>
     );
     expect(screen.getByRole('heading', { name: 'AMRAP With Friends' })).toBeDefined();

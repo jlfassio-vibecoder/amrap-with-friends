@@ -1,3 +1,4 @@
+import { AuthHeaderActions } from '@/components/AuthHeaderActions';
 import { useAmrapTimer } from '@/hooks/useAmrapTimer';
 
 const DEV_SETUP_SEC = 5;
@@ -8,7 +9,10 @@ export default function TimerDevPage() {
 
   return (
     <main className="mx-auto max-w-xl space-y-6 p-6">
-      <h1 className="text-display text-xl text-ink">AMRAP Timer Dev</h1>
+      <div className="flex items-start justify-between gap-4">
+        <h1 className="text-display text-xl text-ink">AMRAP Timer Dev</h1>
+        <AuthHeaderActions />
+      </div>
 
       <section className="card space-y-2 p-4">
         <p>Phase: {timer.phase}</p>
