@@ -49,8 +49,9 @@ export const WORKOUT_CATEGORIES: WorkoutCategoryMeta[] = [
   {
     id: 'engine-room',
     label: 'Engine Room',
-    description: 'Pure cardio — sustained high-output movements with minimal rest between transitions.',
-    availableForDurations: [],
+    description:
+      'Pure Cardio — zero muscular bottlenecks, only lung capacity and mental fortitude. High-velocity, low-resistance movements requiring constant, unbroken rhythm.',
+    availableForDurations: [5],
   },
   {
     id: 'midline-tension',
@@ -309,5 +310,127 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     ],
     tacticalNote:
       'Legs stay perfectly straight on the pogos; bounce strictly from the ankles.',
+  },
+  {
+    id: 'the-gas-pedal',
+    name: 'The Gas Pedal',
+    durationMinutes: 5,
+    category: 'engine-room',
+    movements: [
+      { name: 'Burpees', reps: 10 },
+      { name: 'Jumping Jacks', reps: 20 },
+    ],
+    tacticalNote:
+      'The classic engine tester. Find a breathing rhythm on the jacks to recover from the burpees.',
+  },
+  {
+    id: 'redline',
+    name: 'Redline',
+    durationMinutes: 5,
+    category: 'engine-room',
+    movements: [
+      { name: 'Mountain Climbers (Total)', reps: 30 },
+      { name: 'High Knees (Total)', reps: 30 },
+    ],
+    tacticalNote:
+      "Pure leg turnover. Knees must break the waistline on the high knees or it's a fake rep.",
+  },
+  {
+    id: 'the-sprinters-tax',
+    name: "The Sprinter's Tax",
+    durationMinutes: 5,
+    category: 'engine-room',
+    movements: [
+      { name: 'Sprawls (No-Push-up Burpees)', reps: 12 },
+      { name: 'Lateral Line Hops', reps: 20 },
+    ],
+    tacticalNote:
+      'Fast, violent hip extensions. Pick a line on the floor and jump over it with both feet together.',
+  },
+  {
+    id: 'lateral-combustion',
+    name: 'Lateral Combustion',
+    durationMinutes: 5,
+    category: 'engine-room',
+    movements: [
+      { name: 'Skater Jumps (Total)', reps: 15 },
+      { name: 'Jumping Jacks', reps: 15 },
+    ],
+    tacticalNote:
+      'Constant side-to-side velocity. Stay light on the balls of your feet to minimize ground contact time.',
+  },
+  {
+    id: 'the-phantom-rope',
+    name: 'The Phantom Rope',
+    durationMinutes: 5,
+    category: 'engine-room',
+    movements: [
+      { name: 'Double-Tap Jumps (Penguin Taps)', reps: 30 },
+      { name: 'Down-Ups', reps: 10 },
+    ],
+    tacticalNote:
+      'Simulates double-unders without a rope. Tap your thighs twice at the apex of every jump.',
+  },
+  {
+    id: 'the-turbine',
+    name: 'The Turbine',
+    durationMinutes: 5,
+    category: 'engine-room',
+    movements: [
+      { name: 'High Knees (Total)', reps: 20 },
+      { name: 'Butt Kicks (Total)', reps: 20 },
+      { name: 'Jump Squats', reps: 10 },
+    ],
+    tacticalNote:
+      'A continuous cycle of lower-body plyometrics. Breathe in through the nose, out through the mouth.',
+  },
+  {
+    id: 'cross-current',
+    name: 'Cross-Current',
+    durationMinutes: 5,
+    category: 'engine-room',
+    movements: [
+      { name: 'Cross-Body Mountain Climbers', reps: 20 },
+      { name: 'Sprawls', reps: 10 },
+    ],
+    tacticalNote:
+      'Drives rotational heart rate. Drive the right knee to the left elbow. Keep the hips low.',
+  },
+  {
+    id: 'the-boomerang',
+    name: 'The Boomerang',
+    durationMinutes: 5,
+    category: 'engine-room',
+    movements: [
+      { name: 'Broad Jumps (With backpedal return)', reps: 5 },
+      { name: 'High Knees', reps: 20 },
+    ],
+    tacticalNote:
+      'Explode forward, stay low on the backpedal. This spikes the heart rate faster than running in place.',
+  },
+  {
+    id: 'rapid-fire',
+    name: 'Rapid Fire',
+    durationMinutes: 5,
+    category: 'engine-room',
+    movements: [
+      { name: 'Half-Burpees (Plank to squat stance)', reps: 15 },
+      { name: 'Jumping Jacks', reps: 15 },
+    ],
+    tacticalNote:
+      'Eliminates the chest-to-deck and the jump. It is all hip-hinge speed. Do not let the lower back sag in the plank.',
+  },
+  {
+    id: 'the-escalator',
+    name: 'The Escalator',
+    durationMinutes: 5,
+    category: 'engine-room',
+    movements: [
+      { name: 'Burpees', reps: 5 },
+      { name: 'Mountain Climbers', reps: 10 },
+      { name: 'Jumping Jacks', reps: 15 },
+    ],
+    tacticalNote:
+      'A cascading rep scheme that flows beautifully. Use the 15 jacks as your active recovery.',
   },
 ];

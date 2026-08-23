@@ -30,11 +30,20 @@ describe('filterWorkoutTemplates', () => {
     ).toHaveLength(10);
   });
 
-  it('returns empty for categories with no seeded content', () => {
+  it('returns 10 Engine Room templates at 5 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
         durationMinutes: 5,
         category: 'engine-room',
+      })
+    ).toHaveLength(10);
+  });
+
+  it('returns empty for categories with no seeded content', () => {
+    expect(
+      filterWorkoutTemplates(WORKOUT_TEMPLATES, {
+        durationMinutes: 5,
+        category: 'midline-tension',
       })
     ).toEqual([]);
   });
@@ -83,14 +92,26 @@ describe('isCategoryAvailable', () => {
     expect(isCategoryAvailable(localizedTrap, 5, WORKOUT_TEMPLATES)).toBe(true);
   });
 
-  it('is false for categories without templates at the duration', () => {
+  it('is true for engine-room at 5 minutes', () => {
     const engineRoom = WORKOUT_CATEGORIES.find((category) => category.id === 'engine-room');
     expect(engineRoom).toBeDefined();
     if (!engineRoom) {
       return;
     }
 
-    expect(isCategoryAvailable(engineRoom, 5, WORKOUT_TEMPLATES)).toBe(false);
+    expect(isCategoryAvailable(engineRoom, 5, WORKOUT_TEMPLATES)).toBe(true);
+  });
+
+  it('is false for categories without templates at the duration', () => {
+    const midlineTension = WORKOUT_CATEGORIES.find(
+      (category) => category.id === 'midline-tension'
+    );
+    expect(midlineTension).toBeDefined();
+    if (!midlineTension) {
+      return;
+    }
+
+    expect(isCategoryAvailable(midlineTension, 5, WORKOUT_TEMPLATES)).toBe(false);
   });
 });
 
