@@ -25,5 +25,5 @@ LIMIT 2;
 -- 4) Join should never return host_token — inspect join_result JSON keys only:
 -- participant_id, claim_token
 
--- 5) Fill session to test cap (run join 5 more times after first joiner, then expect error on 7th):
+-- 5) Fill session to test cap (100 participants max; 101st join should raise 'Session is full'):
 -- SELECT public.join_session('<session_id>'::uuid, 'Guest N');
