@@ -113,6 +113,15 @@ describe('filterWorkoutTemplates', () => {
     ).toHaveLength(10);
   });
 
+  it('returns 10 Midline Tension templates at 15 minutes', () => {
+    expect(
+      filterWorkoutTemplates(WORKOUT_TEMPLATES, {
+        durationMinutes: 15,
+        category: 'midline-tension',
+      })
+    ).toHaveLength(10);
+  });
+
   it('returns empty for 20 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
@@ -231,6 +240,18 @@ describe('isCategoryAvailable', () => {
     }
 
     expect(isCategoryAvailable(midlineTension, 10, WORKOUT_TEMPLATES)).toBe(true);
+  });
+
+  it('is true for midline-tension at 15 minutes', () => {
+    const midlineTension = WORKOUT_CATEGORIES.find(
+      (category) => category.id === 'midline-tension'
+    );
+    expect(midlineTension).toBeDefined();
+    if (!midlineTension) {
+      return;
+    }
+
+    expect(isCategoryAvailable(midlineTension, 15, WORKOUT_TEMPLATES)).toBe(true);
   });
 
   it('is true for aerobic-matrix at 20 minutes', () => {
@@ -440,6 +461,11 @@ describe('categoriesForDuration', () => {
     const ids = categoriesForDuration(WORKOUT_CATEGORIES, 10).map((category) => category.id);
     expect(ids).toContain('midline-tension');
   });
+
+  it('includes midline-tension at 15 minutes', () => {
+    const ids = categoriesForDuration(WORKOUT_CATEGORIES, 15).map((category) => category.id);
+    expect(ids).toContain('midline-tension');
+  });
 });
 
 describe('categoryDisplayForDuration', () => {
@@ -558,6 +584,22 @@ describe('categoryDisplayForDuration', () => {
       label: 'Structural Grind',
       description:
         'Continuous spinal flexion for 10 minutes is a recipe for disaster. Structural Grind pairs rigid isometrics and slow anti-rotation with steady lower-body engine work so the abdominal wall stabilizes the spine under shifting loads and protects the lower back.',
+    });
+  });
+
+  it('returns override label and description for midline-tension at 15 minutes', () => {
+    const midlineTension = WORKOUT_CATEGORIES.find(
+      (category) => category.id === 'midline-tension'
+    );
+    expect(midlineTension).toBeDefined();
+    if (!midlineTension) {
+      return;
+    }
+
+    expect(categoryDisplayForDuration(midlineTension, 15)).toEqual({
+      label: 'Structural Grind',
+      description:
+        'Continuous spinal flexion for 15 minutes is a recipe for disaster. Structural Grind pairs timed isometrics, slow anti-rotation, and posterior chain work with steady lower-body engine movements so the abdominal wall stabilizes the spine under shifting loads for the full core crucible.',
     });
   });
 });

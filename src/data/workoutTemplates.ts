@@ -99,12 +99,17 @@ export const WORKOUT_CATEGORIES: WorkoutCategoryMeta[] = [
     label: 'Midline Tension',
     description:
       'Dynamic Core — pairs a cardiovascular movement with strict, controlled core work. A fatigued core makes everything else feel twice as hard.',
-    availableForDurations: [5, 10],
+    availableForDurations: [5, 10, 15],
     overridesByDuration: {
       10: {
         label: 'Structural Grind',
         description:
           'Continuous spinal flexion for 10 minutes is a recipe for disaster. Structural Grind pairs rigid isometrics and slow anti-rotation with steady lower-body engine work so the abdominal wall stabilizes the spine under shifting loads and protects the lower back.',
+      },
+      15: {
+        label: 'Structural Grind',
+        description:
+          'Continuous spinal flexion for 15 minutes is a recipe for disaster. Structural Grind pairs timed isometrics, slow anti-rotation, and posterior chain work with steady lower-body engine movements so the abdominal wall stabilizes the spine under shifting loads for the full core crucible.',
       },
     },
   },
@@ -1500,6 +1505,136 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     ],
     tacticalNote:
       'Lock the plank instantly on the sprawls so your fatigued lower back does not hyperextend.',
+  },
+  {
+    id: 'the-monolith',
+    name: 'The Monolith',
+    durationMinutes: 15,
+    category: 'midline-tension',
+    movements: [
+      { name: 'Plank Hold', reps: 20, unit: 'sec' },
+      { name: 'Air Squats', reps: 20 },
+      { name: 'Jumping Jacks', reps: 30 },
+    ],
+    tacticalNote:
+      'Squeeze the glutes during the plank to lock the pelvis. Use the squats to flush the tension.',
+  },
+  {
+    id: 'iron-spine',
+    name: 'Iron Spine',
+    durationMinutes: 15,
+    category: 'midline-tension',
+    movements: [
+      { name: 'Alternating Bird-Dogs', reps: 16 },
+      { name: 'Reverse Lunges', reps: 16 },
+      { name: 'Mountain Climbers', reps: 30 },
+    ],
+    tacticalNote:
+      'Move with agonizing precision on the bird-dogs. Do not let the hips wobble.',
+  },
+  {
+    id: 'static-equilibrium',
+    name: 'Static Equilibrium',
+    durationMinutes: 15,
+    category: 'midline-tension',
+    movements: [
+      { name: 'Hollow Hold', reps: 20, unit: 'sec' },
+      { name: 'Combat Sprawls', reps: 10 },
+      { name: 'Skater Jumps', reps: 20 },
+    ],
+    tacticalNote:
+      'The combat sprawls will spike the heart rate; the hollow hold forces you to control your panic breathing.',
+  },
+  {
+    id: 'the-suspended-bridge',
+    name: 'The Suspended Bridge',
+    durationMinutes: 15,
+    category: 'midline-tension',
+    movements: [
+      { name: 'Superman Raises', reps: 15 },
+      { name: 'Glute Bridges', reps: 15 },
+      { name: 'Butt Kicks', reps: 30 },
+    ],
+    tacticalNote:
+      'A masterclass in posterior chain endurance. Squeeze the erectors, glutes, and hamstrings relentlessly.',
+  },
+  {
+    id: 'rotational-lock',
+    name: 'Rotational Lock',
+    durationMinutes: 15,
+    category: 'midline-tension',
+    movements: [
+      { name: 'Plank Shoulder Taps', reps: 20 },
+      { name: 'Alternating Lunges', reps: 20 },
+      { name: 'High Knees', reps: 30 },
+    ],
+    tacticalNote:
+      'Widen your feet on the taps to physically block your hips from swaying side to side.',
+  },
+  {
+    id: 'the-pillar',
+    name: 'The Pillar',
+    durationMinutes: 15,
+    category: 'midline-tension',
+    movements: [
+      { name: 'Side Plank Dips (L)', reps: 10 },
+      { name: 'Side Plank Dips (R)', reps: 10 },
+      { name: 'Air Squats', reps: 20 },
+    ],
+    tacticalNote:
+      'Total oblique isolation. Keep the chest completely open, do not roll the top shoulder toward the floor.',
+  },
+  {
+    id: 'dead-stop',
+    name: 'Dead Stop',
+    durationMinutes: 15,
+    category: 'midline-tension',
+    movements: [
+      { name: 'Dead Bugs (Slow)', reps: 20 },
+      { name: 'Down-Ups', reps: 10 },
+      { name: 'Jumping Jacks', reps: 30 },
+    ],
+    tacticalNote:
+      'The slower you move on the dead bugs, the harder they become. Pin your ribcage to the mat.',
+  },
+  {
+    id: 'the-brace',
+    name: 'The Brace',
+    durationMinutes: 15,
+    category: 'midline-tension',
+    movements: [
+      { name: 'Plank Knee-to-Elbows', reps: 16 },
+      { name: 'Reverse Lunges', reps: 16 },
+      { name: 'Double-Tap Jumps', reps: 30 },
+    ],
+    tacticalNote:
+      'The lunges force your core to act as a static brace immediately after the active flexion of the plank.',
+  },
+  {
+    id: 'tension-span',
+    name: 'Tension Span',
+    durationMinutes: 15,
+    category: 'midline-tension',
+    movements: [
+      { name: 'Strict Sit-ups', reps: 15 },
+      { name: 'Superman Raises', reps: 15 },
+      { name: 'Combat Sprawls', reps: 20 },
+    ],
+    tacticalNote:
+      'Perfectly balanced anterior and posterior work. Do not throw your arms to generate momentum on the sit-ups.',
+  },
+  {
+    id: 'the-citadel',
+    name: 'The Citadel',
+    durationMinutes: 15,
+    category: 'midline-tension',
+    movements: [
+      { name: 'Russian Twists', reps: 20 },
+      { name: 'T-Push-ups', reps: 10 },
+      { name: 'Lateral Line Hops', reps: 30 },
+    ],
+    tacticalNote:
+      'High rotational demand on both the floor and the press. Keep your eyes locked on your hands during the T-Push-ups.',
   },
   {
     id: 'the-four-horsemen',
