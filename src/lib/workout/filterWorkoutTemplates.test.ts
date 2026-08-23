@@ -68,6 +68,15 @@ describe('filterWorkoutTemplates', () => {
     ).toHaveLength(10);
   });
 
+  it('returns 10 Engine Room templates at 10 minutes', () => {
+    expect(
+      filterWorkoutTemplates(WORKOUT_TEMPLATES, {
+        durationMinutes: 10,
+        category: 'engine-room',
+      })
+    ).toHaveLength(10);
+  });
+
   it('returns 10 Midline Tension templates at 5 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
@@ -149,16 +158,16 @@ describe('isCategoryAvailable', () => {
     expect(isCategoryAvailable(bloodShunt, 15, WORKOUT_TEMPLATES)).toBe(true);
   });
 
-  it('is false for engine-room and midline-tension at 10 minutes', () => {
-    for (const categoryId of ['engine-room', 'midline-tension'] as const) {
-      const category = WORKOUT_CATEGORIES.find((entry) => entry.id === categoryId);
-      expect(category).toBeDefined();
-      if (!category) {
-        return;
-      }
-
-      expect(isCategoryAvailable(category, 10, WORKOUT_TEMPLATES)).toBe(false);
+  it('is false for midline-tension at 10 minutes', () => {
+    const midlineTension = WORKOUT_CATEGORIES.find(
+      (category) => category.id === 'midline-tension'
+    );
+    expect(midlineTension).toBeDefined();
+    if (!midlineTension) {
+      return;
     }
+
+    expect(isCategoryAvailable(midlineTension, 10, WORKOUT_TEMPLATES)).toBe(false);
   });
 
   it('is true for aerobic-matrix at 20 minutes', () => {
@@ -236,6 +245,16 @@ describe('isCategoryAvailable', () => {
     }
 
     expect(isCategoryAvailable(engineRoom, 5, WORKOUT_TEMPLATES)).toBe(true);
+  });
+
+  it('is true for engine-room at 10 minutes', () => {
+    const engineRoom = WORKOUT_CATEGORIES.find((category) => category.id === 'engine-room');
+    expect(engineRoom).toBeDefined();
+    if (!engineRoom) {
+      return;
+    }
+
+    expect(isCategoryAvailable(engineRoom, 10, WORKOUT_TEMPLATES)).toBe(true);
   });
 
   it('is true for midline-tension at 5 minutes', () => {
@@ -316,6 +335,11 @@ describe('categoriesForDuration', () => {
     const ids = categoriesForDuration(WORKOUT_CATEGORIES, 10).map((category) => category.id);
     expect(ids).toContain('localized-trap');
   });
+
+  it('includes engine-room at 10 minutes', () => {
+    const ids = categoriesForDuration(WORKOUT_CATEGORIES, 10).map((category) => category.id);
+    expect(ids).toContain('engine-room');
+  });
 });
 
 describe('categoryDisplayForDuration', () => {
@@ -374,6 +398,20 @@ describe('categoryDisplayForDuration', () => {
       label: 'Push-Pull',
       description:
         'Anterior Chain versus Posterior Chain — without equipment, true pulling is a hinge-and-spinal-erector puzzle. Pair aggressive chest, shoulder, and quad pushing with heavy glute, hamstring, and posterior tension for a relentless 10-minute equilibrium that protects the joints while keeping the heart rate pinned.',
+    });
+  });
+
+  it('returns override label and description for engine-room at 10 minutes', () => {
+    const engineRoom = WORKOUT_CATEGORIES.find((category) => category.id === 'engine-room');
+    expect(engineRoom).toBeDefined();
+    if (!engineRoom) {
+      return;
+    }
+
+    expect(categoryDisplayForDuration(engineRoom, 10)).toEqual({
+      label: 'Sustained Engine',
+      description:
+        'Gravity and impact are the enemy at 10 minutes — bounce for 600 seconds and your Achilles fail before your lungs. Sustained Engine swaps joint-destroying plyometrics for sweeping, rhythmic compound work to keep the heart rate redlined safely.',
     });
   });
 });

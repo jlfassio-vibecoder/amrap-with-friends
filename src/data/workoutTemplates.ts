@@ -75,7 +75,14 @@ export const WORKOUT_CATEGORIES: WorkoutCategoryMeta[] = [
     label: 'Engine Room',
     description:
       'Pure Cardio — zero muscular bottlenecks, only lung capacity and mental fortitude. High-velocity, low-resistance movements requiring constant, unbroken rhythm.',
-    availableForDurations: [5],
+    availableForDurations: [5, 10],
+    overridesByDuration: {
+      10: {
+        label: 'Sustained Engine',
+        description:
+          'Gravity and impact are the enemy at 10 minutes — bounce for 600 seconds and your Achilles fail before your lungs. Sustained Engine swaps joint-destroying plyometrics for sweeping, rhythmic compound work to keep the heart rate redlined safely.',
+      },
+    },
   },
   {
     id: 'midline-tension',
@@ -845,6 +852,127 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     ],
     tacticalNote:
       'A cascading rep scheme that flows beautifully. Use the 15 jacks as your active recovery.',
+  },
+  {
+    id: 'the-locomotive',
+    name: 'The Locomotive',
+    durationMinutes: 10,
+    category: 'engine-room',
+    movements: [
+      { name: 'Down-Ups', reps: 10 },
+      { name: 'Air Squats', reps: 20 },
+    ],
+    tacticalNote:
+      'Find a breathing rhythm on the squats to recover from the floor transitions.',
+  },
+  {
+    id: 'steady-state',
+    name: 'Steady State',
+    durationMinutes: 10,
+    category: 'engine-room',
+    movements: [
+      { name: 'Sprawls', reps: 12 },
+      { name: 'Mountain Climbers', reps: 24 },
+    ],
+    tacticalNote:
+      'Keep the hips low. Lock the plank instantly when kicking back.',
+  },
+  {
+    id: 'the-pacing-trap',
+    name: 'The Pacing Trap',
+    durationMinutes: 10,
+    category: 'engine-room',
+    movements: [
+      { name: 'Burpees', reps: 8 },
+      { name: 'Alternating Lunges', reps: 16 },
+    ],
+    tacticalNote:
+      'Lunges must be strict. Do not bounce the trailing knee off the floor.',
+  },
+  {
+    id: 'aerobic-flush',
+    name: 'Aerobic Flush',
+    durationMinutes: 10,
+    category: 'engine-room',
+    movements: [
+      { name: 'Air Squats', reps: 15 },
+      { name: 'Jumping Jacks', reps: 30 },
+    ],
+    tacticalNote:
+      'A pure cardiovascular flush. Move continuously without breaking.',
+  },
+  {
+    id: 'the-treadmill',
+    name: 'The Treadmill',
+    durationMinutes: 10,
+    category: 'engine-room',
+    movements: [
+      { name: 'Half-Burpees', reps: 10 },
+      { name: 'Skater Jumps (Total)', reps: 20 },
+    ],
+    tacticalNote:
+      'Lateral bounding paired with horizontal piston action. Keep the chest proud.',
+  },
+  {
+    id: 'rhythmic-fire',
+    name: 'Rhythmic Fire',
+    durationMinutes: 10,
+    category: 'engine-room',
+    movements: [
+      { name: 'Gorilla Sprawls', reps: 10 },
+      { name: 'Jumping Jacks', reps: 20 },
+    ],
+    tacticalNote:
+      'Use the jumping jacks strictly to control your breathing before the next drop.',
+  },
+  {
+    id: 'the-long-stride',
+    name: 'The Long Stride',
+    durationMinutes: 10,
+    category: 'engine-room',
+    movements: [
+      { name: 'Reverse Lunges', reps: 16 },
+      { name: 'Mountain Climbers', reps: 30 },
+    ],
+    tacticalNote:
+      'Heavy quad demand followed by rapid hip flexion. Stay stacked over the wrists.',
+  },
+  {
+    id: 'the-cruiser',
+    name: 'The Cruiser',
+    durationMinutes: 10,
+    category: 'engine-room',
+    movements: [
+      { name: 'Burpees', reps: 5 },
+      { name: 'Air Squats', reps: 15 },
+      { name: 'Butt Kicks', reps: 30 },
+    ],
+    tacticalNote:
+      'A triplet designed to keep the legs moving while distributing the fatigue.',
+  },
+  {
+    id: 'constant-current',
+    name: 'Constant Current',
+    durationMinutes: 10,
+    category: 'engine-room',
+    movements: [
+      { name: 'Sprawls', reps: 12 },
+      { name: 'Cross-Body Mountain Climbers', reps: 24 },
+    ],
+    tacticalNote:
+      'Rotational core engagement while heavily taxing the lungs.',
+  },
+  {
+    id: 'the-oscillator',
+    name: 'The Oscillator',
+    durationMinutes: 10,
+    category: 'engine-room',
+    movements: [
+      { name: 'Down-Ups', reps: 10 },
+      { name: 'High Knees', reps: 20 },
+    ],
+    tacticalNote:
+      'Explode on the knees, but pace the down-ups to avoid central nervous system burnout.',
   },
   {
     id: 'the-folding-knife',
