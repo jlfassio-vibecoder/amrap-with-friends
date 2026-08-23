@@ -8,23 +8,23 @@ export function AuthHeaderActions() {
   const [authOpen, setAuthOpen] = useState(false);
 
   if (isAuthLoading) {
-    return <span className="text-sm text-gray-500">…</span>;
+    return <span className="text-sm text-muted">…</span>;
   }
 
   return (
     <>
       {isAuthenticated ? (
         <div className="flex items-center gap-3 text-sm">
-          <Link className="underline" to="/my-sessions">My sessions</Link>
-          <span className="text-gray-600">{user?.email}</span>
-          <button type="button" className="underline" onClick={() => signOut()}>
+          <Link className="link-accent" to="/my-sessions">My sessions</Link>
+          <span className="text-secondary">{user?.email}</span>
+          <button type="button" className="link-accent" onClick={() => signOut()}>
             Sign out
           </button>
         </div>
       ) : (
         <button
           type="button"
-          className="text-sm underline"
+          className="link-accent text-sm"
           onClick={() => setAuthOpen(true)}
         >
           Sign in

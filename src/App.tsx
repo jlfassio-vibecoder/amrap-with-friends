@@ -10,7 +10,7 @@ const TimerDevPage = lazy(() => import('./pages/dev/TimerDevPage'));
 
 function RouteFallback() {
   return (
-    <main className="flex min-h-screen items-center justify-center p-6 text-sm text-gray-600">
+    <main className="flex min-h-screen items-center justify-center p-6 text-sm text-secondary">
       Loading…
     </main>
   );

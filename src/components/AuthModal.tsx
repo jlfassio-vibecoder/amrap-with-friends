@@ -29,17 +29,23 @@ export function AuthModal({ onClose }: AuthModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="auth-modal-title"
+      onClick={onClose}
     >
-      <div className="w-full max-w-sm space-y-4 rounded-lg border border-gray-300 bg-white p-6 shadow-lg">
+      <div
+        className="card w-full max-w-sm space-y-4 p-6"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="flex items-start justify-between gap-4">
-          <h2 id="auth-modal-title" className="text-lg font-semibold">Sign in</h2>
+          <h2 id="auth-modal-title" className="text-display text-xl text-ink">
+            Sign in
+          </h2>
           <button
             type="button"
-            className="text-sm text-gray-500 hover:text-gray-800"
+            className="text-sm text-secondary hover:text-ink"
             onClick={onClose}
             aria-label="Close"
           >
@@ -47,18 +53,18 @@ export function AuthModal({ onClose }: AuthModalProps) {
           </button>
         </div>
 
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-secondary">
           Optional — play as a guest without signing in. Use an account to save sessions to your profile.
         </p>
 
         <form className="space-y-3" onSubmit={handleSubmit}>
           <label className="block space-y-1 text-sm">
-            <span>Email</span>
+            <span className="font-semibold">Email</span>
             <input
               type="email"
               required
               autoComplete="email"
-              className="w-full rounded border border-gray-300 px-3 py-2"
+              className="input-field"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               disabled={status === 'sending' || status === 'sent'}
@@ -66,16 +72,14 @@ export function AuthModal({ onClose }: AuthModalProps) {
           </label>
 
           {message && (
-            <p
-              className={`text-sm ${status === 'error' ? 'text-red-600' : 'text-gray-700'}`}
-            >
-              {message}
+            <p className={status === 'error' ? 'text-error' : 'text-sm text-secondary'}>
+              {status === 'error' ? `Error: ${message}` : message}
             </p>
           )}
 
           <button
             type="submit"
-            className="w-full rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-neutral w-full text-sm"
             disabled={status === 'sending' || status === 'sent'}
           >
             {status === 'sending' ? 'Sending…' : 'Send magic link'}

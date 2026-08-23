@@ -7,12 +7,12 @@ function HomePage() {
       <div className="absolute right-6 top-6">
         <AuthHeaderActions />
       </div>
-      <h1 className="text-2xl font-semibold">AMRAP With Friends</h1>
+      <h1 className="text-display text-4xl text-ink">AMRAP With Friends</h1>
       <div className="flex gap-4">
-        <Link className="rounded bg-gray-900 px-4 py-2 text-white" to="/create">
+        <Link className="btn-primary" to="/create">
           Create session
         </Link>
-        <Link className="rounded border border-gray-300 px-4 py-2" to="/join">
+        <Link className="btn-outline" to="/join">
           Join session
         </Link>
       </div>
