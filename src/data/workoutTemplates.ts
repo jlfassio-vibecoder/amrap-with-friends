@@ -56,8 +56,9 @@ export const WORKOUT_CATEGORIES: WorkoutCategoryMeta[] = [
   {
     id: 'midline-tension',
     label: 'Midline Tension',
-    description: 'Dynamic core — rotational and anti-extension work under cardiovascular duress.',
-    availableForDurations: [],
+    description:
+      'Dynamic Core — pairs a cardiovascular movement with strict, controlled core work. A fatigued core makes everything else feel twice as hard.',
+    availableForDurations: [5],
   },
 ];
 
@@ -432,5 +433,125 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     ],
     tacticalNote:
       'A cascading rep scheme that flows beautifully. Use the 15 jacks as your active recovery.',
+  },
+  {
+    id: 'the-folding-knife',
+    name: 'The Folding Knife',
+    durationMinutes: 5,
+    category: 'midline-tension',
+    movements: [
+      { name: 'Sprawls', reps: 10 },
+      { name: 'V-Ups', reps: 10 },
+    ],
+    tacticalNote:
+      'Explosive hip extension immediately into extreme hip flexion. Keep the legs locked straight on the V-ups.',
+  },
+  {
+    id: 'the-hull-breach',
+    name: 'The Hull Breach',
+    durationMinutes: 5,
+    category: 'midline-tension',
+    movements: [
+      { name: 'Burpees', reps: 8 },
+      { name: 'Hollow Rocks', reps: 15 },
+    ],
+    tacticalNote:
+      'Breathing heavily during a hollow rock feels like suffocating. Pin the lower back to the floor and fight for position.',
+  },
+  {
+    id: 'the-vice-grip',
+    name: 'The Vice Grip',
+    durationMinutes: 5,
+    category: 'midline-tension',
+    movements: [
+      { name: 'Mountain Climbers', reps: 20 },
+      { name: 'Strict Sit-Ups', reps: 10 },
+    ],
+    tacticalNote:
+      'Do not use momentum to throw yourself up on the sit-ups. Roll up one vertebrae at a time.',
+  },
+  {
+    id: 'the-shock-absorber',
+    name: 'The Shock Absorber',
+    durationMinutes: 5,
+    category: 'midline-tension',
+    movements: [
+      { name: 'Jump Squats', reps: 10 },
+      { name: 'Plank Knee-to-Elbows', reps: 12 },
+    ],
+    tacticalNote:
+      'Forcefully compress the obliques. The knee must physically touch the triceps for the rep to count.',
+  },
+  {
+    id: 'the-tornado',
+    name: 'The Tornado',
+    durationMinutes: 5,
+    category: 'midline-tension',
+    movements: [
+      { name: 'Jumping Jacks', reps: 15 },
+      { name: 'Bicycle Crunches', reps: 20 },
+    ],
+    tacticalNote:
+      'A deceptive trap. Keep the elbows wide and rotate from the sternum, not the neck.',
+  },
+  {
+    id: 'the-contrast',
+    name: 'The Contrast',
+    durationMinutes: 5,
+    category: 'midline-tension',
+    movements: [
+      { name: 'Tuck Jumps', reps: 8 },
+      { name: 'Dead Bugs', reps: 12 },
+    ],
+    tacticalNote:
+      'Maximum chaos moving to maximum control. Breathe out sharply as the opposite arm and leg extend.',
+  },
+  {
+    id: 'the-iron-pendulum',
+    name: 'The Iron Pendulum',
+    durationMinutes: 5,
+    category: 'midline-tension',
+    movements: [
+      { name: 'Skater Jumps', reps: 12 },
+      { name: 'Russian Twists', reps: 20 },
+    ],
+    tacticalNote:
+      'Rotational stability under fire. Touch both hands to the floor outside the hip on every single twist.',
+  },
+  {
+    id: 'anti-gravity',
+    name: 'Anti-Gravity',
+    durationMinutes: 5,
+    category: 'midline-tension',
+    movements: [
+      { name: 'Down-Ups', reps: 10 },
+      { name: 'Leg Raises', reps: 10 },
+    ],
+    tacticalNote:
+      "Control the descent of the legs. If your heels slam into the floor, the rep doesn't count.",
+  },
+  {
+    id: 'the-scissors',
+    name: 'The Scissors',
+    durationMinutes: 5,
+    category: 'midline-tension',
+    movements: [
+      { name: 'High Knees', reps: 20 },
+      { name: 'Flutter Kicks', reps: 20 },
+    ],
+    tacticalNote:
+      'Lightning-fast transitions. Keep the chin tucked during the flutter kicks to deeply engage the upper abdominals.',
+  },
+  {
+    id: 'the-coil',
+    name: 'The Coil',
+    durationMinutes: 5,
+    category: 'midline-tension',
+    movements: [
+      { name: 'Plank Jacks', reps: 10 },
+      { name: 'Superman Raises', reps: 10 },
+    ],
+    tacticalNote:
+      'Remember the posterior core. Lift the chest and thighs off the floor simultaneously, squeezing the lower back.',
   },
 ];

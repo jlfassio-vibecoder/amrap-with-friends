@@ -39,13 +39,13 @@ describe('filterWorkoutTemplates', () => {
     ).toHaveLength(10);
   });
 
-  it('returns empty for categories with no seeded content', () => {
+  it('returns 10 Midline Tension templates at 5 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
         durationMinutes: 5,
         category: 'midline-tension',
       })
-    ).toEqual([]);
+    ).toHaveLength(10);
   });
 
   it('returns empty for durations with no templates', () => {
@@ -102,7 +102,7 @@ describe('isCategoryAvailable', () => {
     expect(isCategoryAvailable(engineRoom, 5, WORKOUT_TEMPLATES)).toBe(true);
   });
 
-  it('is false for categories without templates at the duration', () => {
+  it('is true for midline-tension at 5 minutes', () => {
     const midlineTension = WORKOUT_CATEGORIES.find(
       (category) => category.id === 'midline-tension'
     );
@@ -111,7 +111,13 @@ describe('isCategoryAvailable', () => {
       return;
     }
 
-    expect(isCategoryAvailable(midlineTension, 5, WORKOUT_TEMPLATES)).toBe(false);
+    expect(isCategoryAvailable(midlineTension, 5, WORKOUT_TEMPLATES)).toBe(true);
+  });
+
+  it('reports every category as available at 5 minutes', () => {
+    for (const category of WORKOUT_CATEGORIES) {
+      expect(isCategoryAvailable(category, 5, WORKOUT_TEMPLATES)).toBe(true);
+    }
   });
 });
 
