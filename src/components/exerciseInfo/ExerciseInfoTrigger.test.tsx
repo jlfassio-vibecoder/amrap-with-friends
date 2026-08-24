@@ -8,7 +8,7 @@ afterEach(() => {
 
 describe('ExerciseInfoTrigger', () => {
   it('renders nothing when no library entry exists', () => {
-    const { container } = render(<ExerciseInfoTrigger name="Hollow Rocks" />);
+    const { container } = render(<ExerciseInfoTrigger name="Totally Fake Movement" />);
     expect(container.firstChild).toBeNull();
   });
 

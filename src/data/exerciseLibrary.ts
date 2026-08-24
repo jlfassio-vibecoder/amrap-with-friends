@@ -473,6 +473,19 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     photos: sequencePhotos('sprawls'),
   },
   {
+    id: 'combat-sprawls',
+    name: 'Combat Sprawls',
+    setupAndExecution: [
+      'From a wide, low defensive crouch, plant both hands on the floor. Violently kick both feet back into a rigid high plank. Instantly pull the knees forward, jumping the feet wide to land flat-footed on the outside of your hands. Lift your hands and chest to return to the defensive crouch, never fully standing or locking out the hips.',
+    ],
+    commonMistakes: [],
+    coachingCue:
+      '"Drop to evade, recover to defend." The hips must remain low; if you stand all the way up, you are giving your quads an unearned rest. You must live in the tension.',
+    amrapTip:
+      'You must land with your entire foot completely flat on the mat when returning from the plank. Landing on your toes in this wide stance places severe shearing force on the knee capsule and kills your ability to rebound.',
+    photos: sequencePhotos('combat-sprawls'),
+  },
+  {
     id: 'down-ups',
     name: 'Down-Ups',
     setupAndExecution: [
@@ -696,6 +709,278 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Aggressively squeeze the glutes before lifting the chest to protect the lower back from hyperextension.',
     photos: sequencePhotos('superman-raises'),
+  },
+  {
+    id: 'alternating-bird-dogs',
+    name: 'Alternating Bird-Dogs',
+    setupAndExecution: [
+      'From a quadruped position (hands under shoulders, knees under hips), slowly extend the right arm forward and the left leg backward until both are parallel to the floor. Return and switch.',
+    ],
+    commonMistakes: [],
+    coachingCue:
+      '"Balance a glass of water on your lower back." There should be zero spinal rotation.',
+    amrapTip:
+      'Reach long, not high. Hyperextending the back to get your leg higher defeats the core stabilization purpose entirely.',
+    photos: sequencePhotos('alternating-bird-dogs'),
+  },
+  {
+    id: 'bear-crawl-hover',
+    name: 'Bear Crawl Hover',
+    setupAndExecution: [
+      'Set up in a quadruped position. Press your toes into the mat and lift both knees exactly one inch off the floor. Freeze.',
+    ],
+    commonMistakes: [],
+    coachingCue: '"Your shins are parallel to the deck."',
+    amrapTip:
+      'As your quads burn, your hips will naturally try to pike up toward the ceiling to relieve the tension. Pin them down.',
+    photos: sequencePhotos('bear-crawl-hover'),
+  },
+  {
+    id: 'high-plank-hold',
+    name: 'High Plank Hold',
+    setupAndExecution: [
+      'Assume the top of a push-up position. Hands directly under shoulders, legs perfectly straight, core braced.',
+    ],
+    commonMistakes: [],
+    coachingCue:
+      '"Actively push the floor away from you." This protracts the shoulder blades and engages the serratus anterior.',
+    amrapTip:
+      'Squeeze your glutes. A plank is not just a shoulder exercise; it is a full-body isometric lock.',
+    photos: sequencePhotos('high-plank-hold'),
+  },
+  {
+    id: 'hollow-rocks',
+    name: 'Hollow Rocks',
+    setupAndExecution: [
+      'Assume the hollow hold position (supine, lower back crushed into the floor, shoulders and heels elevated). Generate a tiny rocking motion head-to-toe without breaking the structural shape.',
+    ],
+    commonMistakes: [],
+    coachingCue: '"Maintain the rigid crescent moon."',
+    amrapTip:
+      'The rocking motion should be miniature. If your lower back peels off the floor, you are using momentum, not your core.',
+    photos: sequencePhotos('hollow-rocks'),
+  },
+  {
+    id: 'plank-hold',
+    name: 'Plank Hold',
+    setupAndExecution: [
+      'Rest on your forearms with elbows stacked under shoulders. Body forms a perfectly straight line from the crown of the head to the heels.',
+    ],
+    commonMistakes: [],
+    coachingCue:
+      '"Drag your elbows toward your toes." (This is an isometric intention—they won\'t actually move, but the tension in your lats and core will double).',
+    amrapTip:
+      'Keep your forearms parallel. Do not interlock your fingers, which internally rotates the shoulders and compromises the posture.',
+    photos: sequencePhotos('plank-hold'),
+  },
+  {
+    id: 'plank-reaches',
+    name: 'Plank Reaches',
+    setupAndExecution: [
+      'From a high plank, slowly reach one arm straight out in front of you until it is parallel to the floor. Place it back, then switch arms.',
+    ],
+    commonMistakes: [],
+    coachingCue:
+      '"Do not let the hips spill." Your torso must remain perfectly square to the mat.',
+    amrapTip:
+      'Widen your feet slightly wider than shoulder-width to create a tripod base before you lift a hand.',
+    photos: sequencePhotos('plank-reaches'),
+  },
+  {
+    id: 'side-plank-hold',
+    name: 'Side Plank Hold',
+    setupAndExecution: [
+      'Prop yourself on one forearm, stack your feet, and lift your hips until your body forms a straight line.',
+    ],
+    commonMistakes: [],
+    coachingCue:
+      '"Imagine a steel cable pulling your top hip directly into the ceiling."',
+    amrapTip:
+      'Squeeze the bottom glute aggressively to prevent the hips from hinging backward.',
+    photos: sequencePhotos('side-plank-hold'),
+  },
+  {
+    id: 'v-sit-hold',
+    name: 'V-Sit Hold',
+    setupAndExecution: [
+      'Balance entirely on your sit bones. Elevate straight legs to a 45-degree angle and lean your torso back slightly, reaching your arms forward parallel to the floor.',
+    ],
+    commonMistakes: [],
+    coachingCue: '"Balance on the razor\'s edge."',
+    amrapTip:
+      'If your lower back rounds, the hold is broken. Pull your knees slightly toward your chest to reset the flat spine.',
+    photos: sequencePhotos('v-sit-hold'),
+  },
+  {
+    id: 'butterfly-sit-ups',
+    name: 'Butterfly Sit-ups',
+    setupAndExecution: [
+      'Lie supine, bring the soles of your feet together, and let your knees fall open. Touch the floor behind your head, then sit all the way up and touch your toes.',
+    ],
+    commonMistakes: [],
+    coachingCue: '"Roll up one vertebra at a time."',
+    amrapTip:
+      'The butterfly leg position mechanically disables the hip flexors, forcing pure abdominal contraction. Do not use your arms to swing forward.',
+    photos: sequencePhotos('butterfly-sit-ups'),
+  },
+  {
+    id: 'cross-body-climbers',
+    name: 'Cross-Body Climbers',
+    setupAndExecution: [
+      'From a high plank, violently drive the right knee across the body under the torso to physically tap the left elbow, then switch.',
+    ],
+    commonMistakes: [],
+    coachingCue:
+      '"Wring out the towel." Force a deep rotational twist in the torso on every rep.',
+    amrapTip:
+      'Focus on the hard muscular contraction and the twist rather than pure foot speed.',
+    photos: sequencePhotos('cross-body-climbers'),
+  },
+  {
+    id: 'bodyweight-good-mornings',
+    name: 'Bodyweight Good Mornings',
+    setupAndExecution: [
+      'Stand tall, hands lightly behind your head. With a micro-bend in the knees, hinge your hips straight back until your torso is nearly parallel to the floor. Stand back up aggressively.',
+    ],
+    commonMistakes: [],
+    coachingCue: '"Push your hips through the wall behind you."',
+    amrapTip:
+      'The moment your lower back starts to round, you have gone too deep. The stretch must be felt entirely in the hamstrings.',
+    photos: sequencePhotos('bodyweight-good-mornings'),
+  },
+  {
+    id: 'glute-bridge-hold',
+    name: 'Glute Bridge Hold',
+    setupAndExecution: [
+      'Lie supine, knees bent, feet flat. Drive the hips up into full extension and freeze the position.',
+    ],
+    commonMistakes: [],
+    coachingCue: '"Crack a walnut." Uncompromising glute tension.',
+    amrapTip:
+      'Drive through your heels, not your toes. Pressing through the toes shifts the load to the quads.',
+    photos: sequencePhotos('glute-bridge-hold'),
+  },
+  {
+    id: 'glute-bridge-walkouts',
+    name: 'Glute Bridge Walkouts',
+    setupAndExecution: [
+      'Hold the top of a glute bridge. Slowly walk your heels out away from your body in small, alternating steps until your legs are nearly straight. Walk them back in.',
+    ],
+    commonMistakes: [],
+    coachingCue: '"Dig your heels into the dirt."',
+    amrapTip:
+      'If you rush this, your hamstrings will instantly cramp. Move in slow, deliberate micro-steps.',
+    photos: sequencePhotos('glute-bridge-walkouts'),
+  },
+  {
+    id: 'reverse-snow-angels',
+    name: 'Reverse Snow Angels',
+    setupAndExecution: [
+      'Lie prone (face down). Keep your chest hovering slightly off the floor. Keep your arms totally straight and sweep them from your hips all the way overhead in a wide arc.',
+    ],
+    commonMistakes: [],
+    coachingCue: '"Scrape your knuckles across the ceiling."',
+    amrapTip:
+      'Do not let your hands rest on the floor during the sweep. Keep constant tension on the upper back and rear deltoids.',
+    photos: sequencePhotos('reverse-snow-angels'),
+  },
+  {
+    id: 'superman-hold',
+    name: 'Superman Hold',
+    setupAndExecution: [
+      'Lie prone. Simultaneously lift your chest, arms, and thighs off the floor and hold the rigid, arched position.',
+    ],
+    commonMistakes: [],
+    coachingCue: '"Fly, do not bend."',
+    amrapTip:
+      'Aggressively squeeze the glutes before you lift the chest to protect the lower back from absorbing all the force.',
+    photos: sequencePhotos('superman-hold'),
+  },
+  {
+    id: 'superman-pull-downs',
+    name: 'Superman Pull-downs',
+    setupAndExecution: [
+      'Hold the top of the Superman position with arms extended forward. Pull your elbows back and down toward your ribs, squeezing the lats, then press the arms back forward.',
+    ],
+    commonMistakes: [],
+    coachingCue: '"Pull a heavy cable down to your ribs."',
+    amrapTip:
+      'You must create artificial tension. If you just wave your arms in the air, you are wasting your time.',
+    photos: sequencePhotos('superman-pull-downs'),
+  },
+  {
+    id: 'supermans',
+    name: 'Supermans',
+    setupAndExecution: [
+      'Lie prone. Simultaneously lift the chest and thighs off the mat, pause for a micro-second, then lower with control.',
+    ],
+    commonMistakes: [],
+    coachingCue:
+      '"Controlled flight." Do not jerk the torso off the floor violently.',
+    amrapTip:
+      'The pause at the top of every rep is mandatory to ensure muscular contraction, not momentum.',
+    photos: sequencePhotos('supermans'),
+  },
+  {
+    id: 'bear-crawl-to-broad-jumps',
+    name: 'Bear Crawl to Broad Jumps',
+    setupAndExecution: [
+      'Drop into a bear crawl position (hips low). Move forward four paces. Plant the feet, stand rapidly, and execute a horizontal broad jump.',
+    ],
+    commonMistakes: [],
+    coachingCue:
+      '"Stay in the tunnel during the crawl; explode out of it on the jump."',
+    amrapTip:
+      'Use the momentum of standing up from the crawl to instantly launch into the broad jump. Do not stutter-step.',
+    photos: sequencePhotos('bear-crawl-to-broad-jumps'),
+  },
+  {
+    id: 'fast-air-squats',
+    name: 'Fast Air Squats',
+    setupAndExecution: [
+      'A standard bodyweight squat executed at maximum velocity. The hip crease must still break the plane of the knee, and the hips must fully lock out at the top.',
+    ],
+    commonMistakes: [],
+    coachingCue: '"Piston action. Drop and fire."',
+    amrapTip:
+      'Speed often ruins depth. The moment your squats become "half-squats," your round time is invalid.',
+    photos: sequencePhotos('fast-air-squats'),
+  },
+  {
+    id: 'push-ups',
+    name: 'Push-ups',
+    setupAndExecution: [
+      'Start in a high plank. Lower the body until the chest touches the floor, keeping elbows tracking back at a 45-degree angle. Press back to full lockout.',
+    ],
+    commonMistakes: [],
+    coachingCue: '"Your body is a single sheet of steel."',
+    amrapTip:
+      'Do not let your hips sag to touch the floor before your chest does.',
+    photos: sequencePhotos('push-ups'),
+  },
+  {
+    id: 'strict-reverse-lunges',
+    name: 'Strict Reverse Lunges',
+    setupAndExecution: [
+      'Step one foot backward and lower the hips straight down until the trailing knee gently taps the floor. The front shin remains vertical.',
+    ],
+    commonMistakes: [],
+    coachingCue: '"Elevator, not an escalator. Straight down, straight up."',
+    amrapTip:
+      'Do not push off the back toe to stand up. Pull yourself up by driving through the heel of the front foot.',
+    photos: sequencePhotos('strict-reverse-lunges'),
+  },
+  {
+    id: 'walking-lunges',
+    name: 'Walking Lunges',
+    setupAndExecution: [
+      'Step forward into a lunge. Instead of pushing backward to return, drive off the front foot to immediately step forward into the next lunge on the opposite leg.',
+    ],
+    commonMistakes: [],
+    coachingCue: '"Smooth forward momentum."',
+    amrapTip:
+      'Keep your torso vertical. If you lean forward over your front knee as you walk, you are putting massive shear force on the patella.',
+    photos: sequencePhotos('walking-lunges'),
   },
 ];
 
