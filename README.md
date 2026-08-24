@@ -41,13 +41,31 @@ Lobby schema and RPCs live in [`supabase/migrations/`](supabase/migrations/). Ap
 
 Manual RPC checks: [`supabase/scripts/verify_lobby_rpc.sql`](supabase/scripts/verify_lobby_rpc.sql).
 
+### Hosted Supabase deploy (required for score lock at session finish)
+
+After linking the project (`supabase link --project-ref <ref>`):
+
+```bash
+supabase db push
+supabase functions deploy submit-participant-result
+```
+
+`submit-participant-result` must be deployed or finishing a workout (partial reps / **I EARNED THIS**) fails with a CORS or network error. If claim-status RPCs 404, run `supabase db push` so repair migrations (e.g. `get_participant_claim_status`) are applied.
+
 ### Auth (manual verification)
 
-Magic-link sign-in requires Supabase Auth email provider enabled and redirect URLs allowing your dev origin (e.g. `http://localhost:5173`). After `supabase db push` for `20260822140000_auth_claim.sql`:
+Enable Supabase Auth **email** provider and redirect URLs for your dev origin (e.g. `http://localhost:5173`). Sign-in options: **magic link** or **email + password**.
 
-1. Play a session as guest, finish, sign in via magic link, click **Save this session to my account**.
+**Hosted vs local auth settings:** Local `supabase/config.toml` sets `enable_confirmations = false` and `minimum_password_length = 6`. The hosted dashboard may differ (Confirm email is often ON by default; password minimum may change). Before shipping to prod, check Dashboard → **Authentication → Providers → Email** and align [`AUTH_MIN_PASSWORD_LENGTH`](src/lib/auth/passwordPolicy.ts) with the hosted minimum if needed.
+
+After `supabase db push` for `20260822140000_auth_claim.sql`:
+
+1. Play a session as guest, finish, sign in (magic link or password), click **Save this session to my account**.
 2. Open **My sessions** — saved session appears with round count.
 3. Optional: sign in mid-session, save, then **Log round** still works after claim.
+4. Password sign-up: if email confirmation is enabled on hosted, UI should prompt to check email; local dev may sign in immediately.
+
+**Follow-up (out of scope):** forgot-password / password reset flow.
 
 ## Architecture decisions
 

@@ -80,6 +80,14 @@ function mapInvokeError(message: string | undefined, reason?: string): string {
   if (!message) {
     return 'Something went wrong. Please try again.';
   }
+  if (
+    message.includes('Failed to send a request to the Edge Function') ||
+    message.includes('Failed to fetch') ||
+    message.includes('FunctionsFetchError') ||
+    message.includes('Function not found')
+  ) {
+    return 'Score submission service is not deployed. Run supabase functions deploy submit-participant-result on the linked project.';
+  }
   if (message.includes('Session not found')) {
     return 'Session not found.';
   }

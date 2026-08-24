@@ -3,6 +3,8 @@
 ALTER TABLE public.sessions
   ADD COLUMN IF NOT EXISTS template_id text NULL;
 
+GRANT SELECT (template_id) ON public.sessions TO anon, authenticated;
+
 CREATE INDEX IF NOT EXISTS idx_sessions_template_duration
   ON public.sessions (template_id, duration_minutes)
   WHERE template_id IS NOT NULL;
