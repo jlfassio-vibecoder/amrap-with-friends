@@ -7,6 +7,7 @@ export interface SessionRow {
   id: string;
   duration_minutes: number;
   workout: WorkoutExercise[];
+  template_id: string | null;
   state: LiveSessionPhase;
   time_left_sec: number;
   is_paused: boolean;

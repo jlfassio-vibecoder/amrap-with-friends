@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
 import { useState } from 'react';
-import { getStoredParticipantId, getStoredClaimToken, getStoredNickname } from '@/lib/sessionIdentity';
+import { getStoredParticipantId, getStoredClaimToken, getStoredNickname, getStoredGhostSelection } from '@/lib/sessionIdentity';
 import { useLiveAmrapSession } from '@/hooks/useLiveAmrapSession';
 import { useParticipantClaim } from '@/hooks/useParticipantClaim';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
@@ -11,6 +11,10 @@ import { ParticipantsPanel } from '@/components/ParticipantsPanel';
 import { PartialRepsModal } from '@/components/PartialRepsModal';
 import { SessionScorecard } from '@/components/SessionScorecard';
 import { SessionChat } from '@/components/SessionChat';
+import { GhostPicker } from '@/components/GhostPicker';
+import { GhostPacerStrip } from '@/components/GhostPacerStrip';
+import { useGhostPacer } from '@/hooks/useGhostPacer';
+import type { StoredGhostSelection } from '@/lib/sessionIdentity';
 
 function formatTime(totalSec: number): string {
   const minutes = Math.floor(totalSec / 60);
@@ -82,12 +86,33 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
   const { isAuthenticated } = useAmrapAuth();
   const [isSubmittingPartialReps, setIsSubmittingPartialReps] = useState(false);
   const [scorecardDismissed, setScorecardDismissed] = useState(false);
+  const [ghostSelection, setGhostSelection] = useState<StoredGhostSelection | null>(
+    () => getStoredGhostSelection(sessionId)
+  );
 
   const channel = useSessionChannel(sessionId, { participantId, nickname });
   const live = useLiveAmrapSession(sessionId, channel);
   const claim = useParticipantClaim(sessionId);
   const selfLeaderboardEntry =
     live.leaderboard.find((entry) => entry.isSelf) ?? null;
+  const selfBaseScore = selfLeaderboardEntry?.baseScore ?? 0;
+
+  const ghostPacer = useGhostPacer({
+    sessionId,
+    ghostSelection,
+    repsPerRound: live.repsPerRound,
+    workDurationSec: live.workDurationSec,
+    elapsedSec: live.elapsedSec,
+    selfBaseScore,
+  });
+
+  const isSoloTemplated =
+    live.participantCount === 1 &&
+    live.templateId !== null &&
+    live.phase === 'waiting';
+  const showGhostPicker = isSoloTemplated;
+  const showGhostPacerStrip =
+    ghostSelection !== null && live.phase === 'work';
 
   const showStart = live.isHost && live.phase === 'waiting';
   const showPause = live.isHost && live.phase === 'work' && !live.isPaused;
@@ -191,6 +216,26 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
                 Realtime: {live.isRealtimeConnected ? 'connected' : 'connecting…'}
               </p>
             </section>
+
+            {showGhostPicker && live.templateId ? (
+              <GhostPicker
+                sessionId={sessionId}
+                templateId={live.templateId}
+                durationMinutes={live.workDurationSec / 60}
+                value={ghostSelection}
+                onChange={setGhostSelection}
+              />
+            ) : null}
+
+            {showGhostPacerStrip && ghostSelection ? (
+              <GhostPacerStrip
+                ghostLabel={ghostSelection.label}
+                ghostReps={ghostPacer.ghostReps}
+                selfReps={ghostPacer.selfReps}
+                deltaReps={ghostPacer.deltaReps}
+                isLoading={ghostPacer.isLoading}
+              />
+            ) : null}
 
             <section className="flex flex-wrap gap-2 lg:justify-center">
               {showStart && (

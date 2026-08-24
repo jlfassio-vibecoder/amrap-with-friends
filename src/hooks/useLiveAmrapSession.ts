@@ -45,6 +45,8 @@ export interface UseLiveAmrapSessionReturn {
   nickname: string;
   sessionId: string;
   workout: Array<{ name: string; target?: number; unit?: string }>;
+  templateId: string | null;
+  participantCount: number;
   segmentIndex: number;
   repsPerRound: number;
   hasSubmittedPartialReps: boolean;
@@ -294,6 +296,8 @@ export function useLiveAmrapSession(
       : 0;
 
   const workout = session?.workout ?? [];
+  const templateId = session?.template_id ?? null;
+  const participantCount = channel.participants.length;
 
   const repsPerRound = useMemo(() => {
     try {
@@ -494,6 +498,8 @@ export function useLiveAmrapSession(
     nickname,
     sessionId,
     workout,
+    templateId,
+    participantCount,
     segmentIndex,
     repsPerRound,
     hasSubmittedPartialReps,

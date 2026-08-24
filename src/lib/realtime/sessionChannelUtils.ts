@@ -63,10 +63,19 @@ export function parseSessionRow(record: Record<string, unknown>): SessionRow | n
       ? null
       : String(record.started_at);
 
+  const templateIdRaw = record.template_id;
+  const templateId =
+    templateIdRaw === null || templateIdRaw === undefined
+      ? null
+      : typeof templateIdRaw === 'string' && templateIdRaw.trim().length > 0
+        ? templateIdRaw.trim()
+        : null;
+
   return {
     id,
     duration_minutes: durationMinutes,
     workout: workout as SessionRow['workout'],
+    template_id: templateId,
     state,
     time_left_sec: timeLeftSec,
     is_paused: isPaused,
