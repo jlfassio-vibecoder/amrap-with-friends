@@ -58,13 +58,25 @@ export function PacingBarChart({
       aria-label="Round pacing chart"
     >
       <div className="space-y-1">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">
-            P.V.I. variance
-          </p>
-          <p className="text-display text-lg tabular-nums text-ink">
-            {pvi === null ? 'N/A' : `${pvi}%`}
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+              P.V.I. variance
+            </p>
+            <p className="text-display text-lg tabular-nums text-ink">
+              {pvi === null ? 'N/A' : `${pvi}%`}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+              Avg round time
+            </p>
+            <p className="text-display text-lg tabular-nums text-ink">
+              {averagePaceSec === null
+                ? 'N/A'
+                : formatSplitDuration(Math.round(averagePaceSec))}
+            </p>
+          </div>
         </div>
         <p className="text-xs font-semibold uppercase tracking-wide text-accent">
           {pviTier.classification}

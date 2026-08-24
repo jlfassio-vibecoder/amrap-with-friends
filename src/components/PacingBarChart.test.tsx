@@ -18,6 +18,7 @@ describe('PacingBarChart', () => {
 
     expect(container.querySelectorAll('rect')).toHaveLength(4);
     expect(screen.getByText('12.8%')).toBeDefined();
+    expect(screen.getByText('Avg round time')).toBeDefined();
   });
 
   it('shows buy-in label for round 1 on 10+ minute sessions', () => {
