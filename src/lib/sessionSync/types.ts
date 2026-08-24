@@ -148,7 +148,8 @@ export interface LeaderboardEntry {
   pviMultiplier: number;
   pviClassification: string;
   pviVerdict: string;
-  adjustedScore: number;
+  domainWeight: number;
+  finalScore: number;
   rounds: LeaderboardRoundEntry[];
   isSelf: boolean;
 }

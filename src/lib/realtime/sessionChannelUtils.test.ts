@@ -339,11 +339,11 @@ describe('sessionChannelUtils', () => {
 
     expect(leaderboard[0].participantId).toBe(HOST_ID);
     expect(leaderboard[0].pvi).toBeNull();
-    expect(leaderboard[0].adjustedScore).toBe(40);
-    expect(leaderboard[1].adjustedScore).toBe(40);
+    expect(leaderboard[0].finalScore).toBe(40);
+    expect(leaderboard[1].finalScore).toBe(40);
   });
 
-  it('buildLeaderboard re-ranks by adjusted score at finished phase', () => {
+  it('buildLeaderboard re-ranks by final score at finished phase', () => {
     const participants = [
       parseParticipantRow({
         id: HOST_ID,
@@ -380,6 +380,15 @@ describe('sessionChannelUtils', () => {
         segment_index: 0,
         created_at: '2026-08-22T12:00:01.000Z',
       })!,
+      parseRoundRow({
+        id: 'eeee5555-5555-4555-8555-555555555555',
+        session_id: SESSION_ID,
+        participant_id: HOST_ID,
+        round_index: 2,
+        elapsed_sec_at_round: 180,
+        segment_index: 0,
+        created_at: '2026-08-22T12:00:02.000Z',
+      })!,
     ];
     const joinerRounds = [
       parseRoundRow({
@@ -409,19 +418,21 @@ describe('sessionChannelUtils', () => {
       0,
       HOST_ID,
       WORKOUT,
-      5,
+      15,
       'finished'
     );
 
     expect(leaderboard[0].participantId).toBe(HOST_ID);
-    expect(leaderboard[0].baseScore).toBe(40);
+    expect(leaderboard[0].baseScore).toBe(60);
     expect(leaderboard[0].pvi).toBe(0);
     expect(leaderboard[0].pviMultiplier).toBe(1.15);
-    expect(leaderboard[0].adjustedScore).toBe(46);
+    expect(leaderboard[0].domainWeight).toBe(1.5);
+    expect(leaderboard[0].finalScore).toBe(104);
     expect(leaderboard[1].participantId).toBe(JOINER_ID);
-    expect(leaderboard[1].pvi).toBe(66.7);
-    expect(leaderboard[1].pviMultiplier).toBe(0.85);
-    expect(leaderboard[1].adjustedScore).toBe(34);
+    expect(leaderboard[1].pvi).toBeNull();
+    expect(leaderboard[1].pviMultiplier).toBe(1.0);
+    expect(leaderboard[1].domainWeight).toBe(1.5);
+    expect(leaderboard[1].finalScore).toBe(60);
   });
 
   it('parseSegmentResultRow and upsertSegmentResult handle segment results', () => {

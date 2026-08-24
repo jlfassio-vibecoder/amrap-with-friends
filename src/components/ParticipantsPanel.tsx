@@ -54,7 +54,7 @@ function RosterRow({
   phase: LiveSessionPhase;
   variant?: 'default' | 'pinned';
 }) {
-  const displayScore = phase === 'finished' ? entry.adjustedScore : entry.baseScore;
+  const displayScore = phase === 'finished' ? entry.finalScore : entry.baseScore;
 
   return (
     <div

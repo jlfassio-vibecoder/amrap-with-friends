@@ -10,7 +10,8 @@ import type {
 import type { WorkoutExercise } from '@/lib/api/sessionTypes';
 import { computeBaseScore } from '@/lib/scoring/computeBaseScore';
 import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
-import { computePviScore } from '@/lib/scoring/computePviScore';
+import { computeScoreBreakdown } from '@/lib/scoring/computeScoreBreakdown';
+import { getPviMultiplier } from '@/lib/scoring/getPviMultiplier';
 
 export interface PresenceTrackPayload {
   participant_id: string;
@@ -360,12 +361,13 @@ export function buildLeaderboard(
           : roundCount;
       const roundSummaries = summarizeSortedParticipantRounds(participantRounds);
       const roundDurationsSec = roundSummaries.map((round) => round.durationSec);
-      const pviScore = computePviScore(
+      const breakdown = computeScoreBreakdown(
         roundDurationsSec,
         durationMinutes,
         sessionPhase,
         baseScore
       );
+      const pviTier = getPviMultiplier(breakdown.pvi);
 
       return {
         participantId: participant.id,
@@ -373,19 +375,21 @@ export function buildLeaderboard(
         roundCount,
         partialReps,
         repsPerRound,
-        baseScore,
-        pvi: pviScore.pvi,
-        pviMultiplier: pviScore.multiplier,
-        pviClassification: pviScore.classification,
-        pviVerdict: pviScore.verdict,
-        adjustedScore: pviScore.adjustedScore,
+        baseScore: breakdown.baseScore,
+        pvi: breakdown.pvi,
+        pviMultiplier: breakdown.pviMultiplier,
+        pviClassification:
+          sessionPhase === 'finished' ? pviTier.classification : 'Standard',
+        pviVerdict: sessionPhase === 'finished' ? pviTier.verdict : '',
+        domainWeight: breakdown.domainWeight,
+        finalScore: breakdown.finalScore,
         rounds: roundSummaries,
         isSelf: participant.id === selfParticipantId,
       };
     })
     .sort((a, b) => {
-      const scoreA = sessionPhase === 'finished' ? a.adjustedScore : a.baseScore;
-      const scoreB = sessionPhase === 'finished' ? b.adjustedScore : b.baseScore;
+      const scoreA = sessionPhase === 'finished' ? a.finalScore : a.baseScore;
+      const scoreB = sessionPhase === 'finished' ? b.finalScore : b.baseScore;
 
       if (scoreB !== scoreA) {
         return scoreB - scoreA;

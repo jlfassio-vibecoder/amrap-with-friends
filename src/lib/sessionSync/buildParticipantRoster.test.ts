@@ -20,7 +20,7 @@ function leaderboardEntry(
   nickname: string,
   roundCount: number,
   baseScore = roundCount,
-  adjustedScore = baseScore,
+  finalScore = baseScore,
   isSelf = false
 ): LeaderboardEntry {
   return {
@@ -34,7 +34,8 @@ function leaderboardEntry(
     pviMultiplier: 1.0,
     pviClassification: 'Standard',
     pviVerdict: '',
-    adjustedScore,
+    domainWeight: 1.0,
+    finalScore,
     rounds: [],
     isSelf,
   };
@@ -53,23 +54,23 @@ function presenceEntry(
 }
 
 describe('buildParticipantRoster', () => {
-  it('sorts by adjusted score descending', () => {
+  it('sorts by final score descending', () => {
     const roster = buildParticipantRoster(
       [
         leaderboardEntry(ALICE_ID, 'Alice', 2, 40, 40),
-        leaderboardEntry(BOB_ID, 'Bob', 2, 40, 46),
+        leaderboardEntry(BOB_ID, 'Bob', 2, 40, 69),
       ],
       [],
       SELF_ID
     );
 
     expect(roster.map((entry) => entry.participantId)).toEqual([BOB_ID, ALICE_ID]);
-    expect(roster[0].adjustedScore).toBe(46);
+    expect(roster[0].finalScore).toBe(69);
     expect(roster[0].rank).toBe(1);
     expect(roster[1].rank).toBe(2);
   });
 
-  it('breaks adjusted-score ties by nickname', () => {
+  it('breaks final-score ties by nickname', () => {
     const roster = buildParticipantRoster(
       [
         leaderboardEntry(ALICE_ID, 'Alice', 3, 60, 60),
@@ -130,7 +131,7 @@ describe('buildParticipantRoster', () => {
         nickname: 'Alice',
         roundCount: 0,
         baseScore: 0,
-        adjustedScore: 0,
+        finalScore: 0,
         isOnline: true,
         isSelf: false,
         rank: 1,

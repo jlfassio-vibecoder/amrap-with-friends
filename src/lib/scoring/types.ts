@@ -16,3 +16,11 @@ export interface PviMultiplierResult {
   classification: string;
   verdict: string;
 }
+
+export interface ScoreBreakdown {
+  baseScore: number;
+  pvi: number | null;
+  pviMultiplier: number;
+  domainWeight: number;
+  finalScore: number;
+}
