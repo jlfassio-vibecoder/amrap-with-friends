@@ -2,7 +2,8 @@ export interface ExercisePhoto {
   /**
    * Relative path in the `exercise-media` Storage bucket.
    * Convention: `{exerciseId}/sequence.jpeg` (library default).
-   * Upload either `.jpeg` or `.png` — the modal tries both on load failure.
+   * Upload `.jpeg` or `.png` (`.jpg` also accepted) — the modal tries
+   * `.jpeg` / `.png` / `.jpg` on load failure.
    * Empty = placeholder cell.
    */
   url: string;

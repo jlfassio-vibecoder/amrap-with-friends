@@ -6,8 +6,9 @@ export const EXERCISE_MEDIA_BUCKET = 'exercise-media';
 const IMAGE_EXTENSIONS = ['.jpeg', '.png', '.jpg'] as const;
 
 /**
- * Paths to try for a sequence still when the stored object may be `.jpeg` or `.png`.
- * Keeps the requested extension first, then the other accepted formats.
+ * Paths to try for a sequence still when the stored object may be `.jpeg`,
+ * `.png`, or `.jpg`. Keeps the requested extension first, then the other
+ * accepted formats.
  */
 export function getExerciseImagePathCandidates(relativePath: string): string[] {
   const path = relativePath.trim();
