@@ -3,6 +3,7 @@ const STORAGE_PREFIX = {
   participantId: 'amrap_participant_id',
   claimToken: 'amrap_claim_token',
   nickname: 'amrap_nickname',
+  ghost: 'amrap_ghost',
 } as const;
 
 function storageKey(prefix: string, sessionId: string): string {
@@ -81,5 +82,57 @@ export function persistSessionIdentity(
   }
   if (identity.claimToken) {
     setStoredClaimToken(sessionId, identity.claimToken);
+  }
+}
+
+export interface StoredGhostSelection {
+  sessionId: string;
+  participantId: string;
+  label: string;
+  nickname: string;
+  finalScore: number;
+  baseScore: number;
+  createdAt: string;
+}
+
+export function getStoredGhostSelection(sessionId: string): StoredGhostSelection | null {
+  const raw = readItem(storageKey(STORAGE_PREFIX.ghost, sessionId));
+  if (!raw || raw === 'none') {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as StoredGhostSelection;
+    if (
+      typeof parsed.sessionId === 'string' &&
+      typeof parsed.participantId === 'string' &&
+      typeof parsed.label === 'string'
+    ) {
+      return parsed;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+export function setStoredGhostSelection(
+  sessionId: string,
+  selection: StoredGhostSelection | null
+): void {
+  if (!selection) {
+    writeItem(storageKey(STORAGE_PREFIX.ghost, sessionId), 'none');
+    return;
+  }
+
+  writeItem(storageKey(STORAGE_PREFIX.ghost, sessionId), JSON.stringify(selection));
+}
+
+export function clearStoredGhostSelection(sessionId: string): void {
+  try {
+    sessionStorage.removeItem(storageKey(STORAGE_PREFIX.ghost, sessionId));
+  } catch {
+    /* sessionStorage unavailable */
   }
 }

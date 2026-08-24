@@ -23,4 +23,6 @@ export interface ScoreBreakdown {
   pviMultiplier: number;
   domainWeight: number;
   finalScore: number;
+  roundCount?: number;
+  roundSplits?: number[];
 }

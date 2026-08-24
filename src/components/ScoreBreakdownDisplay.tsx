@@ -1,9 +1,13 @@
 import type { ScoreBreakdown } from '@/lib/scoring/types';
-import { getPviMultiplier } from '@/lib/scoring/getPviMultiplier';
+import { PacingBarChart } from '@/components/PacingBarChart';
 
 interface ScoreBreakdownDisplayProps {
   breakdown: ScoreBreakdown;
-  showPviInsights?: boolean;
+  roundCount?: number;
+  partialReps?: number;
+  roundSplits?: number[];
+  durationMinutes?: number;
+  showPacingChart?: boolean;
 }
 
 function formatMultiplier(multiplier: number): string {
@@ -12,9 +16,19 @@ function formatMultiplier(multiplier: number): string {
 
 export function ScoreBreakdownDisplay({
   breakdown,
-  showPviInsights = false,
+  roundCount,
+  partialReps,
+  roundSplits,
+  durationMinutes,
+  showPacingChart = false,
 }: ScoreBreakdownDisplayProps) {
-  const pviTier = getPviMultiplier(breakdown.pvi);
+  const resolvedRoundCount = roundCount ?? breakdown.roundCount;
+  const resolvedPartialReps = partialReps ?? 0;
+  const resolvedRoundSplits = roundSplits ?? breakdown.roundSplits ?? [];
+  const canShowChart =
+    showPacingChart &&
+    resolvedRoundSplits.length > 0 &&
+    typeof durationMinutes === 'number';
 
   return (
     <>
@@ -42,20 +56,18 @@ export function ScoreBreakdownDisplay({
         </div>
       </div>
 
-      <div className="rounded-card border border-border bg-page p-3 text-sm">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted">P.V.I. variance</p>
-        <p className="text-display text-lg tabular-nums text-ink">
-          {breakdown.pvi === null ? 'N/A' : `${breakdown.pvi}%`}
+      {typeof resolvedRoundCount === 'number' ? (
+        <p className="text-center text-sm font-semibold uppercase tracking-wide text-ink">
+          Rounds completed: {resolvedRoundCount} | Partial reps: {resolvedPartialReps}
         </p>
-      </div>
+      ) : null}
 
-      {showPviInsights ? (
-        <div className="space-y-2 rounded-card border border-border bg-accent-tint p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-accent">
-            {pviTier.classification}
-          </p>
-          <p className="text-display text-lg leading-snug text-ink">{pviTier.verdict}</p>
-        </div>
+      {canShowChart ? (
+        <PacingBarChart
+          roundSplits={resolvedRoundSplits}
+          durationMinutes={durationMinutes}
+          pvi={breakdown.pvi}
+        />
       ) : null}
     </>
   );

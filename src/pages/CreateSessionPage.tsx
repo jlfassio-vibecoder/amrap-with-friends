@@ -99,6 +99,10 @@ export default function CreateSessionPage() {
         nickname,
         durationMinutes,
         workout,
+        templateId:
+          workoutSource === 'library' && selectedTemplateId
+            ? selectedTemplateId
+            : undefined,
       });
 
       if (result.error) {

@@ -46,6 +46,12 @@ function mapRpcError(message: string | undefined): string {
   if (message.includes('Invalid claim')) {
     return 'Could not save session. Try again.';
   }
+  if (
+    message.includes('Could not find the function') ||
+    message.includes('PGRST202')
+  ) {
+    return 'Claim status check is unavailable on this Supabase project.';
+  }
   return message;
 }
 

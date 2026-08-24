@@ -8,6 +8,7 @@ export interface CreateSessionInput {
   nickname: string;
   durationMinutes: number;
   workout: WorkoutExercise[];
+  templateId?: string;
 }
 
 export interface CreateSessionResult {

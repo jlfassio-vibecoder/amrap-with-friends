@@ -1,3 +1,5 @@
+import { getPacingDurations } from '@/lib/scoring/getPacingDurations';
+
 export interface ComputePviOptions {
   excludeFirstRound: boolean;
 }
@@ -6,9 +8,7 @@ export function computePvi(
   roundDurationsSec: number[],
   options: ComputePviOptions
 ): number | null {
-  const durations = options.excludeFirstRound
-    ? roundDurationsSec.slice(1)
-    : roundDurationsSec;
+  const durations = getPacingDurations(roundDurationsSec, options);
 
   if (durations.length < 2) {
     return null;

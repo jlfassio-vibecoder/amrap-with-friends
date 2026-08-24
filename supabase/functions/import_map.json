@@ -1,6 +1,14 @@
 {
   "imports": {
-    "@/lib/scoring/": "../../src/lib/scoring/",
+    "@/lib/scoring/computeBaseScore": "../../src/lib/scoring/computeBaseScore.ts",
+    "@/lib/scoring/computeRepsPerRound": "../../src/lib/scoring/computeRepsPerRound.ts",
+    "@/lib/scoring/computeScoreBreakdown": "../../src/lib/scoring/computeScoreBreakdown.ts",
+    "@/lib/scoring/computePvi": "../../src/lib/scoring/computePvi.ts",
+    "@/lib/scoring/computeFinalScore": "../../src/lib/scoring/computeFinalScore.ts",
+    "@/lib/scoring/getDomainWeight": "../../src/lib/scoring/getDomainWeight.ts",
+    "@/lib/scoring/getPacingDurations": "../../src/lib/scoring/getPacingDurations.ts",
+    "@/lib/scoring/getPviMultiplier": "../../src/lib/scoring/getPviMultiplier.ts",
+    "@/lib/scoring/types": "../../src/lib/scoring/types.ts",
     "@/lib/api/sessionTypes": "../../src/lib/api/sessionTypes.ts",
     "@/lib/sessionSync/types": "../../src/lib/sessionSync/types.ts",
     "@supabase/supabase-js": "jsr:@supabase/supabase-js@2"

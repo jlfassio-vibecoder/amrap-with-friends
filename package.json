@@ -15,7 +15,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "format": "prettier --write .",
-    "seed:exercise-media": "tsx scripts/seed-exercise-media-folders.ts"
+    "seed:exercise-media": "tsx scripts/seed-exercise-media-folders.ts",
+    "supabase:push": "supabase db push",
+    "supabase:deploy:functions": "supabase functions deploy submit-participant-result",
+    "supabase:deploy": "supabase db push && supabase functions deploy submit-participant-result"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.109.0",

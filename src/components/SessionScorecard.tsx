@@ -1,13 +1,49 @@
 import type { LeaderboardEntry } from '@/lib/sessionSync/types';
+import { resolvePacingData } from '@/lib/scoring/resolvePacingData';
 import { ScoreBreakdownDisplay } from '@/components/ScoreBreakdownDisplay';
+
+export type SessionScorecardSaveState = 'idle' | 'saving' | 'saved' | 'unavailable';
 
 interface SessionScorecardProps {
   entry: LeaderboardEntry;
+  durationMinutes: number;
   onClose: () => void;
+  saveState: SessionScorecardSaveState;
+  onSave: () => void;
+  saveError?: string | null;
+  saveMessage?: string | null;
 }
 
-export function SessionScorecard({ entry, onClose }: SessionScorecardProps) {
+function saveButtonLabel(saveState: SessionScorecardSaveState): string {
+  switch (saveState) {
+    case 'saving':
+      return 'Saving…';
+    case 'saved':
+      return 'Saved to my account';
+    case 'idle':
+      return 'Save to my account';
+    default:
+      return '';
+  }
+}
+
+export function SessionScorecard({
+  entry,
+  durationMinutes,
+  onClose,
+  saveState,
+  onSave,
+  saveError = null,
+  saveMessage = null,
+}: SessionScorecardProps) {
   const titleId = 'session-scorecard-title';
+  const showSaveAction = saveState !== 'unavailable';
+  const saveDisabled = saveState === 'saving' || saveState === 'saved';
+  const pacingData = resolvePacingData({
+    roundCount: entry.roundCount,
+    partialReps: entry.partialReps,
+    liveRounds: entry.rounds,
+  });
 
   return (
     <div
@@ -18,7 +54,7 @@ export function SessionScorecard({ entry, onClose }: SessionScorecardProps) {
       onClick={onClose}
     >
       <div
-        className="card w-full max-w-md space-y-5 p-6"
+        className="card max-h-[90vh] w-full max-w-lg space-y-5 overflow-y-auto p-6"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
@@ -42,9 +78,47 @@ export function SessionScorecard({ entry, onClose }: SessionScorecardProps) {
             pviMultiplier: entry.pviMultiplier,
             domainWeight: entry.domainWeight,
             finalScore: entry.finalScore,
+            roundCount: pacingData?.roundCount,
+            roundSplits: pacingData?.roundSplits,
           }}
-          showPviInsights
+          roundCount={pacingData?.roundCount}
+          partialReps={pacingData?.partialReps}
+          roundSplits={pacingData?.roundSplits}
+          durationMinutes={durationMinutes}
+          showPacingChart
         />
+
+        {showSaveAction ? (
+          <div className="space-y-2">
+            <button
+              type="button"
+              className={
+                saveState === 'saved'
+                  ? 'btn-outline w-full text-sm'
+                  : 'btn-primary w-full text-sm'
+              }
+              disabled={saveDisabled}
+              onClick={onSave}
+            >
+              {saveButtonLabel(saveState)}
+            </button>
+            {saveMessage ? (
+              <p className="text-sm text-accent">{saveMessage}</p>
+            ) : null}
+            {saveError ? (
+              <p className="text-sm text-error">{saveError}</p>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-sm text-secondary">
+            This session can no longer be saved from this device. Rejoin the session if you still
+            have access.
+          </p>
+        )}
+
+        <button type="button" className="btn-neutral w-full text-sm" onClick={onClose}>
+          Close
+        </button>
       </div>
     </div>
   );

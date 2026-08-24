@@ -9,6 +9,7 @@ import type {
 } from '@/lib/sessionSync/types';
 import type { WorkoutExercise } from '@/lib/api/sessionTypes';
 import type { ScoreBreakdown } from '@/lib/scoring/types';
+import { parseScoreBreakdownJson } from '@/lib/scoring/parseScoreBreakdownJson';
 import { computeBaseScore } from '@/lib/scoring/computeBaseScore';
 import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
 import { computeScoreBreakdown } from '@/lib/scoring/computeScoreBreakdown';
@@ -63,10 +64,19 @@ export function parseSessionRow(record: Record<string, unknown>): SessionRow | n
       ? null
       : String(record.started_at);
 
+  const templateIdRaw = record.template_id;
+  const templateId =
+    templateIdRaw === null || templateIdRaw === undefined
+      ? null
+      : typeof templateIdRaw === 'string' && templateIdRaw.trim().length > 0
+        ? templateIdRaw.trim()
+        : null;
+
   return {
     id,
     duration_minutes: durationMinutes,
     workout: workout as SessionRow['workout'],
+    template_id: templateId,
     state,
     time_left_sec: timeLeftSec,
     is_paused: isPaused,
@@ -145,40 +155,7 @@ function readNumber(value: unknown): number | null {
 }
 
 function parseScoreBreakdown(value: unknown): ScoreBreakdown | null {
-  if (!value || typeof value !== 'object') {
-    return null;
-  }
-
-  const row = value as Record<string, unknown>;
-  const baseScore = readNumber(row.baseScore);
-  const pviMultiplier = readNumber(row.pviMultiplier);
-  const domainWeight = readNumber(row.domainWeight);
-  const finalScore = readNumber(row.finalScore);
-  const pviRaw = row.pvi;
-
-  if (
-    baseScore === null ||
-    pviMultiplier === null ||
-    domainWeight === null ||
-    finalScore === null
-  ) {
-    return null;
-  }
-
-  const pvi =
-    pviRaw === null || pviRaw === undefined ? null : readNumber(pviRaw);
-
-  if (pviRaw !== null && pviRaw !== undefined && pvi === null) {
-    return null;
-  }
-
-  return {
-    baseScore,
-    pvi,
-    pviMultiplier,
-    domainWeight,
-    finalScore,
-  };
+  return parseScoreBreakdownJson(value);
 }
 
 export function parseSegmentResultRow(
@@ -448,16 +425,26 @@ export function buildLeaderboard(
   return participants
     .map((participant) => {
       const participantRounds = roundsByParticipant.get(participant.id) ?? [];
-      const roundCount = counts.get(participant.id) ?? 0;
+      const liveRoundCount = counts.get(participant.id) ?? 0;
       const partialReps = partialByParticipant.get(participant.id) ?? 0;
       // Copilot suggestion ignored: round-count fallback is intentional for unsupported workouts; UI labels rounds vs reps via repsPerRound.
       const baseScore =
         repsPerRound > 0
-          ? computeBaseScore(roundCount, partialReps, repsPerRound)
-          : roundCount;
-      const roundSummaries = summarizeSortedParticipantRounds(participantRounds);
-      const roundDurationsSec = roundSummaries.map((round) => round.durationSec);
+          ? computeBaseScore(liveRoundCount, partialReps, repsPerRound)
+          : liveRoundCount;
       const locked = lockedByParticipant.get(participant.id);
+      const roundSummaries =
+        locked?.breakdown.roundSplits && locked.breakdown.roundSplits.length > 0
+          ? locked.breakdown.roundSplits.map((durationSec, index) => ({
+              roundNumber: index + 1,
+              durationSec,
+            }))
+          : summarizeSortedParticipantRounds(participantRounds);
+      const roundCount =
+        locked?.breakdown.roundSplits && locked.breakdown.roundSplits.length > 0
+          ? (locked.breakdown.roundCount ?? locked.breakdown.roundSplits.length)
+          : liveRoundCount;
+      const roundDurationsSec = roundSummaries.map((round) => round.durationSec);
       const breakdown = locked
         ? locked.breakdown
         : computeScoreBreakdown(
