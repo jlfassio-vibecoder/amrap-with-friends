@@ -54,7 +54,7 @@ FROM fixtures;
 
 -- 3) Authenticated smoke call (must be signed in as a user with JWT):
 -- SELECT public.hud_telemetry('America/Los_Angeles');
--- Expect Phase 2 shape:
+-- Expect Phase 3 shape:
 -- {
 --   "ok": true,
 --   "telemetry": {
@@ -62,8 +62,10 @@ FROM fixtures;
 --     "weekPviAverage": <num|null>,
 --     "weekEndsAt": <timestamptz>,
 --     "lastLockedAt": <timestamptz|null>,
---     "attrition": [<bool x 12>]
+--     "attrition": [<bool x 12>],
+--     "domainMinutes30d": { "5": <int>, "10": <int>, "15": <int>, "20": <int>, "other": <int> }
 --   }
 -- }
 -- attrition length must be 12; index 11 = current local week; index 0 = 11 weeks ago.
 -- A week is true iff sum(duration_minutes) of claimed+locked sessions in that Mon–Sun >= 150.
+-- domainMinutes30d uses rolling now() - 30 days on score lock time; other = non 5/10/15/20.

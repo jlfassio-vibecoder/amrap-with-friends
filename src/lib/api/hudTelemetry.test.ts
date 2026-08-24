@@ -16,8 +16,16 @@ const attrition12 = [
   true,
 ];
 
+const domainMinutes30d = {
+  5: 20,
+  10: 10,
+  15: 15,
+  20: 40,
+  other: 0,
+};
+
 describe('parseHudTelemetryPayload', () => {
-  it('parses a valid Phase 2 payload', () => {
+  it('parses a valid Phase 3 payload', () => {
     expect(
       parseHudTelemetryPayload({
         weekMinutes: 75,
@@ -25,6 +33,7 @@ describe('parseHudTelemetryPayload', () => {
         weekEndsAt: '2026-08-25T07:00:00.000Z',
         lastLockedAt: '2026-08-24T10:00:00.000Z',
         attrition: attrition12,
+        domainMinutes30d,
       })
     ).toEqual({
       weekMinutes: 75,
@@ -32,6 +41,7 @@ describe('parseHudTelemetryPayload', () => {
       weekEndsAt: '2026-08-25T07:00:00.000Z',
       lastLockedAt: '2026-08-24T10:00:00.000Z',
       attrition: attrition12,
+      domainMinutes30d,
     });
   });
 
@@ -43,6 +53,7 @@ describe('parseHudTelemetryPayload', () => {
         weekEndsAt: '2026-08-25T07:00:00.000Z',
         lastLockedAt: null,
         attrition: Array.from({ length: 12 }, () => false),
+        domainMinutes30d: { 5: 0, 10: 0, 15: 0, 20: 0, other: 0 },
       })
     ).toEqual({
       weekMinutes: 0,
@@ -50,6 +61,7 @@ describe('parseHudTelemetryPayload', () => {
       weekEndsAt: '2026-08-25T07:00:00.000Z',
       lastLockedAt: null,
       attrition: Array.from({ length: 12 }, () => false),
+      domainMinutes30d: { 5: 0, 10: 0, 15: 0, 20: 0, other: 0 },
     });
   });
 
@@ -62,15 +74,7 @@ describe('parseHudTelemetryPayload', () => {
         weekEndsAt: '2026-08-25T07:00:00.000Z',
         lastLockedAt: null,
         attrition: Array.from({ length: 12 }, () => false),
-      })
-    ).toBeNull();
-    expect(
-      parseHudTelemetryPayload({
-        weekMinutes: 10,
-        weekPviAverage: 'bad',
-        weekEndsAt: '2026-08-25T07:00:00.000Z',
-        lastLockedAt: null,
-        attrition: Array.from({ length: 12 }, () => false),
+        domainMinutes30d,
       })
     ).toBeNull();
     expect(
@@ -80,6 +84,17 @@ describe('parseHudTelemetryPayload', () => {
         weekEndsAt: '2026-08-25T07:00:00.000Z',
         lastLockedAt: null,
         attrition: [true, false],
+        domainMinutes30d,
+      })
+    ).toBeNull();
+    expect(
+      parseHudTelemetryPayload({
+        weekMinutes: 10,
+        weekPviAverage: null,
+        weekEndsAt: '2026-08-25T07:00:00.000Z',
+        lastLockedAt: null,
+        attrition: Array.from({ length: 12 }, () => false),
+        domainMinutes30d: { 5: 1, 10: 1, 15: 1 },
       })
     ).toBeNull();
   });

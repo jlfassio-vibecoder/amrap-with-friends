@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { AttritionGrid } from '@/components/hud/AttritionGrid';
 import { DailyTelemetry } from '@/components/hud/DailyTelemetry';
+import { DomainMatrixChart } from '@/components/hud/DomainMatrixChart';
 import { WeeklyBaselineBar } from '@/components/hud/WeeklyBaselineBar';
 import { fetchHudTelemetry } from '@/lib/api/hudTelemetry';
 import type { HUDTelemetryPayload } from '@/lib/hud/types';
@@ -78,6 +79,7 @@ export default function HUDPage() {
             attrition={telemetry.attrition}
             weekEndsAt={telemetry.weekEndsAt}
           />
+          <DomainMatrixChart domainMinutes30d={telemetry.domainMinutes30d} />
         </div>
       ) : null}
 

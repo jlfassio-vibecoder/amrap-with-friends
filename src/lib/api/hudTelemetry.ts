@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { HUDTelemetryPayload } from '@/lib/hud/types';
+import type { HudDomainMinutes, HUDTelemetryPayload } from '@/lib/hud/types';
 
 export type HudTelemetryApiError = {
   message: string;
@@ -7,6 +7,14 @@ export type HudTelemetryApiError = {
 
 function readNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function readNonNegativeInt(value: unknown): number | null {
+  const n = readNumber(value);
+  if (n === null || n < 0 || !Number.isInteger(n)) {
+    return null;
+  }
+  return n;
 }
 
 function readString(value: unknown): string | null {
@@ -33,6 +41,31 @@ function readAttrition(value: unknown): boolean[] | null {
   return attrition;
 }
 
+function readDomainMinutes(value: unknown): HudDomainMinutes | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const row = value as Record<string, unknown>;
+  const five = readNonNegativeInt(row['5']);
+  const ten = readNonNegativeInt(row['10']);
+  const fifteen = readNonNegativeInt(row['15']);
+  const twenty = readNonNegativeInt(row['20']);
+  const other = readNonNegativeInt(row.other);
+
+  if (
+    five === null ||
+    ten === null ||
+    fifteen === null ||
+    twenty === null ||
+    other === null
+  ) {
+    return null;
+  }
+
+  return { 5: five, 10: ten, 15: fifteen, 20: twenty, other };
+}
+
 export function parseHudTelemetryPayload(
   value: unknown
 ): HUDTelemetryPayload | null {
@@ -46,8 +79,15 @@ export function parseHudTelemetryPayload(
   const pviRaw = row.weekPviAverage;
   const lastLockedRaw = row.lastLockedAt;
   const attrition = readAttrition(row.attrition);
+  const domainMinutes30d = readDomainMinutes(row.domainMinutes30d);
 
-  if (weekMinutes === null || weekMinutes < 0 || !weekEndsAt || attrition === null) {
+  if (
+    weekMinutes === null ||
+    weekMinutes < 0 ||
+    !weekEndsAt ||
+    attrition === null ||
+    domainMinutes30d === null
+  ) {
     return null;
   }
 
@@ -74,6 +114,7 @@ export function parseHudTelemetryPayload(
     weekEndsAt,
     lastLockedAt,
     attrition,
+    domainMinutes30d,
   };
 }
 
