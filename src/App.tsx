@@ -6,6 +6,7 @@ const CreateSessionPage = lazy(() => import('./pages/CreateSessionPage'));
 const JoinSessionPage = lazy(() => import('./pages/JoinSessionPage'));
 const SessionWaitingRoomPage = lazy(() => import('./pages/SessionWaitingRoomPage'));
 const MySessionsPage = lazy(() => import('./pages/MySessionsPage'));
+const HUDPage = lazy(() => import('./pages/HUDPage'));
 const TimerDevPage = lazy(() => import('./pages/dev/TimerDevPage'));
 
 function RouteFallback() {
@@ -25,6 +26,7 @@ function App() {
         <Route path="/join" element={<JoinSessionPage />} />
         <Route path="/session/:sessionId" element={<SessionWaitingRoomPage />} />
         <Route path="/my-sessions" element={<MySessionsPage />} />
+        <Route path="/hud" element={<HUDPage />} />
         {import.meta.env.DEV && <Route path="/dev/timer" element={<TimerDevPage />} />}
       </Routes>
     </Suspense>
