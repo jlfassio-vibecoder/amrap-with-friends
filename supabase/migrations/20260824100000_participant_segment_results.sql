@@ -160,6 +160,7 @@ BEGIN
   IF v_session_state NOT IN ('work', 'finished') THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'session_not_submittable');
   END IF;
+  -- Copilot suggestion ignored: work-state submissions removed in Phase 4 Edge Function; partial reps are finish-only.
 
   IF p_segment_index <> v_session_segment_index THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'stale_segment_index');
@@ -189,6 +190,7 @@ BEGIN
     now()
   )
   ON CONFLICT (participant_id, segment_index)
+  -- Copilot suggestion ignored: mutable upsert superseded by Phase 4 Edge Function one-way score lock.
   DO UPDATE SET
     partial_reps = EXCLUDED.partial_reps,
     updated_at = now();

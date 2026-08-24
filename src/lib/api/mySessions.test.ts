@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { countRoundsForSegment, computeMySessionBaseScore, displayMySessionScore } from './mySessions';
+import { countRoundsForSegment, computeMySessionBaseScore, displayMySessionScore, formatMySessionScoreDisplay } from './mySessions';
 import type { MySessionEntry } from './mySessions';
 
 describe('mySessions helpers', () => {
@@ -91,5 +91,26 @@ describe('mySessions helpers', () => {
     };
 
     expect(displayMySessionScore(entry)).toBe(175);
+  });
+
+  it('formatMySessionScoreDisplay labels unscorable workouts as rounds', () => {
+    const entry: MySessionEntry = {
+      participantId: '11111111-1111-4111-8111-111111111111',
+      nickname: 'Justin',
+      joinedAt: '2026-08-22T12:00:00.000Z',
+      role: 'host',
+      sessionId: '22222222-2222-4222-8222-222222222222',
+      createdAt: '2026-08-22T12:00:00.000Z',
+      durationMinutes: 5,
+      workout: [{ name: 'Run', unit: 'm', target: 400 }],
+      state: 'finished',
+      segmentIndex: 0,
+      roundCount: 4,
+      partialReps: 0,
+      finalScore: null,
+      scoreBreakdown: null,
+    };
+
+    expect(formatMySessionScoreDisplay(entry)).toBe('4 rounds');
   });
 });

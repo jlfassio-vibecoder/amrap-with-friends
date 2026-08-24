@@ -9,6 +9,7 @@ export interface ParticipantRosterEntry {
   participantId: string;
   nickname: string;
   roundCount: number;
+  repsPerRound: number;
   baseScore: number;
   finalScore: number;
   pvi: number | null;
@@ -24,6 +25,7 @@ interface RosterMergeEntry {
   participantId: string;
   nickname: string;
   roundCount: number;
+  repsPerRound: number;
   baseScore: number;
   finalScore: number;
   pvi: number | null;
@@ -104,6 +106,7 @@ export function buildParticipantRoster(
       participantId: entry.participantId,
       nickname: entry.nickname,
       roundCount: entry.roundCount,
+      repsPerRound: entry.repsPerRound,
       baseScore: entry.baseScore,
       finalScore: entry.finalScore,
       pvi: entry.pvi,
@@ -128,6 +131,7 @@ export function buildParticipantRoster(
       participantId: entry.participantId,
       nickname: entry.nickname,
       roundCount: 0,
+      repsPerRound: 0,
       baseScore: 0,
       finalScore: 0,
       pvi: null,
@@ -152,6 +156,7 @@ export function buildParticipantRoster(
     participantId: entry.participantId,
     nickname: entry.nickname,
     roundCount: entry.roundCount,
+    repsPerRound: entry.repsPerRound,
     baseScore: entry.baseScore,
     finalScore: entry.finalScore,
     pvi: entry.pvi,

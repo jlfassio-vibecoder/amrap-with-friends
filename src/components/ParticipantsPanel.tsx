@@ -28,6 +28,21 @@ function formatMultiplier(multiplier: number): string {
   return `× ${Number(multiplier.toFixed(2))}`;
 }
 
+function formatRosterScore(
+  entry: ParticipantRosterEntry,
+  phase: LiveSessionPhase,
+  sortMode: LeaderboardSortMode
+): string {
+  if (phase === 'finished' && sortMode === 'discipline' && entry.pvi !== null) {
+    return `${entry.pvi}% · ${formatMultiplier(entry.pviMultiplier)}`;
+  }
+
+  const score = phase === 'finished' ? entry.finalScore : entry.baseScore;
+  const unit = entry.repsPerRound > 0 ? 'reps' : 'rounds';
+  const value = entry.repsPerRound > 0 ? score : entry.roundCount;
+  return `${value} ${unit}`;
+}
+
 function LeaderboardSortToggle({
   value,
   onChange,
@@ -113,15 +128,7 @@ function RosterRow({
   variant?: 'default' | 'pinned';
 }) {
   const showPacingBadge = phase === 'finished' && entry.pviVerdict.length > 0;
-
-  let scoreDisplay: string;
-  if (phase !== 'finished') {
-    scoreDisplay = `${entry.baseScore} reps`;
-  } else if (sortMode === 'discipline' && entry.pvi !== null) {
-    scoreDisplay = `${entry.pvi}% · ${formatMultiplier(entry.pviMultiplier)}`;
-  } else {
-    scoreDisplay = `${entry.finalScore} reps`;
-  }
+  const scoreDisplay = formatRosterScore(entry, phase, sortMode);
 
   return (
     <div

@@ -8,6 +8,7 @@ import {
   parseRoundRow,
   parseSegmentResultRow,
   parseSessionRow,
+  removeSegmentResult,
   sortMessagesByCreatedAt,
   upsertMessage,
   upsertParticipant,
@@ -55,6 +56,7 @@ export function useSessionChannel(
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const participantIdsRef = useRef<Set<string>>(new Set());
 
   const presenceParticipantId = presence?.participantId;
   const presenceNickname = presence?.nickname;
@@ -133,6 +135,9 @@ export function useSessionChannel(
         .map((row) => parseParticipantRow(row as Record<string, unknown>))
         .filter((row): row is ParticipantRow => row !== null);
       setParticipants(parsedParticipants);
+      participantIdsRef.current = new Set(
+        parsedParticipants.map((participant) => participant.id)
+      );
 
       const participantIds = parsedParticipants.map((participant) => participant.id);
       if (participantIds.length > 0) {
@@ -155,7 +160,13 @@ export function useSessionChannel(
         const parsedSegmentResults = (segmentResultsResult.data ?? [])
           .map((row) => parseSegmentResultRow(row as Record<string, unknown>))
           .filter((row): row is ParticipantSegmentResultRow => row !== null);
-        setSegmentResults(parsedSegmentResults);
+        setSegmentResults((prev) => {
+          let merged = prev;
+          for (const row of parsedSegmentResults) {
+            merged = upsertSegmentResult(merged, row);
+          }
+          return merged;
+        });
       } else {
         setSegmentResults([]);
       }
@@ -210,6 +221,7 @@ export function useSessionChannel(
             payload.new as Record<string, unknown>
           );
           if (parsed) {
+            participantIdsRef.current.add(parsed.id);
             setParticipants((prev) => upsertParticipant(prev, parsed));
           }
         }
@@ -222,12 +234,35 @@ export function useSessionChannel(
           table: 'participant_segment_results',
         },
         (payload) => {
-          const record =
-            payload.eventType === 'DELETE'
-              ? (payload.old as Record<string, unknown>)
-              : (payload.new as Record<string, unknown>);
-          const parsed = parseSegmentResultRow(record);
-          if (parsed) {
+          if (payload.eventType === 'DELETE') {
+            const oldRecord = payload.old as Record<string, unknown>;
+            const participantId =
+              typeof oldRecord.participant_id === 'string'
+                ? oldRecord.participant_id
+                : null;
+            const segmentIndex =
+              typeof oldRecord.segment_index === 'number'
+                ? oldRecord.segment_index
+                : null;
+
+            if (
+              !participantId ||
+              segmentIndex === null ||
+              !participantIdsRef.current.has(participantId)
+            ) {
+              return;
+            }
+
+            setSegmentResults((prev) =>
+              removeSegmentResult(prev, participantId, segmentIndex)
+            );
+            return;
+          }
+
+          const parsed = parseSegmentResultRow(
+            payload.new as Record<string, unknown>
+          );
+          if (parsed && participantIdsRef.current.has(parsed.participant_id)) {
             setSegmentResults((prev) => upsertSegmentResult(prev, parsed));
           }
         }

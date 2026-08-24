@@ -204,7 +204,7 @@ export async function handleSubmitParticipantResult(
     return { ok: false, reason: 'session_not_found' };
   }
 
-  if (session.state !== 'work' && session.state !== 'finished') {
+  if (session.state !== 'finished') {
     return { ok: false, reason: 'session_not_submittable' };
   }
 

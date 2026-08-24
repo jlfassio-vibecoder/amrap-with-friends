@@ -27,14 +27,15 @@ function leaderboardEntry(
   pvi: number | null = null,
   pviMultiplier = 1.0,
   pviClassification = 'Standard',
-  pviVerdict = ''
+  pviVerdict = '',
+  repsPerRound = 20
 ): LeaderboardEntry {
   return {
     participantId,
     nickname,
     roundCount,
     partialReps: 0,
-    repsPerRound: 20,
+    repsPerRound,
     baseScore,
     pvi,
     pviMultiplier,
@@ -61,6 +62,7 @@ function presenceEntry(
 
 function rosterDefaults(overrides: Record<string, unknown> = {}) {
   return {
+    repsPerRound: 0,
     pvi: null,
     pviMultiplier: 1.0,
     pviClassification: 'Insufficient Data',
@@ -256,6 +258,7 @@ describe('roster comparators', () => {
       participantId: ALICE_ID,
       nickname: 'Alice',
       roundCount: 3,
+      repsPerRound: 20,
       baseScore: 60,
       finalScore: 60,
       pvi: 0,
@@ -274,6 +277,7 @@ describe('roster comparators', () => {
       participantId: BOB_ID,
       nickname: 'Bob',
       roundCount: 3,
+      repsPerRound: 40,
       baseScore: 240,
       finalScore: 280,
       pvi: 4,

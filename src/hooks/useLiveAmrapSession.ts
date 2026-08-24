@@ -446,6 +446,9 @@ export function useLiveAmrapSession(
 
       const tokenForRpc = claimToken ?? '';
       if (!tokenForRpc && !isAuthenticated) {
+        setSyncError(
+          'Cannot submit score without a session credential. Rejoin the session or sign in.'
+        );
         return;
       }
 

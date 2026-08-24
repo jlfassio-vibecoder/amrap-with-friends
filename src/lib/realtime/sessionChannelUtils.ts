@@ -329,6 +329,20 @@ export function upsertSegmentResult(
   return [...results, row];
 }
 
+export function removeSegmentResult(
+  results: ParticipantSegmentResultRow[],
+  participantId: string,
+  segmentIndex: number
+): ParticipantSegmentResultRow[] {
+  return results.filter(
+    (result) =>
+      !(
+        result.participant_id === participantId &&
+        result.segment_index === segmentIndex
+      )
+  );
+}
+
 export function upsertMessage(messages: MessageRow[], row: MessageRow): MessageRow[] {
   const existing = messages.find((m) => m.id === row.id);
   if (existing) {
@@ -436,6 +450,7 @@ export function buildLeaderboard(
       const participantRounds = roundsByParticipant.get(participant.id) ?? [];
       const roundCount = counts.get(participant.id) ?? 0;
       const partialReps = partialByParticipant.get(participant.id) ?? 0;
+      // Copilot suggestion ignored: round-count fallback is intentional for unsupported workouts; UI labels rounds vs reps via repsPerRound.
       const baseScore =
         repsPerRound > 0
           ? computeBaseScore(roundCount, partialReps, repsPerRound)

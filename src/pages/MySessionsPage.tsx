@@ -4,7 +4,7 @@ import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { MySessionScoreBreakdownModal } from '@/components/MySessionScoreBreakdownModal';
 import {
   fetchMySessions,
-  displayMySessionScore,
+  formatMySessionScoreDisplay,
   type MySessionEntry,
 } from '@/lib/api/mySessions';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
@@ -89,7 +89,7 @@ export default function MySessionsPage() {
               <p className="font-semibold">{formatWorkoutSummary(entry.workout)}</p>
               <p className="text-secondary">
                 {new Date(entry.createdAt).toLocaleString()} · {entry.durationMinutes} min ·{' '}
-                {displayMySessionScore(entry)} reps · {entry.state}
+                {formatMySessionScoreDisplay(entry)} · {entry.state}
               </p>
               <div className="flex flex-wrap items-center gap-3">
                 <Link className="link-accent" to={`/session/${entry.sessionId}`}>

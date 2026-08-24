@@ -44,8 +44,30 @@ export function computeMySessionBaseScore(entry: MySessionEntry): number {
     const repsPerRound = computeRepsPerRound(entry.workout);
     return computeBaseScore(entry.roundCount, entry.partialReps, repsPerRound);
   } catch {
+    // Copilot suggestion ignored: roundCount fallback is intentional; callers use formatMySessionScoreDisplay for the unit label.
     return entry.roundCount;
   }
+}
+
+export function isMySessionScoreScorable(entry: MySessionEntry): boolean {
+  try {
+    computeRepsPerRound(entry.workout);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function formatMySessionScoreDisplay(entry: MySessionEntry): string {
+  if (entry.finalScore !== null) {
+    return `${entry.finalScore} reps`;
+  }
+
+  if (!isMySessionScoreScorable(entry)) {
+    return `${entry.roundCount} rounds`;
+  }
+
+  return `${computeMySessionBaseScore(entry)} reps`;
 }
 
 export function displayMySessionScore(entry: MySessionEntry): string | number {
