@@ -92,7 +92,9 @@ export function GhostPicker({
   const displayedPersonalBest = canFetchGhosts ? personalBest : null;
 
   const selectedValue: GhostPickerValue =
-    value?.label.startsWith('Personal Best') ? 'personal-best' : 'none';
+    value?.label.startsWith('Personal Best') && displayedPersonalBest
+      ? 'personal-best'
+      : 'none';
 
   function handleSelect(nextValue: GhostPickerValue) {
     if (nextValue === 'none') {

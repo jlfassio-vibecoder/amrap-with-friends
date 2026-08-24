@@ -89,6 +89,7 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
   const [ghostSelection, setGhostSelection] = useState<StoredGhostSelection | null>(
     () => getStoredGhostSelection(sessionId)
   );
+  const activeGhostSelection = isAuthenticated ? ghostSelection : null;
 
   const channel = useSessionChannel(sessionId, { participantId, nickname });
   const live = useLiveAmrapSession(sessionId, channel);
@@ -99,7 +100,7 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
 
   const ghostPacer = useGhostPacer({
     sessionId,
-    ghostSelection,
+    ghostSelection: activeGhostSelection,
     repsPerRound: live.repsPerRound,
     workDurationSec: live.workDurationSec,
     elapsedSec: live.elapsedSec,
@@ -111,8 +112,13 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
     live.templateId !== null &&
     live.phase === 'waiting';
   const showGhostPicker = isSoloTemplated;
+  const showGhostPacerError =
+    activeGhostSelection !== null && live.phase === 'work' && ghostPacer.error !== null;
   const showGhostPacerStrip =
-    ghostSelection !== null && live.phase === 'work';
+    activeGhostSelection !== null &&
+    live.phase === 'work' &&
+    ghostPacer.error === null &&
+    !ghostPacer.isLoading;
 
   const showStart = live.isHost && live.phase === 'waiting';
   const showPause = live.isHost && live.phase === 'work' && !live.isPaused;
@@ -227,13 +233,16 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
               />
             ) : null}
 
-            {showGhostPacerStrip && ghostSelection ? (
+            {showGhostPacerError && activeGhostSelection ? (
+              <p className="alert-error text-sm">{ghostPacer.error}</p>
+            ) : null}
+
+            {showGhostPacerStrip && activeGhostSelection ? (
               <GhostPacerStrip
-                ghostLabel={ghostSelection.label}
+                ghostLabel={activeGhostSelection.label}
                 ghostReps={ghostPacer.ghostReps}
                 selfReps={ghostPacer.selfReps}
                 deltaReps={ghostPacer.deltaReps}
-                isLoading={ghostPacer.isLoading}
               />
             ) : null}
 

@@ -7,8 +7,6 @@ CREATE INDEX IF NOT EXISTS idx_sessions_template_duration
   ON public.sessions (template_id, duration_minutes)
   WHERE template_id IS NOT NULL;
 
-DROP FUNCTION IF EXISTS public.create_session(int, text, jsonb);
-
 CREATE OR REPLACE FUNCTION public.create_session(
   p_duration_minutes int,
   p_nickname text,
@@ -87,6 +85,23 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.create_session(int, text, jsonb, text) TO anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.create_session(
+  p_duration_minutes int,
+  p_nickname text,
+  p_workout jsonb
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public, extensions
+AS $$
+BEGIN
+  RETURN public.create_session(p_duration_minutes, p_nickname, p_workout, NULL);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.create_session(int, text, jsonb) TO anon, authenticated;
 
 CREATE OR REPLACE FUNCTION public.available_ghosts(
   p_template_id text,
