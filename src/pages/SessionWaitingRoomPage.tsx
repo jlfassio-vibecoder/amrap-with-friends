@@ -11,7 +11,6 @@ import { ParticipantsPanel } from '@/components/ParticipantsPanel';
 import { PartialRepsModal } from '@/components/PartialRepsModal';
 import { SessionScorecard } from '@/components/SessionScorecard';
 import { SessionChat } from '@/components/SessionChat';
-import { buildParticipantRoster } from '@/lib/sessionSync/buildParticipantRoster';
 
 function formatTime(totalSec: number): string {
   const minutes = Math.floor(totalSec / 60);
@@ -231,11 +230,9 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
         </div>
 
         <ParticipantsPanel
-          roster={buildParticipantRoster(
-            live.leaderboard,
-            live.presence,
-            live.participantId
-          )}
+          leaderboard={live.leaderboard}
+          presence={live.presence}
+          selfParticipantId={live.participantId}
           phase={live.phase}
           className="lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:self-start"
         />
