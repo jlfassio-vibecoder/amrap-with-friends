@@ -410,6 +410,7 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
       {showScorecard && selfLeaderboardEntry ? (
         <SessionScorecard
           entry={selfLeaderboardEntry}
+          durationMinutes={live.workDurationSec / 60}
           saveState={scorecardSaveState}
           onSave={handleScorecardSave}
           saveError={claim.claimError}

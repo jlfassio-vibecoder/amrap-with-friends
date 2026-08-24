@@ -49,6 +49,8 @@ Deno.test('computeLockedScore derives 302 from 4 rounds and 15 partial reps', ()
     pviMultiplier: 1.15,
     domainWeight: 1.5,
     finalScore: 302,
+    roundCount: 4,
+    roundSplits: [60, 60, 60, 60],
   });
 });
 

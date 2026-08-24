@@ -1,10 +1,12 @@
 import type { LeaderboardEntry } from '@/lib/sessionSync/types';
+import { resolvePacingData } from '@/lib/scoring/resolvePacingData';
 import { ScoreBreakdownDisplay } from '@/components/ScoreBreakdownDisplay';
 
 export type SessionScorecardSaveState = 'idle' | 'saving' | 'saved' | 'unavailable';
 
 interface SessionScorecardProps {
   entry: LeaderboardEntry;
+  durationMinutes: number;
   onClose: () => void;
   saveState: SessionScorecardSaveState;
   onSave: () => void;
@@ -27,6 +29,7 @@ function saveButtonLabel(saveState: SessionScorecardSaveState): string {
 
 export function SessionScorecard({
   entry,
+  durationMinutes,
   onClose,
   saveState,
   onSave,
@@ -36,6 +39,11 @@ export function SessionScorecard({
   const titleId = 'session-scorecard-title';
   const showSaveAction = saveState !== 'unavailable';
   const saveDisabled = saveState === 'saving' || saveState === 'saved';
+  const pacingData = resolvePacingData({
+    roundCount: entry.roundCount,
+    partialReps: entry.partialReps,
+    liveRounds: entry.rounds,
+  });
 
   return (
     <div
@@ -46,7 +54,7 @@ export function SessionScorecard({
       onClick={onClose}
     >
       <div
-        className="card w-full max-w-md space-y-5 p-6"
+        className="card max-h-[90vh] w-full max-w-lg space-y-5 overflow-y-auto p-6"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
@@ -70,8 +78,14 @@ export function SessionScorecard({
             pviMultiplier: entry.pviMultiplier,
             domainWeight: entry.domainWeight,
             finalScore: entry.finalScore,
+            roundCount: pacingData?.roundCount,
+            roundSplits: pacingData?.roundSplits,
           }}
-          showPviInsights
+          roundCount={pacingData?.roundCount}
+          partialReps={pacingData?.partialReps}
+          roundSplits={pacingData?.roundSplits}
+          durationMinutes={durationMinutes}
+          showPacingChart
         />
 
         {showSaveAction ? (

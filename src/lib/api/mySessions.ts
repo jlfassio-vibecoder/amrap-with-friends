@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import type { WorkoutExercise } from '@/lib/api/sessionTypes';
 import type { ScoreBreakdown } from '@/lib/scoring/types';
+import { parseScoreBreakdownJson } from '@/lib/scoring/parseScoreBreakdownJson';
 import { computeBaseScore } from '@/lib/scoring/computeBaseScore';
 import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
 
@@ -80,40 +81,7 @@ export function displayMySessionScore(entry: MySessionEntry): string | number {
 }
 
 function readScoreBreakdown(value: unknown): ScoreBreakdown | null {
-  if (!value || typeof value !== 'object') {
-    return null;
-  }
-
-  const row = value as Record<string, unknown>;
-  const baseScore = readNumber(row.baseScore);
-  const pviMultiplier = readNumber(row.pviMultiplier);
-  const domainWeight = readNumber(row.domainWeight);
-  const finalScore = readNumber(row.finalScore);
-  const pviRaw = row.pvi;
-
-  if (
-    baseScore === null ||
-    pviMultiplier === null ||
-    domainWeight === null ||
-    finalScore === null
-  ) {
-    return null;
-  }
-
-  const pvi =
-    pviRaw === null || pviRaw === undefined ? null : readNumber(pviRaw);
-
-  if (pviRaw !== null && pviRaw !== undefined && pvi === null) {
-    return null;
-  }
-
-  return {
-    baseScore,
-    pvi,
-    pviMultiplier,
-    domainWeight,
-    finalScore,
-  };
+  return parseScoreBreakdownJson(value);
 }
 
 function readString(value: unknown): string | null {

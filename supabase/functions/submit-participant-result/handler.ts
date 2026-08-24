@@ -143,12 +143,16 @@ export function computeLockedScore(
   const roundCount = rounds.length;
   const baseScore = computeBaseScore(roundCount, partialReps, repsPerRound);
   const roundDurationsSec = deriveRoundDurationsSec(rounds);
-  const breakdown = computeScoreBreakdown(
-    roundDurationsSec,
-    durationMinutes,
-    'finished',
-    baseScore
-  );
+  const breakdown = {
+    ...computeScoreBreakdown(
+      roundDurationsSec,
+      durationMinutes,
+      'finished',
+      baseScore
+    ),
+    roundCount,
+    roundSplits: roundDurationsSec,
+  };
 
   return { repsPerRound, breakdown };
 }

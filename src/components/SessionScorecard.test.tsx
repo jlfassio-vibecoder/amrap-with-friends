@@ -20,18 +20,27 @@ const entry: LeaderboardEntry = {
   pviVerdict: 'Acceptable degradation.',
   domainWeight: 1,
   finalScore: 129,
-  rounds: [],
+  rounds: [
+    { roundNumber: 1, durationSec: 62 },
+    { roundNumber: 2, durationSec: 65 },
+    { roundNumber: 3, durationSec: 71 },
+  ],
   isSelf: true,
+};
+
+const scorecardProps = {
+  entry,
+  durationMinutes: 15,
+  onSave: vi.fn(),
+  onClose: vi.fn(),
 };
 
 describe('SessionScorecard', () => {
   it('renders save button when saveState is idle', () => {
     render(
       <SessionScorecard
-        entry={entry}
+        {...scorecardProps}
         saveState="idle"
-        onSave={vi.fn()}
-        onClose={vi.fn()}
       />
     );
 
@@ -41,10 +50,8 @@ describe('SessionScorecard', () => {
   it('renders saving label when saveState is saving', () => {
     render(
       <SessionScorecard
-        entry={entry}
+        {...scorecardProps}
         saveState="saving"
-        onSave={vi.fn()}
-        onClose={vi.fn()}
       />
     );
 
@@ -54,10 +61,8 @@ describe('SessionScorecard', () => {
   it('renders saved label when saveState is saved', () => {
     render(
       <SessionScorecard
-        entry={entry}
+        {...scorecardProps}
         saveState="saved"
-        onSave={vi.fn()}
-        onClose={vi.fn()}
       />
     );
 
@@ -67,10 +72,8 @@ describe('SessionScorecard', () => {
   it('shows unavailable message when saveState is unavailable', () => {
     render(
       <SessionScorecard
-        entry={entry}
+        {...scorecardProps}
         saveState="unavailable"
-        onSave={vi.fn()}
-        onClose={vi.fn()}
       />
     );
 

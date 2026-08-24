@@ -9,6 +9,7 @@ import type {
 } from '@/lib/sessionSync/types';
 import type { WorkoutExercise } from '@/lib/api/sessionTypes';
 import type { ScoreBreakdown } from '@/lib/scoring/types';
+import { parseScoreBreakdownJson } from '@/lib/scoring/parseScoreBreakdownJson';
 import { computeBaseScore } from '@/lib/scoring/computeBaseScore';
 import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
 import { computeScoreBreakdown } from '@/lib/scoring/computeScoreBreakdown';
@@ -154,40 +155,7 @@ function readNumber(value: unknown): number | null {
 }
 
 function parseScoreBreakdown(value: unknown): ScoreBreakdown | null {
-  if (!value || typeof value !== 'object') {
-    return null;
-  }
-
-  const row = value as Record<string, unknown>;
-  const baseScore = readNumber(row.baseScore);
-  const pviMultiplier = readNumber(row.pviMultiplier);
-  const domainWeight = readNumber(row.domainWeight);
-  const finalScore = readNumber(row.finalScore);
-  const pviRaw = row.pvi;
-
-  if (
-    baseScore === null ||
-    pviMultiplier === null ||
-    domainWeight === null ||
-    finalScore === null
-  ) {
-    return null;
-  }
-
-  const pvi =
-    pviRaw === null || pviRaw === undefined ? null : readNumber(pviRaw);
-
-  if (pviRaw !== null && pviRaw !== undefined && pvi === null) {
-    return null;
-  }
-
-  return {
-    baseScore,
-    pvi,
-    pviMultiplier,
-    domainWeight,
-    finalScore,
-  };
+  return parseScoreBreakdownJson(value);
 }
 
 export function parseSegmentResultRow(
@@ -464,9 +432,15 @@ export function buildLeaderboard(
         repsPerRound > 0
           ? computeBaseScore(roundCount, partialReps, repsPerRound)
           : roundCount;
-      const roundSummaries = summarizeSortedParticipantRounds(participantRounds);
-      const roundDurationsSec = roundSummaries.map((round) => round.durationSec);
       const locked = lockedByParticipant.get(participant.id);
+      const roundSummaries =
+        locked?.breakdown.roundSplits && locked.breakdown.roundSplits.length > 0
+          ? locked.breakdown.roundSplits.map((durationSec, index) => ({
+              roundNumber: index + 1,
+              durationSec,
+            }))
+          : summarizeSortedParticipantRounds(participantRounds);
+      const roundDurationsSec = roundSummaries.map((round) => round.durationSec);
       const breakdown = locked
         ? locked.breakdown
         : computeScoreBreakdown(

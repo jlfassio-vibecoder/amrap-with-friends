@@ -1,4 +1,5 @@
 import type { MySessionEntry } from '@/lib/api/mySessions';
+import { resolvePacingData } from '@/lib/scoring/resolvePacingData';
 import { ScoreBreakdownDisplay } from '@/components/ScoreBreakdownDisplay';
 
 interface MySessionScoreBreakdownModalProps {
@@ -15,6 +16,11 @@ export function MySessionScoreBreakdownModal({
   }
 
   const titleId = 'my-session-score-breakdown-title';
+  const pacingData = resolvePacingData({
+    breakdown: entry.scoreBreakdown,
+    roundCount: entry.roundCount,
+    partialReps: entry.partialReps,
+  });
 
   return (
     <div
@@ -25,7 +31,7 @@ export function MySessionScoreBreakdownModal({
       onClick={onClose}
     >
       <div
-        className="card w-full max-w-md space-y-5 p-6"
+        className="card max-h-[90vh] w-full max-w-lg space-y-5 overflow-y-auto p-6"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
@@ -42,7 +48,14 @@ export function MySessionScoreBreakdownModal({
           </button>
         </div>
 
-        <ScoreBreakdownDisplay breakdown={entry.scoreBreakdown} />
+        <ScoreBreakdownDisplay
+          breakdown={entry.scoreBreakdown}
+          roundCount={pacingData?.roundCount}
+          partialReps={pacingData?.partialReps}
+          roundSplits={pacingData?.roundSplits}
+          durationMinutes={entry.durationMinutes}
+          showPacingChart
+        />
       </div>
     </div>
   );
