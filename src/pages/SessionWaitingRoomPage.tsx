@@ -1,15 +1,17 @@
 import { Link, useParams } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getStoredParticipantId, getStoredClaimToken, getStoredNickname, getStoredGhostSelection } from '@/lib/sessionIdentity';
 import { useLiveAmrapSession } from '@/hooks/useLiveAmrapSession';
 import { useParticipantClaim } from '@/hooks/useParticipantClaim';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useSessionChannel } from '@/lib/realtime/useSessionChannel';
+import { canOfferSessionSave } from '@/lib/claim/canOfferSessionSave';
 import { AppHeader } from '@/components/AppHeader';
+import { AuthModal } from '@/components/AuthModal';
 import { ExerciseInfoTrigger } from '@/components/exerciseInfo/ExerciseInfoTrigger';
 import { ParticipantsPanel } from '@/components/ParticipantsPanel';
 import { PartialRepsModal } from '@/components/PartialRepsModal';
-import { SessionScorecard } from '@/components/SessionScorecard';
+import { SessionScorecard, type SessionScorecardSaveState } from '@/components/SessionScorecard';
 import { SessionChat } from '@/components/SessionChat';
 import { GhostPicker } from '@/components/GhostPicker';
 import { GhostPacerStrip } from '@/components/GhostPacerStrip';
@@ -83,9 +85,11 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
   const participantId = getStoredParticipantId(sessionId) ?? '';
   const nickname = getStoredNickname(sessionId) ?? 'Unknown';
   const claimToken = getStoredClaimToken(sessionId);
-  const { isAuthenticated } = useAmrapAuth();
+  const { isAuthenticated, isAuthLoading } = useAmrapAuth();
   const [isSubmittingPartialReps, setIsSubmittingPartialReps] = useState(false);
   const [scorecardDismissed, setScorecardDismissed] = useState(false);
+  const [authOpenForSave, setAuthOpenForSave] = useState(false);
+  const pendingSaveAfterAuth = useRef(false);
   const [ghostSelection, setGhostSelection] = useState<StoredGhostSelection | null>(
     () => getStoredGhostSelection(sessionId)
   );
@@ -128,15 +132,63 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
     live.phase === 'finished' &&
     live.repsPerRound > 0 &&
     !live.hasSubmittedPartialReps;
-  const showFinishedClaimPrompt =
-    live.phase === 'finished' &&
-    claim.showClaimPrompt &&
-    !showPartialRepsModal;
   const showScorecard =
     live.phase === 'finished' &&
     live.hasSubmittedPartialReps &&
     !scorecardDismissed &&
     selfLeaderboardEntry !== null;
+  const showFinishedClaimPrompt =
+    live.phase === 'finished' &&
+    claim.showClaimPrompt &&
+    !showPartialRepsModal &&
+    !showScorecard;
+
+  const canSave = canOfferSessionSave({
+    claimToken,
+    participantId,
+    claimStatus: claim.claimStatus,
+  });
+
+  const scorecardSaveState: SessionScorecardSaveState =
+    claim.claimStatus === 'claimed'
+      ? 'saved'
+      : claim.isClaiming
+        ? 'saving'
+        : canSave
+          ? 'idle'
+          : 'unavailable';
+
+  const handleScorecardSave = () => {
+    if (!isAuthenticated) {
+      pendingSaveAfterAuth.current = true;
+      setAuthOpenForSave(true);
+      return;
+    }
+
+    void claim.saveToAccount();
+  };
+
+  useEffect(() => {
+    if (
+      isAuthLoading ||
+      !pendingSaveAfterAuth.current ||
+      !isAuthenticated ||
+      !canSave ||
+      claim.isClaiming
+    ) {
+      return;
+    }
+
+    pendingSaveAfterAuth.current = false;
+    void claim.saveToAccount();
+  }, [isAuthLoading, isAuthenticated, canSave, claim.isClaiming]);
+
+  const handleAuthCloseForSave = () => {
+    setAuthOpenForSave(false);
+    if (!isAuthenticated) {
+      pendingSaveAfterAuth.current = false;
+    }
+  };
 
   const handleSubmitPartialReps = async (partialReps: number) => {
     setIsSubmittingPartialReps(true);
@@ -358,9 +410,15 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
       {showScorecard && selfLeaderboardEntry ? (
         <SessionScorecard
           entry={selfLeaderboardEntry}
+          saveState={scorecardSaveState}
+          onSave={handleScorecardSave}
+          saveError={claim.claimError}
+          saveMessage={claim.claimMessage}
           onClose={() => setScorecardDismissed(true)}
         />
       ) : null}
+
+      {authOpenForSave ? <AuthModal onClose={handleAuthCloseForSave} /> : null}
     </main>
   );
 }

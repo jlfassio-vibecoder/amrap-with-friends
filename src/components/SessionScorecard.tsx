@@ -1,13 +1,41 @@
 import type { LeaderboardEntry } from '@/lib/sessionSync/types';
 import { ScoreBreakdownDisplay } from '@/components/ScoreBreakdownDisplay';
 
+export type SessionScorecardSaveState = 'idle' | 'saving' | 'saved' | 'unavailable';
+
 interface SessionScorecardProps {
   entry: LeaderboardEntry;
   onClose: () => void;
+  saveState: SessionScorecardSaveState;
+  onSave: () => void;
+  saveError?: string | null;
+  saveMessage?: string | null;
 }
 
-export function SessionScorecard({ entry, onClose }: SessionScorecardProps) {
+function saveButtonLabel(saveState: SessionScorecardSaveState): string {
+  switch (saveState) {
+    case 'saving':
+      return 'Saving…';
+    case 'saved':
+      return 'Saved to my account';
+    case 'idle':
+      return 'Save to my account';
+    default:
+      return '';
+  }
+}
+
+export function SessionScorecard({
+  entry,
+  onClose,
+  saveState,
+  onSave,
+  saveError = null,
+  saveMessage = null,
+}: SessionScorecardProps) {
   const titleId = 'session-scorecard-title';
+  const showSaveAction = saveState !== 'unavailable';
+  const saveDisabled = saveState === 'saving' || saveState === 'saved';
 
   return (
     <div
@@ -45,6 +73,38 @@ export function SessionScorecard({ entry, onClose }: SessionScorecardProps) {
           }}
           showPviInsights
         />
+
+        {showSaveAction ? (
+          <div className="space-y-2">
+            <button
+              type="button"
+              className={
+                saveState === 'saved'
+                  ? 'btn-outline w-full text-sm'
+                  : 'btn-primary w-full text-sm'
+              }
+              disabled={saveDisabled}
+              onClick={onSave}
+            >
+              {saveButtonLabel(saveState)}
+            </button>
+            {saveMessage ? (
+              <p className="text-sm text-accent">{saveMessage}</p>
+            ) : null}
+            {saveError ? (
+              <p className="text-sm text-error">{saveError}</p>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-sm text-secondary">
+            This session can no longer be saved from this device. Rejoin the session if you still
+            have access.
+          </p>
+        )}
+
+        <button type="button" className="btn-neutral w-full text-sm" onClick={onClose}>
+          Close
+        </button>
       </div>
     </div>
   );
