@@ -7,16 +7,22 @@ import {
   parseMessageRow,
   parseParticipantRow,
   parseRoundRow,
+  parseSegmentResultRow,
   parseSessionRow,
   sortMessagesByCreatedAt,
   upsertMessage,
   upsertParticipant,
   upsertRound,
+  upsertSegmentResult,
 } from './sessionChannelUtils';
 
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
 const HOST_ID = '22222222-2222-4222-8222-222222222222';
 const JOINER_ID = '33333333-3333-4333-8333-333333333333';
+const WORKOUT = [
+  { name: 'Burpees', target: 10, unit: 'reps' as const },
+  { name: 'Air squats', target: 10, unit: 'reps' as const },
+];
 
 describe('sessionChannelUtils', () => {
   it('parseSessionRow validates session shape', () => {
@@ -122,11 +128,83 @@ describe('sessionChannelUtils', () => {
       })!,
     ];
 
-    const leaderboard = buildLeaderboard(participants, rounds, 0, HOST_ID);
+    const leaderboard = buildLeaderboard(
+      participants,
+      rounds,
+      [],
+      0,
+      HOST_ID,
+      WORKOUT
+    );
     expect(leaderboard[0].participantId).toBe(HOST_ID);
     expect(leaderboard[0].roundCount).toBe(2);
+    expect(leaderboard[0].baseScore).toBe(40);
     expect(leaderboard[1].participantId).toBe(JOINER_ID);
     expect(leaderboard[1].roundCount).toBe(1);
+    expect(leaderboard[1].baseScore).toBe(20);
+  });
+
+  it('buildLeaderboard ranks by baseScore when partial reps break round-count ties', () => {
+    const participants = [
+      parseParticipantRow({
+        id: HOST_ID,
+        session_id: SESSION_ID,
+        nickname: 'Host',
+        role: 'host',
+        joined_at: '2026-08-22T12:00:00.000Z',
+      })!,
+      parseParticipantRow({
+        id: JOINER_ID,
+        session_id: SESSION_ID,
+        nickname: 'Joiner',
+        role: 'joiner',
+        joined_at: '2026-08-22T12:00:00.000Z',
+      })!,
+    ];
+
+    const rounds = [
+      parseRoundRow({
+        id: 'aaaa1111-1111-4111-8111-111111111111',
+        session_id: SESSION_ID,
+        participant_id: HOST_ID,
+        round_index: 0,
+        elapsed_sec_at_round: 10,
+        segment_index: 0,
+        created_at: '2026-08-22T12:00:00.000Z',
+      })!,
+      parseRoundRow({
+        id: 'bbbb2222-2222-4222-8222-222222222222',
+        session_id: SESSION_ID,
+        participant_id: JOINER_ID,
+        round_index: 0,
+        elapsed_sec_at_round: 12,
+        segment_index: 0,
+        created_at: '2026-08-22T12:00:00.000Z',
+      })!,
+    ];
+
+    const segmentResults = [
+      parseSegmentResultRow({
+        participant_id: HOST_ID,
+        segment_index: 0,
+        partial_reps: 15,
+        updated_at: '2026-08-22T12:05:00.000Z',
+      })!,
+    ];
+
+    const leaderboard = buildLeaderboard(
+      participants,
+      rounds,
+      segmentResults,
+      0,
+      HOST_ID,
+      WORKOUT
+    );
+
+    expect(leaderboard[0].participantId).toBe(HOST_ID);
+    expect(leaderboard[0].baseScore).toBe(35);
+    expect(leaderboard[1].participantId).toBe(JOINER_ID);
+    expect(leaderboard[1].baseScore).toBe(20);
   });
 
   it('buildParticipantRoundSummaries computes per-round durations from elapsed timestamps', () => {
@@ -180,9 +258,30 @@ describe('sessionChannelUtils', () => {
       })!,
     ];
 
-    expect(buildLeaderboard(participants, rounds, 0, HOST_ID)[0].rounds).toEqual([
-      { roundNumber: 1, durationSec: 45 },
-    ]);
+    expect(
+      buildLeaderboard(participants, rounds, [], 0, HOST_ID, WORKOUT)[0].rounds
+    ).toEqual([{ roundNumber: 1, durationSec: 45 }]);
+  });
+
+  it('parseSegmentResultRow and upsertSegmentResult handle segment results', () => {
+    const result = parseSegmentResultRow({
+      participant_id: HOST_ID,
+      segment_index: 0,
+      partial_reps: 7,
+      updated_at: '2026-08-22T12:05:00.000Z',
+    })!;
+
+    expect(result.partial_reps).toBe(7);
+
+    const updated = parseSegmentResultRow({
+      participant_id: HOST_ID,
+      segment_index: 0,
+      partial_reps: 9,
+      updated_at: '2026-08-22T12:06:00.000Z',
+    })!;
+
+    expect(upsertSegmentResult([result], updated)).toEqual([updated]);
+    expect(upsertSegmentResult([], result)).toEqual([result]);
   });
 
   it('upsertParticipant and upsertRound avoid duplicates', () => {

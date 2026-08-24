@@ -19,12 +19,16 @@ function leaderboardEntry(
   participantId: string,
   nickname: string,
   roundCount: number,
+  baseScore = roundCount,
   isSelf = false
 ): LeaderboardEntry {
   return {
     participantId,
     nickname,
     roundCount,
+    partialReps: 0,
+    repsPerRound: 20,
+    baseScore,
     rounds: [],
     isSelf,
   };
@@ -43,26 +47,27 @@ function presenceEntry(
 }
 
 describe('buildParticipantRoster', () => {
-  it('sorts by round count descending', () => {
+  it('sorts by base score descending', () => {
     const roster = buildParticipantRoster(
       [
-        leaderboardEntry(ALICE_ID, 'Alice', 2),
-        leaderboardEntry(BOB_ID, 'Bob', 5),
+        leaderboardEntry(ALICE_ID, 'Alice', 2, 40),
+        leaderboardEntry(BOB_ID, 'Bob', 2, 55),
       ],
       [],
       SELF_ID
     );
 
     expect(roster.map((entry) => entry.participantId)).toEqual([BOB_ID, ALICE_ID]);
+    expect(roster[0].baseScore).toBe(55);
     expect(roster[0].rank).toBe(1);
     expect(roster[1].rank).toBe(2);
   });
 
-  it('breaks round-count ties by nickname', () => {
+  it('breaks base-score ties by nickname', () => {
     const roster = buildParticipantRoster(
       [
-        leaderboardEntry(ALICE_ID, 'Alice', 3),
-        leaderboardEntry(BOB_ID, 'Bob', 3),
+        leaderboardEntry(ALICE_ID, 'Alice', 3, 60),
+        leaderboardEntry(BOB_ID, 'Bob', 3, 60),
       ],
       [],
       SELF_ID
@@ -118,6 +123,7 @@ describe('buildParticipantRoster', () => {
         participantId: ALICE_ID,
         nickname: 'Alice',
         roundCount: 0,
+        baseScore: 0,
         isOnline: true,
         isSelf: false,
         rank: 1,
@@ -128,8 +134,8 @@ describe('buildParticipantRoster', () => {
   it('marks the self participant', () => {
     const roster = buildParticipantRoster(
       [
-        leaderboardEntry(SELF_ID, 'Justin', 4, true),
-        leaderboardEntry(ALICE_ID, 'Alice', 9),
+        leaderboardEntry(SELF_ID, 'Justin', 4, 80, true),
+        leaderboardEntry(ALICE_ID, 'Alice', 9, 180),
       ],
       [
         presenceEntry(SELF_ID, 'Justin', true),
@@ -148,8 +154,8 @@ describe('rosterEntriesForScrollList', () => {
   it('excludes the self row while preserving ranks for others', () => {
     const roster = buildParticipantRoster(
       [
-        leaderboardEntry(ALICE_ID, 'Alice', 9),
-        leaderboardEntry(SELF_ID, 'Justin', 4, true),
+        leaderboardEntry(ALICE_ID, 'Alice', 9, 180),
+        leaderboardEntry(SELF_ID, 'Justin', 4, 80, true),
       ],
       [],
       SELF_ID

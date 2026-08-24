@@ -69,7 +69,9 @@ function RosterRow({
         {entry.nickname}
         {entry.isSelf ? ' (you)' : ''}
       </span>
-      <span className="shrink-0 text-sm font-semibold tabular-nums">{entry.roundCount}</span>
+      <span className="shrink-0 text-sm font-semibold tabular-nums">
+        {entry.baseScore} reps
+      </span>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { updateSessionState, logRound } from './sessionSync';
+import { updateSessionState, logRound, submitParticipantResult } from './sessionSync';
 import { supabase } from '@/lib/supabase';
 
 vi.mock('@/lib/supabase', () => ({
@@ -187,5 +187,46 @@ describe('sessionSync API', () => {
 
     expect(result.error).toBeNull();
     expect(result.data).toEqual({ ok: false, reason: 'duplicate_round' });
+  });
+
+  it('submitParticipantResult calls RPC with correct args and parses success', async () => {
+    rpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        participant_id: PARTICIPANT_ID,
+        segment_index: 0,
+        partial_reps: 15,
+        reps_per_round: 40,
+      },
+      error: null,
+      success: true,
+      count: null,
+      status: 200,
+      statusText: 'OK',
+    });
+
+    const result = await submitParticipantResult({
+      sessionId: SESSION_ID,
+      participantId: PARTICIPANT_ID,
+      claimToken: 'claim-token',
+      partialReps: 15,
+      segmentIndex: 0,
+    });
+
+    expect(rpcMock).toHaveBeenCalledWith('submit_participant_result', {
+      p_session_id: SESSION_ID,
+      p_participant_id: PARTICIPANT_ID,
+      p_claim_token: 'claim-token',
+      p_partial_reps: 15,
+      p_segment_index: 0,
+    });
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual({
+      ok: true,
+      participantId: PARTICIPANT_ID,
+      segmentIndex: 0,
+      partialReps: 15,
+      repsPerRound: 40,
+    });
   });
 });

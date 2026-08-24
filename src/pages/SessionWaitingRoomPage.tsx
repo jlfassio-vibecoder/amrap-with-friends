@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router-dom';
+import { useState } from 'react';
 import { getStoredParticipantId, getStoredClaimToken, getStoredNickname } from '@/lib/sessionIdentity';
 import { useLiveAmrapSession } from '@/hooks/useLiveAmrapSession';
 import { useParticipantClaim } from '@/hooks/useParticipantClaim';
@@ -7,6 +8,7 @@ import { useSessionChannel } from '@/lib/realtime/useSessionChannel';
 import { AppHeader } from '@/components/AppHeader';
 import { ExerciseInfoTrigger } from '@/components/exerciseInfo/ExerciseInfoTrigger';
 import { ParticipantsPanel } from '@/components/ParticipantsPanel';
+import { PartialRepsModal } from '@/components/PartialRepsModal';
 import { SessionChat } from '@/components/SessionChat';
 import { buildParticipantRoster } from '@/lib/sessionSync/buildParticipantRoster';
 
@@ -78,6 +80,7 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
   const nickname = getStoredNickname(sessionId) ?? 'Unknown';
   const claimToken = getStoredClaimToken(sessionId);
   const { isAuthenticated } = useAmrapAuth();
+  const [isSubmittingPartialReps, setIsSubmittingPartialReps] = useState(false);
 
   const channel = useSessionChannel(sessionId, { participantId, nickname });
   const live = useLiveAmrapSession(sessionId, channel);
@@ -89,6 +92,19 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
   const showLogRound = live.phase === 'work' && !live.isPaused;
   const showFinishedClaimPrompt =
     live.phase === 'finished' && claim.showClaimPrompt;
+  const showPartialRepsModal =
+    live.phase === 'finished' &&
+    live.repsPerRound > 0 &&
+    !live.hasSubmittedPartialReps;
+
+  const handleSubmitPartialReps = async (partialReps: number) => {
+    setIsSubmittingPartialReps(true);
+    try {
+      await live.submitPartialReps(partialReps);
+    } finally {
+      setIsSubmittingPartialReps(false);
+    }
+  };
 
   const hostStatusText = live.isHost
     ? 'You are the host.'
@@ -265,6 +281,14 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
         </span>
         <Link className="link-accent" to="/">Back home</Link>
       </footer>
+
+      {showPartialRepsModal ? (
+        <PartialRepsModal
+          repsPerRound={live.repsPerRound}
+          isSubmitting={isSubmittingPartialReps}
+          onSubmit={handleSubmitPartialReps}
+        />
+      ) : null}
     </main>
   );
 }

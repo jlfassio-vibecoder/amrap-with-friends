@@ -3,6 +3,8 @@ import type {
   LiveSessionPhase,
   LogRoundInput,
   LogRoundResult,
+  SubmitParticipantResultInput,
+  SubmitParticipantResultResult,
   UpdateSessionStateInput,
   UpdateSessionStateResult,
 } from '@/lib/sessionSync/types';
@@ -60,6 +62,9 @@ function mapRpcError(message: string | undefined): string {
   }
   if (message.includes('Participant not found')) {
     return 'Participant not found.';
+  }
+  if (message.includes('Invalid partial')) {
+    return 'Invalid partial rep count.';
   }
   return message;
 }
@@ -187,6 +192,65 @@ export async function logRound(
       roundIndex,
       elapsedSecAtRound,
       segmentIndex,
+    },
+    error: null,
+  };
+}
+
+export async function submitParticipantResult(
+  input: SubmitParticipantResultInput
+): Promise<{
+  data: SubmitParticipantResultResult | null;
+  error: SessionSyncApiError | null;
+}> {
+  const { data, error } = await supabase.rpc('submit_participant_result', {
+    p_session_id: input.sessionId,
+    p_participant_id: input.participantId,
+    p_claim_token: input.claimToken,
+    p_partial_reps: input.partialReps,
+    p_segment_index: input.segmentIndex,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapRpcError(error.message) } };
+  }
+
+  const raw =
+    data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  const ok = raw.ok === true;
+
+  if (!ok) {
+    const reason = readString(raw.reason) ?? 'unknown';
+    return {
+      data: { ok: false, reason },
+      error: null,
+    };
+  }
+
+  const participantId = readString(raw.participant_id);
+  const segmentIndex = readNumber(raw.segment_index);
+  const partialReps = readNumber(raw.partial_reps);
+  const repsPerRound = readNumber(raw.reps_per_round);
+
+  if (
+    !participantId ||
+    segmentIndex === null ||
+    partialReps === null ||
+    repsPerRound === null
+  ) {
+    return {
+      data: null,
+      error: { message: 'Something went wrong. Please try again.' },
+    };
+  }
+
+  return {
+    data: {
+      ok: true,
+      participantId,
+      segmentIndex,
+      partialReps,
+      repsPerRound,
     },
     error: null,
   };

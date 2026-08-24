@@ -6,16 +6,19 @@ import {
   parseMessageRow,
   parseParticipantRow,
   parseRoundRow,
+  parseSegmentResultRow,
   parseSessionRow,
   sortMessagesByCreatedAt,
   upsertMessage,
   upsertParticipant,
   upsertRound,
+  upsertSegmentResult,
   type PresenceByParticipantId,
 } from '@/lib/realtime/sessionChannelUtils';
 import type {
   MessageRow,
   ParticipantRow,
+  ParticipantSegmentResultRow,
   RoundRow,
   SessionRow,
 } from '@/lib/sessionSync/types';
@@ -29,6 +32,7 @@ export interface UseSessionChannelResult {
   session: SessionRow | null;
   participants: ParticipantRow[];
   rounds: RoundRow[];
+  segmentResults: ParticipantSegmentResultRow[];
   messages: MessageRow[];
   presenceByParticipantId: PresenceByParticipantId;
   isConnected: boolean;
@@ -42,6 +46,9 @@ export function useSessionChannel(
   const [session, setSession] = useState<SessionRow | null>(null);
   const [participants, setParticipants] = useState<ParticipantRow[]>([]);
   const [rounds, setRounds] = useState<RoundRow[]>([]);
+  const [segmentResults, setSegmentResults] = useState<ParticipantSegmentResultRow[]>(
+    []
+  );
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [presenceByParticipantId, setPresenceByParticipantId] =
     useState<PresenceByParticipantId>({});
@@ -127,6 +134,30 @@ export function useSessionChannel(
         .filter((row): row is ParticipantRow => row !== null);
       setParticipants(parsedParticipants);
 
+      const participantIds = parsedParticipants.map((participant) => participant.id);
+      if (participantIds.length > 0) {
+        const segmentResultsResult = await supabase
+          .from('participant_segment_results')
+          .select('participant_id, segment_index, partial_reps, updated_at')
+          .in('participant_id', participantIds);
+
+        if (cancelled) {
+          return;
+        }
+
+        if (segmentResultsResult.error) {
+          setError(segmentResultsResult.error.message);
+          return;
+        }
+
+        const parsedSegmentResults = (segmentResultsResult.data ?? [])
+          .map((row) => parseSegmentResultRow(row as Record<string, unknown>))
+          .filter((row): row is ParticipantSegmentResultRow => row !== null);
+        setSegmentResults(parsedSegmentResults);
+      } else {
+        setSegmentResults([]);
+      }
+
       const parsedRounds = (roundsResult.data ?? [])
         .map((row) => parseRoundRow(row as Record<string, unknown>))
         .filter((row): row is RoundRow => row !== null);
@@ -178,6 +209,24 @@ export function useSessionChannel(
           );
           if (parsed) {
             setParticipants((prev) => upsertParticipant(prev, parsed));
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'participant_segment_results',
+        },
+        (payload) => {
+          const record =
+            payload.eventType === 'DELETE'
+              ? (payload.old as Record<string, unknown>)
+              : (payload.new as Record<string, unknown>);
+          const parsed = parseSegmentResultRow(record);
+          if (parsed) {
+            setSegmentResults((prev) => upsertSegmentResult(prev, parsed));
           }
         }
       )
@@ -254,6 +303,7 @@ export function useSessionChannel(
     session,
     participants,
     rounds,
+    segmentResults,
     messages,
     presenceByParticipantId,
     isConnected,

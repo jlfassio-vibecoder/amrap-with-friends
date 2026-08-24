@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
-import { fetchMySessions, type MySessionEntry } from '@/lib/api/mySessions';
+import { fetchMySessions, computeMySessionBaseScore, type MySessionEntry } from '@/lib/api/mySessions';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 
 function formatWorkoutSummary(workout: MySessionEntry['workout']): string {
@@ -83,7 +83,7 @@ export default function MySessionsPage() {
               <p className="font-semibold">{formatWorkoutSummary(entry.workout)}</p>
               <p className="text-secondary">
                 {new Date(entry.createdAt).toLocaleString()} · {entry.durationMinutes} min ·{' '}
-                {entry.roundCount} rounds · {entry.state}
+                {computeMySessionBaseScore(entry)} reps · {entry.state}
               </p>
               <Link className="link-accent" to={`/session/${entry.sessionId}`}>
                 View session

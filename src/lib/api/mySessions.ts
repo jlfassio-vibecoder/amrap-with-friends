@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import type { WorkoutExercise } from '@/lib/api/sessionTypes';
+import { computeBaseScore } from '@/lib/scoring/computeBaseScore';
+import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
 
 export interface MySessionEntry {
   participantId: string;
@@ -13,6 +15,7 @@ export interface MySessionEntry {
   state: string;
   segmentIndex: number;
   roundCount: number;
+  partialReps: number;
 }
 
 export type MySessionsApiError = {
@@ -31,6 +34,15 @@ export function countRoundsForSegment(
   segmentIndex: number
 ): number {
   return rounds.filter((round) => round.segment_index === segmentIndex).length;
+}
+
+export function computeMySessionBaseScore(entry: MySessionEntry): number {
+  try {
+    const repsPerRound = computeRepsPerRound(entry.workout);
+    return computeBaseScore(entry.roundCount, entry.partialReps, repsPerRound);
+  } catch {
+    return entry.roundCount;
+  }
 }
 
 function readString(value: unknown): string | null {
@@ -61,6 +73,7 @@ function parseMySessionEntry(raw: unknown): MySessionEntry | null {
   const state = readString(row.state);
   const segmentIndex = readNumber(row.segment_index) ?? 0;
   const roundCount = readNumber(row.round_count) ?? 0;
+  const partialReps = readNumber(row.partial_reps) ?? 0;
 
   if (
     !participantId ||
@@ -87,6 +100,7 @@ function parseMySessionEntry(raw: unknown): MySessionEntry | null {
     state,
     segmentIndex,
     roundCount,
+    partialReps,
   };
 }
 

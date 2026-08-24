@@ -27,3 +27,18 @@ LIMIT 2;
 
 -- 5) Fill session to test cap (100 participants max; 101st join should raise 'Session is full'):
 -- SELECT public.join_session('<session_id>'::uuid, 'Guest N');
+
+-- 6) Submit partial reps after session is in work or finished (replace IDs/tokens from create/join):
+-- SELECT public.submit_participant_result(
+--   '<session_id>'::uuid,
+--   '<participant_id>'::uuid,
+--   '<claim_token>',
+--   5,
+--   0
+-- ) AS submit_result;
+-- Expect ok=true with partial_reps and reps_per_round; partial >= reps_per_round returns partial_reps_too_high.
+
+-- SELECT participant_id, segment_index, partial_reps
+-- FROM public.participant_segment_results
+-- ORDER BY updated_at DESC
+-- LIMIT 5;

@@ -94,6 +94,38 @@ export interface LogRoundFailure {
 
 export type LogRoundResult = LogRoundSuccess | LogRoundFailure;
 
+export interface ParticipantSegmentResultRow {
+  participant_id: string;
+  segment_index: number;
+  partial_reps: number;
+  updated_at: string;
+}
+
+export interface SubmitParticipantResultInput {
+  sessionId: string;
+  participantId: string;
+  claimToken: string;
+  partialReps: number;
+  segmentIndex: number;
+}
+
+export interface SubmitParticipantResultSuccess {
+  ok: true;
+  participantId: string;
+  segmentIndex: number;
+  partialReps: number;
+  repsPerRound: number;
+}
+
+export interface SubmitParticipantResultFailure {
+  ok: false;
+  reason: string;
+}
+
+export type SubmitParticipantResultResult =
+  | SubmitParticipantResultSuccess
+  | SubmitParticipantResultFailure;
+
 export interface SessionPresenceEntry {
   participantId: string;
   nickname: string;
@@ -109,6 +141,9 @@ export interface LeaderboardEntry {
   participantId: string;
   nickname: string;
   roundCount: number;
+  partialReps: number;
+  repsPerRound: number;
+  baseScore: number;
   rounds: LeaderboardRoundEntry[];
   isSelf: boolean;
 }

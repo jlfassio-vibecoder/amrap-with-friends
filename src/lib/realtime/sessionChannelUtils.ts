@@ -1,4 +1,14 @@
-import type { ParticipantRow, RoundRow, SessionRow, MessageRow } from '@/lib/sessionSync/types';
+import type {
+  ParticipantRow,
+  ParticipantSegmentResultRow,
+  RoundRow,
+  SessionRow,
+  MessageRow,
+  LeaderboardEntry,
+} from '@/lib/sessionSync/types';
+import type { WorkoutExercise } from '@/lib/api/sessionTypes';
+import { computeBaseScore } from '@/lib/scoring/computeBaseScore';
+import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
 
 export interface PresenceTrackPayload {
   participant_id: string;
@@ -126,6 +136,34 @@ export function parseRoundRow(record: Record<string, unknown>): RoundRow | null 
   };
 }
 
+export function parseSegmentResultRow(
+  record: Record<string, unknown>
+): ParticipantSegmentResultRow | null {
+  const participantId =
+    typeof record.participant_id === 'string' ? record.participant_id : null;
+  const segmentIndex =
+    typeof record.segment_index === 'number' ? record.segment_index : null;
+  const partialReps =
+    typeof record.partial_reps === 'number' ? record.partial_reps : null;
+  const updatedAt = typeof record.updated_at === 'string' ? record.updated_at : null;
+
+  if (
+    !participantId ||
+    segmentIndex === null ||
+    partialReps === null ||
+    !updatedAt
+  ) {
+    return null;
+  }
+
+  return {
+    participant_id: participantId,
+    segment_index: segmentIndex,
+    partial_reps: partialReps,
+    updated_at: updatedAt,
+  };
+}
+
 export function parseMessageRow(record: Record<string, unknown>): MessageRow | null {
   const id = typeof record.id === 'string' ? record.id : null;
   const sessionId = typeof record.session_id === 'string' ? record.session_id : null;
@@ -207,6 +245,23 @@ export function upsertRound(rounds: RoundRow[], row: RoundRow): RoundRow[] {
   return [...rounds, row];
 }
 
+export function upsertSegmentResult(
+  results: ParticipantSegmentResultRow[],
+  row: ParticipantSegmentResultRow
+): ParticipantSegmentResultRow[] {
+  const existingIndex = results.findIndex(
+    (result) =>
+      result.participant_id === row.participant_id &&
+      result.segment_index === row.segment_index
+  );
+
+  if (existingIndex >= 0) {
+    return results.map((result, index) => (index === existingIndex ? row : result));
+  }
+
+  return [...results, row];
+}
+
 export function upsertMessage(messages: MessageRow[], row: MessageRow): MessageRow[] {
   const existing = messages.find((m) => m.id === row.id);
   if (existing) {
@@ -252,15 +307,25 @@ function summarizeSortedParticipantRounds(
 export function buildLeaderboard(
   participants: ParticipantRow[],
   rounds: RoundRow[],
+  segmentResults: ParticipantSegmentResultRow[],
   segmentIndex: number,
-  selfParticipantId: string
-): Array<{
-  participantId: string;
-  nickname: string;
-  roundCount: number;
-  rounds: Array<{ roundNumber: number; durationSec: number }>;
-  isSelf: boolean;
-}> {
+  selfParticipantId: string,
+  workout: WorkoutExercise[]
+): LeaderboardEntry[] {
+  let repsPerRound = 0;
+  try {
+    repsPerRound = computeRepsPerRound(workout);
+  } catch {
+    repsPerRound = 0;
+  }
+
+  const partialByParticipant = new Map<string, number>();
+  for (const result of segmentResults) {
+    if (result.segment_index === segmentIndex) {
+      partialByParticipant.set(result.participant_id, result.partial_reps);
+    }
+  }
+
   const counts = new Map<string, number>();
   const roundsByParticipant = new Map<string, RoundRow[]>();
 
@@ -283,18 +348,27 @@ export function buildLeaderboard(
   return participants
     .map((participant) => {
       const participantRounds = roundsByParticipant.get(participant.id) ?? [];
+      const roundCount = counts.get(participant.id) ?? 0;
+      const partialReps = partialByParticipant.get(participant.id) ?? 0;
+      const baseScore =
+        repsPerRound > 0
+          ? computeBaseScore(roundCount, partialReps, repsPerRound)
+          : roundCount;
 
       return {
         participantId: participant.id,
         nickname: participant.nickname,
-        roundCount: counts.get(participant.id) ?? 0,
+        roundCount,
+        partialReps,
+        repsPerRound,
+        baseScore,
         rounds: summarizeSortedParticipantRounds(participantRounds),
         isSelf: participant.id === selfParticipantId,
       };
     })
     .sort((a, b) => {
-      if (b.roundCount !== a.roundCount) {
-        return b.roundCount - a.roundCount;
+      if (b.baseScore !== a.baseScore) {
+        return b.baseScore - a.baseScore;
       }
       return a.nickname.localeCompare(b.nickname);
     });
