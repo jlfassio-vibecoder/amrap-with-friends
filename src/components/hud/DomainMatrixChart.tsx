@@ -23,13 +23,20 @@ export function DomainMatrixChart({ domainMinutes30d }: DomainMatrixChartProps) 
     domainMinutes30d[15] +
     domainMinutes30d[20];
 
-  let cursorX = 0;
-  const segments = CORE_SEGMENTS.map(({ domain, label }) => {
+  const segments = CORE_SEGMENTS.map(({ domain, label }, index) => {
     const minutes = domainMinutes30d[domain];
     const width =
       coreTotal > 0 ? (minutes / coreTotal) * BAR_WIDTH : BAR_WIDTH / CORE_SEGMENTS.length;
-    const x = cursorX;
-    cursorX += width;
+
+    const x = CORE_SEGMENTS.slice(0, index).reduce((sum, { domain: d }) => {
+      const prevMinutes = domainMinutes30d[d];
+      const prevWidth =
+        coreTotal > 0
+          ? (prevMinutes / coreTotal) * BAR_WIDTH
+          : BAR_WIDTH / CORE_SEGMENTS.length;
+      return sum + prevWidth;
+    }, 0);
+
     return { domain, label, minutes, x, width };
   });
 

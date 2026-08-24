@@ -8,7 +8,7 @@ function pad2(value: number): string {
 }
 
 /** Current week Monday (local date string) from weekEndsAt (next Monday 00:00). */
-export function currentWeekStartDate(weekEndsAt: string): Date {
+function currentWeekStartDate(weekEndsAt: string): Date {
   const end = new Date(weekEndsAt);
   const start = new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000);
   return start;
