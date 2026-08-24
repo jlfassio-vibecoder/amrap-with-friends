@@ -1,6 +1,9 @@
 import { useEffect, useId, useState } from 'react';
 import type { ExerciseInfo } from '@/data/exerciseLibrary';
-import { getExerciseMediaUrl } from '@/lib/media/getExerciseMediaUrl';
+import {
+  getExerciseImagePathCandidates,
+  getExerciseMediaUrl,
+} from '@/lib/media/getExerciseMediaUrl';
 import { getPhotoGridColumnCount } from '@/components/exerciseInfo/getPhotoGridColumnCount';
 
 interface ExerciseInfoModalProps {
@@ -27,6 +30,7 @@ function PhotoPlaceholder({ caption }: { caption?: string }) {
 export function ExerciseInfoModal({ info, onClose }: ExerciseInfoModalProps) {
   const titleId = useId();
   const [mediaTab, setMediaTab] = useState<MediaTab>('photos');
+  const [photoPathOverrides, setPhotoPathOverrides] = useState<Record<string, string>>({});
   const [failedPhotoUrls, setFailedPhotoUrls] = useState<Record<string, true>>({});
 
   useEffect(() => {
@@ -45,6 +49,25 @@ export function ExerciseInfoModal({ info, onClose }: ExerciseInfoModalProps) {
 
   function photoFailureKey(photoUrl: string): string {
     return `${info.id}:${photoUrl}`;
+  }
+
+  function resolvePhotoPath(photoUrl: string): string {
+    return photoPathOverrides[photoFailureKey(photoUrl)] ?? photoUrl;
+  }
+
+  function handlePhotoError(photoUrl: string) {
+    const key = photoFailureKey(photoUrl);
+    const currentPath = resolvePhotoPath(photoUrl);
+    const candidates = getExerciseImagePathCandidates(photoUrl);
+    const currentIndex = candidates.indexOf(currentPath);
+    const nextPath = candidates[currentIndex + 1];
+
+    if (nextPath) {
+      setPhotoPathOverrides((prev) => ({ ...prev, [key]: nextPath }));
+      return;
+    }
+
+    setFailedPhotoUrls((prev) => ({ ...prev, [key]: true }));
   }
 
   return (
@@ -132,18 +155,16 @@ export function ExerciseInfoModal({ info, onClose }: ExerciseInfoModalProps) {
                     );
                   }
 
+                  const resolvedPath = resolvePhotoPath(photo.url);
+
                   return (
                     <figure key={cellKey} className="space-y-1">
                       <img
-                        src={getExerciseMediaUrl(photo.url)}
+                        key={resolvedPath}
+                        src={getExerciseMediaUrl(resolvedPath)}
                         alt={photo.caption || info.name}
                         className="h-auto w-full rounded-card border border-border object-contain"
-                        onError={() => {
-                          setFailedPhotoUrls((prev) => ({
-                            ...prev,
-                            [photoFailureKey(photo.url)]: true,
-                          }));
-                        }}
+                        onError={() => handlePhotoError(photo.url)}
                       />
                       {photo.caption ? (
                         <figcaption className="text-center text-xs text-secondary">

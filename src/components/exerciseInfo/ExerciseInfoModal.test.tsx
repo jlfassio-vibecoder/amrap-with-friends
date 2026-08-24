@@ -3,11 +3,15 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { ExerciseInfoModal } from './ExerciseInfoModal';
 import type { ExerciseInfo } from '@/data/exerciseLibrary';
 
-vi.mock('@/lib/media/getExerciseMediaUrl', () => ({
-  getExerciseMediaUrl: vi.fn((path: string) =>
-    path ? `https://cdn.example/exercise-media/${path}` : ''
-  ),
-}));
+vi.mock('@/lib/media/getExerciseMediaUrl', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/media/getExerciseMediaUrl')>();
+  return {
+    ...actual,
+    getExerciseMediaUrl: vi.fn((path: string) =>
+      path ? `https://cdn.example/exercise-media/${path}` : ''
+    ),
+  };
+});
 
 afterEach(() => {
   cleanup();
@@ -23,11 +27,38 @@ const infoWithBrokenPhoto: ExerciseInfo = {
 };
 
 describe('ExerciseInfoModal media', () => {
-  it('falls back to the photo placeholder when an image fails to load', () => {
+  it('tries alternate image extensions before showing the placeholder', () => {
+    const info: ExerciseInfo = {
+      ...infoWithBrokenPhoto,
+      photos: [{ url: 'test-exercise/sequence.jpeg', caption: 'Setup' }],
+    };
+
+    render(<ExerciseInfoModal info={info} onClose={() => undefined} />);
+
+    let image = screen.getByRole('img', { name: 'Setup' });
+    expect(image.getAttribute('src')).toBe(
+      'https://cdn.example/exercise-media/test-exercise/sequence.jpeg'
+    );
+
+    fireEvent.error(image);
+    image = screen.getByRole('img', { name: 'Setup' });
+    expect(image.getAttribute('src')).toBe(
+      'https://cdn.example/exercise-media/test-exercise/sequence.png'
+    );
+
+    fireEvent.error(image);
+    image = screen.getByRole('img', { name: 'Setup' });
+    expect(image.getAttribute('src')).toBe(
+      'https://cdn.example/exercise-media/test-exercise/sequence.jpg'
+    );
+  });
+
+  it('falls back to the photo placeholder when all image formats fail to load', () => {
     render(<ExerciseInfoModal info={infoWithBrokenPhoto} onClose={() => undefined} />);
 
-    const image = screen.getByRole('img', { name: 'Setup' });
-    fireEvent.error(image);
+    fireEvent.error(screen.getByRole('img', { name: 'Setup' }));
+    fireEvent.error(screen.getByRole('img', { name: 'Setup' }));
+    fireEvent.error(screen.getByRole('img', { name: 'Setup' }));
 
     expect(screen.queryByRole('img', { name: 'Setup' })).toBeNull();
     expect(screen.getByText('Setup')).toBeTruthy();

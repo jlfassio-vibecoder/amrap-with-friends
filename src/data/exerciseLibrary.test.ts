@@ -15,15 +15,16 @@ describe('getExerciseInfo', () => {
   });
 
   it('returns undefined when no entry exists', () => {
-    expect(getExerciseInfo('Hollow Rocks')).toBeUndefined();
+    expect(getExerciseInfo('Totally Fake Movement')).toBeUndefined();
   });
 
-  it('does not match a generic Push-ups name to a specific variant', () => {
-    expect(getExerciseInfo('Push-ups')).toBeUndefined();
+  it('matches generic Push-ups to the Push-ups entry', () => {
+    expect(getExerciseInfo('Push-ups')?.id).toBe('push-ups');
   });
 
-  it('does not match prefix modifiers like Fast Air Squats', () => {
-    expect(getExerciseInfo('Fast Air Squats')).toBeUndefined();
+  it('keeps Fast Air Squats separate from Air Squats', () => {
+    expect(getExerciseInfo('Fast Air Squats')?.id).toBe('fast-air-squats');
+    expect(getExerciseInfo('Air Squats')?.id).toBe('air-squat');
   });
 
   it('matches exact names for new seeded entries', () => {
@@ -99,6 +100,7 @@ describe('getExerciseInfo', () => {
 
   it('matches Engine Room entries by exact name', () => {
     expect(getExerciseInfo('Sprawls')?.id).toBe('sprawls');
+    expect(getExerciseInfo('Combat Sprawls')?.id).toBe('combat-sprawls');
     expect(getExerciseInfo('Down-Ups')?.id).toBe('down-ups');
     expect(getExerciseInfo('Half-Burpees')?.id).toBe('half-burpees');
     expect(getExerciseInfo('Mountain Climbers')?.id).toBe('mountain-climbers');
@@ -110,6 +112,11 @@ describe('getExerciseInfo', () => {
     expect(getExerciseInfo('Jumping Jacks')?.id).toBe('jumping-jacks');
     expect(getExerciseInfo('Lateral Line Hops')?.id).toBe('lateral-line-hops');
     expect(getExerciseInfo('Double-Tap Jumps')?.id).toBe('double-tap-jumps');
+  });
+
+  it('keeps Combat Sprawls separate from Sprawls', () => {
+    expect(getExerciseInfo('Sprawls')?.id).toBe('sprawls');
+    expect(getExerciseInfo('Combat Sprawls')?.id).toBe('combat-sprawls');
   });
 
   it('strips parenthetical for Engine Room template names', () => {
@@ -163,5 +170,57 @@ describe('getExerciseInfo', () => {
   it('hides empty common mistakes for Midline Tension entries', () => {
     expect(getExerciseInfo('Dead Bugs')?.commonMistakes).toEqual([]);
     expect(getExerciseInfo('Flutter Kicks')?.commonMistakes).toEqual([]);
+  });
+
+  it('matches remaining dictionary entries by exact name', () => {
+    expect(getExerciseInfo('Alternating Bird-Dogs')?.id).toBe('alternating-bird-dogs');
+    expect(getExerciseInfo('Bear Crawl Hover')?.id).toBe('bear-crawl-hover');
+    expect(getExerciseInfo('High Plank Hold')?.id).toBe('high-plank-hold');
+    expect(getExerciseInfo('Hollow Rocks')?.id).toBe('hollow-rocks');
+    expect(getExerciseInfo('Plank Hold')?.id).toBe('plank-hold');
+    expect(getExerciseInfo('Plank Reaches')?.id).toBe('plank-reaches');
+    expect(getExerciseInfo('Side Plank Hold')?.id).toBe('side-plank-hold');
+    expect(getExerciseInfo('V-Sit Hold')?.id).toBe('v-sit-hold');
+    expect(getExerciseInfo('Butterfly Sit-ups')?.id).toBe('butterfly-sit-ups');
+    expect(getExerciseInfo('Cross-Body Climbers')?.id).toBe('cross-body-climbers');
+    expect(getExerciseInfo('Bodyweight Good Mornings')?.id).toBe(
+      'bodyweight-good-mornings'
+    );
+    expect(getExerciseInfo('Glute Bridge Hold')?.id).toBe('glute-bridge-hold');
+    expect(getExerciseInfo('Glute Bridge Walkouts')?.id).toBe('glute-bridge-walkouts');
+    expect(getExerciseInfo('Reverse Snow Angels')?.id).toBe('reverse-snow-angels');
+    expect(getExerciseInfo('Superman Hold')?.id).toBe('superman-hold');
+    expect(getExerciseInfo('Superman Pull-downs')?.id).toBe('superman-pull-downs');
+    expect(getExerciseInfo('Supermans')?.id).toBe('supermans');
+    expect(getExerciseInfo('Bear Crawl to Broad Jumps')?.id).toBe(
+      'bear-crawl-to-broad-jumps'
+    );
+    expect(getExerciseInfo('Strict Reverse Lunges')?.id).toBe('strict-reverse-lunges');
+    expect(getExerciseInfo('Walking Lunges')?.id).toBe('walking-lunges');
+  });
+
+  it('strips parentheticals for remaining dictionary template names', () => {
+    expect(getExerciseInfo('Plank Reaches (Total)')?.id).toBe('plank-reaches');
+    expect(getExerciseInfo('Side Plank Hold (Switch sides each round)')?.id).toBe(
+      'side-plank-hold'
+    );
+  });
+
+  it('keeps Cross-Body Climbers separate from Cross-Body Mountain Climbers', () => {
+    expect(getExerciseInfo('Cross-Body Climbers')?.id).toBe('cross-body-climbers');
+    expect(getExerciseInfo('Cross-Body Mountain Climbers')?.id).toBe(
+      'cross-body-mountain-climbers'
+    );
+  });
+
+  it('keeps High Plank Hold separate from Plank Hold', () => {
+    expect(getExerciseInfo('High Plank Hold')?.id).toBe('high-plank-hold');
+    expect(getExerciseInfo('Plank Hold')?.id).toBe('plank-hold');
+  });
+
+  it('keeps Supermans separate from Superman Raises and Superman Hold', () => {
+    expect(getExerciseInfo('Supermans')?.id).toBe('supermans');
+    expect(getExerciseInfo('Superman Raises')?.id).toBe('superman-raises');
+    expect(getExerciseInfo('Superman Hold')?.id).toBe('superman-hold');
   });
 });

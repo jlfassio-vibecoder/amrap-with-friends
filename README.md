@@ -33,7 +33,7 @@ When you add exercises to [`src/data/exerciseLibrary.ts`](src/data/exerciseLibra
 
 The script reads `EXERCISE_LIBRARY` directly and upserts `${id}/.keep` placeholders. It is **not** part of the app runtime or CI — re-run only when new exercise ids appear.
 
-Upload sequence stills as **`{exerciseId}/sequence.jpeg`** (`.jpeg`, not `.jpg`) in the `exercise-media` bucket. The library already points every exercise at that path.
+Upload sequence stills as **`{exerciseId}/sequence.jpeg`** or **`{exerciseId}/sequence.png`** in the `exercise-media` bucket (Gemini → `.jpeg`, ChatGPT → `.png`). The library defaults to `.jpeg`; the info modal falls back across `.jpeg` / `.png` / `.jpg` if the first path 404s.
 
 ## Supabase migrations
 
