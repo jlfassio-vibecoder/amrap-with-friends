@@ -22,6 +22,18 @@ The dev server runs at [http://localhost:5173](http://localhost:5173).
 | `npm run typecheck` | TypeScript project references build |
 | `npm run test` | Vitest (single run) |
 | `npm run format` | Prettier |
+| `npm run seed:exercise-media` | Manual: seed empty `exercise-media/{id}/.keep` folders in Supabase Storage |
+
+### Seed exercise-media folders (manual)
+
+When you add exercises to [`src/data/exerciseLibrary.ts`](src/data/exerciseLibrary.ts) and want empty folders visible in the Supabase Storage dashboard before uploading real photos/video:
+
+1. Put `SUPABASE_SERVICE_ROLE_KEY` in `.env` (never prefix with `VITE_`).
+2. Run `npm run seed:exercise-media` once from your machine.
+
+The script reads `EXERCISE_LIBRARY` directly and upserts `${id}/.keep` placeholders. It is **not** part of the app runtime or CI — re-run only when new exercise ids appear.
+
+Upload sequence stills as **`{exerciseId}/sequence.jpeg`** (`.jpeg`, not `.jpg`) in the `exercise-media` bucket. The library already points every exercise at that path.
 
 ## Supabase migrations
 
