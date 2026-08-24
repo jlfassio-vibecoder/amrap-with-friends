@@ -440,20 +440,101 @@ describe('sessionChannelUtils', () => {
       participant_id: HOST_ID,
       segment_index: 0,
       partial_reps: 7,
+      final_score: null,
+      score_breakdown: null,
       updated_at: '2026-08-22T12:05:00.000Z',
     })!;
 
     expect(result.partial_reps).toBe(7);
+    expect(result.final_score).toBeNull();
+    expect(result.score_breakdown).toBeNull();
+
+    const locked = parseSegmentResultRow({
+      participant_id: HOST_ID,
+      segment_index: 0,
+      partial_reps: 15,
+      final_score: 302,
+      score_breakdown: {
+        baseScore: 175,
+        pvi: 0,
+        pviMultiplier: 1.15,
+        domainWeight: 1.5,
+        finalScore: 302,
+      },
+      updated_at: '2026-08-22T12:06:00.000Z',
+    })!;
+
+    expect(locked.final_score).toBe(302);
+    expect(locked.score_breakdown?.finalScore).toBe(302);
 
     const updated = parseSegmentResultRow({
       participant_id: HOST_ID,
       segment_index: 0,
       partial_reps: 9,
+      final_score: null,
+      score_breakdown: null,
       updated_at: '2026-08-22T12:06:00.000Z',
     })!;
 
     expect(upsertSegmentResult([result], updated)).toEqual([updated]);
     expect(upsertSegmentResult([], result)).toEqual([result]);
+  });
+
+  it('buildLeaderboard uses persisted locked score over client computation', () => {
+    const participants = [
+      parseParticipantRow({
+        id: HOST_ID,
+        session_id: SESSION_ID,
+        nickname: 'Host',
+        role: 'host',
+        joined_at: '2026-08-22T12:00:00.000Z',
+      })!,
+    ];
+
+    const rounds = [
+      parseRoundRow({
+        id: 'aaaa1111-1111-4111-8111-111111111111',
+        session_id: SESSION_ID,
+        participant_id: HOST_ID,
+        round_index: 0,
+        elapsed_sec_at_round: 999,
+        segment_index: 0,
+        created_at: '2026-08-22T12:00:00.000Z',
+      })!,
+    ];
+
+    const segmentResults = [
+      parseSegmentResultRow({
+        participant_id: HOST_ID,
+        segment_index: 0,
+        partial_reps: 15,
+        final_score: 302,
+        score_breakdown: {
+          baseScore: 175,
+          pvi: 0,
+          pviMultiplier: 1.15,
+          domainWeight: 1.5,
+          finalScore: 302,
+        },
+        updated_at: '2026-08-22T12:05:00.000Z',
+      })!,
+    ];
+
+    const leaderboard = buildLeaderboard(
+      participants,
+      rounds,
+      segmentResults,
+      0,
+      HOST_ID,
+      WORKOUT,
+      15,
+      'finished'
+    );
+
+    expect(leaderboard[0].finalScore).toBe(302);
+    expect(leaderboard[0].baseScore).toBe(175);
+    expect(leaderboard[0].pviMultiplier).toBe(1.15);
+    expect(leaderboard[0].domainWeight).toBe(1.5);
   });
 
   it('upsertParticipant and upsertRound avoid duplicates', () => {

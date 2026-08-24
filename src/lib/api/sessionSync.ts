@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import type { ScoreBreakdown } from '@/lib/scoring/types';
 import type {
   LiveSessionPhase,
   LogRoundInput,
@@ -67,6 +68,67 @@ function mapRpcError(message: string | undefined): string {
     return 'Invalid partial rep count.';
   }
   return message;
+}
+
+function mapInvokeError(message: string | undefined, reason?: string): string {
+  if (reason === 'score_already_locked') {
+    return 'Your score is already locked for this segment.';
+  }
+  if (reason === 'use_edge_function') {
+    return 'Score submission is unavailable. Please update the app.';
+  }
+  if (!message) {
+    return 'Something went wrong. Please try again.';
+  }
+  if (message.includes('Session not found')) {
+    return 'Session not found.';
+  }
+  if (message.includes('Participant not found')) {
+    return 'Participant not found.';
+  }
+  if (message.includes('Invalid partial')) {
+    return 'Invalid partial rep count.';
+  }
+  return message;
+}
+
+function readScoreBreakdown(value: unknown): ScoreBreakdown | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const row = value as Record<string, unknown>;
+  const baseScore = readNumber(row.baseScore);
+  const pviMultiplier = readNumber(row.pviMultiplier);
+  const domainWeight = readNumber(row.domainWeight);
+  const finalScore = readNumber(row.finalScore);
+  const pviRaw = row.pvi;
+
+  if (
+    baseScore === null ||
+    pviMultiplier === null ||
+    domainWeight === null ||
+    finalScore === null
+  ) {
+    return null;
+  }
+
+  const pvi =
+    pviRaw === null || pviRaw === undefined
+      ? null
+      : readNumber(pviRaw);
+
+  if (pviRaw !== null && pviRaw !== undefined && pvi === null) {
+    return null;
+  }
+
+  return {
+    baseScore,
+    pvi,
+    pviMultiplier,
+    domainWeight,
+    finalScore,
+  };
 }
 
 export async function updateSessionState(
@@ -203,16 +265,18 @@ export async function submitParticipantResult(
   data: SubmitParticipantResultResult | null;
   error: SessionSyncApiError | null;
 }> {
-  const { data, error } = await supabase.rpc('submit_participant_result', {
-    p_session_id: input.sessionId,
-    p_participant_id: input.participantId,
-    p_claim_token: input.claimToken,
-    p_partial_reps: input.partialReps,
-    p_segment_index: input.segmentIndex,
+  const { data, error } = await supabase.functions.invoke('submit-participant-result', {
+    body: {
+      sessionId: input.sessionId,
+      participantId: input.participantId,
+      claimToken: input.claimToken,
+      partialReps: input.partialReps,
+      segmentIndex: input.segmentIndex,
+    },
   });
 
   if (error) {
-    return { data: null, error: { message: mapRpcError(error.message) } };
+    return { data: null, error: { message: mapInvokeError(error.message) } };
   }
 
   const raw =
@@ -227,16 +291,20 @@ export async function submitParticipantResult(
     };
   }
 
-  const participantId = readString(raw.participant_id);
-  const segmentIndex = readNumber(raw.segment_index);
-  const partialReps = readNumber(raw.partial_reps);
-  const repsPerRound = readNumber(raw.reps_per_round);
+  const participantId = readString(raw.participantId);
+  const segmentIndex = readNumber(raw.segmentIndex);
+  const partialReps = readNumber(raw.partialReps);
+  const repsPerRound = readNumber(raw.repsPerRound);
+  const finalScore = readNumber(raw.finalScore);
+  const scoreBreakdown = readScoreBreakdown(raw.scoreBreakdown);
 
   if (
     !participantId ||
     segmentIndex === null ||
     partialReps === null ||
-    repsPerRound === null
+    repsPerRound === null ||
+    finalScore === null ||
+    !scoreBreakdown
   ) {
     return {
       data: null,
@@ -251,6 +319,8 @@ export async function submitParticipantResult(
       segmentIndex,
       partialReps,
       repsPerRound,
+      finalScore,
+      scoreBreakdown,
     },
     error: null,
   };

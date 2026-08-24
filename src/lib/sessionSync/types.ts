@@ -1,4 +1,5 @@
 import type { WorkoutExercise } from '@/lib/api/sessionTypes';
+import type { ScoreBreakdown } from '@/lib/scoring/types';
 
 export type LiveSessionPhase = 'waiting' | 'setup' | 'work' | 'finished';
 
@@ -98,6 +99,8 @@ export interface ParticipantSegmentResultRow {
   participant_id: string;
   segment_index: number;
   partial_reps: number;
+  final_score: number | null;
+  score_breakdown: ScoreBreakdown | null;
   updated_at: string;
 }
 
@@ -115,6 +118,8 @@ export interface SubmitParticipantResultSuccess {
   segmentIndex: number;
   partialReps: number;
   repsPerRound: number;
+  finalScore: number;
+  scoreBreakdown: ScoreBreakdown;
 }
 
 export interface SubmitParticipantResultFailure {

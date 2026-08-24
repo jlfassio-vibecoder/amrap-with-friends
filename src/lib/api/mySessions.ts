@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { WorkoutExercise } from '@/lib/api/sessionTypes';
+import type { ScoreBreakdown } from '@/lib/scoring/types';
 import { computeBaseScore } from '@/lib/scoring/computeBaseScore';
 import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
 
@@ -16,6 +17,8 @@ export interface MySessionEntry {
   segmentIndex: number;
   roundCount: number;
   partialReps: number;
+  finalScore: number | null;
+  scoreBreakdown: ScoreBreakdown | null;
 }
 
 export type MySessionsApiError = {
@@ -43,6 +46,52 @@ export function computeMySessionBaseScore(entry: MySessionEntry): number {
   } catch {
     return entry.roundCount;
   }
+}
+
+export function displayMySessionScore(entry: MySessionEntry): string | number {
+  if (entry.finalScore !== null) {
+    return entry.finalScore;
+  }
+
+  const baseScore = computeMySessionBaseScore(entry);
+  return baseScore ?? 'N/A';
+}
+
+function readScoreBreakdown(value: unknown): ScoreBreakdown | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const row = value as Record<string, unknown>;
+  const baseScore = readNumber(row.baseScore);
+  const pviMultiplier = readNumber(row.pviMultiplier);
+  const domainWeight = readNumber(row.domainWeight);
+  const finalScore = readNumber(row.finalScore);
+  const pviRaw = row.pvi;
+
+  if (
+    baseScore === null ||
+    pviMultiplier === null ||
+    domainWeight === null ||
+    finalScore === null
+  ) {
+    return null;
+  }
+
+  const pvi =
+    pviRaw === null || pviRaw === undefined ? null : readNumber(pviRaw);
+
+  if (pviRaw !== null && pviRaw !== undefined && pvi === null) {
+    return null;
+  }
+
+  return {
+    baseScore,
+    pvi,
+    pviMultiplier,
+    domainWeight,
+    finalScore,
+  };
 }
 
 function readString(value: unknown): string | null {
@@ -74,6 +123,14 @@ function parseMySessionEntry(raw: unknown): MySessionEntry | null {
   const segmentIndex = readNumber(row.segment_index) ?? 0;
   const roundCount = readNumber(row.round_count) ?? 0;
   const partialReps = readNumber(row.partial_reps) ?? 0;
+  const finalScore =
+    row.final_score === null || row.final_score === undefined
+      ? null
+      : readNumber(row.final_score);
+  const scoreBreakdown =
+    row.score_breakdown === null || row.score_breakdown === undefined
+      ? null
+      : readScoreBreakdown(row.score_breakdown);
 
   if (
     !participantId ||
@@ -101,6 +158,8 @@ function parseMySessionEntry(raw: unknown): MySessionEntry | null {
     segmentIndex,
     roundCount,
     partialReps,
+    finalScore,
+    scoreBreakdown,
   };
 }
 

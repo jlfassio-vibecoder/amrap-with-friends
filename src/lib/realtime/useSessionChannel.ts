@@ -138,7 +138,9 @@ export function useSessionChannel(
       if (participantIds.length > 0) {
         const segmentResultsResult = await supabase
           .from('participant_segment_results')
-          .select('participant_id, segment_index, partial_reps, updated_at')
+          .select(
+            'participant_id, segment_index, partial_reps, final_score, score_breakdown, updated_at'
+          )
           .in('participant_id', participantIds);
 
         if (cancelled) {

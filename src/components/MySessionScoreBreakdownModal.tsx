@@ -1,13 +1,20 @@
-import type { LeaderboardEntry } from '@/lib/sessionSync/types';
+import type { MySessionEntry } from '@/lib/api/mySessions';
 import { ScoreBreakdownDisplay } from '@/components/ScoreBreakdownDisplay';
 
-interface SessionScorecardProps {
-  entry: LeaderboardEntry;
+interface MySessionScoreBreakdownModalProps {
+  entry: MySessionEntry;
   onClose: () => void;
 }
 
-export function SessionScorecard({ entry, onClose }: SessionScorecardProps) {
-  const titleId = 'session-scorecard-title';
+export function MySessionScoreBreakdownModal({
+  entry,
+  onClose,
+}: MySessionScoreBreakdownModalProps) {
+  if (!entry.scoreBreakdown) {
+    return null;
+  }
+
+  const titleId = 'my-session-score-breakdown-title';
 
   return (
     <div
@@ -23,7 +30,7 @@ export function SessionScorecard({ entry, onClose }: SessionScorecardProps) {
       >
         <div className="flex items-start justify-between gap-4">
           <h2 id={titleId} className="text-display text-xl text-ink">
-            Session results
+            Score breakdown
           </h2>
           <button
             type="button"
@@ -35,16 +42,7 @@ export function SessionScorecard({ entry, onClose }: SessionScorecardProps) {
           </button>
         </div>
 
-        <ScoreBreakdownDisplay
-          breakdown={{
-            baseScore: entry.baseScore,
-            pvi: entry.pvi,
-            pviMultiplier: entry.pviMultiplier,
-            domainWeight: entry.domainWeight,
-            finalScore: entry.finalScore,
-          }}
-          showPviInsights
-        />
+        <ScoreBreakdownDisplay breakdown={entry.scoreBreakdown} />
       </div>
     </div>
   );

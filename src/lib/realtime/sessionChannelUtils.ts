@@ -8,6 +8,7 @@ import type {
   LiveSessionPhase,
 } from '@/lib/sessionSync/types';
 import type { WorkoutExercise } from '@/lib/api/sessionTypes';
+import type { ScoreBreakdown } from '@/lib/scoring/types';
 import { computeBaseScore } from '@/lib/scoring/computeBaseScore';
 import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
 import { computeScoreBreakdown } from '@/lib/scoring/computeScoreBreakdown';
@@ -139,6 +140,47 @@ export function parseRoundRow(record: Record<string, unknown>): RoundRow | null 
   };
 }
 
+function readNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function parseScoreBreakdown(value: unknown): ScoreBreakdown | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const row = value as Record<string, unknown>;
+  const baseScore = readNumber(row.baseScore);
+  const pviMultiplier = readNumber(row.pviMultiplier);
+  const domainWeight = readNumber(row.domainWeight);
+  const finalScore = readNumber(row.finalScore);
+  const pviRaw = row.pvi;
+
+  if (
+    baseScore === null ||
+    pviMultiplier === null ||
+    domainWeight === null ||
+    finalScore === null
+  ) {
+    return null;
+  }
+
+  const pvi =
+    pviRaw === null || pviRaw === undefined ? null : readNumber(pviRaw);
+
+  if (pviRaw !== null && pviRaw !== undefined && pvi === null) {
+    return null;
+  }
+
+  return {
+    baseScore,
+    pvi,
+    pviMultiplier,
+    domainWeight,
+    finalScore,
+  };
+}
+
 export function parseSegmentResultRow(
   record: Record<string, unknown>
 ): ParticipantSegmentResultRow | null {
@@ -148,6 +190,14 @@ export function parseSegmentResultRow(
     typeof record.segment_index === 'number' ? record.segment_index : null;
   const partialReps =
     typeof record.partial_reps === 'number' ? record.partial_reps : null;
+  const finalScore =
+    record.final_score === null || record.final_score === undefined
+      ? null
+      : readNumber(record.final_score);
+  const scoreBreakdown =
+    record.score_breakdown === null || record.score_breakdown === undefined
+      ? null
+      : parseScoreBreakdown(record.score_breakdown);
   const updatedAt = typeof record.updated_at === 'string' ? record.updated_at : null;
 
   if (
@@ -159,10 +209,24 @@ export function parseSegmentResultRow(
     return null;
   }
 
+  if (record.final_score !== null && record.final_score !== undefined && finalScore === null) {
+    return null;
+  }
+
+  if (
+    record.score_breakdown !== null &&
+    record.score_breakdown !== undefined &&
+    scoreBreakdown === null
+  ) {
+    return null;
+  }
+
   return {
     participant_id: participantId,
     segment_index: segmentIndex,
     partial_reps: partialReps,
+    final_score: finalScore,
+    score_breakdown: scoreBreakdown,
     updated_at: updatedAt,
   };
 }
@@ -325,9 +389,26 @@ export function buildLeaderboard(
   }
 
   const partialByParticipant = new Map<string, number>();
+  const lockedByParticipant = new Map<
+    string,
+    { finalScore: number; breakdown: ScoreBreakdown }
+  >();
+
   for (const result of segmentResults) {
-    if (result.segment_index === segmentIndex) {
-      partialByParticipant.set(result.participant_id, result.partial_reps);
+    if (result.segment_index !== segmentIndex) {
+      continue;
+    }
+
+    partialByParticipant.set(result.participant_id, result.partial_reps);
+
+    if (
+      result.final_score !== null &&
+      result.score_breakdown !== null
+    ) {
+      lockedByParticipant.set(result.participant_id, {
+        finalScore: result.final_score,
+        breakdown: result.score_breakdown,
+      });
     }
   }
 
@@ -361,12 +442,16 @@ export function buildLeaderboard(
           : roundCount;
       const roundSummaries = summarizeSortedParticipantRounds(participantRounds);
       const roundDurationsSec = roundSummaries.map((round) => round.durationSec);
-      const breakdown = computeScoreBreakdown(
-        roundDurationsSec,
-        durationMinutes,
-        sessionPhase,
-        baseScore
-      );
+      const locked = lockedByParticipant.get(participant.id);
+      const breakdown = locked
+        ? locked.breakdown
+        : computeScoreBreakdown(
+            roundDurationsSec,
+            durationMinutes,
+            sessionPhase,
+            baseScore
+          );
+      const finalScore = locked ? locked.finalScore : breakdown.finalScore;
       const pviTier = getPviMultiplier(breakdown.pvi);
 
       return {
@@ -382,7 +467,7 @@ export function buildLeaderboard(
           sessionPhase === 'finished' ? pviTier.classification : 'Standard',
         pviVerdict: sessionPhase === 'finished' ? pviTier.verdict : '',
         domainWeight: breakdown.domainWeight,
-        finalScore: breakdown.finalScore,
+        finalScore,
         rounds: roundSummaries,
         isSelf: participant.id === selfParticipantId,
       };

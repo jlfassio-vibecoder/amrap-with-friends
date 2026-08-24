@@ -5,10 +5,14 @@ import { supabase } from '@/lib/supabase';
 vi.mock('@/lib/supabase', () => ({
   supabase: {
     rpc: vi.fn(),
+    functions: {
+      invoke: vi.fn(),
+    },
   },
 }));
 
 const rpcMock = vi.mocked(supabase.rpc);
+const invokeMock = vi.mocked(supabase.functions.invoke);
 
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
 const PARTICIPANT_ID = '22222222-2222-4222-8222-222222222222';
@@ -189,20 +193,24 @@ describe('sessionSync API', () => {
     expect(result.data).toEqual({ ok: false, reason: 'duplicate_round' });
   });
 
-  it('submitParticipantResult calls RPC with correct args and parses success', async () => {
-    rpcMock.mockResolvedValue({
+  it('submitParticipantResult calls Edge Function with correct args and parses success', async () => {
+    invokeMock.mockResolvedValue({
       data: {
         ok: true,
-        participant_id: PARTICIPANT_ID,
-        segment_index: 0,
-        partial_reps: 15,
-        reps_per_round: 40,
+        participantId: PARTICIPANT_ID,
+        segmentIndex: 0,
+        partialReps: 15,
+        repsPerRound: 40,
+        finalScore: 302,
+        scoreBreakdown: {
+          baseScore: 175,
+          pvi: 0,
+          pviMultiplier: 1.15,
+          domainWeight: 1.5,
+          finalScore: 302,
+        },
       },
       error: null,
-      success: true,
-      count: null,
-      status: 200,
-      statusText: 'OK',
     });
 
     const result = await submitParticipantResult({
@@ -213,12 +221,14 @@ describe('sessionSync API', () => {
       segmentIndex: 0,
     });
 
-    expect(rpcMock).toHaveBeenCalledWith('submit_participant_result', {
-      p_session_id: SESSION_ID,
-      p_participant_id: PARTICIPANT_ID,
-      p_claim_token: 'claim-token',
-      p_partial_reps: 15,
-      p_segment_index: 0,
+    expect(invokeMock).toHaveBeenCalledWith('submit-participant-result', {
+      body: {
+        sessionId: SESSION_ID,
+        participantId: PARTICIPANT_ID,
+        claimToken: 'claim-token',
+        partialReps: 15,
+        segmentIndex: 0,
+      },
     });
     expect(result.error).toBeNull();
     expect(result.data).toEqual({
@@ -227,6 +237,14 @@ describe('sessionSync API', () => {
       segmentIndex: 0,
       partialReps: 15,
       repsPerRound: 40,
+      finalScore: 302,
+      scoreBreakdown: {
+        baseScore: 175,
+        pvi: 0,
+        pviMultiplier: 1.15,
+        domainWeight: 1.5,
+        finalScore: 302,
+      },
     });
   });
 });
