@@ -17,6 +17,10 @@ import {
 import { createSession } from '@/lib/api/sessions';
 import { getSupabaseConfigError } from '@/lib/supabase';
 import { firstAvailableCategoryForDuration } from '@/lib/workout/filterWorkoutTemplates';
+import {
+  CUSTOM_WORKOUT_INTENSITY_TIER,
+  resolveTemplateIntensity,
+} from '@/lib/workout/resolveTemplateIntensity';
 import { applyTemplate } from '@/lib/workout/templateToExercises';
 import { parseWorkoutText } from '@/lib/workout/parseWorkoutLines';
 
@@ -95,6 +99,10 @@ export default function CreateSessionPage() {
 
     try {
       const workout = parseWorkoutText(workoutText);
+      const intensityTier =
+        workoutSource === 'library' && selectedTemplate
+          ? resolveTemplateIntensity(selectedTemplate)
+          : CUSTOM_WORKOUT_INTENSITY_TIER;
       const result = await createSession({
         nickname,
         durationMinutes,
@@ -103,6 +111,7 @@ export default function CreateSessionPage() {
           workoutSource === 'library' && selectedTemplateId
             ? selectedTemplateId
             : undefined,
+        intensityTier,
       });
 
       if (result.error) {

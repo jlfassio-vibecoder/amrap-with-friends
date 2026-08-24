@@ -1,0 +1,107 @@
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { NarrowPageLayout } from '@/components/NarrowPageLayout';
+import { AttritionGrid } from '@/components/hud/AttritionGrid';
+import { ClassificationBadge } from '@/components/hud/ClassificationBadge';
+import { DailyTelemetry } from '@/components/hud/DailyTelemetry';
+import { DomainMatrixChart } from '@/components/hud/DomainMatrixChart';
+import { WeeklyBaselineBar } from '@/components/hud/WeeklyBaselineBar';
+import { fetchHudTelemetry } from '@/lib/api/hudTelemetry';
+import type { HUDTelemetryPayload } from '@/lib/hud/types';
+import { useAmrapAuth } from '@/hooks/useAmrapAuth';
+
+export default function HUDPage() {
+  const { user, isAuthenticated, isAuthLoading } = useAmrapAuth();
+  const [telemetry, setTelemetry] = useState<HUDTelemetryPayload | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
+
+  useEffect(() => {
+    if (isAuthLoading || !isAuthenticated || !user) {
+      return;
+    }
+
+    let cancelled = false;
+
+    fetchHudTelemetry()
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+        if (result.error) {
+          setError(result.error.message);
+          setTelemetry(null);
+        } else {
+          setTelemetry(result.data);
+          setError(null);
+        }
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+        setError('Something went wrong. Please try again.');
+        setTelemetry(null);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setHasLoaded(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthLoading, isAuthenticated, user]);
+
+  const loading = isAuthLoading || (isAuthenticated && user !== null && !hasLoaded);
+
+  return (
+    <NarrowPageLayout title="HUD" subtitle="Operational telemetry">
+      <p className="text-sm text-secondary lg:hidden">
+        Locked-session volume and pacing for the current local week.
+      </p>
+
+      <div className="hidden space-y-2 lg:block">
+        <h1 className="text-display text-5xl text-ink">HUD</h1>
+        <p className="text-sm text-secondary">
+          Locked-session volume and pacing for the current local week.
+        </p>
+      </div>
+
+      {loading ? <p className="text-sm text-secondary">Loading…</p> : null}
+
+      {!isAuthLoading && !isAuthenticated ? (
+        <p className="text-sm text-secondary">
+          Sign in to view your HUD. Only sessions saved to your account with a locked
+          score count.
+        </p>
+      ) : null}
+
+      {error ? <p className="text-error">Error: {error}</p> : null}
+
+      {!loading && isAuthenticated && telemetry ? (
+        <div className="space-y-4">
+          <ClassificationBadge classification={telemetry.classification} />
+          <DailyTelemetry lastLockedAt={telemetry.lastLockedAt} />
+          <WeeklyBaselineBar
+            weekMinutes={telemetry.weekMinutes}
+            weekPviAverage={telemetry.weekPviAverage}
+            weekEndsAt={telemetry.weekEndsAt}
+          />
+          <AttritionGrid
+            attrition={telemetry.attrition}
+            weekEndsAt={telemetry.weekEndsAt}
+          />
+          <DomainMatrixChart domainMinutes30d={telemetry.domainMinutes30d} />
+        </div>
+      ) : null}
+
+      <p className="text-center text-sm">
+        <Link className="link-accent" to="/">
+          Back home
+        </Link>
+      </p>
+    </NarrowPageLayout>
+  );
+}

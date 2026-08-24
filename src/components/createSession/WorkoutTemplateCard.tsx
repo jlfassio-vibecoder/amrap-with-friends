@@ -1,6 +1,7 @@
 import type { KeyboardEvent } from 'react';
 import type { WorkoutTemplate } from '@/data/workoutTemplates';
 import { ExerciseInfoTrigger } from '@/components/exerciseInfo/ExerciseInfoTrigger';
+import { resolveTemplateIntensity } from '@/lib/workout/resolveTemplateIntensity';
 import { formatTemplateMovementLine } from '@/lib/workout/templateToExercises';
 
 interface WorkoutTemplateCardProps {
@@ -10,6 +11,8 @@ interface WorkoutTemplateCardProps {
 }
 
 export function WorkoutTemplateCard({ template, selected, onSelect }: WorkoutTemplateCardProps) {
+  const intensityTier = resolveTemplateIntensity(template);
+
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -39,7 +42,15 @@ export function WorkoutTemplateCard({ template, selected, onSelect }: WorkoutTem
         </span>
       ) : null}
       <div className="space-y-1">
-        <h3 className="text-display text-base text-ink">{template.name}</h3>
+        <div className="flex items-baseline justify-between gap-2 pr-8">
+          <h3 className="text-display text-base text-ink">{template.name}</h3>
+          <span
+            className="shrink-0 font-mono text-xs tabular-nums text-secondary"
+            title={`Intensity ${intensityTier}`}
+          >
+            I{intensityTier}
+          </span>
+        </div>
         {template.focus ? (
           <span className="inline-block rounded-full border border-border bg-page px-2 py-0.5 text-xs font-semibold text-secondary">
             {template.focus}

@@ -50,6 +50,7 @@ describe('sessions API', () => {
       p_nickname: 'Host',
       p_workout: [{ name: 'Burpees', target: 10, unit: 'reps' }],
       p_template_id: null,
+      p_intensity_tier: null,
     });
     expect(persistMock).toHaveBeenCalledWith(SESSION_ID, {
       nickname: 'Host',
