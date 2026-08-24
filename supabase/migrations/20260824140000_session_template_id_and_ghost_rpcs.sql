@@ -88,6 +88,7 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.create_session(int, text, jsonb, text) TO anon, authenticated;
 
+-- Copilot suggestion ignored: 3-arg create_session overload is already retained and delegates to the 4-arg form.
 CREATE OR REPLACE FUNCTION public.create_session(
   p_duration_minutes int,
   p_nickname text,

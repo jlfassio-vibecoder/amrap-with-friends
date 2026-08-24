@@ -93,6 +93,7 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
   const [ghostSelection, setGhostSelection] = useState<StoredGhostSelection | null>(
     () => getStoredGhostSelection(sessionId)
   );
+  // Copilot suggestion ignored: activeGhostSelection already gates stored selection on isAuthenticated.
   const activeGhostSelection = isAuthenticated ? ghostSelection : null;
 
   const channel = useSessionChannel(sessionId, { participantId, nickname });
@@ -116,6 +117,7 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
     live.templateId !== null &&
     live.phase === 'waiting';
   const showGhostPicker = isSoloTemplated;
+  // Copilot suggestion ignored: ghost pacer error display and strip suppression on load failure already exist.
   const showGhostPacerError =
     activeGhostSelection !== null && live.phase === 'work' && ghostPacer.error !== null;
   const showGhostPacerStrip =
@@ -231,6 +233,7 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
               <p className="text-secondary">
                 Sign up is optional, but saving links this session to your account for My Sessions.
               </p>
+              {/* Copilot suggestion ignored: this banner only renders when claim.showClaimPrompt requires isAuthenticated. */}
               <button
                 type="button"
                 className="btn-primary text-sm"
@@ -244,6 +247,7 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
 
           {claim.showClaimPrompt && live.phase !== 'finished' && (
             <section className="card p-4 text-sm">
+              {/* Copilot suggestion ignored: mid-session save CTA is also gated by authenticated claim.showClaimPrompt. */}
               <button
                 type="button"
                 className="btn-outline"

@@ -425,13 +425,13 @@ export function buildLeaderboard(
   return participants
     .map((participant) => {
       const participantRounds = roundsByParticipant.get(participant.id) ?? [];
-      const roundCount = counts.get(participant.id) ?? 0;
+      const liveRoundCount = counts.get(participant.id) ?? 0;
       const partialReps = partialByParticipant.get(participant.id) ?? 0;
       // Copilot suggestion ignored: round-count fallback is intentional for unsupported workouts; UI labels rounds vs reps via repsPerRound.
       const baseScore =
         repsPerRound > 0
-          ? computeBaseScore(roundCount, partialReps, repsPerRound)
-          : roundCount;
+          ? computeBaseScore(liveRoundCount, partialReps, repsPerRound)
+          : liveRoundCount;
       const locked = lockedByParticipant.get(participant.id);
       const roundSummaries =
         locked?.breakdown.roundSplits && locked.breakdown.roundSplits.length > 0
@@ -440,6 +440,10 @@ export function buildLeaderboard(
               durationSec,
             }))
           : summarizeSortedParticipantRounds(participantRounds);
+      const roundCount =
+        locked?.breakdown.roundSplits && locked.breakdown.roundSplits.length > 0
+          ? (locked.breakdown.roundCount ?? locked.breakdown.roundSplits.length)
+          : liveRoundCount;
       const roundDurationsSec = roundSummaries.map((round) => round.durationSec);
       const breakdown = locked
         ? locked.breakdown

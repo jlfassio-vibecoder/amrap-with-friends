@@ -515,6 +515,8 @@ describe('sessionChannelUtils', () => {
           pviMultiplier: 1.15,
           domainWeight: 1.5,
           finalScore: 302,
+          roundCount: 4,
+          roundSplits: [60, 60, 60, 60],
         },
         updated_at: '2026-08-22T12:05:00.000Z',
       })!,
@@ -535,6 +537,13 @@ describe('sessionChannelUtils', () => {
     expect(leaderboard[0].baseScore).toBe(175);
     expect(leaderboard[0].pviMultiplier).toBe(1.15);
     expect(leaderboard[0].domainWeight).toBe(1.5);
+    expect(leaderboard[0].roundCount).toBe(4);
+    expect(leaderboard[0].rounds).toEqual([
+      { roundNumber: 1, durationSec: 60 },
+      { roundNumber: 2, durationSec: 60 },
+      { roundNumber: 3, durationSec: 60 },
+      { roundNumber: 4, durationSec: 60 },
+    ]);
   });
 
   it('upsertParticipant and upsertRound avoid duplicates', () => {

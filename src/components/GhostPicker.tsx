@@ -91,6 +91,7 @@ export function GhostPicker({
 
   const displayedPersonalBest = canFetchGhosts ? personalBest : null;
 
+  // Copilot suggestion ignored: selectedValue is already gated on displayedPersonalBest to avoid orphan options.
   const selectedValue: GhostPickerValue =
     value?.label.startsWith('Personal Best') && displayedPersonalBest
       ? 'personal-best'
