@@ -1,14 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { updateSessionState, logRound } from './sessionSync';
+import { updateSessionState, logRound, submitParticipantResult } from './sessionSync';
 import { supabase } from '@/lib/supabase';
 
 vi.mock('@/lib/supabase', () => ({
   supabase: {
     rpc: vi.fn(),
+    functions: {
+      invoke: vi.fn(),
+    },
   },
 }));
 
 const rpcMock = vi.mocked(supabase.rpc);
+const invokeMock = vi.mocked(supabase.functions.invoke);
 
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
 const PARTICIPANT_ID = '22222222-2222-4222-8222-222222222222';
@@ -187,5 +191,60 @@ describe('sessionSync API', () => {
 
     expect(result.error).toBeNull();
     expect(result.data).toEqual({ ok: false, reason: 'duplicate_round' });
+  });
+
+  it('submitParticipantResult calls Edge Function with correct args and parses success', async () => {
+    invokeMock.mockResolvedValue({
+      data: {
+        ok: true,
+        participantId: PARTICIPANT_ID,
+        segmentIndex: 0,
+        partialReps: 15,
+        repsPerRound: 40,
+        finalScore: 302,
+        scoreBreakdown: {
+          baseScore: 175,
+          pvi: 0,
+          pviMultiplier: 1.15,
+          domainWeight: 1.5,
+          finalScore: 302,
+        },
+      },
+      error: null,
+    });
+
+    const result = await submitParticipantResult({
+      sessionId: SESSION_ID,
+      participantId: PARTICIPANT_ID,
+      claimToken: 'claim-token',
+      partialReps: 15,
+      segmentIndex: 0,
+    });
+
+    expect(invokeMock).toHaveBeenCalledWith('submit-participant-result', {
+      body: {
+        sessionId: SESSION_ID,
+        participantId: PARTICIPANT_ID,
+        claimToken: 'claim-token',
+        partialReps: 15,
+        segmentIndex: 0,
+      },
+    });
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual({
+      ok: true,
+      participantId: PARTICIPANT_ID,
+      segmentIndex: 0,
+      partialReps: 15,
+      repsPerRound: 40,
+      finalScore: 302,
+      scoreBreakdown: {
+        baseScore: 175,
+        pvi: 0,
+        pviMultiplier: 1.15,
+        domainWeight: 1.5,
+        finalScore: 302,
+      },
+    });
   });
 });

@@ -1,4 +1,5 @@
 import type { WorkoutExercise } from '@/lib/api/sessionTypes';
+import type { ScoreBreakdown } from '@/lib/scoring/types';
 
 export type LiveSessionPhase = 'waiting' | 'setup' | 'work' | 'finished';
 
@@ -94,6 +95,42 @@ export interface LogRoundFailure {
 
 export type LogRoundResult = LogRoundSuccess | LogRoundFailure;
 
+export interface ParticipantSegmentResultRow {
+  participant_id: string;
+  segment_index: number;
+  partial_reps: number;
+  final_score: number | null;
+  score_breakdown: ScoreBreakdown | null;
+  updated_at: string;
+}
+
+export interface SubmitParticipantResultInput {
+  sessionId: string;
+  participantId: string;
+  claimToken: string;
+  partialReps: number;
+  segmentIndex: number;
+}
+
+export interface SubmitParticipantResultSuccess {
+  ok: true;
+  participantId: string;
+  segmentIndex: number;
+  partialReps: number;
+  repsPerRound: number;
+  finalScore: number;
+  scoreBreakdown: ScoreBreakdown;
+}
+
+export interface SubmitParticipantResultFailure {
+  ok: false;
+  reason: string;
+}
+
+export type SubmitParticipantResultResult =
+  | SubmitParticipantResultSuccess
+  | SubmitParticipantResultFailure;
+
 export interface SessionPresenceEntry {
   participantId: string;
   nickname: string;
@@ -109,6 +146,15 @@ export interface LeaderboardEntry {
   participantId: string;
   nickname: string;
   roundCount: number;
+  partialReps: number;
+  repsPerRound: number;
+  baseScore: number;
+  pvi: number | null;
+  pviMultiplier: number;
+  pviClassification: string;
+  pviVerdict: string;
+  domainWeight: number;
+  finalScore: number;
   rounds: LeaderboardRoundEntry[];
   isSelf: boolean;
 }

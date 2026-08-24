@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
-import { fetchMySessions, type MySessionEntry } from '@/lib/api/mySessions';
+import { MySessionScoreBreakdownModal } from '@/components/MySessionScoreBreakdownModal';
+import {
+  fetchMySessions,
+  formatMySessionScoreDisplay,
+  type MySessionEntry,
+} from '@/lib/api/mySessions';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 
 function formatWorkoutSummary(workout: MySessionEntry['workout']): string {
@@ -20,6 +25,7 @@ export default function MySessionsPage() {
   const [entries, setEntries] = useState<MySessionEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [breakdownEntry, setBreakdownEntry] = useState<MySessionEntry | null>(null);
 
   useEffect(() => {
     if (isAuthLoading || !isAuthenticated || !user) {
@@ -43,7 +49,7 @@ export default function MySessionsPage() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthLoading, isAuthenticated, user?.id]);
+  }, [isAuthLoading, isAuthenticated, user]);
 
   const loading = isAuthLoading || (isAuthenticated && user !== null && !hasLoaded);
 
@@ -79,19 +85,37 @@ export default function MySessionsPage() {
       {entries.length > 0 && (
         <ul className="space-y-3">
           {entries.map((entry) => (
-            <li key={entry.participantId} className="card space-y-1 p-4 text-sm">
+            <li key={entry.participantId} className="card space-y-2 p-4 text-sm">
               <p className="font-semibold">{formatWorkoutSummary(entry.workout)}</p>
               <p className="text-secondary">
                 {new Date(entry.createdAt).toLocaleString()} · {entry.durationMinutes} min ·{' '}
-                {entry.roundCount} rounds · {entry.state}
+                {formatMySessionScoreDisplay(entry)} · {entry.state}
               </p>
-              <Link className="link-accent" to={`/session/${entry.sessionId}`}>
-                View session
-              </Link>
+              <div className="flex flex-wrap items-center gap-3">
+                <Link className="link-accent" to={`/session/${entry.sessionId}`}>
+                  View session
+                </Link>
+                {entry.scoreBreakdown ? (
+                  <button
+                    type="button"
+                    className="link-accent"
+                    onClick={() => setBreakdownEntry(entry)}
+                  >
+                    View breakdown
+                  </button>
+                ) : null}
+              </div>
             </li>
           ))}
         </ul>
       )}
+
+      {breakdownEntry ? (
+        <MySessionScoreBreakdownModal
+          entry={breakdownEntry}
+          onClose={() => setBreakdownEntry(null)}
+        />
+      ) : null}
 
       <p className="text-center text-sm">
         <Link className="link-accent" to="/">Back home</Link>

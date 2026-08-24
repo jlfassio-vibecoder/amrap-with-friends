@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { updateSessionState, logRound } from '@/lib/api/sessionSync';
+import { updateSessionState, logRound, submitParticipantResult } from '@/lib/api/sessionSync';
 import { computeElapsedSecForLogRound } from '@/lib/amrapTimer/computeElapsedSecForLogRound';
 import { selectElapsedSec } from '@/lib/amrapTimer/reducer';
 import type { AmrapTimerPhase } from '@/lib/amrapTimer/types';
@@ -10,6 +10,7 @@ import {
   buildPresenceList,
 } from '@/lib/realtime/sessionChannelUtils';
 import type { UseSessionChannelResult } from '@/lib/realtime/useSessionChannel';
+import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
 import {
   createAuthoritativeSnapshot,
   getSetupDurationSec,
@@ -45,6 +46,8 @@ export interface UseLiveAmrapSessionReturn {
   sessionId: string;
   workout: Array<{ name: string; target?: number; unit?: string }>;
   segmentIndex: number;
+  repsPerRound: number;
+  hasSubmittedPartialReps: boolean;
   leaderboard: LeaderboardEntry[];
   presence: SessionPresenceEntry[];
   isRealtimeConnected: boolean;
@@ -55,6 +58,7 @@ export interface UseLiveAmrapSessionReturn {
   resume: () => Promise<void>;
   finish: () => Promise<void>;
   logRound: () => Promise<void>;
+  submitPartialReps: (partialReps: number) => Promise<void>;
 }
 
 function mapTimerPhaseToSessionState(phase: AmrapTimerPhase): LiveSessionPhase {
@@ -95,6 +99,7 @@ export function useLiveAmrapSession(
   const [lastAuthoritativeSyncAtMs, setLastAuthoritativeSyncAtMs] = useState<
     number | null
   >(null);
+  const [localPartialSubmitted, setLocalPartialSubmitted] = useState(false);
 
   const lastPushAtRef = useRef(0);
   const prevSessionStateRef = useRef<LiveSessionPhase | null>(null);
@@ -288,6 +293,32 @@ export function useLiveAmrapSession(
       ? selectElapsedSecFromDisplay(joinerDisplay)
       : 0;
 
+  const workout = session?.workout ?? [];
+
+  const repsPerRound = useMemo(() => {
+    try {
+      return computeRepsPerRound(workout);
+    } catch {
+      return 0;
+    }
+  }, [workout]);
+
+  const hasSubmittedPartialReps = useMemo(() => {
+    if (localPartialSubmitted) {
+      return true;
+    }
+    return channel.segmentResults.some(
+      (result) =>
+        result.participant_id === participantId &&
+        result.segment_index === segmentIndex
+    );
+  }, [
+    localPartialSubmitted,
+    channel.segmentResults,
+    participantId,
+    segmentIndex,
+  ]);
+
   const myRoundCount = useMemo(() => {
     return channel.rounds.filter(
       (round) =>
@@ -301,10 +332,24 @@ export function useLiveAmrapSession(
       buildLeaderboard(
         channel.participants,
         channel.rounds,
+        channel.segmentResults,
         segmentIndex,
-        participantId
+        participantId,
+        workout,
+        session?.duration_minutes ?? workDurationSec / 60,
+        displayPhase
       ),
-    [channel.participants, channel.rounds, segmentIndex, participantId]
+    [
+      channel.participants,
+      channel.rounds,
+      channel.segmentResults,
+      segmentIndex,
+      participantId,
+      workout,
+      session?.duration_minutes,
+      workDurationSec,
+      displayPhase,
+    ]
   );
 
   const presence = useMemo(
@@ -393,6 +438,50 @@ export function useLiveAmrapSession(
     segmentIndex,
   ]);
 
+  const submitPartialRepsAction = useCallback(
+    async (partialReps: number) => {
+      if (!participantId || hasSubmittedPartialReps) {
+        return;
+      }
+
+      const tokenForRpc = claimToken ?? '';
+      if (!tokenForRpc && !isAuthenticated) {
+        setSyncError(
+          'Cannot submit score without a session credential. Rejoin the session or sign in.'
+        );
+        return;
+      }
+
+      const result = await submitParticipantResult({
+        sessionId,
+        participantId,
+        claimToken: tokenForRpc,
+        partialReps,
+        segmentIndex,
+      });
+
+      if (result.error) {
+        setSyncError(result.error.message);
+        return;
+      }
+
+      if (result.data?.ok === false) {
+        setSyncError(`Could not submit partial reps: ${result.data.reason}`);
+        return;
+      }
+
+      setLocalPartialSubmitted(true);
+    },
+    [
+      participantId,
+      hasSubmittedPartialReps,
+      claimToken,
+      isAuthenticated,
+      sessionId,
+      segmentIndex,
+    ]
+  );
+
   return {
     phase: displayPhase,
     timeLeftSec: displayTimeLeftSec,
@@ -404,8 +493,10 @@ export function useLiveAmrapSession(
     participantId,
     nickname,
     sessionId,
-    workout: session?.workout ?? [],
+    workout,
     segmentIndex,
+    repsPerRound,
+    hasSubmittedPartialReps,
     leaderboard,
     presence,
     isRealtimeConnected: channel.isConnected,
@@ -416,5 +507,6 @@ export function useLiveAmrapSession(
     resume,
     finish,
     logRound: logRoundAction,
+    submitPartialReps: submitPartialRepsAction,
   };
 }

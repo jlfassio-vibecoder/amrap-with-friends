@@ -1,8 +1,11 @@
 import { supabase } from '@/lib/supabase';
+import type { ScoreBreakdown } from '@/lib/scoring/types';
 import type {
   LiveSessionPhase,
   LogRoundInput,
   LogRoundResult,
+  SubmitParticipantResultInput,
+  SubmitParticipantResultResult,
   UpdateSessionStateInput,
   UpdateSessionStateResult,
 } from '@/lib/sessionSync/types';
@@ -61,7 +64,71 @@ function mapRpcError(message: string | undefined): string {
   if (message.includes('Participant not found')) {
     return 'Participant not found.';
   }
+  if (message.includes('Invalid partial')) {
+    return 'Invalid partial rep count.';
+  }
   return message;
+}
+
+function mapInvokeError(message: string | undefined, reason?: string): string {
+  if (reason === 'score_already_locked') {
+    return 'Your score is already locked for this segment.';
+  }
+  if (reason === 'use_edge_function') {
+    return 'Score submission is unavailable. Please update the app.';
+  }
+  if (!message) {
+    return 'Something went wrong. Please try again.';
+  }
+  if (message.includes('Session not found')) {
+    return 'Session not found.';
+  }
+  if (message.includes('Participant not found')) {
+    return 'Participant not found.';
+  }
+  if (message.includes('Invalid partial')) {
+    return 'Invalid partial rep count.';
+  }
+  return message;
+}
+
+function readScoreBreakdown(value: unknown): ScoreBreakdown | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const row = value as Record<string, unknown>;
+  const baseScore = readNumber(row.baseScore);
+  const pviMultiplier = readNumber(row.pviMultiplier);
+  const domainWeight = readNumber(row.domainWeight);
+  const finalScore = readNumber(row.finalScore);
+  const pviRaw = row.pvi;
+
+  if (
+    baseScore === null ||
+    pviMultiplier === null ||
+    domainWeight === null ||
+    finalScore === null
+  ) {
+    return null;
+  }
+
+  const pvi =
+    pviRaw === null || pviRaw === undefined
+      ? null
+      : readNumber(pviRaw);
+
+  if (pviRaw !== null && pviRaw !== undefined && pvi === null) {
+    return null;
+  }
+
+  return {
+    baseScore,
+    pvi,
+    pviMultiplier,
+    domainWeight,
+    finalScore,
+  };
 }
 
 export async function updateSessionState(
@@ -187,6 +254,73 @@ export async function logRound(
       roundIndex,
       elapsedSecAtRound,
       segmentIndex,
+    },
+    error: null,
+  };
+}
+
+export async function submitParticipantResult(
+  input: SubmitParticipantResultInput
+): Promise<{
+  data: SubmitParticipantResultResult | null;
+  error: SessionSyncApiError | null;
+}> {
+  const { data, error } = await supabase.functions.invoke('submit-participant-result', {
+    body: {
+      sessionId: input.sessionId,
+      participantId: input.participantId,
+      claimToken: input.claimToken,
+      partialReps: input.partialReps,
+      segmentIndex: input.segmentIndex,
+    },
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapInvokeError(error.message) } };
+  }
+
+  const raw =
+    data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  const ok = raw.ok === true;
+
+  if (!ok) {
+    const reason = readString(raw.reason) ?? 'unknown';
+    return {
+      data: { ok: false, reason },
+      error: null,
+    };
+  }
+
+  const participantId = readString(raw.participantId);
+  const segmentIndex = readNumber(raw.segmentIndex);
+  const partialReps = readNumber(raw.partialReps);
+  const repsPerRound = readNumber(raw.repsPerRound);
+  const finalScore = readNumber(raw.finalScore);
+  const scoreBreakdown = readScoreBreakdown(raw.scoreBreakdown);
+
+  if (
+    !participantId ||
+    segmentIndex === null ||
+    partialReps === null ||
+    repsPerRound === null ||
+    finalScore === null ||
+    !scoreBreakdown
+  ) {
+    return {
+      data: null,
+      error: { message: 'Something went wrong. Please try again.' },
+    };
+  }
+
+  return {
+    data: {
+      ok: true,
+      participantId,
+      segmentIndex,
+      partialReps,
+      repsPerRound,
+      finalScore,
+      scoreBreakdown,
     },
     error: null,
   };

@@ -3,13 +3,36 @@ import type {
   SessionPresenceEntry,
 } from '@/lib/sessionSync/types';
 
+export type LeaderboardSortMode = 'absolute' | 'discipline';
+
 export interface ParticipantRosterEntry {
   participantId: string;
   nickname: string;
   roundCount: number;
+  repsPerRound: number;
+  baseScore: number;
+  finalScore: number;
+  pvi: number | null;
+  pviMultiplier: number;
+  pviClassification: string;
+  pviVerdict: string;
   isOnline: boolean;
   isSelf: boolean;
   rank: number;
+}
+
+interface RosterMergeEntry {
+  participantId: string;
+  nickname: string;
+  roundCount: number;
+  repsPerRound: number;
+  baseScore: number;
+  finalScore: number;
+  pvi: number | null;
+  pviMultiplier: number;
+  pviClassification: string;
+  pviVerdict: string;
+  isOnline: boolean;
 }
 
 const AVATAR_PALETTE = [
@@ -43,26 +66,53 @@ export function getParticipantAvatarColor(participantId: string): string {
   return AVATAR_PALETTE[index];
 }
 
+export function compareAbsoluteRoster(a: RosterMergeEntry, b: RosterMergeEntry): number {
+  if (b.finalScore !== a.finalScore) {
+    return b.finalScore - a.finalScore;
+  }
+
+  if (b.baseScore !== a.baseScore) {
+    return b.baseScore - a.baseScore;
+  }
+
+  return a.nickname.localeCompare(b.nickname);
+}
+
+export function compareDisciplineRoster(a: RosterMergeEntry, b: RosterMergeEntry): number {
+  const pviA = a.pvi ?? Number.POSITIVE_INFINITY;
+  const pviB = b.pvi ?? Number.POSITIVE_INFINITY;
+
+  if (pviA !== pviB) {
+    return pviA - pviB;
+  }
+
+  if (b.finalScore !== a.finalScore) {
+    return b.finalScore - a.finalScore;
+  }
+
+  return a.nickname.localeCompare(b.nickname);
+}
+
 export function buildParticipantRoster(
   leaderboard: LeaderboardEntry[],
   presence: SessionPresenceEntry[],
-  selfParticipantId: string
+  selfParticipantId: string,
+  sortMode: LeaderboardSortMode = 'absolute'
 ): ParticipantRosterEntry[] {
-  const byId = new Map<
-    string,
-    {
-      participantId: string;
-      nickname: string;
-      roundCount: number;
-      isOnline: boolean;
-    }
-  >();
+  const byId = new Map<string, RosterMergeEntry>();
 
   for (const entry of leaderboard) {
     byId.set(entry.participantId, {
       participantId: entry.participantId,
       nickname: entry.nickname,
       roundCount: entry.roundCount,
+      repsPerRound: entry.repsPerRound,
+      baseScore: entry.baseScore,
+      finalScore: entry.finalScore,
+      pvi: entry.pvi,
+      pviMultiplier: entry.pviMultiplier,
+      pviClassification: entry.pviClassification,
+      pviVerdict: entry.pviVerdict,
       isOnline: false,
     });
   }
@@ -81,22 +131,38 @@ export function buildParticipantRoster(
       participantId: entry.participantId,
       nickname: entry.nickname,
       roundCount: 0,
+      repsPerRound: 0,
+      baseScore: 0,
+      finalScore: 0,
+      pvi: null,
+      pviMultiplier: 1.0,
+      pviClassification: 'Insufficient Data',
+      pviVerdict: '',
       isOnline: entry.isOnline,
     });
   }
 
-  const sorted = [...byId.values()].sort((a, b) => {
-    if (b.roundCount !== a.roundCount) {
-      return b.roundCount - a.roundCount;
-    }
+  const entries = [...byId.values()];
+  const filtered =
+    sortMode === 'discipline'
+      ? entries.filter((entry) => entry.pvi !== null)
+      : entries;
 
-    return a.nickname.localeCompare(b.nickname);
-  });
+  const sorted = [...filtered].sort(
+    sortMode === 'discipline' ? compareDisciplineRoster : compareAbsoluteRoster
+  );
 
   return sorted.map((entry, index) => ({
     participantId: entry.participantId,
     nickname: entry.nickname,
     roundCount: entry.roundCount,
+    repsPerRound: entry.repsPerRound,
+    baseScore: entry.baseScore,
+    finalScore: entry.finalScore,
+    pvi: entry.pvi,
+    pviMultiplier: entry.pviMultiplier,
+    pviClassification: entry.pviClassification,
+    pviVerdict: entry.pviVerdict,
     isOnline: entry.isOnline,
     isSelf: entry.participantId === selfParticipantId,
     rank: index + 1,

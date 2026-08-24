@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildParticipantRoster,
+  compareAbsoluteRoster,
+  compareDisciplineRoster,
   getParticipantAvatarColor,
   getParticipantInitial,
   rosterEntriesForScrollList,
@@ -19,12 +21,28 @@ function leaderboardEntry(
   participantId: string,
   nickname: string,
   roundCount: number,
-  isSelf = false
+  baseScore = roundCount,
+  finalScore = baseScore,
+  isSelf = false,
+  pvi: number | null = null,
+  pviMultiplier = 1.0,
+  pviClassification = 'Standard',
+  pviVerdict = '',
+  repsPerRound = 20
 ): LeaderboardEntry {
   return {
     participantId,
     nickname,
     roundCount,
+    partialReps: 0,
+    repsPerRound,
+    baseScore,
+    pvi,
+    pviMultiplier,
+    pviClassification,
+    pviVerdict,
+    domainWeight: 1.0,
+    finalScore,
     rounds: [],
     isSelf,
   };
@@ -42,33 +60,46 @@ function presenceEntry(
   };
 }
 
+function rosterDefaults(overrides: Record<string, unknown> = {}) {
+  return {
+    repsPerRound: 0,
+    pvi: null,
+    pviMultiplier: 1.0,
+    pviClassification: 'Insufficient Data',
+    pviVerdict: '',
+    ...overrides,
+  };
+}
+
 describe('buildParticipantRoster', () => {
-  it('sorts by round count descending', () => {
+  it('sorts by final score descending', () => {
     const roster = buildParticipantRoster(
       [
-        leaderboardEntry(ALICE_ID, 'Alice', 2),
-        leaderboardEntry(BOB_ID, 'Bob', 5),
+        leaderboardEntry(ALICE_ID, 'Alice', 2, 40, 40),
+        leaderboardEntry(BOB_ID, 'Bob', 2, 40, 69),
       ],
       [],
       SELF_ID
     );
 
     expect(roster.map((entry) => entry.participantId)).toEqual([BOB_ID, ALICE_ID]);
+    expect(roster[0].finalScore).toBe(69);
     expect(roster[0].rank).toBe(1);
     expect(roster[1].rank).toBe(2);
   });
 
-  it('breaks round-count ties by nickname', () => {
+  it('breaks final-score ties by base score then nickname', () => {
     const roster = buildParticipantRoster(
       [
-        leaderboardEntry(ALICE_ID, 'Alice', 3),
-        leaderboardEntry(BOB_ID, 'Bob', 3),
+        leaderboardEntry(ALICE_ID, 'Alice', 3, 55, 60),
+        leaderboardEntry(BOB_ID, 'Bob', 3, 60, 60),
+        leaderboardEntry(CAROL_ID, 'Carol', 3, 60, 60),
       ],
       [],
       SELF_ID
     );
 
-    expect(roster.map((entry) => entry.nickname)).toEqual(['Alice', 'Bob']);
+    expect(roster.map((entry) => entry.nickname)).toEqual(['Bob', 'Carol', 'Alice']);
   });
 
   it('assigns contiguous ranks after sort', () => {
@@ -106,7 +137,7 @@ describe('buildParticipantRoster', () => {
     expect(roster[0].isOnline).toBe(true);
   });
 
-  it('includes presence-only participants with zero rounds', () => {
+  it('includes presence-only participants with zero rounds on absolute board', () => {
     const roster = buildParticipantRoster(
       [],
       [presenceEntry(ALICE_ID, 'Alice', true)],
@@ -118,18 +149,32 @@ describe('buildParticipantRoster', () => {
         participantId: ALICE_ID,
         nickname: 'Alice',
         roundCount: 0,
+        baseScore: 0,
+        finalScore: 0,
         isOnline: true,
         isSelf: false,
         rank: 1,
+        ...rosterDefaults(),
       },
     ]);
+  });
+
+  it('excludes presence-only participants from discipline board', () => {
+    const roster = buildParticipantRoster(
+      [],
+      [presenceEntry(ALICE_ID, 'Alice', true)],
+      SELF_ID,
+      'discipline'
+    );
+
+    expect(roster).toEqual([]);
   });
 
   it('marks the self participant', () => {
     const roster = buildParticipantRoster(
       [
-        leaderboardEntry(SELF_ID, 'Justin', 4, true),
-        leaderboardEntry(ALICE_ID, 'Alice', 9),
+        leaderboardEntry(SELF_ID, 'Justin', 4, 80, 80, true),
+        leaderboardEntry(ALICE_ID, 'Alice', 9, 180, 180),
       ],
       [
         presenceEntry(SELF_ID, 'Justin', true),
@@ -142,14 +187,117 @@ describe('buildParticipantRoster', () => {
     expect(selfEntry?.isSelf).toBe(true);
     expect(selfEntry?.rank).toBe(2);
   });
+
+  it('ranks higher final score first on absolute board', () => {
+    const roster = buildParticipantRoster(
+      [
+        leaderboardEntry(ALICE_ID, 'Alice', 10, 260, 300, false, 15, 1.0, 'Standard', 'Acceptable'),
+        leaderboardEntry(BOB_ID, 'Bob', 9, 240, 280, false, 4, 1.15, 'Elite Pacing', 'Surgical'),
+      ],
+      [],
+      SELF_ID,
+      'absolute'
+    );
+
+    expect(roster[0].participantId).toBe(ALICE_ID);
+    expect(roster[0].rank).toBe(1);
+    expect(roster[1].participantId).toBe(BOB_ID);
+    expect(roster[1].rank).toBe(2);
+  });
+
+  it('ranks lower P.V.I. first on discipline board', () => {
+    const roster = buildParticipantRoster(
+      [
+        leaderboardEntry(ALICE_ID, 'Alice', 10, 260, 300, false, 15, 1.0, 'Standard', 'Acceptable'),
+        leaderboardEntry(BOB_ID, 'Bob', 9, 240, 280, false, 4, 1.15, 'Elite Pacing', 'Surgical'),
+      ],
+      [],
+      SELF_ID,
+      'discipline'
+    );
+
+    expect(roster[0].participantId).toBe(BOB_ID);
+    expect(roster[0].rank).toBe(1);
+    expect(roster[1].participantId).toBe(ALICE_ID);
+    expect(roster[1].rank).toBe(2);
+  });
+
+  it('breaks discipline ties by final score then nickname', () => {
+    const roster = buildParticipantRoster(
+      [
+        leaderboardEntry(ALICE_ID, 'Alice', 10, 260, 300, false, 10, 1.0, 'Standard', 'Acceptable'),
+        leaderboardEntry(BOB_ID, 'Bob', 9, 240, 280, false, 10, 1.15, 'Standard', 'Acceptable'),
+      ],
+      [],
+      SELF_ID,
+      'discipline'
+    );
+
+    expect(roster.map((entry) => entry.participantId)).toEqual([ALICE_ID, BOB_ID]);
+  });
+
+  it('excludes participants with null P.V.I. from discipline board', () => {
+    const roster = buildParticipantRoster(
+      [
+        leaderboardEntry(ALICE_ID, 'Alice', 1, 20, 20, false, null),
+        leaderboardEntry(BOB_ID, 'Bob', 2, 40, 40, false, 8, 1.15, 'Elite Pacing', 'Surgical'),
+      ],
+      [],
+      SELF_ID,
+      'discipline'
+    );
+
+    expect(roster).toHaveLength(1);
+    expect(roster[0].participantId).toBe(BOB_ID);
+  });
+});
+
+describe('roster comparators', () => {
+  it('compareAbsoluteRoster prefers higher base score on final-score ties', () => {
+    const higherBase = {
+      participantId: ALICE_ID,
+      nickname: 'Alice',
+      roundCount: 3,
+      repsPerRound: 20,
+      baseScore: 60,
+      finalScore: 60,
+      pvi: 0,
+      pviMultiplier: 1,
+      pviClassification: 'Standard',
+      pviVerdict: '',
+      isOnline: false,
+    };
+    const lowerBase = { ...higherBase, participantId: BOB_ID, nickname: 'Bob', baseScore: 55 };
+
+    expect(compareAbsoluteRoster(higherBase, lowerBase)).toBeLessThan(0);
+  });
+
+  it('compareDisciplineRoster prefers lower P.V.I.', () => {
+    const disciplined = {
+      participantId: BOB_ID,
+      nickname: 'Bob',
+      roundCount: 3,
+      repsPerRound: 40,
+      baseScore: 240,
+      finalScore: 280,
+      pvi: 4,
+      pviMultiplier: 1.15,
+      pviClassification: 'Elite Pacing',
+      pviVerdict: '',
+      isOnline: false,
+    };
+    const leaky = { ...disciplined, participantId: ALICE_ID, nickname: 'Alice', pvi: 15 };
+
+    expect(compareDisciplineRoster(disciplined, leaky)).toBeLessThan(0);
+  });
 });
 
 describe('rosterEntriesForScrollList', () => {
   it('excludes the self row while preserving ranks for others', () => {
     const roster = buildParticipantRoster(
       [
-        leaderboardEntry(ALICE_ID, 'Alice', 9),
-        leaderboardEntry(SELF_ID, 'Justin', 4, true),
+        leaderboardEntry(ALICE_ID, 'Alice', 9, 180, 180),
+        leaderboardEntry(SELF_ID, 'Justin', 4, 80, 80, true),
       ],
       [],
       SELF_ID

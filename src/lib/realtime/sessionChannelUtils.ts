@@ -1,4 +1,18 @@
-import type { ParticipantRow, RoundRow, SessionRow, MessageRow } from '@/lib/sessionSync/types';
+import type {
+  ParticipantRow,
+  ParticipantSegmentResultRow,
+  RoundRow,
+  SessionRow,
+  MessageRow,
+  LeaderboardEntry,
+  LiveSessionPhase,
+} from '@/lib/sessionSync/types';
+import type { WorkoutExercise } from '@/lib/api/sessionTypes';
+import type { ScoreBreakdown } from '@/lib/scoring/types';
+import { computeBaseScore } from '@/lib/scoring/computeBaseScore';
+import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
+import { computeScoreBreakdown } from '@/lib/scoring/computeScoreBreakdown';
+import { getPviMultiplier } from '@/lib/scoring/getPviMultiplier';
 
 export interface PresenceTrackPayload {
   participant_id: string;
@@ -126,6 +140,97 @@ export function parseRoundRow(record: Record<string, unknown>): RoundRow | null 
   };
 }
 
+function readNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function parseScoreBreakdown(value: unknown): ScoreBreakdown | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const row = value as Record<string, unknown>;
+  const baseScore = readNumber(row.baseScore);
+  const pviMultiplier = readNumber(row.pviMultiplier);
+  const domainWeight = readNumber(row.domainWeight);
+  const finalScore = readNumber(row.finalScore);
+  const pviRaw = row.pvi;
+
+  if (
+    baseScore === null ||
+    pviMultiplier === null ||
+    domainWeight === null ||
+    finalScore === null
+  ) {
+    return null;
+  }
+
+  const pvi =
+    pviRaw === null || pviRaw === undefined ? null : readNumber(pviRaw);
+
+  if (pviRaw !== null && pviRaw !== undefined && pvi === null) {
+    return null;
+  }
+
+  return {
+    baseScore,
+    pvi,
+    pviMultiplier,
+    domainWeight,
+    finalScore,
+  };
+}
+
+export function parseSegmentResultRow(
+  record: Record<string, unknown>
+): ParticipantSegmentResultRow | null {
+  const participantId =
+    typeof record.participant_id === 'string' ? record.participant_id : null;
+  const segmentIndex =
+    typeof record.segment_index === 'number' ? record.segment_index : null;
+  const partialReps =
+    typeof record.partial_reps === 'number' ? record.partial_reps : null;
+  const finalScore =
+    record.final_score === null || record.final_score === undefined
+      ? null
+      : readNumber(record.final_score);
+  const scoreBreakdown =
+    record.score_breakdown === null || record.score_breakdown === undefined
+      ? null
+      : parseScoreBreakdown(record.score_breakdown);
+  const updatedAt = typeof record.updated_at === 'string' ? record.updated_at : null;
+
+  if (
+    !participantId ||
+    segmentIndex === null ||
+    partialReps === null ||
+    !updatedAt
+  ) {
+    return null;
+  }
+
+  if (record.final_score !== null && record.final_score !== undefined && finalScore === null) {
+    return null;
+  }
+
+  if (
+    record.score_breakdown !== null &&
+    record.score_breakdown !== undefined &&
+    scoreBreakdown === null
+  ) {
+    return null;
+  }
+
+  return {
+    participant_id: participantId,
+    segment_index: segmentIndex,
+    partial_reps: partialReps,
+    final_score: finalScore,
+    score_breakdown: scoreBreakdown,
+    updated_at: updatedAt,
+  };
+}
+
 export function parseMessageRow(record: Record<string, unknown>): MessageRow | null {
   const id = typeof record.id === 'string' ? record.id : null;
   const sessionId = typeof record.session_id === 'string' ? record.session_id : null;
@@ -207,6 +312,37 @@ export function upsertRound(rounds: RoundRow[], row: RoundRow): RoundRow[] {
   return [...rounds, row];
 }
 
+export function upsertSegmentResult(
+  results: ParticipantSegmentResultRow[],
+  row: ParticipantSegmentResultRow
+): ParticipantSegmentResultRow[] {
+  const existingIndex = results.findIndex(
+    (result) =>
+      result.participant_id === row.participant_id &&
+      result.segment_index === row.segment_index
+  );
+
+  if (existingIndex >= 0) {
+    return results.map((result, index) => (index === existingIndex ? row : result));
+  }
+
+  return [...results, row];
+}
+
+export function removeSegmentResult(
+  results: ParticipantSegmentResultRow[],
+  participantId: string,
+  segmentIndex: number
+): ParticipantSegmentResultRow[] {
+  return results.filter(
+    (result) =>
+      !(
+        result.participant_id === participantId &&
+        result.segment_index === segmentIndex
+      )
+  );
+}
+
 export function upsertMessage(messages: MessageRow[], row: MessageRow): MessageRow[] {
   const existing = messages.find((m) => m.id === row.id);
   if (existing) {
@@ -252,15 +388,44 @@ function summarizeSortedParticipantRounds(
 export function buildLeaderboard(
   participants: ParticipantRow[],
   rounds: RoundRow[],
+  segmentResults: ParticipantSegmentResultRow[],
   segmentIndex: number,
-  selfParticipantId: string
-): Array<{
-  participantId: string;
-  nickname: string;
-  roundCount: number;
-  rounds: Array<{ roundNumber: number; durationSec: number }>;
-  isSelf: boolean;
-}> {
+  selfParticipantId: string,
+  workout: WorkoutExercise[],
+  durationMinutes: number,
+  sessionPhase: LiveSessionPhase
+): LeaderboardEntry[] {
+  let repsPerRound = 0;
+  try {
+    repsPerRound = computeRepsPerRound(workout);
+  } catch {
+    repsPerRound = 0;
+  }
+
+  const partialByParticipant = new Map<string, number>();
+  const lockedByParticipant = new Map<
+    string,
+    { finalScore: number; breakdown: ScoreBreakdown }
+  >();
+
+  for (const result of segmentResults) {
+    if (result.segment_index !== segmentIndex) {
+      continue;
+    }
+
+    partialByParticipant.set(result.participant_id, result.partial_reps);
+
+    if (
+      result.final_score !== null &&
+      result.score_breakdown !== null
+    ) {
+      lockedByParticipant.set(result.participant_id, {
+        finalScore: result.final_score,
+        breakdown: result.score_breakdown,
+      });
+    }
+  }
+
   const counts = new Map<string, number>();
   const roundsByParticipant = new Map<string, RoundRow[]>();
 
@@ -283,18 +448,51 @@ export function buildLeaderboard(
   return participants
     .map((participant) => {
       const participantRounds = roundsByParticipant.get(participant.id) ?? [];
+      const roundCount = counts.get(participant.id) ?? 0;
+      const partialReps = partialByParticipant.get(participant.id) ?? 0;
+      // Copilot suggestion ignored: round-count fallback is intentional for unsupported workouts; UI labels rounds vs reps via repsPerRound.
+      const baseScore =
+        repsPerRound > 0
+          ? computeBaseScore(roundCount, partialReps, repsPerRound)
+          : roundCount;
+      const roundSummaries = summarizeSortedParticipantRounds(participantRounds);
+      const roundDurationsSec = roundSummaries.map((round) => round.durationSec);
+      const locked = lockedByParticipant.get(participant.id);
+      const breakdown = locked
+        ? locked.breakdown
+        : computeScoreBreakdown(
+            roundDurationsSec,
+            durationMinutes,
+            sessionPhase,
+            baseScore
+          );
+      const finalScore = locked ? locked.finalScore : breakdown.finalScore;
+      const pviTier = getPviMultiplier(breakdown.pvi);
 
       return {
         participantId: participant.id,
         nickname: participant.nickname,
-        roundCount: counts.get(participant.id) ?? 0,
-        rounds: summarizeSortedParticipantRounds(participantRounds),
+        roundCount,
+        partialReps,
+        repsPerRound,
+        baseScore: breakdown.baseScore,
+        pvi: breakdown.pvi,
+        pviMultiplier: breakdown.pviMultiplier,
+        pviClassification:
+          sessionPhase === 'finished' ? pviTier.classification : 'Standard',
+        pviVerdict: sessionPhase === 'finished' ? pviTier.verdict : '',
+        domainWeight: breakdown.domainWeight,
+        finalScore,
+        rounds: roundSummaries,
         isSelf: participant.id === selfParticipantId,
       };
     })
     .sort((a, b) => {
-      if (b.roundCount !== a.roundCount) {
-        return b.roundCount - a.roundCount;
+      const scoreA = sessionPhase === 'finished' ? a.finalScore : a.baseScore;
+      const scoreB = sessionPhase === 'finished' ? b.finalScore : b.baseScore;
+
+      if (scoreB !== scoreA) {
+        return scoreB - scoreA;
       }
       return a.nickname.localeCompare(b.nickname);
     });

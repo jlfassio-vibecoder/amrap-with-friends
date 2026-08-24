@@ -1,16 +1,90 @@
+import { useState } from 'react';
+import { PacingBadge } from '@/components/PacingBadge';
 import {
+  buildParticipantRoster,
   getParticipantAvatarColor,
   getParticipantInitial,
   rosterEntriesForScrollList,
+  type LeaderboardSortMode,
   type ParticipantRosterEntry,
 } from '@/lib/sessionSync/buildParticipantRoster';
+import type {
+  LeaderboardEntry,
+  LiveSessionPhase,
+  SessionPresenceEntry,
+} from '@/lib/sessionSync/types';
 
 interface ParticipantsPanelProps {
-  roster: ParticipantRosterEntry[];
+  leaderboard: LeaderboardEntry[];
+  presence: SessionPresenceEntry[];
+  selfParticipantId: string;
+  phase: LiveSessionPhase;
   className?: string;
 }
 
 const AVATAR_STACK_LIMIT = 5;
+
+function formatMultiplier(multiplier: number): string {
+  return `× ${Number(multiplier.toFixed(2))}`;
+}
+
+function formatRosterScore(
+  entry: ParticipantRosterEntry,
+  phase: LiveSessionPhase,
+  sortMode: LeaderboardSortMode
+): string {
+  if (phase === 'finished' && sortMode === 'discipline' && entry.pvi !== null) {
+    return `${entry.pvi}% · ${formatMultiplier(entry.pviMultiplier)}`;
+  }
+
+  const score = phase === 'finished' ? entry.finalScore : entry.baseScore;
+  const unit = entry.repsPerRound > 0 ? 'reps' : 'rounds';
+  const value = entry.repsPerRound > 0 ? score : entry.roundCount;
+  return `${value} ${unit}`;
+}
+
+function LeaderboardSortToggle({
+  value,
+  onChange,
+}: {
+  value: LeaderboardSortMode;
+  onChange: (value: LeaderboardSortMode) => void;
+}) {
+  return (
+    <div
+      className="inline-flex w-full rounded-full border border-border bg-page p-1"
+      role="tablist"
+      aria-label="Leaderboard view"
+    >
+      <button
+        type="button"
+        role="tab"
+        aria-selected={value === 'absolute'}
+        className={
+          value === 'absolute'
+            ? 'flex-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-on-accent'
+            : 'flex-1 rounded-full px-3 py-1.5 text-xs font-semibold text-secondary hover:text-ink'
+        }
+        onClick={() => onChange('absolute')}
+      >
+        Absolute
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={value === 'discipline'}
+        className={
+          value === 'discipline'
+            ? 'flex-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-on-accent'
+            : 'flex-1 rounded-full px-3 py-1.5 text-xs font-semibold text-secondary hover:text-ink'
+        }
+        onClick={() => onChange('discipline')}
+      >
+        Discipline
+      </button>
+    </div>
+  );
+}
 
 function RankBadge({
   rank,
@@ -44,18 +118,25 @@ function RankBadge({
 
 function RosterRow({
   entry,
+  phase,
+  sortMode,
   variant = 'default',
 }: {
   entry: ParticipantRosterEntry;
+  phase: LiveSessionPhase;
+  sortMode: LeaderboardSortMode;
   variant?: 'default' | 'pinned';
 }) {
+  const showPacingBadge = phase === 'finished' && entry.pviVerdict.length > 0;
+  const scoreDisplay = formatRosterScore(entry, phase, sortMode);
+
   return (
     <div
       role="listitem"
       className={
         variant === 'pinned'
-          ? 'flex items-center gap-3 rounded-md border border-border bg-accent-tint px-2 py-2'
-          : 'flex items-center gap-3 px-2 py-1.5'
+          ? 'flex items-center gap-2 rounded-md border border-border bg-accent-tint px-2 py-2'
+          : 'flex items-center gap-2 px-2 py-1.5'
       }
     >
       <RankBadge rank={entry.rank} variant={variant === 'pinned' ? 'pinned' : 'default'} />
@@ -69,18 +150,45 @@ function RosterRow({
         {entry.nickname}
         {entry.isSelf ? ' (you)' : ''}
       </span>
-      <span className="shrink-0 text-sm font-semibold tabular-nums">{entry.roundCount}</span>
+      {showPacingBadge ? (
+        <PacingBadge
+          classification={entry.pviClassification}
+          verdict={entry.pviVerdict}
+        />
+      ) : null}
+      <span className="shrink-0 text-sm font-semibold tabular-nums">{scoreDisplay}</span>
     </div>
   );
 }
 
-export function ParticipantsPanel({ roster, className }: ParticipantsPanelProps) {
+export function ParticipantsPanel({
+  leaderboard,
+  presence,
+  selfParticipantId,
+  phase,
+  className,
+}: ParticipantsPanelProps) {
+  const [sortMode, setSortMode] = useState<LeaderboardSortMode>('absolute');
+  const effectiveSortMode = phase === 'finished' ? sortMode : 'absolute';
+  const roster = buildParticipantRoster(
+    leaderboard,
+    presence,
+    selfParticipantId,
+    effectiveSortMode
+  );
+
   const onlineCount = roster.filter((entry) => entry.isOnline).length;
   const onlineEntries = roster.filter((entry) => entry.isOnline);
   const visibleAvatars = onlineEntries.slice(0, AVATAR_STACK_LIMIT);
   const overflowCount = Math.max(0, onlineEntries.length - AVATAR_STACK_LIMIT);
   const scrollEntries = rosterEntriesForScrollList(roster);
   const selfEntry = roster.find((entry) => entry.isSelf) ?? null;
+  const hasAnyParticipants = leaderboard.length > 0 || presence.length > 0;
+  const showDisciplineEmptyState =
+    phase === 'finished' &&
+    effectiveSortMode === 'discipline' &&
+    hasAnyParticipants &&
+    roster.length === 0;
 
   return (
     <section className={`card space-y-3 p-4 ${className ?? ''}`}>
@@ -91,6 +199,17 @@ export function ParticipantsPanel({ roster, className }: ParticipantsPanelProps)
           {onlineCount} here
         </span>
       </div>
+
+      {phase === 'finished' ? (
+        <LeaderboardSortToggle
+          value={sortMode}
+          onChange={(value) => {
+            if (phase === 'finished') {
+              setSortMode(value);
+            }
+          }}
+        />
+      ) : null}
 
       {visibleAvatars.length > 0 ? (
         <div className="flex items-center" aria-hidden="true">
@@ -113,8 +232,12 @@ export function ParticipantsPanel({ roster, className }: ParticipantsPanelProps)
         </div>
       ) : null}
 
-      {roster.length === 0 ? (
+      {!hasAnyParticipants ? (
         <p className="text-sm text-secondary">No participants yet.</p>
+      ) : showDisciplineEmptyState ? (
+        <p className="text-display px-2 py-6 text-center text-sm leading-relaxed text-secondary">
+          No pacing data established. The crucible demands more time.
+        </p>
       ) : (
         <>
           <div
@@ -125,14 +248,24 @@ export function ParticipantsPanel({ roster, className }: ParticipantsPanelProps)
               <p className="px-2 text-sm text-secondary">No other participants yet.</p>
             ) : (
               scrollEntries.map((entry) => (
-                <RosterRow key={entry.participantId} entry={entry} />
+                <RosterRow
+                  key={entry.participantId}
+                  entry={entry}
+                  phase={phase}
+                  sortMode={effectiveSortMode}
+                />
               ))
             )}
           </div>
 
           {selfEntry ? (
             <div role="list" aria-label="Your rank">
-              <RosterRow entry={selfEntry} variant="pinned" />
+              <RosterRow
+                entry={selfEntry}
+                phase={phase}
+                sortMode={effectiveSortMode}
+                variant="pinned"
+              />
             </div>
           ) : null}
         </>
