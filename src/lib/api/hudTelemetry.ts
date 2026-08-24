@@ -1,9 +1,22 @@
 import { supabase } from '@/lib/supabase';
-import type { HudDomainMinutes, HUDTelemetryPayload } from '@/lib/hud/types';
+import type {
+  ClassificationProgress,
+  ClassificationRank,
+  HudClassification,
+  HudDomainMinutes,
+  HUDTelemetryPayload,
+} from '@/lib/hud/types';
 
 export type HudTelemetryApiError = {
   message: string;
 };
+
+const CLASSIFICATION_RANKS = new Set<ClassificationRank>([
+  'unclassified',
+  'civilian',
+  'operator',
+  'special_ops',
+]);
 
 function readNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
@@ -66,6 +79,63 @@ function readDomainMinutes(value: unknown): HudDomainMinutes | null {
   return { 5: five, 10: ten, 15: fifteen, 20: twenty, other };
 }
 
+function readClassificationRank(value: unknown): ClassificationRank | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  if (!CLASSIFICATION_RANKS.has(value as ClassificationRank)) {
+    return null;
+  }
+  return value as ClassificationRank;
+}
+
+function readClassificationProgress(
+  value: unknown
+): ClassificationProgress | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const row = value as Record<string, unknown>;
+  const weekMinutes = readNonNegativeInt(row.weekMinutes);
+  const intensity3PlusCount = readNonNegativeInt(row.intensity3PlusCount);
+  const intensity4PlusCount = readNonNegativeInt(row.intensity4PlusCount);
+  const marathon20Count = readNonNegativeInt(row.marathon20Count);
+
+  if (
+    weekMinutes === null ||
+    intensity3PlusCount === null ||
+    intensity4PlusCount === null ||
+    marathon20Count === null
+  ) {
+    return null;
+  }
+
+  return {
+    weekMinutes,
+    intensity3PlusCount,
+    intensity4PlusCount,
+    marathon20Count,
+  };
+}
+
+function readClassification(value: unknown): HudClassification | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const row = value as Record<string, unknown>;
+  const current = readClassificationRank(row.current);
+  const previous = readClassificationRank(row.previous);
+  const progress = readClassificationProgress(row.progress);
+
+  if (current === null || previous === null || progress === null) {
+    return null;
+  }
+
+  return { current, previous, progress };
+}
+
 export function parseHudTelemetryPayload(
   value: unknown
 ): HUDTelemetryPayload | null {
@@ -80,13 +150,15 @@ export function parseHudTelemetryPayload(
   const lastLockedRaw = row.lastLockedAt;
   const attrition = readAttrition(row.attrition);
   const domainMinutes30d = readDomainMinutes(row.domainMinutes30d);
+  const classification = readClassification(row.classification);
 
   if (
     weekMinutes === null ||
     weekMinutes < 0 ||
     !weekEndsAt ||
     attrition === null ||
-    domainMinutes30d === null
+    domainMinutes30d === null ||
+    classification === null
   ) {
     return null;
   }
@@ -115,6 +187,7 @@ export function parseHudTelemetryPayload(
     lastLockedAt,
     attrition,
     domainMinutes30d,
+    classification,
   };
 }
 

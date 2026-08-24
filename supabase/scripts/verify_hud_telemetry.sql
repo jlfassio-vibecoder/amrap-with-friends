@@ -54,7 +54,7 @@ FROM fixtures;
 
 -- 3) Authenticated smoke call (must be signed in as a user with JWT):
 -- SELECT public.hud_telemetry('America/Los_Angeles');
--- Expect Phase 3 shape:
+-- Expect Phase 4 shape:
 -- {
 --   "ok": true,
 --   "telemetry": {
@@ -63,9 +63,20 @@ FROM fixtures;
 --     "weekEndsAt": <timestamptz>,
 --     "lastLockedAt": <timestamptz|null>,
 --     "attrition": [<bool x 12>],
---     "domainMinutes30d": { "5": <int>, "10": <int>, "15": <int>, "20": <int>, "other": <int> }
+--     "domainMinutes30d": { "5": <int>, "10": <int>, "15": <int>, "20": <int>, "other": <int> },
+--     "classification": {
+--       "current": "unclassified"|"civilian"|"operator"|"special_ops",
+--       "previous": "unclassified"|"civilian"|"operator"|"special_ops",
+--       "progress": {
+--         "weekMinutes": <int>,
+--         "intensity3PlusCount": <int>,
+--         "intensity4PlusCount": <int>,
+--         "marathon20Count": <int>
+--       }
+--     }
 --   }
 -- }
 -- attrition length must be 12; index 11 = current local week; index 0 = 11 weeks ago.
 -- A week is true iff sum(duration_minutes) of claimed+locked sessions in that Mon–Sun >= 150.
 -- domainMinutes30d uses rolling now() - 30 days on score lock time; other = non 5/10/15/20.
+-- NULL intensity_tier counts as 2 for lethality; custom/historical cannot fill I3+/I4+ quotas alone.

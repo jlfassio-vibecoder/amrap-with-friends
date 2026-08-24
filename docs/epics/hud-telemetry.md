@@ -292,6 +292,50 @@ Each phase is **one planning slice**. Plan, implement, and ship independently wh
 
 ---
 
+### Phase 4 — Benchmark Matrix (Volume × Lethality)
+
+**Planning goal:** Close the low-intensity volume loophole. Classify the current (and previous) local week by volume **and** workout intensity, and surface a Classification Badge with a next-tier checklist on the HUD.
+
+#### Intensity taxonomy (1–5)
+
+Templates live in [`src/data/workoutTemplates.ts`](src/data/workoutTemplates.ts) (not a DB table). Each library template resolves to `intensityTier` via `resolveTemplateIntensity()`. Intensity is **snapshotted** onto `sessions.intensity_tier` at create time so server aggregation does not depend on TS.
+
+| Tier | Label | Meaning |
+| --- | --- | --- |
+| 1 | Active Recovery | Low CNS tax |
+| 2 | Foundational | Sustainable bodyweight mechanics |
+| 3 | Tactical | High metabolic demand / explosive or isometrics |
+| 4 | Crucible | Severe CNS drain, complex multi-joint |
+| 5 | Tier 1 | Hypoxia + agonizing isometrics |
+
+**Category defaults:** aerobic-matrix → 2; blood-shunt / localized-trap / engine-room / midline-tension → 3; four-point-cascade → 4; armor-protocol → 4 (override to 5 for explicit Tier 1 cues).
+
+**Custom workouts** (no `template_id`): count toward **volume**; intensity treated as **2** — cannot satisfy Intensity 3+ / 4+ lethality quotas.
+
+#### Weekly classifications (re-earned every Mon–Sun local week)
+
+| Rank | Volume | Lethality | Domain |
+| --- | --- | --- | --- |
+| CIVILIAN | ≥ 150 min | — | — |
+| OPERATOR | ≥ 240 min | ≥ 2 sessions with intensity ≥ 3 | — |
+| SPECIAL OPS | ≥ 300 min | ≥ 3 sessions with intensity ≥ 4 | ≥ 1 × 20-min Marathon |
+| UNCLASSIFIED | below Civilian | — | — |
+
+Highest rank meeting **all** criteria wins. Eligibility unchanged: claimed + locked; clock = `psr.updated_at`.
+
+#### Deliverables
+
+- [x] `intensityTier` resolution on templates; `sessions.intensity_tier`; `create_session` snapshot
+- [x] `hud_telemetry` returns `classification.current`, `classification.previous`, `classification.progress`
+- [x] `ClassificationBadge` + next-tier checklist atop HUD (Baseline bar remains)
+- [x] Tests: classification / checklist pure functions; parser; badge empty state
+
+#### Out of scope
+
+- Lifetime ranks / XP; friends classification leaderboard; requiring templates for all sessions
+
+---
+
 ## Phase dependency graph
 
 ```
@@ -300,7 +344,8 @@ Locked scores + claimed user_id (already shipped)
 Phase 1 (RPC + weekly 150 bar + /hud)
     ↓
     ├── Phase 2 (daily clock + attrition)
-    └── Phase 3 (domain matrix)   -- can parallel Phase 2
+    ├── Phase 3 (domain matrix)
+    └── Phase 4 (Benchmark Matrix)  -- after intensity snapshot exists
 ```
 
 ---
@@ -318,6 +363,11 @@ src/lib/hud/
   evaluateLoadImbalance.test.ts
   formatWeekCountdown.ts
   formatWeekCountdown.test.ts
+  resolveWeeklyClassification.ts
+  nextTierChecklist.ts
+
+src/lib/workout/
+  resolveTemplateIntensity.ts
 
 src/lib/api/hudTelemetry.ts
 
@@ -327,6 +377,7 @@ src/components/hud/
   DailyTelemetry.tsx
   AttritionGrid.tsx
   DomainMatrixChart.tsx
+  ClassificationBadge.tsx
 ```
 
 SQL lives in the migration. Do not duplicate week-boundary math in TypeScript except for countdown / status clocks that take already-correct ISO timestamps from the server.

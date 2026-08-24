@@ -67,6 +67,7 @@ export async function createSession(
     p_nickname: nickname,
     p_workout: input.workout,
     p_template_id: input.templateId ?? null,
+    p_intensity_tier: input.intensityTier ?? null,
   });
 
   if (error) {

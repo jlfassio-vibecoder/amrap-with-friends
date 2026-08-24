@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { AttritionGrid } from '@/components/hud/AttritionGrid';
+import { ClassificationBadge } from '@/components/hud/ClassificationBadge';
 import { DailyTelemetry } from '@/components/hud/DailyTelemetry';
 import { DomainMatrixChart } from '@/components/hud/DomainMatrixChart';
 import { WeeklyBaselineBar } from '@/components/hud/WeeklyBaselineBar';
@@ -69,6 +70,7 @@ export default function HUDPage() {
 
       {!loading && isAuthenticated && telemetry ? (
         <div className="space-y-4">
+          <ClassificationBadge classification={telemetry.classification} />
           <DailyTelemetry lastLockedAt={telemetry.lastLockedAt} />
           <WeeklyBaselineBar
             weekMinutes={telemetry.weekMinutes}

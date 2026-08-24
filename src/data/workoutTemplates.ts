@@ -1,5 +1,8 @@
 export type TimeDomain = 5 | 10 | 15 | 20;
 
+/** Benchmark Matrix intensity (1 = recovery … 5 = Tier 1). */
+export type IntensityTier = 1 | 2 | 3 | 4 | 5;
+
 export type WorkoutCategory =
   | 'blood-shunt'
   | 'localized-trap'
@@ -37,6 +40,8 @@ export interface WorkoutTemplate {
   focus?: string;
   durationMinutes: TimeDomain;
   category: WorkoutCategory | null;
+  /** Optional override; otherwise resolved from category via `resolveTemplateIntensity`. */
+  intensityTier?: IntensityTier;
   movements: WorkoutTemplateMovement[];
   tacticalNote: string;
 }
@@ -1951,6 +1956,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Iron Will',
     durationMinutes: 20,
     category: 'armor-protocol',
+    intensityTier: 5,
     movements: [
       { name: 'Hollow Hold', reps: 20, unit: 'sec' },
       { name: 'Combat Sprawls', reps: 15 },
@@ -2021,6 +2027,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Trench',
     durationMinutes: 20,
     category: 'armor-protocol',
+    intensityTier: 5,
     movements: [
       { name: 'Bear Crawl Hover', reps: 20, unit: 'sec' },
       { name: 'Wide Push-ups', reps: 10 },
@@ -2049,6 +2056,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Shield',
     durationMinutes: 20,
     category: 'armor-protocol',
+    intensityTier: 5,
     movements: [
       { name: 'Hollow Hold', reps: 20, unit: 'sec' },
       { name: 'Diamond Push-ups', reps: 10 },

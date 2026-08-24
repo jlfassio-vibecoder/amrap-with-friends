@@ -12,6 +12,25 @@ export type HudDomainMinutes = {
   other: number;
 };
 
+export type ClassificationRank =
+  | 'unclassified'
+  | 'civilian'
+  | 'operator'
+  | 'special_ops';
+
+export type ClassificationProgress = {
+  weekMinutes: number;
+  intensity3PlusCount: number;
+  intensity4PlusCount: number;
+  marathon20Count: number;
+};
+
+export type HudClassification = {
+  current: ClassificationRank;
+  previous: ClassificationRank;
+  progress: ClassificationProgress;
+};
+
 export interface HUDTelemetryPayload {
   weekMinutes: number;
   weekPviAverage: number | null;
@@ -19,4 +38,5 @@ export interface HUDTelemetryPayload {
   lastLockedAt: string | null;
   attrition: boolean[];
   domainMinutes30d: HudDomainMinutes;
+  classification: HudClassification;
 }

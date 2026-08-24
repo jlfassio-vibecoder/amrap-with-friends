@@ -9,6 +9,8 @@ export interface CreateSessionInput {
   durationMinutes: number;
   workout: WorkoutExercise[];
   templateId?: string;
+  /** Snapshot intensity 1–5; custom workouts should pass 2. */
+  intensityTier?: number;
 }
 
 export interface CreateSessionResult {
