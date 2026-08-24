@@ -49,7 +49,7 @@ export default function MySessionsPage() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthLoading, isAuthenticated, user?.id]);
+  }, [isAuthLoading, isAuthenticated, user]);
 
   const loading = isAuthLoading || (isAuthenticated && user !== null && !hasLoaded);
 

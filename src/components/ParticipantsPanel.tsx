@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { PacingBadge } from '@/components/PacingBadge';
 import {
   buildParticipantRoster,
@@ -177,12 +177,6 @@ export function ParticipantsPanel({
     effectiveSortMode
   );
 
-  useEffect(() => {
-    if (phase !== 'finished') {
-      setSortMode('absolute');
-    }
-  }, [phase]);
-
   const onlineCount = roster.filter((entry) => entry.isOnline).length;
   const onlineEntries = roster.filter((entry) => entry.isOnline);
   const visibleAvatars = onlineEntries.slice(0, AVATAR_STACK_LIMIT);
@@ -207,7 +201,14 @@ export function ParticipantsPanel({
       </div>
 
       {phase === 'finished' ? (
-        <LeaderboardSortToggle value={sortMode} onChange={setSortMode} />
+        <LeaderboardSortToggle
+          value={sortMode}
+          onChange={(value) => {
+            if (phase === 'finished') {
+              setSortMode(value);
+            }
+          }}
+        />
       ) : null}
 
       {visibleAvatars.length > 0 ? (
