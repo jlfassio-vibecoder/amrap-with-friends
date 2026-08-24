@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { EXERCISE_MEDIA_BUCKET, getExerciseMediaUrl } from './getExerciseMediaUrl';
+import {
+  EXERCISE_MEDIA_BUCKET,
+  getExerciseImagePathCandidates,
+  getExerciseMediaUrl,
+} from './getExerciseMediaUrl';
 
 const getPublicUrl = vi.fn();
 const from = vi.fn(() => ({ getPublicUrl }));
@@ -9,6 +13,35 @@ vi.mock('@/lib/supabase', () => ({
     storage: { from },
   })),
 }));
+
+describe('getExerciseImagePathCandidates', () => {
+  it('returns an empty list for blank paths', () => {
+    expect(getExerciseImagePathCandidates('')).toEqual([]);
+    expect(getExerciseImagePathCandidates('   ')).toEqual([]);
+  });
+
+  it('keeps non-image paths unchanged', () => {
+    expect(getExerciseImagePathCandidates('burpees/video.mp4')).toEqual([
+      'burpees/video.mp4',
+    ]);
+  });
+
+  it('tries jpeg then png then jpg when the library path is .jpeg', () => {
+    expect(getExerciseImagePathCandidates('burpees/sequence.jpeg')).toEqual([
+      'burpees/sequence.jpeg',
+      'burpees/sequence.png',
+      'burpees/sequence.jpg',
+    ]);
+  });
+
+  it('tries png then jpeg then jpg when the stored path is .png', () => {
+    expect(getExerciseImagePathCandidates('burpees/sequence.png')).toEqual([
+      'burpees/sequence.png',
+      'burpees/sequence.jpeg',
+      'burpees/sequence.jpg',
+    ]);
+  });
+});
 
 describe('getExerciseMediaUrl', () => {
   beforeEach(() => {
