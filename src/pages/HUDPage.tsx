@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
+import { AttritionGrid } from '@/components/hud/AttritionGrid';
+import { DailyTelemetry } from '@/components/hud/DailyTelemetry';
 import { WeeklyBaselineBar } from '@/components/hud/WeeklyBaselineBar';
 import { fetchHudTelemetry } from '@/lib/api/hudTelemetry';
 import type { HUDTelemetryPayload } from '@/lib/hud/types';
@@ -65,11 +67,18 @@ export default function HUDPage() {
       {error ? <p className="text-error">Error: {error}</p> : null}
 
       {!loading && isAuthenticated && telemetry ? (
-        <WeeklyBaselineBar
-          weekMinutes={telemetry.weekMinutes}
-          weekPviAverage={telemetry.weekPviAverage}
-          weekEndsAt={telemetry.weekEndsAt}
-        />
+        <div className="space-y-4">
+          <DailyTelemetry lastLockedAt={telemetry.lastLockedAt} />
+          <WeeklyBaselineBar
+            weekMinutes={telemetry.weekMinutes}
+            weekPviAverage={telemetry.weekPviAverage}
+            weekEndsAt={telemetry.weekEndsAt}
+          />
+          <AttritionGrid
+            attrition={telemetry.attrition}
+            weekEndsAt={telemetry.weekEndsAt}
+          />
+        </div>
       ) : null}
 
       <p className="text-center text-sm">

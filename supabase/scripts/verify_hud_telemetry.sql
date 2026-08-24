@@ -54,4 +54,16 @@ FROM fixtures;
 
 -- 3) Authenticated smoke call (must be signed in as a user with JWT):
 -- SELECT public.hud_telemetry('America/Los_Angeles');
--- Expect: {"ok": true, "telemetry": {"weekMinutes": <int>, "weekPviAverage": <num|null>, "weekEndsAt": <timestamptz>}}
+-- Expect Phase 2 shape:
+-- {
+--   "ok": true,
+--   "telemetry": {
+--     "weekMinutes": <int>,
+--     "weekPviAverage": <num|null>,
+--     "weekEndsAt": <timestamptz>,
+--     "lastLockedAt": <timestamptz|null>,
+--     "attrition": [<bool x 12>]
+--   }
+-- }
+-- attrition length must be 12; index 11 = current local week; index 0 = 11 weeks ago.
+-- A week is true iff sum(duration_minutes) of claimed+locked sessions in that Mon–Sun >= 150.

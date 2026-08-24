@@ -17,6 +17,22 @@ function readString(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+function readAttrition(value: unknown): boolean[] | null {
+  if (!Array.isArray(value) || value.length !== 12) {
+    return null;
+  }
+
+  const attrition: boolean[] = [];
+  for (const item of value) {
+    if (typeof item !== 'boolean') {
+      return null;
+    }
+    attrition.push(item);
+  }
+
+  return attrition;
+}
+
 export function parseHudTelemetryPayload(
   value: unknown
 ): HUDTelemetryPayload | null {
@@ -28,8 +44,10 @@ export function parseHudTelemetryPayload(
   const weekMinutes = readNumber(row.weekMinutes);
   const weekEndsAt = readString(row.weekEndsAt);
   const pviRaw = row.weekPviAverage;
+  const lastLockedRaw = row.lastLockedAt;
+  const attrition = readAttrition(row.attrition);
 
-  if (weekMinutes === null || weekMinutes < 0 || !weekEndsAt) {
+  if (weekMinutes === null || weekMinutes < 0 || !weekEndsAt || attrition === null) {
     return null;
   }
 
@@ -40,10 +58,22 @@ export function parseHudTelemetryPayload(
     return null;
   }
 
+  let lastLockedAt: string | null;
+  if (lastLockedRaw === null || lastLockedRaw === undefined) {
+    lastLockedAt = null;
+  } else {
+    lastLockedAt = readString(lastLockedRaw);
+    if (lastLockedAt === null) {
+      return null;
+    }
+  }
+
   return {
     weekMinutes,
     weekPviAverage,
     weekEndsAt,
+    lastLockedAt,
+    attrition,
   };
 }
 
