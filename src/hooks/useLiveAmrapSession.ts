@@ -335,7 +335,9 @@ export function useLiveAmrapSession(
         channel.segmentResults,
         segmentIndex,
         participantId,
-        workout
+        workout,
+        session?.duration_minutes ?? workDurationSec / 60,
+        displayPhase
       ),
     [
       channel.participants,
@@ -344,6 +346,9 @@ export function useLiveAmrapSession(
       segmentIndex,
       participantId,
       workout,
+      session?.duration_minutes,
+      workDurationSec,
+      displayPhase,
     ]
   );
 

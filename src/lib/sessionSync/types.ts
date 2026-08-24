@@ -144,6 +144,11 @@ export interface LeaderboardEntry {
   partialReps: number;
   repsPerRound: number;
   baseScore: number;
+  pvi: number | null;
+  pviMultiplier: number;
+  pviClassification: string;
+  pviVerdict: string;
+  adjustedScore: number;
   rounds: LeaderboardRoundEntry[];
   isSelf: boolean;
 }

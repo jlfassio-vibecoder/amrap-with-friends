@@ -10,3 +10,9 @@ export interface BaseScoreInput {
   partialReps: number;
   repsPerRound: number;
 }
+
+export interface PviMultiplierResult {
+  multiplier: number;
+  classification: string;
+  verdict: string;
+}

@@ -8,6 +8,7 @@ export interface ParticipantRosterEntry {
   nickname: string;
   roundCount: number;
   baseScore: number;
+  adjustedScore: number;
   isOnline: boolean;
   isSelf: boolean;
   rank: number;
@@ -56,6 +57,7 @@ export function buildParticipantRoster(
       nickname: string;
       roundCount: number;
       baseScore: number;
+      adjustedScore: number;
       isOnline: boolean;
     }
   >();
@@ -66,6 +68,7 @@ export function buildParticipantRoster(
       nickname: entry.nickname,
       roundCount: entry.roundCount,
       baseScore: entry.baseScore,
+      adjustedScore: entry.adjustedScore,
       isOnline: false,
     });
   }
@@ -85,13 +88,14 @@ export function buildParticipantRoster(
       nickname: entry.nickname,
       roundCount: 0,
       baseScore: 0,
+      adjustedScore: 0,
       isOnline: entry.isOnline,
     });
   }
 
   const sorted = [...byId.values()].sort((a, b) => {
-    if (b.baseScore !== a.baseScore) {
-      return b.baseScore - a.baseScore;
+    if (b.adjustedScore !== a.adjustedScore) {
+      return b.adjustedScore - a.adjustedScore;
     }
 
     return a.nickname.localeCompare(b.nickname);
@@ -102,6 +106,7 @@ export function buildParticipantRoster(
     nickname: entry.nickname,
     roundCount: entry.roundCount,
     baseScore: entry.baseScore,
+    adjustedScore: entry.adjustedScore,
     isOnline: entry.isOnline,
     isSelf: entry.participantId === selfParticipantId,
     rank: index + 1,

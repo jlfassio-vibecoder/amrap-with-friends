@@ -134,7 +134,9 @@ describe('sessionChannelUtils', () => {
       [],
       0,
       HOST_ID,
-      WORKOUT
+      WORKOUT,
+      5,
+      'work'
     );
     expect(leaderboard[0].participantId).toBe(HOST_ID);
     expect(leaderboard[0].roundCount).toBe(2);
@@ -198,7 +200,9 @@ describe('sessionChannelUtils', () => {
       segmentResults,
       0,
       HOST_ID,
-      WORKOUT
+      WORKOUT,
+      5,
+      'work'
     );
 
     expect(leaderboard[0].participantId).toBe(HOST_ID);
@@ -259,8 +263,165 @@ describe('sessionChannelUtils', () => {
     ];
 
     expect(
-      buildLeaderboard(participants, rounds, [], 0, HOST_ID, WORKOUT)[0].rounds
+      buildLeaderboard(participants, rounds, [], 0, HOST_ID, WORKOUT, 5, 'work')[0].rounds
     ).toEqual([{ roundNumber: 1, durationSec: 45 }]);
+  });
+
+  it('buildLeaderboard ignores P.V.I. during work phase', () => {
+    const participants = [
+      parseParticipantRow({
+        id: HOST_ID,
+        session_id: SESSION_ID,
+        nickname: 'Host',
+        role: 'host',
+        joined_at: '2026-08-22T12:00:00.000Z',
+      })!,
+      parseParticipantRow({
+        id: JOINER_ID,
+        session_id: SESSION_ID,
+        nickname: 'Joiner',
+        role: 'joiner',
+        joined_at: '2026-08-22T12:00:00.000Z',
+      })!,
+    ];
+
+    const hostRounds = [
+      parseRoundRow({
+        id: 'aaaa1111-1111-4111-8111-111111111111',
+        session_id: SESSION_ID,
+        participant_id: HOST_ID,
+        round_index: 0,
+        elapsed_sec_at_round: 60,
+        segment_index: 0,
+        created_at: '2026-08-22T12:00:00.000Z',
+      })!,
+      parseRoundRow({
+        id: 'bbbb2222-2222-4222-8222-222222222222',
+        session_id: SESSION_ID,
+        participant_id: HOST_ID,
+        round_index: 1,
+        elapsed_sec_at_round: 120,
+        segment_index: 0,
+        created_at: '2026-08-22T12:00:01.000Z',
+      })!,
+    ];
+    const joinerRounds = [
+      parseRoundRow({
+        id: 'cccc3333-3333-4333-8333-333333333333',
+        session_id: SESSION_ID,
+        participant_id: JOINER_ID,
+        round_index: 0,
+        elapsed_sec_at_round: 60,
+        segment_index: 0,
+        created_at: '2026-08-22T12:00:00.000Z',
+      })!,
+      parseRoundRow({
+        id: 'dddd4444-4444-4444-8444-444444444444',
+        session_id: SESSION_ID,
+        participant_id: JOINER_ID,
+        round_index: 1,
+        elapsed_sec_at_round: 180,
+        segment_index: 0,
+        created_at: '2026-08-22T12:00:02.000Z',
+      })!,
+    ];
+
+    const leaderboard = buildLeaderboard(
+      participants,
+      [...hostRounds, ...joinerRounds],
+      [],
+      0,
+      HOST_ID,
+      WORKOUT,
+      5,
+      'work'
+    );
+
+    expect(leaderboard[0].participantId).toBe(HOST_ID);
+    expect(leaderboard[0].pvi).toBeNull();
+    expect(leaderboard[0].adjustedScore).toBe(40);
+    expect(leaderboard[1].adjustedScore).toBe(40);
+  });
+
+  it('buildLeaderboard re-ranks by adjusted score at finished phase', () => {
+    const participants = [
+      parseParticipantRow({
+        id: HOST_ID,
+        session_id: SESSION_ID,
+        nickname: 'Host',
+        role: 'host',
+        joined_at: '2026-08-22T12:00:00.000Z',
+      })!,
+      parseParticipantRow({
+        id: JOINER_ID,
+        session_id: SESSION_ID,
+        nickname: 'Joiner',
+        role: 'joiner',
+        joined_at: '2026-08-22T12:00:00.000Z',
+      })!,
+    ];
+
+    const hostRounds = [
+      parseRoundRow({
+        id: 'aaaa1111-1111-4111-8111-111111111111',
+        session_id: SESSION_ID,
+        participant_id: HOST_ID,
+        round_index: 0,
+        elapsed_sec_at_round: 60,
+        segment_index: 0,
+        created_at: '2026-08-22T12:00:00.000Z',
+      })!,
+      parseRoundRow({
+        id: 'bbbb2222-2222-4222-8222-222222222222',
+        session_id: SESSION_ID,
+        participant_id: HOST_ID,
+        round_index: 1,
+        elapsed_sec_at_round: 120,
+        segment_index: 0,
+        created_at: '2026-08-22T12:00:01.000Z',
+      })!,
+    ];
+    const joinerRounds = [
+      parseRoundRow({
+        id: 'cccc3333-3333-4333-8333-333333333333',
+        session_id: SESSION_ID,
+        participant_id: JOINER_ID,
+        round_index: 0,
+        elapsed_sec_at_round: 60,
+        segment_index: 0,
+        created_at: '2026-08-22T12:00:00.000Z',
+      })!,
+      parseRoundRow({
+        id: 'dddd4444-4444-4444-8444-444444444444',
+        session_id: SESSION_ID,
+        participant_id: JOINER_ID,
+        round_index: 1,
+        elapsed_sec_at_round: 180,
+        segment_index: 0,
+        created_at: '2026-08-22T12:00:02.000Z',
+      })!,
+    ];
+
+    const leaderboard = buildLeaderboard(
+      participants,
+      [...hostRounds, ...joinerRounds],
+      [],
+      0,
+      HOST_ID,
+      WORKOUT,
+      5,
+      'finished'
+    );
+
+    expect(leaderboard[0].participantId).toBe(HOST_ID);
+    expect(leaderboard[0].baseScore).toBe(40);
+    expect(leaderboard[0].pvi).toBe(0);
+    expect(leaderboard[0].pviMultiplier).toBe(1.15);
+    expect(leaderboard[0].adjustedScore).toBe(46);
+    expect(leaderboard[1].participantId).toBe(JOINER_ID);
+    expect(leaderboard[1].pvi).toBe(66.7);
+    expect(leaderboard[1].pviMultiplier).toBe(0.85);
+    expect(leaderboard[1].adjustedScore).toBe(34);
   });
 
   it('parseSegmentResultRow and upsertSegmentResult handle segment results', () => {

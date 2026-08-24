@@ -5,8 +5,11 @@ import {
   type ParticipantRosterEntry,
 } from '@/lib/sessionSync/buildParticipantRoster';
 
+import type { LiveSessionPhase } from '@/lib/sessionSync/types';
+
 interface ParticipantsPanelProps {
   roster: ParticipantRosterEntry[];
+  phase: LiveSessionPhase;
   className?: string;
 }
 
@@ -44,11 +47,15 @@ function RankBadge({
 
 function RosterRow({
   entry,
+  phase,
   variant = 'default',
 }: {
   entry: ParticipantRosterEntry;
+  phase: LiveSessionPhase;
   variant?: 'default' | 'pinned';
 }) {
+  const displayScore = phase === 'finished' ? entry.adjustedScore : entry.baseScore;
+
   return (
     <div
       role="listitem"
@@ -70,13 +77,13 @@ function RosterRow({
         {entry.isSelf ? ' (you)' : ''}
       </span>
       <span className="shrink-0 text-sm font-semibold tabular-nums">
-        {entry.baseScore} reps
+        {displayScore} reps
       </span>
     </div>
   );
 }
 
-export function ParticipantsPanel({ roster, className }: ParticipantsPanelProps) {
+export function ParticipantsPanel({ roster, phase, className }: ParticipantsPanelProps) {
   const onlineCount = roster.filter((entry) => entry.isOnline).length;
   const onlineEntries = roster.filter((entry) => entry.isOnline);
   const visibleAvatars = onlineEntries.slice(0, AVATAR_STACK_LIMIT);
@@ -127,14 +134,14 @@ export function ParticipantsPanel({ roster, className }: ParticipantsPanelProps)
               <p className="px-2 text-sm text-secondary">No other participants yet.</p>
             ) : (
               scrollEntries.map((entry) => (
-                <RosterRow key={entry.participantId} entry={entry} />
+                <RosterRow key={entry.participantId} entry={entry} phase={phase} />
               ))
             )}
           </div>
 
           {selfEntry ? (
             <div role="list" aria-label="Your rank">
-              <RosterRow entry={selfEntry} variant="pinned" />
+              <RosterRow entry={selfEntry} phase={phase} variant="pinned" />
             </div>
           ) : null}
         </>

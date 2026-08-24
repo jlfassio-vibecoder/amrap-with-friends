@@ -5,10 +5,12 @@ import type {
   SessionRow,
   MessageRow,
   LeaderboardEntry,
+  LiveSessionPhase,
 } from '@/lib/sessionSync/types';
 import type { WorkoutExercise } from '@/lib/api/sessionTypes';
 import { computeBaseScore } from '@/lib/scoring/computeBaseScore';
 import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
+import { computePviScore } from '@/lib/scoring/computePviScore';
 
 export interface PresenceTrackPayload {
   participant_id: string;
@@ -310,7 +312,9 @@ export function buildLeaderboard(
   segmentResults: ParticipantSegmentResultRow[],
   segmentIndex: number,
   selfParticipantId: string,
-  workout: WorkoutExercise[]
+  workout: WorkoutExercise[],
+  durationMinutes: number,
+  sessionPhase: LiveSessionPhase
 ): LeaderboardEntry[] {
   let repsPerRound = 0;
   try {
@@ -354,6 +358,14 @@ export function buildLeaderboard(
         repsPerRound > 0
           ? computeBaseScore(roundCount, partialReps, repsPerRound)
           : roundCount;
+      const roundSummaries = summarizeSortedParticipantRounds(participantRounds);
+      const roundDurationsSec = roundSummaries.map((round) => round.durationSec);
+      const pviScore = computePviScore(
+        roundDurationsSec,
+        durationMinutes,
+        sessionPhase,
+        baseScore
+      );
 
       return {
         participantId: participant.id,
@@ -362,13 +374,21 @@ export function buildLeaderboard(
         partialReps,
         repsPerRound,
         baseScore,
-        rounds: summarizeSortedParticipantRounds(participantRounds),
+        pvi: pviScore.pvi,
+        pviMultiplier: pviScore.multiplier,
+        pviClassification: pviScore.classification,
+        pviVerdict: pviScore.verdict,
+        adjustedScore: pviScore.adjustedScore,
+        rounds: roundSummaries,
         isSelf: participant.id === selfParticipantId,
       };
     })
     .sort((a, b) => {
-      if (b.baseScore !== a.baseScore) {
-        return b.baseScore - a.baseScore;
+      const scoreA = sessionPhase === 'finished' ? a.adjustedScore : a.baseScore;
+      const scoreB = sessionPhase === 'finished' ? b.adjustedScore : b.baseScore;
+
+      if (scoreB !== scoreA) {
+        return scoreB - scoreA;
       }
       return a.nickname.localeCompare(b.nickname);
     });

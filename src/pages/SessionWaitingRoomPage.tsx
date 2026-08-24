@@ -9,6 +9,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { ExerciseInfoTrigger } from '@/components/exerciseInfo/ExerciseInfoTrigger';
 import { ParticipantsPanel } from '@/components/ParticipantsPanel';
 import { PartialRepsModal } from '@/components/PartialRepsModal';
+import { SessionScorecard } from '@/components/SessionScorecard';
 import { SessionChat } from '@/components/SessionChat';
 import { buildParticipantRoster } from '@/lib/sessionSync/buildParticipantRoster';
 
@@ -81,10 +82,13 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
   const claimToken = getStoredClaimToken(sessionId);
   const { isAuthenticated } = useAmrapAuth();
   const [isSubmittingPartialReps, setIsSubmittingPartialReps] = useState(false);
+  const [scorecardDismissed, setScorecardDismissed] = useState(false);
 
   const channel = useSessionChannel(sessionId, { participantId, nickname });
   const live = useLiveAmrapSession(sessionId, channel);
   const claim = useParticipantClaim(sessionId);
+  const selfLeaderboardEntry =
+    live.leaderboard.find((entry) => entry.isSelf) ?? null;
 
   const showStart = live.isHost && live.phase === 'waiting';
   const showPause = live.isHost && live.phase === 'work' && !live.isPaused;
@@ -96,6 +100,11 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
     live.phase === 'finished' &&
     live.repsPerRound > 0 &&
     !live.hasSubmittedPartialReps;
+  const showScorecard =
+    live.phase === 'finished' &&
+    live.hasSubmittedPartialReps &&
+    !scorecardDismissed &&
+    selfLeaderboardEntry !== null;
 
   const handleSubmitPartialReps = async (partialReps: number) => {
     setIsSubmittingPartialReps(true);
@@ -227,6 +236,7 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
             live.presence,
             live.participantId
           )}
+          phase={live.phase}
           className="lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:self-start"
         />
 
@@ -287,6 +297,13 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
           repsPerRound={live.repsPerRound}
           isSubmitting={isSubmittingPartialReps}
           onSubmit={handleSubmitPartialReps}
+        />
+      ) : null}
+
+      {showScorecard && selfLeaderboardEntry ? (
+        <SessionScorecard
+          entry={selfLeaderboardEntry}
+          onClose={() => setScorecardDismissed(true)}
         />
       ) : null}
     </main>
