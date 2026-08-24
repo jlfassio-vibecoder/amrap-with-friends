@@ -23,19 +23,31 @@ export default function HUDPage() {
 
     let cancelled = false;
 
-    fetchHudTelemetry().then((result) => {
-      if (cancelled) {
-        return;
-      }
-      if (result.error) {
-        setError(result.error.message);
+    fetchHudTelemetry()
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+        if (result.error) {
+          setError(result.error.message);
+          setTelemetry(null);
+        } else {
+          setTelemetry(result.data);
+          setError(null);
+        }
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+        setError('Something went wrong. Please try again.');
         setTelemetry(null);
-      } else {
-        setTelemetry(result.data);
-        setError(null);
-      }
-      setHasLoaded(true);
-    });
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setHasLoaded(true);
+        }
+      });
 
     return () => {
       cancelled = true;

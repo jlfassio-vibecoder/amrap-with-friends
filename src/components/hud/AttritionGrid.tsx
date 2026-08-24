@@ -15,7 +15,7 @@ function currentWeekStartDate(weekEndsAt: string): Date {
 }
 
 function formatWeekOf(date: Date): string {
-  return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`;
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
 }
 
 function weekStartForIndex(weekEndsAt: string, index: number): Date {

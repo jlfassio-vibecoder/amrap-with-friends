@@ -91,7 +91,10 @@ BEGIN
   week_minutes AS (
     SELECT
       wb.week_index,
-      coalesce(sum(s.duration_minutes), 0)::int AS minutes
+      coalesce(
+        sum(s.duration_minutes) FILTER (WHERE psr.participant_id IS NOT NULL),
+        0
+      )::int AS minutes
     FROM week_bounds wb
     LEFT JOIN public.participants p
       ON p.user_id = v_uid

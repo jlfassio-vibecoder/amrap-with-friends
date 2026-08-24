@@ -1,4 +1,4 @@
--- Phase 4b: weekly Benchmark Matrix classification on hud_telemetry
+-- Fix attrition week_minutes: only sum sessions with a locked psr in the week window
 
 CREATE OR REPLACE FUNCTION public.hud_telemetry(p_timezone text)
 RETURNS jsonb
