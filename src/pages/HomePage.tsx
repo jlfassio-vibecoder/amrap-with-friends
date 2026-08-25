@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { HomeSeoContent } from '@/components/home/HomeSeoContent';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
+import { HostScheduledSessionsPanel } from '@/components/session/HostScheduledSessionsPanel';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 
 function HomePage() {
@@ -32,6 +33,7 @@ function HomePage() {
           </Link>
         </div>
       </div>
+      <HostScheduledSessionsPanel />
       <HomeSeoContent />
     </NarrowPageLayout>
   );

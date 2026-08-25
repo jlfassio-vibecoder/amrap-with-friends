@@ -22,6 +22,7 @@ import { SessionChat } from '@/components/SessionChat';
 import { GhostPicker } from '@/components/GhostPicker';
 import { GhostPacerStrip } from '@/components/GhostPacerStrip';
 import { CopyInviteLink } from '@/components/session/CopyInviteLink';
+import { EditRallyScheduleForm } from '@/components/session/EditRallyScheduleForm';
 import { LobbyCountdownPanel } from '@/components/session/LobbyCountdownPanel';
 import { useGhostPacer } from '@/hooks/useGhostPacer';
 import { useTacticalAudio } from '@/hooks/useTacticalAudio';
@@ -480,16 +481,24 @@ function LiveSessionView({
             </section>
 
             {live.phase === 'waiting' && live.scheduledAt ? (
-              <p className="text-sm text-secondary">
-                Rally time:{' '}
-                {new Date(live.scheduledAt).toLocaleString(undefined, {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                  hour: 'numeric',
-                  minute: '2-digit',
-                })}
-              </p>
+              isHost ? (
+                <EditRallyScheduleForm
+                  key={live.scheduledAt}
+                  sessionId={sessionId}
+                  scheduledAt={live.scheduledAt}
+                />
+              ) : (
+                <p className="text-sm text-secondary">
+                  Rally time:{' '}
+                  {new Date(live.scheduledAt).toLocaleString(undefined, {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  })}
+                </p>
+              )
             ) : null}
 
             <LobbyCountdownPanel

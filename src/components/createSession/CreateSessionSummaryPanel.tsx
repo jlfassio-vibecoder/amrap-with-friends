@@ -3,6 +3,7 @@ import type { WorkoutTemplate } from '@/data/workoutTemplates';
 import { formatTemplateMovementLine } from '@/lib/workout/templateToExercises';
 import type { RallyDay } from '@/lib/session/rallySchedule';
 import { HOST_ACTIVE_SESSION_LIMIT } from '@/lib/session/rallySchedule';
+import { RallyScheduleFields } from '@/components/session/RallyScheduleFields';
 
 const DURATION_OPTIONS = [5, 10, 15, 20] as const;
 
@@ -147,44 +148,12 @@ export function CreateSessionSummaryPanel({
       </div>
 
       {scheduleMode === 'rally' ? (
-        <div className="space-y-3">
-          <div className="space-y-2">
-            <p className="text-sm font-semibold">Day</p>
-            <div
-              className="inline-flex rounded-full border border-border bg-page p-1"
-              role="tablist"
-              aria-label="Rally day"
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={rallyDay === 'today'}
-                className={chipClass(rallyDay === 'today')}
-                onClick={() => onRallyDayChange('today')}
-              >
-                Today
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={rallyDay === 'tomorrow'}
-                className={chipClass(rallyDay === 'tomorrow')}
-                onClick={() => onRallyDayChange('tomorrow')}
-              >
-                Tomorrow
-              </button>
-            </div>
-          </div>
-          <SummaryField label="Time">
-            <input
-              className="input-field"
-              type="time"
-              value={rallyTime}
-              onChange={(event) => onRallyTimeChange(event.target.value)}
-              required
-            />
-          </SummaryField>
-        </div>
+        <RallyScheduleFields
+          rallyDay={rallyDay}
+          rallyTime={rallyTime}
+          onRallyDayChange={onRallyDayChange}
+          onRallyTimeChange={onRallyTimeChange}
+        />
       ) : null}
 
       {capReached ? (

@@ -37,6 +37,14 @@ vi.mock('@/lib/supabase', () => ({
   getSupabaseConfigError: () => null,
 }));
 
+vi.mock('@/lib/api/hostScheduledSessions', () => ({
+  fetchHostScheduledSessions: vi.fn().mockResolvedValue({ data: [], error: null }),
+  formatHostScheduledSessionWorkout: (workout: { name: string }[]) =>
+    workout[0]?.name ?? 'Workout',
+  formatHostScheduledSessionRallyTime: () => 'Rally time',
+  formatHostScheduledSessionState: (state: string) => state,
+}));
+
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
 
 afterEach(() => {
