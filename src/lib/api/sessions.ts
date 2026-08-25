@@ -11,16 +11,22 @@ export type SessionApiError = {
   message: string;
 };
 
+export const SESSION_LOCKED_OR_INVALID = 'SESSION LOCKED OR INVALID.';
+export const SESSION_RALLY_DEPARTED = 'SESSION LOCKED. THE RALLY HAS DEPARTED.';
+
 const SESSION_ID_UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-function isSessionIdUuid(value: string): boolean {
+export function isSessionIdUuid(value: string): boolean {
   return SESSION_ID_UUID_RE.test(value);
 }
 
 function mapRpcError(message: string | undefined): string {
   if (!message) {
     return 'Something went wrong. Please try again.';
+  }
+  if (message.includes('Session locked')) {
+    return SESSION_RALLY_DEPARTED;
   }
   if (
     message.includes('invalid input syntax for type uuid') ||
@@ -50,6 +56,25 @@ function mapRpcError(message: string | undefined): string {
     return 'Complete intake before creating a session.';
   }
   return message;
+}
+
+/** Stark copy for invite-link (`?s=`) join failures. */
+export function mapDeepLinkJoinError(message: string | undefined): string {
+  if (!message) {
+    return SESSION_LOCKED_OR_INVALID;
+  }
+  if (message.includes('Session locked') || message.includes(SESSION_RALLY_DEPARTED)) {
+    return SESSION_RALLY_DEPARTED;
+  }
+  if (
+    message.includes('Session not found') ||
+    message.includes('invalid input syntax for type uuid') ||
+    message.toLowerCase().includes('invalid uuid') ||
+    message.includes(SESSION_LOCKED_OR_INVALID)
+  ) {
+    return SESSION_LOCKED_OR_INVALID;
+  }
+  return mapRpcError(message);
 }
 
 function readString(value: unknown): string | null {

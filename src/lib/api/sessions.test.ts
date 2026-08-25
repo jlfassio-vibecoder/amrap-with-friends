@@ -204,6 +204,41 @@ describe('sessions API', () => {
     expect(persistMock).not.toHaveBeenCalled();
   });
 
+  it('joinSession maps Session locked RPC error', async () => {
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: {
+        message: 'Session locked',
+        name: 'PostgrestError',
+        details: '',
+        hint: '',
+        code: 'P0001',
+        toJSON: () => ({
+          name: 'PostgrestError',
+          message: 'Session locked',
+          details: '',
+          hint: '',
+          code: 'P0001',
+        }),
+      },
+      success: false,
+      count: null,
+      status: 400,
+      statusText: 'Bad Request',
+    });
+
+    const result = await joinSession({
+      sessionId: SESSION_ID,
+      nickname: 'Guest',
+    });
+
+    expect(result.data).toBeNull();
+    expect(result.error?.message).toBe(
+      'SESSION LOCKED. THE RALLY HAS DEPARTED.'
+    );
+    expect(persistMock).not.toHaveBeenCalled();
+  });
+
   it('joinSession persists identity on success', async () => {
     rpcMock.mockResolvedValue({
       data: {

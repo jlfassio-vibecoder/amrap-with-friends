@@ -136,3 +136,15 @@ export function clearStoredGhostSelection(sessionId: string): void {
     /* sessionStorage unavailable */
   }
 }
+
+/** Lobby display name from email local-part (max 50). */
+export function callsignFromEmail(email: string | null | undefined): string | null {
+  if (!email) {
+    return null;
+  }
+  const local = email.trim().split('@')[0]?.trim() ?? '';
+  if (!local) {
+    return null;
+  }
+  return local.slice(0, 50);
+}

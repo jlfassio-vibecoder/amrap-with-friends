@@ -456,6 +456,28 @@ Age = current calendar year − `birth_year`. Under-18 maps to Alpha.
 
 ---
 
+### Phase 6 — The Rally Point
+
+**Planning goal:** Frictionless invite links. Hosts copy `/join?s={sessionId}` to clipboard; invitees deep-link into the lobby. Guests stay join-open (Phase 5).
+
+#### Rules
+
+- Clipboard only (`navigator.clipboard.writeText`). No Web Share / SMS / email gateways.
+- Authenticated invitees auto-join with email local-part as callsign; guests enter a temporary callsign then **BREACH LOBBY**.
+- `join_session` rejects non-`waiting` sessions (`Session locked` → **SESSION LOCKED. THE RALLY HAS DEPARTED.**). Invalid / missing IDs on the deep link → **SESSION LOCKED OR INVALID.**
+
+#### Deliverables
+
+- [x] `CopyInviteLink` on waiting lobby
+- [x] `JoinSessionPage` `?s=` breach flow
+- [x] `join_session` waiting-state gate
+
+#### Out of scope
+
+- Short codes; push notifications; dossier callsign column
+
+---
+
 ## Phase dependency graph
 
 ```
@@ -472,6 +494,8 @@ Phase 1 (RPC + weekly 150 bar + /hud)
          Phase 5 (Intake Dossier)  -- claimed vs verified + create gate
             ↓
          Phase 5.5 (Biometric Scaling)  -- age/sex Civilian+Operator quotas
+            ↓
+         Phase 6 (Rally Point)  -- /join?s= invite clipboard + waiting-only join
 ```
 
 ---

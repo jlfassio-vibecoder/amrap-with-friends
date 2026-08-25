@@ -15,6 +15,7 @@ import { SessionScorecard, type SessionScorecardSaveState } from '@/components/S
 import { SessionChat } from '@/components/SessionChat';
 import { GhostPicker } from '@/components/GhostPicker';
 import { GhostPacerStrip } from '@/components/GhostPacerStrip';
+import { CopyInviteLink } from '@/components/session/CopyInviteLink';
 import { useGhostPacer } from '@/hooks/useGhostPacer';
 import type { StoredGhostSelection } from '@/lib/sessionIdentity';
 
@@ -278,6 +279,10 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
                 Realtime: {live.isRealtimeConnected ? 'connected' : 'connecting…'}
               </p>
             </section>
+
+            {live.phase === 'waiting' ? (
+              <CopyInviteLink sessionId={sessionId} />
+            ) : null}
 
             {showGhostPicker && live.templateId ? (
               <GhostPicker

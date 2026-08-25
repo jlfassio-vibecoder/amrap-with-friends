@@ -1,18 +1,37 @@
-import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
-import { joinSession } from '@/lib/api/sessions';
+import { useAmrapAuth } from '@/hooks/useAmrapAuth';
+import {
+  isSessionIdUuid,
+  joinSession,
+  mapDeepLinkJoinError,
+  SESSION_LOCKED_OR_INVALID,
+} from '@/lib/api/sessions';
+import { callsignFromEmail } from '@/lib/sessionIdentity';
 import { getSupabaseConfigError } from '@/lib/supabase';
 
 export default function JoinSessionPage() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const rallyParam = params.get('s');
+  const deepLink = rallyParam !== null;
+  const rallySessionId = rallyParam?.trim() ?? '';
+  const rallyUuidValid = deepLink && isSessionIdUuid(rallySessionId);
+
+  const { user, isAuthenticated, isAuthLoading } = useAmrapAuth();
+  const authCallsign = callsignFromEmail(user?.email);
+  const canAutoJoin = deepLink && rallyUuidValid && isAuthenticated && !!authCallsign;
+
   const [sessionId, setSessionId] = useState('');
   const [nickname, setNickname] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    deepLink && !rallyUuidValid ? SESSION_LOCKED_OR_INVALID : null
+  );
   const [loading, setLoading] = useState(false);
+  const autoJoinStarted = useRef(false);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function performJoin(targetSessionId: string, callsign: string, deep: boolean) {
     setError(null);
 
     const configError = getSupabaseConfigError();
@@ -22,26 +41,129 @@ export default function JoinSessionPage() {
     }
 
     setLoading(true);
-
     try {
       const result = await joinSession({
-        sessionId,
-        nickname,
+        sessionId: targetSessionId,
+        nickname: callsign,
       });
 
       if (result.error) {
-        setError(result.error.message);
+        setError(
+          deep ? mapDeepLinkJoinError(result.error.message) : result.error.message
+        );
         return;
       }
 
       if (result.data) {
-        navigate(`/session/${sessionId.trim()}`);
+        navigate(`/session/${targetSessionId.trim()}`);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.');
+      const message =
+        e instanceof Error ? e.message : 'Something went wrong. Please try again.';
+      setError(deep ? mapDeepLinkJoinError(message) : message);
     } finally {
       setLoading(false);
     }
+  }
+
+  useEffect(() => {
+    if (!canAutoJoin || isAuthLoading || autoJoinStarted.current || !authCallsign) {
+      return;
+    }
+    autoJoinStarted.current = true;
+    void performJoin(rallySessionId, authCallsign, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot auto-join when auth ready
+  }, [canAutoJoin, isAuthLoading, authCallsign, rallySessionId]);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (deepLink) {
+      if (!rallyUuidValid) {
+        setError(SESSION_LOCKED_OR_INVALID);
+        return;
+      }
+      await performJoin(rallySessionId, nickname, true);
+      return;
+    }
+    await performJoin(sessionId, nickname, false);
+  }
+
+  if (deepLink && !rallyUuidValid) {
+    return (
+      <NarrowPageLayout title="Join session" subtitle="Rally point">
+        <p className="text-error">{SESSION_LOCKED_OR_INVALID}</p>
+        <p className="text-center text-sm">
+          <Link className="link-accent" to="/join">
+            Enter a session ID manually
+          </Link>
+        </p>
+      </NarrowPageLayout>
+    );
+  }
+
+  if (deepLink && isAuthLoading) {
+    return (
+      <NarrowPageLayout title="Join session" subtitle="Rally point">
+        <p className="text-sm text-secondary">Checking identity…</p>
+      </NarrowPageLayout>
+    );
+  }
+
+  if (deepLink && canAutoJoin) {
+    return (
+      <NarrowPageLayout title="Join session" subtitle="Rally point">
+        <p className="text-sm text-secondary">
+          Welcome, {authCallsign}. Breaching lobby…
+        </p>
+        {error ? <p className="text-error">{error}</p> : null}
+        {loading ? <p className="text-sm text-secondary">Joining…</p> : null}
+      </NarrowPageLayout>
+    );
+  }
+
+  if (deepLink) {
+    return (
+      <NarrowPageLayout title="Join session" subtitle="Rally point">
+        <p className="text-sm text-secondary lg:hidden">
+          Enter a temporary callsign to breach the lobby. No account required.
+        </p>
+        <div className="hidden space-y-2 lg:block">
+          <h1 className="text-display text-5xl text-ink">Rally point</h1>
+          <p className="text-sm text-secondary">
+            Enter a temporary callsign to breach the lobby. No account required.
+          </p>
+        </div>
+
+        <form className="card space-y-4 p-6" onSubmit={handleSubmit}>
+          <label className="block space-y-1">
+            <span className="text-sm font-semibold uppercase tracking-wide">
+              Enter temporary callsign
+            </span>
+            <input
+              className="input-field"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              placeholder="Callsign"
+              maxLength={50}
+              required
+              autoFocus
+            />
+          </label>
+
+          {error ? <p className="text-error">{error}</p> : null}
+
+          <button type="submit" className="btn-primary w-full uppercase tracking-widest" disabled={loading}>
+            {loading ? 'Joining…' : 'Breach lobby'}
+          </button>
+        </form>
+
+        <p className="text-center text-sm">
+          <Link className="link-accent" to="/">
+            Back home
+          </Link>
+        </p>
+      </NarrowPageLayout>
+    );
   }
 
   return (
