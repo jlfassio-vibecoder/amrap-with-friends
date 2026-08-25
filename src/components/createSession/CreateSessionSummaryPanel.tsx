@@ -63,8 +63,11 @@ export function CreateSessionSummaryPanel({
   const durationLockedByTemplate =
     workoutSource === 'library' && selectedTemplate !== null;
   const submitDisabled = loading || capReached;
-  const submitLabel =
-    loading ? 'Creating…' : scheduleMode === 'rally' ? 'Schedule rally' : 'Start now';
+  const submitLabel = loading
+    ? 'Creating…'
+    : scheduleMode === 'rally'
+      ? 'Schedule staging'
+      : 'Open staging area';
 
   return (
     <form className="card space-y-4 p-6" onSubmit={onSubmit}>
@@ -120,7 +123,7 @@ export function CreateSessionSummaryPanel({
         <div
           className="inline-flex rounded-full border border-border bg-page p-1"
           role="tablist"
-          aria-label="Session start"
+          aria-label="Staging timing"
         >
           <button
             type="button"
@@ -129,7 +132,7 @@ export function CreateSessionSummaryPanel({
             className={chipClass(scheduleMode === 'now')}
             onClick={() => onScheduleModeChange('now')}
           >
-            Start now
+            Open staging
           </button>
           <button
             type="button"
@@ -138,7 +141,7 @@ export function CreateSessionSummaryPanel({
             className={chipClass(scheduleMode === 'rally')}
             onClick={() => onScheduleModeChange('rally')}
           >
-            Schedule rally
+            Schedule staging
           </button>
         </div>
       </div>

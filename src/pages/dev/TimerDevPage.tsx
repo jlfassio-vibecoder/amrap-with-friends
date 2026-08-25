@@ -1,11 +1,21 @@
 import { AuthHeaderActions } from '@/components/AuthHeaderActions';
 import { useAmrapTimer } from '@/hooks/useAmrapTimer';
+import { useTacticalAudio } from '@/hooks/useTacticalAudio';
+import type { LiveSessionPhase } from '@/lib/sessionSync/types';
 
 const DEV_SETUP_SEC = 5;
 const DEV_WORK_SEC = 60;
 
 export default function TimerDevPage() {
   const timer = useAmrapTimer();
+  const displayPhase: LiveSessionPhase =
+    timer.phase === 'idle' ? 'waiting' : timer.phase;
+  const { unlock, playRoundLogged } = useTacticalAudio({
+    phase: displayPhase,
+    timeLeftSec: timer.timeLeftSec,
+    isPaused: timer.isPaused,
+    workDurationSec: timer.workDurationSec,
+  });
 
   return (
     <main className="mx-auto max-w-xl space-y-6 p-6">
@@ -26,22 +36,44 @@ export default function TimerDevPage() {
         <button
           type="button"
           className="btn-neutral"
-          onClick={() =>
+          onClick={() => {
+            unlock();
             timer.start({
               setupDurationSec: DEV_SETUP_SEC,
               workDurationSec: DEV_WORK_SEC,
-            })
-          }
+            });
+          }}
         >
           Start ({DEV_SETUP_SEC}s setup / {DEV_WORK_SEC}s work)
         </button>
-        <button type="button" className="btn-outline" onClick={timer.pause}>
+        <button
+          type="button"
+          className="btn-outline"
+          onClick={() => {
+            unlock();
+            timer.pause();
+          }}
+        >
           Pause
         </button>
-        <button type="button" className="btn-outline" onClick={timer.resume}>
+        <button
+          type="button"
+          className="btn-outline"
+          onClick={() => {
+            unlock();
+            timer.resume();
+          }}
+        >
           Resume
         </button>
-        <button type="button" className="btn-outline" onClick={timer.logRound}>
+        <button
+          type="button"
+          className="btn-outline"
+          onClick={() => {
+            playRoundLogged();
+            timer.logRound();
+          }}
+        >
           Log round
         </button>
         <button type="button" className="btn-outline" onClick={timer.finish}>

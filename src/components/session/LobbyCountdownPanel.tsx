@@ -20,6 +20,7 @@ interface LobbyCountdownPanelProps {
   countdownArmed: boolean;
   ticking: boolean;
   onStart: () => void;
+  onAudioUnlock?: () => void;
 }
 
 export function LobbyCountdownPanel({
@@ -29,6 +30,7 @@ export function LobbyCountdownPanel({
   countdownArmed,
   ticking,
   onStart,
+  onAudioUnlock,
 }: LobbyCountdownPanelProps) {
   const [selectedSeconds, setSelectedSeconds] = useState(300);
   const [customSeconds, setCustomSeconds] = useState('300');
@@ -40,6 +42,7 @@ export function LobbyCountdownPanel({
   }
 
   async function engageClock() {
+    onAudioUnlock?.();
     const hostToken = getStoredHostToken(sessionId);
     if (!hostToken) {
       setError('Host credentials are missing. Reopen the session as host.');
@@ -62,6 +65,7 @@ export function LobbyCountdownPanel({
   }
 
   async function abortClock() {
+    onAudioUnlock?.();
     const hostToken = getStoredHostToken(sessionId);
     if (!hostToken) {
       setError('Host credentials are missing. Reopen the session as host.');
@@ -160,7 +164,10 @@ export function LobbyCountdownPanel({
             type="button"
             className="btn-primary uppercase tracking-widest"
             disabled={busy}
-            onClick={() => onStart()}
+            onClick={() => {
+              onAudioUnlock?.();
+              onStart();
+            }}
           >
             {ticking ? 'Override: start now' : 'Start now'}
           </button>
