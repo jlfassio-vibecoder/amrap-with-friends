@@ -49,6 +49,7 @@ export interface UseLiveAmrapSessionReturn {
   participantCount: number;
   segmentIndex: number;
   scheduledAt: string | null;
+  lobbyCountdownEndsAt: string | null;
   repsPerRound: number;
   hasSubmittedPartialReps: boolean;
   leaderboard: LeaderboardEntry[];
@@ -503,6 +504,7 @@ export function useLiveAmrapSession(
     participantCount,
     segmentIndex,
     scheduledAt: session?.scheduled_at ?? null,
+    lobbyCountdownEndsAt: session?.lobby_countdown_ends_at ?? null,
     repsPerRound,
     hasSubmittedPartialReps,
     leaderboard,

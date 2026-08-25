@@ -13,6 +13,7 @@ export interface SessionRow {
   is_paused: boolean;
   started_at: string | null;
   scheduled_at: string | null;
+  lobby_countdown_ends_at: string | null;
   segment_index: number;
   created_at: string;
 }
