@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createSession, fetchHostActiveSessionCount, joinSession } from './sessions';
+import { createSession, fetchHostActiveSessionCount, joinSession, updateSessionScheduledAt } from './sessions';
 import { supabase } from '@/lib/supabase';
 import * as sessionIdentity from '@/lib/sessionIdentity';
 
@@ -334,5 +334,72 @@ describe('sessions API', () => {
       participantId: '33333333-3333-4333-8333-333333333333',
       claimToken: 'claim-2',
     });
+  });
+});
+
+describe('updateSessionScheduledAt', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('calls RPC and returns updated scheduled time', async () => {
+    const scheduledAt = '2026-08-25T23:30:00.000Z';
+    rpcMock.mockResolvedValue({
+      data: { ok: true, scheduled_at: scheduledAt },
+      error: null,
+      success: true,
+      count: null,
+      status: 200,
+      statusText: 'OK',
+    });
+
+    const result = await updateSessionScheduledAt({
+      sessionId: SESSION_ID,
+      scheduledAt,
+    });
+
+    expect(rpcMock).toHaveBeenCalledWith('update_session_scheduled_at', {
+      p_session_id: SESSION_ID,
+      p_scheduled_at: scheduledAt,
+      p_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual({ scheduledAt });
+  });
+
+  it('maps host and waiting guard errors', async () => {
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: {
+        message: 'Session is not waiting',
+        name: 'PostgrestError',
+        details: '',
+        hint: '',
+        code: 'P0001',
+        toJSON() {
+          return {
+            message: this.message,
+            name: this.name,
+            details: this.details,
+            hint: this.hint,
+            code: this.code,
+          };
+        },
+      },
+      count: null,
+      status: 400,
+      statusText: 'Bad Request',
+      success: false,
+    });
+
+    const result = await updateSessionScheduledAt({
+      sessionId: SESSION_ID,
+      scheduledAt: '2026-08-25T23:30:00.000Z',
+    });
+
+    expect(result.data).toBeNull();
+    expect(result.error?.message).toBe(
+      'Rally time can only be changed while waiting in the lobby.'
+    );
   });
 });

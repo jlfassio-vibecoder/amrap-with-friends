@@ -67,6 +67,15 @@ function mapRpcError(message: string | undefined): string {
   if (message.includes('invalid_timezone')) {
     return 'Could not determine your timezone.';
   }
+  if (message.includes('Only the host can update rally time')) {
+    return 'Only the host can update rally time.';
+  }
+  if (message.includes('Session is not waiting')) {
+    return 'Rally time can only be changed while waiting in the lobby.';
+  }
+  if (message.includes('Session has no scheduled rally time')) {
+    return 'This session does not have a scheduled rally time.';
+  }
   return message;
 }
 
@@ -211,4 +220,46 @@ export async function fetchHostActiveSessionCount(): Promise<{
   }
 
   return { data: raw.count, error: null };
+}
+
+export async function updateSessionScheduledAt(input: {
+  sessionId: string;
+  scheduledAt: string;
+}): Promise<{
+  data: { scheduledAt: string } | null;
+  error: SessionApiError | null;
+}> {
+  const sessionId = input.sessionId.trim();
+  if (!sessionId) {
+    return { data: null, error: { message: 'Session id is required.' } };
+  }
+  if (!isSessionIdUuid(sessionId)) {
+    return {
+      data: null,
+      error: { message: 'Enter a valid session ID (UUID format).' },
+    };
+  }
+
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const { data, error } = await supabase.rpc('update_session_scheduled_at', {
+    p_session_id: sessionId,
+    p_scheduled_at: input.scheduledAt,
+    p_timezone: timeZone,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapRpcError(error.message) } };
+  }
+
+  const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const scheduledAt = readString(raw.scheduled_at);
+  if (!scheduledAt) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  return { data: { scheduledAt }, error: null };
 }

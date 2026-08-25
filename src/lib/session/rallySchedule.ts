@@ -113,3 +113,33 @@ export function defaultRallyTime(now: Date, timeZone: string): string {
   const parts = zonedParts(later, timeZone);
   return `${pad2(parts.hour)}:${pad2(parts.minute)}`;
 }
+
+export function rallyIsoToDayAndTime(
+  iso: string,
+  timeZone: string,
+  now: Date
+): { day: RallyDay; time: string } | null {
+  const rally = new Date(iso);
+  if (!Number.isFinite(rally.getTime())) {
+    return null;
+  }
+
+  const today = calendarDateInTimeZone(now, timeZone);
+  const tomorrow = addOneCalendarDay(today);
+  const rallyDay = calendarDateInTimeZone(rally, timeZone);
+
+  let day: RallyDay;
+  if (rallyDay === today) {
+    day = 'today';
+  } else if (rallyDay === tomorrow) {
+    day = 'tomorrow';
+  } else {
+    return null;
+  }
+
+  const parts = zonedParts(rally, timeZone);
+  return {
+    day,
+    time: `${pad2(parts.hour)}:${pad2(parts.minute)}`,
+  };
+}

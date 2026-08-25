@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
+import { HostScheduledSessionsPanel } from '@/components/session/HostScheduledSessionsPanel';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import {
   isSessionIdUuid,
@@ -161,6 +162,8 @@ export default function JoinSessionPage() {
           </button>
         </form>
 
+        <HostScheduledSessionsPanel />
+
         <p className="text-center text-sm">
           <Link className="link-accent" to="/">
             Back home
@@ -213,6 +216,8 @@ export default function JoinSessionPage() {
           {loading ? 'Joining…' : 'Join session'}
         </button>
       </form>
+
+      <HostScheduledSessionsPanel />
 
       <p className="text-center text-sm">
         <Link className="link-accent" to="/create">Create a new session</Link>
