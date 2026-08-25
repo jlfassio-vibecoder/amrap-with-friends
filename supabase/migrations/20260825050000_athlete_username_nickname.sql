@@ -159,37 +159,42 @@ BEGIN
     RAISE EXCEPTION 'Cannot downgrade perceived classification';
   END IF;
 
-  INSERT INTO public.athlete_profiles (
-    user_id,
-    height_cm,
-    weight_kg,
-    birth_year,
-    biological_sex,
-    perceived_classification,
-    username,
-    nickname,
-    updated_at
-  )
-  VALUES (
-    v_uid,
-    p_height_cm,
-    p_weight_kg,
-    p_birth_year,
-    p_biological_sex,
-    p_perceived_classification,
-    v_username,
-    v_nickname,
-    now()
-  )
-  ON CONFLICT (user_id) DO UPDATE
-    SET height_cm = EXCLUDED.height_cm,
-        weight_kg = EXCLUDED.weight_kg,
-        birth_year = EXCLUDED.birth_year,
-        biological_sex = EXCLUDED.biological_sex,
-        perceived_classification = EXCLUDED.perceived_classification,
-        username = EXCLUDED.username,
-        nickname = EXCLUDED.nickname,
-        updated_at = now();
+  BEGIN
+    INSERT INTO public.athlete_profiles (
+      user_id,
+      height_cm,
+      weight_kg,
+      birth_year,
+      biological_sex,
+      perceived_classification,
+      username,
+      nickname,
+      updated_at
+    )
+    VALUES (
+      v_uid,
+      p_height_cm,
+      p_weight_kg,
+      p_birth_year,
+      p_biological_sex,
+      p_perceived_classification,
+      v_username,
+      v_nickname,
+      now()
+    )
+    ON CONFLICT (user_id) DO UPDATE
+      SET height_cm = EXCLUDED.height_cm,
+          weight_kg = EXCLUDED.weight_kg,
+          birth_year = EXCLUDED.birth_year,
+          biological_sex = EXCLUDED.biological_sex,
+          perceived_classification = EXCLUDED.perceived_classification,
+          username = EXCLUDED.username,
+          nickname = EXCLUDED.nickname,
+          updated_at = now();
+  EXCEPTION
+    WHEN unique_violation THEN
+      RAISE EXCEPTION 'That username is already taken';
+  END;
 
   SELECT *
   INTO v_row

@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@/contexts/ThemeProvider';
 import MySessionsPage from './MySessionsPage';
@@ -95,7 +95,7 @@ describe('MySessionsPage delete', () => {
 
     renderPage();
 
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(screen.getAllByText('View session')).toHaveLength(3);
     });
 
@@ -114,7 +114,7 @@ describe('MySessionsPage delete', () => {
 
     renderPage();
 
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy();
     });
 
@@ -122,7 +122,7 @@ describe('MySessionsPage delete', () => {
 
     expect(confirmMock).toHaveBeenCalled();
 
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(deleteIncompleteSessionMock).toHaveBeenCalledWith(
         '22222222-2222-4222-8222-222222222222'
       );

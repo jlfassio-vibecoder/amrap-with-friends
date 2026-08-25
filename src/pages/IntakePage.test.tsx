@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@/contexts/ThemeProvider';
 import IntakePage from './IntakePage';
@@ -117,7 +117,7 @@ describe('IntakePage', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'File the dossier' }));
 
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(saveMock).toHaveBeenCalledWith(
         expect.objectContaining({
           heightCm: 180,
@@ -151,7 +151,7 @@ describe('IntakePage', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'File the dossier' }));
 
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(updateEmailMock).toHaveBeenCalledWith('new@example.com');
     });
     expect(updatePasswordMock).toHaveBeenCalledWith('newpass1');
@@ -171,7 +171,7 @@ describe('IntakePage', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'File the dossier' }));
 
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(
         screen.getByText(/Check your inbox to confirm the new email address/)
       ).toBeTruthy();
