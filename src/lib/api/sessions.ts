@@ -43,6 +43,12 @@ function mapRpcError(message: string | undefined): string {
   if (message.includes('workout')) {
     return 'Check your workout list and try again.';
   }
+  if (message.includes('Authentication required')) {
+    return 'Sign in to create a session.';
+  }
+  if (message.includes('Intake required')) {
+    return 'Complete intake before creating a session.';
+  }
   return message;
 }
 

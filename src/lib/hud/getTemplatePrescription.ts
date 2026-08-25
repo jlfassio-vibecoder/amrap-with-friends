@@ -1,31 +1,66 @@
 import type { WorkoutTemplate } from '@/data/workoutTemplates';
+import { compareClassificationRank } from '@/lib/hud/compareClassificationRank';
 import type { ClassificationProgress, ClassificationRank } from '@/lib/hud/types';
 
 export type TemplatePrescription =
   | { required: false }
   | { required: true; label: string };
 
-export function getTemplatePrescription(
+function nextTierFrom(verified: ClassificationRank): ClassificationRank | null {
+  if (verified === 'unclassified') {
+    return 'civilian';
+  }
+  if (verified === 'civilian') {
+    return 'operator';
+  }
+  if (verified === 'operator') {
+    return 'special_ops';
+  }
+  return null;
+}
+
+function prescribeForTarget(
   template: Pick<WorkoutTemplate, 'intensityTier' | 'durationMinutes'>,
-  current: ClassificationRank,
-  progress: ClassificationProgress
+  progress: ClassificationProgress,
+  target: ClassificationRank,
+  prefix: 'MANDATE' | 'PROVE IT'
 ): TemplatePrescription {
-  if (current === 'civilian') {
+  if (target === 'operator') {
     if (progress.intensity3PlusCount < 2 && template.intensityTier >= 3) {
-      return { required: true, label: 'MANDATE: INTENSITY 3+' };
+      return { required: true, label: `${prefix}: INTENSITY 3+` };
     }
     return { required: false };
   }
 
-  if (current === 'operator') {
+  if (target === 'special_ops') {
     if (progress.marathon20Count < 1 && template.durationMinutes === 20) {
-      return { required: true, label: 'MANDATE: MARATHON' };
+      return { required: true, label: `${prefix}: MARATHON` };
     }
     if (progress.intensity4PlusCount < 3 && template.intensityTier >= 4) {
-      return { required: true, label: 'MANDATE: TIER 4+' };
+      return { required: true, label: `${prefix}: TIER 4+` };
     }
     return { required: false };
   }
 
   return { required: false };
+}
+
+export function getTemplatePrescription(
+  template: Pick<WorkoutTemplate, 'intensityTier' | 'durationMinutes'>,
+  verified: ClassificationRank,
+  progress: ClassificationProgress,
+  perceived?: ClassificationRank | null
+): TemplatePrescription {
+  const behind =
+    perceived != null && compareClassificationRank(verified, perceived) < 0;
+  const target = behind ? perceived : nextTierFrom(verified);
+  if (!target) {
+    return { required: false };
+  }
+  return prescribeForTarget(
+    template,
+    progress,
+    target,
+    behind ? 'PROVE IT' : 'MANDATE'
+  );
 }

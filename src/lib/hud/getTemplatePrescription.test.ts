@@ -108,4 +108,37 @@ describe('getTemplatePrescription', () => {
       )
     ).toEqual({ required: false });
   });
+
+  it('uses PROVE IT Intensity 3+ when civilian-behind-operator', () => {
+    expect(
+      getTemplatePrescription(
+        { intensityTier: 3, durationMinutes: 10 },
+        'civilian',
+        progress({ intensity3PlusCount: 1 }),
+        'operator'
+      )
+    ).toEqual({ required: true, label: 'PROVE IT: INTENSITY 3+' });
+  });
+
+  it('uses PROVE IT Marathon when civilian-behind-special_ops on a 20-min I5', () => {
+    expect(
+      getTemplatePrescription(
+        { intensityTier: 5, durationMinutes: 20 },
+        'civilian',
+        progress({ intensity4PlusCount: 0, marathon20Count: 0 }),
+        'special_ops'
+      )
+    ).toEqual({ required: true, label: 'PROVE IT: MARATHON' });
+  });
+
+  it('resumes MANDATE next-tier when verified meets the claim', () => {
+    expect(
+      getTemplatePrescription(
+        { intensityTier: 5, durationMinutes: 10 },
+        'operator',
+        progress({ intensity4PlusCount: 1 }),
+        'operator'
+      )
+    ).toEqual({ required: true, label: 'MANDATE: TIER 4+' });
+  });
 });

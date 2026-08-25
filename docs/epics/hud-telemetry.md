@@ -384,6 +384,41 @@ HUD RPC requires auth. Guests can still create sessions. Skip fetch; render card
 
 ---
 
+### Phase 5 — The Intake Dossier
+
+**Planning goal:** Capture biometrics and a declared (ego) rank. Block HUD and session creation until the dossier exists. Join stays guest-open. Guests can no longer create.
+
+#### Schema
+
+`athlete_profiles`: `user_id` PK, `height_cm`, `weight_kg`, `birth_year`, `perceived_classification` (`civilian` | `operator` | `special_ops`). Weight/height/year stay editable. Perceived rank may **only increase**. Verified rank is weekly HUD telemetry — the declared claim is never overwritten by a single workout.
+
+#### Gates
+
+- `/hud` and `/create` require auth + dossier (`RequireIntake`)
+- `create_session` requires `auth.uid()` and a dossier row; `anon` execute revoked
+- `/join` and `/session/:id` unchanged; My Sessions stays open
+
+#### Ego trap
+
+If `verified < perceived`: badge reads **Claimed: OPERATOR | Verified: CIVILIAN**. Checklist shows claimed-rank requirements. Template badges use `PROVE IT:` targeting the **claimed** rank.
+
+If `verified >= perceived`: Claimed copy disappears; Phase 4.5 `MANDATE:` next-tier resumes.
+
+Civilian claim is volume-only (no template prove-it badges).
+
+#### Deliverables
+
+- [x] `athlete_profiles` + get/upsert RPCs; `create_session` auth + dossier gate
+- [x] `/intake` UI + `RequireIntake`
+- [x] ClassificationBadge claimed vs verified
+- [x] `getTemplatePrescription` PROVE IT override
+
+#### Out of scope
+
+- Auto-rewriting perceived rank from one session; friends seeing claims; gating My Sessions or join
+
+---
+
 ## Phase dependency graph
 
 ```
@@ -396,6 +431,8 @@ Phase 1 (RPC + weekly 150 bar + /hud)
     └── Phase 4 (Benchmark Matrix)  -- after intensity snapshot exists
             ↓
          Phase 4.5 (Tactical Prescription)  -- mandates on template picker
+            ↓
+         Phase 5 (Intake Dossier)  -- claimed vs verified + create gate
 ```
 
 ---
@@ -416,11 +453,15 @@ src/lib/hud/
   resolveWeeklyClassification.ts
   nextTierChecklist.ts
   getTemplatePrescription.ts
+  compareClassificationRank.ts
 
 src/lib/workout/
   resolveTemplateIntensity.ts
 
 src/hooks/useHudTelemetry.ts
+src/hooks/useAthleteProfile.ts
+src/pages/IntakePage.tsx
+src/components/RequireIntake.tsx
 
 src/lib/api/hudTelemetry.ts
 

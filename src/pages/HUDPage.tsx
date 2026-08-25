@@ -5,11 +5,13 @@ import { ClassificationBadge } from '@/components/hud/ClassificationBadge';
 import { DailyTelemetry } from '@/components/hud/DailyTelemetry';
 import { DomainMatrixChart } from '@/components/hud/DomainMatrixChart';
 import { WeeklyBaselineBar } from '@/components/hud/WeeklyBaselineBar';
+import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { useHudTelemetry } from '@/hooks/useHudTelemetry';
 
 export default function HUDPage() {
   const { telemetry, error, loading, isAuthenticated, isAuthLoading } =
     useHudTelemetry();
+  const { profile } = useAthleteProfile();
 
   return (
     <NarrowPageLayout title="HUD" subtitle="Operational telemetry">
@@ -37,7 +39,10 @@ export default function HUDPage() {
 
       {!loading && isAuthenticated && telemetry ? (
         <div className="space-y-4">
-          <ClassificationBadge classification={telemetry.classification} />
+          <ClassificationBadge
+            classification={telemetry.classification}
+            perceivedClassification={profile?.perceivedClassification ?? null}
+          />
           <DailyTelemetry lastLockedAt={telemetry.lastLockedAt} />
           <WeeklyBaselineBar
             weekMinutes={telemetry.weekMinutes}

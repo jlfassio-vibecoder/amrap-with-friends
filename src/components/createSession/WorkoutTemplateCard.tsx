@@ -2,7 +2,7 @@ import type { KeyboardEvent } from 'react';
 import type { WorkoutTemplate } from '@/data/workoutTemplates';
 import { ExerciseInfoTrigger } from '@/components/exerciseInfo/ExerciseInfoTrigger';
 import { getTemplatePrescription } from '@/lib/hud/getTemplatePrescription';
-import type { HudClassification } from '@/lib/hud/types';
+import type { ClassificationRank, HudClassification } from '@/lib/hud/types';
 import { formatTemplateMovementLine } from '@/lib/workout/templateToExercises';
 
 interface WorkoutTemplateCardProps {
@@ -10,6 +10,7 @@ interface WorkoutTemplateCardProps {
   selected: boolean;
   onSelect: (template: WorkoutTemplate) => void;
   classification?: HudClassification | null;
+  perceivedClassification?: ClassificationRank | null;
 }
 
 export function WorkoutTemplateCard({
@@ -17,10 +18,16 @@ export function WorkoutTemplateCard({
   selected,
   onSelect,
   classification = null,
+  perceivedClassification = null,
 }: WorkoutTemplateCardProps) {
   const intensityTier = template.intensityTier;
   const prescription = classification
-    ? getTemplatePrescription(template, classification.current, classification.progress)
+    ? getTemplatePrescription(
+        template,
+        classification.current,
+        classification.progress,
+        perceivedClassification
+      )
     : { required: false as const };
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {

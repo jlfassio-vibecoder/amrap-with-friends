@@ -127,4 +127,17 @@ describe('nextTierChecklist', () => {
       'marathon-20',
     ]);
   });
+
+  it('uses an explicit claimed target instead of the next step', () => {
+    const rows = nextTierChecklist(
+      'civilian',
+      progress({ weekMinutes: 180, intensity4PlusCount: 1 }),
+      'special_ops'
+    );
+    expect(rows.map((r) => r.id)).toEqual([
+      'volume-300',
+      'i4-plus',
+      'marathon-20',
+    ]);
+  });
 });
