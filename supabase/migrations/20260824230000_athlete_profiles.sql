@@ -68,6 +68,7 @@ BEGIN
 END;
 $$;
 
+REVOKE EXECUTE ON FUNCTION public.get_athlete_profile() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.get_athlete_profile() TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.upsert_athlete_profile(
@@ -163,6 +164,7 @@ BEGIN
 END;
 $$;
 
+REVOKE EXECUTE ON FUNCTION public.upsert_athlete_profile(int, numeric, int, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.upsert_athlete_profile(int, numeric, int, text) TO authenticated;
 
 -- Gate create_session: authenticated + dossier required
@@ -267,7 +269,7 @@ BEGIN
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.create_session(int, text, jsonb, text, int) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.create_session(int, text, jsonb, text, int) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.create_session(int, text, jsonb, text, int) TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.create_session(
@@ -285,5 +287,5 @@ BEGIN
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.create_session(int, text, jsonb) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.create_session(int, text, jsonb) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.create_session(int, text, jsonb) TO authenticated;

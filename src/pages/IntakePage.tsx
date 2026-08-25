@@ -77,18 +77,23 @@ function IntakeForm({ initial, nowYear, onSave, onSaved }: IntakeFormProps) {
     }
     setSubmitting(true);
     setError(null);
-    const result = await onSave({
-      heightCm: Number(heightCm),
-      weightKg: Number(weightKg),
-      birthYear: nowYear - Number(age),
-      perceivedClassification: rank,
-    });
-    setSubmitting(false);
-    if (result.error) {
-      setError(result.error);
-      return;
+    try {
+      const result = await onSave({
+        heightCm: Number(heightCm),
+        weightKg: Number(weightKg),
+        birthYear: nowYear - Number(age),
+        perceivedClassification: rank,
+      });
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      onSaved();
+    } catch {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
-    onSaved();
   }
 
   return (

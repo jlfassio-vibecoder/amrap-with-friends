@@ -38,6 +38,7 @@ export function useAthleteProfile() {
         if (!cancelled) {
           setError('Something went wrong. Please try again.');
           setProfile(null);
+          setMissing(false);
         }
       })
       .finally(() => {

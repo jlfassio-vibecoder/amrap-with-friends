@@ -39,6 +39,7 @@ function App() {
         <Route
           path="/hud"
           element={
+            // Copilot suggestion ignored: passthrough keeps HUDPage guest copy; RequireIntake still redirects signed-in users missing a dossier.
             <RequireIntake guestMode="passthrough">
               <HUDPage />
             </RequireIntake>
