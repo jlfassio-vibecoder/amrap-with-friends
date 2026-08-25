@@ -29,7 +29,6 @@ type ScheduledNoise = {
 let currentTime = 0;
 let scheduledOsc: ScheduledOsc[] = [];
 let scheduledNoise: ScheduledNoise[] = [];
-let noiseBuffersCreated = 0;
 let waveShapersCreated = 0;
 
 function createParam(initial = 0) {
@@ -63,7 +62,6 @@ function createFakeAudioContext() {
     destination: {},
     resume: vi.fn(() => Promise.resolve()),
     createBuffer(channels: number, length: number, sampleRate: number) {
-      noiseBuffersCreated += 1;
       const data = new Float32Array(length);
       return {
         numberOfChannels: channels,
@@ -173,7 +171,6 @@ describe('tacticalSynthesis heavy profile', () => {
     currentTime = 0;
     scheduledOsc = [];
     scheduledNoise = [];
-    noiseBuffersCreated = 0;
     waveShapersCreated = 0;
     resetTacticalAudioForTests();
     vi.stubGlobal('AudioContext', function AudioContext() {

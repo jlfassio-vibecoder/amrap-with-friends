@@ -17,9 +17,15 @@ describe('parseAthleteProfile', () => {
   });
 
   it('defaults missing username and nickname to empty strings', () => {
-    const { username: _u, nickname: _n, ...rest } = valid;
-    expect(parseAthleteProfile(rest)).toEqual({
-      ...rest,
+    const withoutIdentity = {
+      heightCm: valid.heightCm,
+      weightKg: valid.weightKg,
+      birthYear: valid.birthYear,
+      biologicalSex: valid.biologicalSex,
+      perceivedClassification: valid.perceivedClassification,
+    };
+    expect(parseAthleteProfile(withoutIdentity)).toEqual({
+      ...withoutIdentity,
       username: '',
       nickname: '',
     });
