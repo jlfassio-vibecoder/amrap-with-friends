@@ -1,3 +1,9 @@
+import {
+  playVaultSample,
+  preloadVaultSamples,
+  resetVaultSamplesForTests,
+} from '@/lib/audio/vaultSamples';
+
 export type TacticalCue =
   | 'ignition'
   | 'prep'
@@ -35,11 +41,13 @@ export function unlockTacticalAudio(): AudioContext | null {
     audioContext = new Ctor();
   }
   void audioContext.resume();
+  void preloadVaultSamples(audioContext);
   return audioContext;
 }
 
 export function resetTacticalAudioForTests(): void {
   audioContext = null;
+  resetVaultSamplesForTests();
 }
 
 /** Pure white noise buffer — foundation for impacts and mechanical scrapes. */
@@ -181,10 +189,13 @@ function createDriveShaper(context: AudioContext, amount = 2.5): WaveShaperNode 
   return shaper;
 }
 
-/** Vault door thud — sine drop + lowpassed noise scrape. */
+/** Session start vault sample for all clients entering setup; synth fallback. */
 export function playIgnition(): void {
   const context = audioContext;
   if (!context) {
+    return;
+  }
+  if (playVaultSample(context, 'sessionStart')) {
     return;
   }
   playPitchedOscillator(context, {
@@ -252,10 +263,13 @@ export function playGo(): void {
   });
 }
 
-/** Bolt-action clack-clack — highpassed noise pairs + faint metallic square. */
+/** Round-log vault sample; synth bolt-action fallback if not loaded yet. */
 export function playRoundLogged(): void {
   const context = audioContext;
   if (!context) {
+    return;
+  }
+  if (playVaultSample(context, 'roundLog')) {
     return;
   }
   for (const offset of [0, 0.06] as const) {
