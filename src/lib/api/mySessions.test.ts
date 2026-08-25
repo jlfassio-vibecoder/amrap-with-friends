@@ -142,6 +142,7 @@ describe('deleteIncompleteSession', () => {
       count: null,
       status: 200,
       statusText: 'OK',
+      success: true,
     });
 
     const result = await deleteIncompleteSession(
@@ -163,10 +164,20 @@ describe('deleteIncompleteSession', () => {
         details: '',
         hint: '',
         code: 'P0001',
+        toJSON() {
+          return {
+            message: this.message,
+            name: this.name,
+            details: this.details,
+            hint: this.hint,
+            code: this.code,
+          };
+        },
       },
       count: null,
       status: 400,
       statusText: 'Bad Request',
+      success: false,
     });
 
     const result = await deleteIncompleteSession(
