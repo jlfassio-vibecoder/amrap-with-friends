@@ -19,10 +19,13 @@ export function HostScheduledSessionsPanel() {
   const [authOpen, setAuthOpen] = useState(false);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
 
-  const loadEntries = useCallback(async () => {
+  const loadEntries = useCallback(async (shouldApply: () => boolean = () => true) => {
     setIsLoadingEntries(true);
     try {
       const result = await fetchHostScheduledSessions();
+      if (!shouldApply()) {
+        return;
+      }
       if (result.error) {
         setError(result.error.message);
         return;
@@ -30,16 +33,28 @@ export function HostScheduledSessionsPanel() {
       setError(null);
       setEntries(result.data ?? []);
     } finally {
-      setIsLoadingEntries(false);
+      if (shouldApply()) {
+        setIsLoadingEntries(false);
+      }
     }
   }, []);
 
   useEffect(() => {
     if (isAuthLoading || !isAuthenticated || !user) {
+      setEntries([]);
+      setError(null);
+      setEditingSessionId(null);
+      setIsLoadingEntries(false);
       return;
     }
 
-    void loadEntries();
+    let cancelled = false;
+
+    void loadEntries(() => !cancelled);
+
+    return () => {
+      cancelled = true;
+    };
   }, [isAuthLoading, isAuthenticated, user, loadEntries]);
 
   const loading = isAuthLoading || (isAuthenticated && user !== null && isLoadingEntries);
@@ -80,7 +95,7 @@ export function HostScheduledSessionsPanel() {
 
       {loading ? <p className="text-sm text-secondary">Loading scheduled sessions…</p> : null}
 
-      {error ? <p className="text-error">Error: {error}</p> : null}
+      {isAuthenticated && !loading && error ? <p className="text-error">Error: {error}</p> : null}
 
       {!loading && isAuthenticated && entries.length === 0 ? (
         <p className="text-sm text-secondary">
@@ -88,7 +103,7 @@ export function HostScheduledSessionsPanel() {
         </p>
       ) : null}
 
-      {entries.length > 0 ? (
+      {isAuthenticated && !loading && entries.length > 0 ? (
         <ul className="space-y-3">
           {entries.map((entry) => (
             <li key={entry.sessionId} className="card space-y-2 p-4 text-sm">
