@@ -107,4 +107,14 @@
   .alert-success {
     @apply rounded-card border border-border bg-success-tint p-3 text-sm text-success-text;
   }
+
+  /* Large home-page brand mark; slightly brighter in dark theme so the dark logo reads. */
+  .brand-watermark {
+    opacity: 0.14;
+  }
+
+  [data-theme='dark'] .brand-watermark {
+    opacity: 0.22;
+    filter: brightness(1.2);
+  }
 }
