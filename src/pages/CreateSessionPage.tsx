@@ -1,7 +1,10 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
-import { CreateSessionSummaryPanel } from '@/components/createSession/CreateSessionSummaryPanel';
+import {
+  CreateSessionSummaryPanel,
+  type CreateScheduleMode,
+} from '@/components/createSession/CreateSessionSummaryPanel';
 import {
   WorkoutSourceToggle,
   type WorkoutSource,
@@ -14,7 +17,7 @@ import {
   type WorkoutCategory,
   type WorkoutTemplate,
 } from '@/data/workoutTemplates';
-import { createSession } from '@/lib/api/sessions';
+import { createSession, fetchHostActiveSessionCount } from '@/lib/api/sessions';
 import { getSupabaseConfigError } from '@/lib/supabase';
 import { quotasFromProfile } from '@/lib/hud/classificationQuotas';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
@@ -23,6 +26,13 @@ import { firstAvailableCategoryForDuration } from '@/lib/workout/filterWorkoutTe
 import { CUSTOM_WORKOUT_INTENSITY_TIER } from '@/lib/workout/resolveTemplateIntensity';
 import { applyTemplate } from '@/lib/workout/templateToExercises';
 import { parseWorkoutText } from '@/lib/workout/parseWorkoutLines';
+import {
+  HOST_ACTIVE_SESSION_LIMIT,
+  defaultRallyTime,
+  isRallyTimeAllowed,
+  rallyLocalDateTimeToIso,
+  type RallyDay,
+} from '@/lib/session/rallySchedule';
 
 export default function CreateSessionPage() {
   const navigate = useNavigate();
@@ -37,6 +47,32 @@ export default function CreateSessionPage() {
   const [workoutText, setWorkoutText] = useState('10 Burpees\n15 Push-ups');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [scheduleMode, setScheduleMode] = useState<CreateScheduleMode>('now');
+  const [rallyDay, setRallyDay] = useState<RallyDay>('today');
+  const [rallyTime, setRallyTime] = useState(() =>
+    defaultRallyTime(
+      new Date(),
+      Intl.DateTimeFormat().resolvedOptions().timeZone
+    )
+  );
+  const [activeCount, setActiveCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchHostActiveSessionCount().then((result) => {
+      if (cancelled) {
+        return;
+      }
+      if (result.data !== null) {
+        setActiveCount(result.data);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const capReached = (activeCount ?? 0) >= HOST_ACTIVE_SESSION_LIMIT;
 
   const selectedTemplate = useMemo(
     () => WORKOUT_TEMPLATES.find((template) => template.id === selectedTemplateId) ?? null,
@@ -92,10 +128,26 @@ export default function CreateSessionPage() {
       return;
     }
 
+    if (capReached) {
+      setError('You already have 3 active sessions.');
+      return;
+    }
+
     const configError = getSupabaseConfigError();
     if (configError) {
       setError(configError);
       return;
+    }
+
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    let scheduledAt: string | undefined;
+    if (scheduleMode === 'rally') {
+      const iso = rallyLocalDateTimeToIso(rallyDay, rallyTime, timeZone, new Date());
+      if (!iso || !isRallyTimeAllowed(iso, timeZone, new Date())) {
+        setError('Rally time must be today or tomorrow, and in the future.');
+        return;
+      }
+      scheduledAt = iso;
     }
 
     setLoading(true);
@@ -115,6 +167,7 @@ export default function CreateSessionPage() {
             ? selectedTemplateId
             : undefined,
         intensityTier,
+        scheduledAt,
       });
 
       if (result.error) {
@@ -187,10 +240,17 @@ export default function CreateSessionPage() {
               durationMinutes={durationMinutes}
               workoutSource={workoutSource}
               selectedTemplate={selectedTemplate}
+              scheduleMode={scheduleMode}
+              rallyDay={rallyDay}
+              rallyTime={rallyTime}
+              capReached={capReached}
               error={error}
               loading={loading}
               onNicknameChange={setNickname}
               onDurationChange={handleSummaryDurationChange}
+              onScheduleModeChange={setScheduleMode}
+              onRallyDayChange={setRallyDay}
+              onRallyTimeChange={setRallyTime}
               onSubmit={handleSubmit}
             />
           </div>

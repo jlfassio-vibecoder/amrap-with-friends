@@ -299,3 +299,104 @@ export async function submitParticipantResult(
     error: null,
   };
 }
+
+export type LobbyCountdownResult =
+  | { ok: true; lobbyCountdownEndsAt: string }
+  | { ok: false; reason: string };
+
+export type CancelLobbyCountdownResult =
+  | { ok: true }
+  | { ok: false; reason: string };
+
+function mapLobbyCountdownReason(reason: string): string {
+  switch (reason) {
+    case 'invalid_host_token':
+      return 'Host credentials are invalid. Reopen the session as host.';
+    case 'session_not_waiting':
+      return 'Countdown can only run while the lobby is waiting.';
+    case 'invalid_seconds':
+      return 'Countdown must be between 1 and 600 seconds.';
+    case 'not_found':
+      return 'Session not found.';
+    default:
+      return 'Something went wrong. Please try again.';
+  }
+}
+
+export async function setLobbyCountdown(input: {
+  sessionId: string;
+  hostToken: string;
+  seconds: number;
+}): Promise<{
+  data: LobbyCountdownResult | null;
+  error: SessionSyncApiError | null;
+}> {
+  const { data, error } = await supabase.rpc('set_lobby_countdown', {
+    p_session_id: input.sessionId,
+    p_host_token: input.hostToken,
+    p_seconds: input.seconds,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapRpcError(error.message) } };
+  }
+
+  const raw =
+    data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+
+  if (raw.ok !== true) {
+    const reason = readString(raw.reason) ?? 'unknown';
+    return {
+      data: { ok: false, reason },
+      error: { message: mapLobbyCountdownReason(reason) },
+    };
+  }
+
+  const endsAtRaw = raw.lobby_countdown_ends_at;
+  const lobbyCountdownEndsAt =
+    endsAtRaw === null || endsAtRaw === undefined
+      ? null
+      : readString(String(endsAtRaw));
+
+  if (!lobbyCountdownEndsAt) {
+    return {
+      data: null,
+      error: { message: 'Something went wrong. Please try again.' },
+    };
+  }
+
+  return {
+    data: { ok: true, lobbyCountdownEndsAt },
+    error: null,
+  };
+}
+
+export async function cancelLobbyCountdown(input: {
+  sessionId: string;
+  hostToken: string;
+}): Promise<{
+  data: CancelLobbyCountdownResult | null;
+  error: SessionSyncApiError | null;
+}> {
+  const { data, error } = await supabase.rpc('cancel_lobby_countdown', {
+    p_session_id: input.sessionId,
+    p_host_token: input.hostToken,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapRpcError(error.message) } };
+  }
+
+  const raw =
+    data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+
+  if (raw.ok !== true) {
+    const reason = readString(raw.reason) ?? 'unknown';
+    return {
+      data: { ok: false, reason },
+      error: { message: mapLobbyCountdownReason(reason) },
+    };
+  }
+
+  return { data: { ok: true }, error: null };
+}

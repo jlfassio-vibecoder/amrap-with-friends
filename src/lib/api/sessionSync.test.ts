@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { updateSessionState, logRound, submitParticipantResult } from './sessionSync';
+import { updateSessionState, logRound, submitParticipantResult, setLobbyCountdown, cancelLobbyCountdown } from './sessionSync';
 import { supabase } from '@/lib/supabase';
 
 vi.mock('@/lib/supabase', () => ({
@@ -246,5 +246,102 @@ describe('sessionSync API', () => {
         finalScore: 302,
       },
     });
+  });
+
+  it('setLobbyCountdown calls RPC and parses ends_at', async () => {
+    rpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        lobby_countdown_ends_at: '2026-08-25T12:05:00.000Z',
+      },
+      error: null,
+      success: true,
+      count: null,
+      status: 200,
+      statusText: 'OK',
+    });
+
+    const result = await setLobbyCountdown({
+      sessionId: SESSION_ID,
+      hostToken: 'host-secret',
+      seconds: 300,
+    });
+
+    expect(rpcMock).toHaveBeenCalledWith('set_lobby_countdown', {
+      p_session_id: SESSION_ID,
+      p_host_token: 'host-secret',
+      p_seconds: 300,
+    });
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual({
+      ok: true,
+      lobbyCountdownEndsAt: '2026-08-25T12:05:00.000Z',
+    });
+  });
+
+  it('setLobbyCountdown maps invalid_seconds reason', async () => {
+    rpcMock.mockResolvedValue({
+      data: { ok: false, reason: 'invalid_seconds' },
+      error: null,
+      success: true,
+      count: null,
+      status: 200,
+      statusText: 'OK',
+    });
+
+    const result = await setLobbyCountdown({
+      sessionId: SESSION_ID,
+      hostToken: 'host-secret',
+      seconds: 0,
+    });
+
+    expect(result.data).toEqual({ ok: false, reason: 'invalid_seconds' });
+    expect(result.error?.message).toBe(
+      'Countdown must be between 1 and 600 seconds.'
+    );
+  });
+
+  it('cancelLobbyCountdown calls RPC and returns ok', async () => {
+    rpcMock.mockResolvedValue({
+      data: { ok: true },
+      error: null,
+      success: true,
+      count: null,
+      status: 200,
+      statusText: 'OK',
+    });
+
+    const result = await cancelLobbyCountdown({
+      sessionId: SESSION_ID,
+      hostToken: 'host-secret',
+    });
+
+    expect(rpcMock).toHaveBeenCalledWith('cancel_lobby_countdown', {
+      p_session_id: SESSION_ID,
+      p_host_token: 'host-secret',
+    });
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual({ ok: true });
+  });
+
+  it('cancelLobbyCountdown maps session_not_waiting', async () => {
+    rpcMock.mockResolvedValue({
+      data: { ok: false, reason: 'session_not_waiting' },
+      error: null,
+      success: true,
+      count: null,
+      status: 200,
+      statusText: 'OK',
+    });
+
+    const result = await cancelLobbyCountdown({
+      sessionId: SESSION_ID,
+      hostToken: 'host-secret',
+    });
+
+    expect(result.data).toEqual({ ok: false, reason: 'session_not_waiting' });
+    expect(result.error?.message).toBe(
+      'Countdown can only run while the lobby is waiting.'
+    );
   });
 });

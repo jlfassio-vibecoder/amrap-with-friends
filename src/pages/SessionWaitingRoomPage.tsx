@@ -22,8 +22,13 @@ import { SessionChat } from '@/components/SessionChat';
 import { GhostPicker } from '@/components/GhostPicker';
 import { GhostPacerStrip } from '@/components/GhostPacerStrip';
 import { CopyInviteLink } from '@/components/session/CopyInviteLink';
+import { LobbyCountdownPanel } from '@/components/session/LobbyCountdownPanel';
 import { useGhostPacer } from '@/hooks/useGhostPacer';
 import type { StoredGhostSelection } from '@/lib/sessionIdentity';
+import {
+  formatTMinus,
+  remainingLobbyCountdownSec,
+} from '@/lib/session/lobbyCountdown';
 
 function formatTime(totalSec: number): string {
   const minutes = Math.floor(totalSec / 60);
@@ -209,13 +214,46 @@ function LiveSessionView({
   );
   // Copilot suggestion ignored: activeGhostSelection already gates stored selection on isAuthenticated.
   const activeGhostSelection = isAuthenticated ? ghostSelection : null;
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const ignitionStarted = useRef(false);
 
   const channel = useSessionChannel(sessionId, { participantId, nickname });
   const live = useLiveAmrapSession(sessionId, channel);
+  const { isHost, start: startSession, phase: livePhase } = live;
   const claim = useParticipantClaim(sessionId);
   const selfLeaderboardEntry =
     live.leaderboard.find((entry) => entry.isSelf) ?? null;
   const selfBaseScore = selfLeaderboardEntry?.baseScore ?? 0;
+
+  const lobbyCountdownEndsAt = live.lobbyCountdownEndsAt;
+  const lobbyRemaining = remainingLobbyCountdownSec(lobbyCountdownEndsAt, nowMs);
+  const lobbyCountdownArmed =
+    livePhase === 'waiting' && lobbyCountdownEndsAt !== null;
+  const lobbyTicking =
+    lobbyCountdownArmed && lobbyRemaining !== null && lobbyRemaining > 0;
+  const lobbyIgnited = lobbyCountdownArmed && lobbyRemaining === 0;
+
+  useEffect(() => {
+    if (!lobbyCountdownArmed) {
+      return;
+    }
+    const id = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 250);
+    return () => window.clearInterval(id);
+  }, [lobbyCountdownArmed]);
+
+  useEffect(() => {
+    ignitionStarted.current = false;
+  }, [lobbyCountdownEndsAt, sessionId]);
+
+  useEffect(() => {
+    if (!isHost || !lobbyIgnited || ignitionStarted.current) {
+      return;
+    }
+    ignitionStarted.current = true;
+    void startSession();
+  }, [isHost, lobbyIgnited, startSession]);
 
   const ghostPacer = useGhostPacer({
     sessionId,
@@ -229,32 +267,33 @@ function LiveSessionView({
   const isSoloTemplated =
     live.participantCount === 1 &&
     live.templateId !== null &&
-    live.phase === 'waiting';
+    livePhase === 'waiting';
   const showGhostPicker = isSoloTemplated;
   // Copilot suggestion ignored: ghost pacer error display and strip suppression on load failure already exist.
   const showGhostPacerError =
-    activeGhostSelection !== null && live.phase === 'work' && ghostPacer.error !== null;
+    activeGhostSelection !== null && livePhase === 'work' && ghostPacer.error !== null;
   const showGhostPacerStrip =
     activeGhostSelection !== null &&
-    live.phase === 'work' &&
+    livePhase === 'work' &&
     ghostPacer.error === null &&
     !ghostPacer.isLoading;
 
-  const showStart = live.isHost && live.phase === 'waiting';
-  const showPause = live.isHost && live.phase === 'work' && !live.isPaused;
-  const showResume = live.isHost && live.phase === 'work' && live.isPaused;
-  const showLogRound = live.phase === 'work' && !live.isPaused;
+  // Copilot suggestion ignored: ignition Start/Abort is restored in LobbyCountdownPanel when armed; changing showStart would duplicate host Start while ticking.
+  const showStart = isHost && livePhase === 'waiting' && !lobbyCountdownArmed;
+  const showPause = isHost && livePhase === 'work' && !live.isPaused;
+  const showResume = isHost && livePhase === 'work' && live.isPaused;
+  const showLogRound = livePhase === 'work' && !live.isPaused;
   const showPartialRepsModal =
-    live.phase === 'finished' &&
+    livePhase === 'finished' &&
     live.repsPerRound > 0 &&
     !live.hasSubmittedPartialReps;
   const showScorecard =
-    live.phase === 'finished' &&
+    livePhase === 'finished' &&
     live.hasSubmittedPartialReps &&
     !scorecardDismissed &&
     selfLeaderboardEntry !== null;
   const showFinishedClaimPrompt =
-    live.phase === 'finished' &&
+    livePhase === 'finished' &&
     claim.showClaimPrompt &&
     !showPartialRepsModal &&
     !showScorecard;
@@ -315,7 +354,7 @@ function LiveSessionView({
     }
   };
 
-  const hostStatusText = live.isHost
+  const hostStatusText = isHost
     ? 'You are the host.'
     : 'Waiting on host for session control.';
 
@@ -380,8 +419,20 @@ function LiveSessionView({
               <p className="text-display text-sm text-secondary lg:text-base">
                 {phaseLabel(live.phase)}
               </p>
-              <p className="text-display text-accent tabular-nums text-5xl lg:text-7xl xl:text-8xl">
-                {live.phase === 'waiting' ? '—' : formatTime(live.timeLeftSec)}
+              <p
+                className={
+                  live.phase === 'waiting' && (lobbyTicking || lobbyIgnited)
+                    ? 'font-mono text-accent tabular-nums text-4xl tracking-widest lg:text-6xl xl:text-7xl'
+                    : 'text-display text-accent tabular-nums text-5xl lg:text-7xl xl:text-8xl'
+                }
+              >
+                {live.phase === 'waiting'
+                  ? lobbyTicking && lobbyRemaining !== null
+                    ? formatTMinus(lobbyRemaining)
+                    : lobbyIgnited
+                      ? 'IGNITION...'
+                      : '—'
+                  : formatTime(live.timeLeftSec)}
               </p>
               {live.phase === 'work' || live.phase === 'finished' ? (
                 <p className="text-sm text-secondary">
@@ -392,6 +443,30 @@ function LiveSessionView({
                 Realtime: {live.isRealtimeConnected ? 'connected' : 'connecting…'}
               </p>
             </section>
+
+            {live.phase === 'waiting' && live.scheduledAt ? (
+              <p className="text-sm text-secondary">
+                Rally time:{' '}
+                {new Date(live.scheduledAt).toLocaleString(undefined, {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                })}
+              </p>
+            ) : null}
+
+            <LobbyCountdownPanel
+              sessionId={sessionId}
+              isHost={isHost}
+              phase={livePhase}
+              countdownArmed={lobbyCountdownArmed}
+              ticking={lobbyTicking}
+              onStart={() => {
+                void startSession();
+              }}
+            />
 
             {live.phase === 'waiting' ? (
               <CopyInviteLink sessionId={sessionId} />
@@ -425,7 +500,7 @@ function LiveSessionView({
                 <button
                   type="button"
                   className="btn-primary lg:px-6 lg:py-3 lg:text-base"
-                  onClick={() => live.start()}
+                  onClick={() => startSession()}
                 >
                   Start
                 </button>
