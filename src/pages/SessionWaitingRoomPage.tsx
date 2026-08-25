@@ -357,7 +357,7 @@ function LiveSessionView({
 
     pendingSaveAfterAuth.current = false;
     void claim.saveToAccount();
-  }, [isAuthLoading, isAuthenticated, canSave, claim.isClaiming]);
+  }, [isAuthLoading, isAuthenticated, canSave, claim]);
 
   const handleAuthCloseForSave = () => {
     setAuthOpenForSave(false);

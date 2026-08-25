@@ -15,18 +15,23 @@ export function HostScheduledSessionsPanel() {
   const { isAuthenticated, isAuthLoading, user } = useAmrapAuth();
   const [entries, setEntries] = useState<HostScheduledSessionEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [hasLoaded, setHasLoaded] = useState(false);
+  const [isLoadingEntries, setIsLoadingEntries] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
 
   const loadEntries = useCallback(async () => {
-    const result = await fetchHostScheduledSessions();
-    if (result.error) {
-      setError(result.error.message);
-      return;
+    setIsLoadingEntries(true);
+    try {
+      const result = await fetchHostScheduledSessions();
+      if (result.error) {
+        setError(result.error.message);
+        return;
+      }
+      setError(null);
+      setEntries(result.data ?? []);
+    } finally {
+      setIsLoadingEntries(false);
     }
-    setError(null);
-    setEntries(result.data ?? []);
   }, []);
 
   useEffect(() => {
@@ -34,20 +39,10 @@ export function HostScheduledSessionsPanel() {
       return;
     }
 
-    let cancelled = false;
-
-    loadEntries().then(() => {
-      if (!cancelled) {
-        setHasLoaded(true);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
+    void loadEntries();
   }, [isAuthLoading, isAuthenticated, user, loadEntries]);
 
-  const loading = isAuthLoading || (isAuthenticated && user !== null && !hasLoaded);
+  const loading = isAuthLoading || (isAuthenticated && user !== null && isLoadingEntries);
 
   async function handleSaved(sessionId: string, scheduledAt: string) {
     setEditingSessionId(null);
