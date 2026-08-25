@@ -46,17 +46,70 @@ describe('IntakePage', () => {
     expect(warnings).toHaveLength(2);
   });
 
-  it('disables submit until biometrics and a rank are set', () => {
+  it('defaults to imperial labels and disables submit until biometrics and a rank are set', () => {
     renderIntake();
+    expect(screen.getByLabelText(/Height \(in\)/)).toBeTruthy();
+    expect(screen.getByLabelText(/Weight \(lb\)/)).toBeTruthy();
+
     const submit = screen.getByRole('button', { name: 'File the dossier' });
     expect(submit).toHaveProperty('disabled', true);
 
-    fireEvent.change(screen.getByLabelText(/Height/), { target: { value: '180' } });
-    fireEvent.change(screen.getByLabelText(/Weight/), { target: { value: '80' } });
+    fireEvent.change(screen.getByLabelText(/Height \(in\)/), {
+      target: { value: '71' },
+    });
+    fireEvent.change(screen.getByLabelText(/Weight \(lb\)/), {
+      target: { value: '176' },
+    });
     fireEvent.change(screen.getByLabelText(/^Age$/), { target: { value: '32' } });
     expect(submit).toHaveProperty('disabled', true);
 
     fireEvent.click(screen.getByRole('button', { name: 'CIVILIAN' }));
     expect(submit).toHaveProperty('disabled', false);
+  });
+
+  it('converts imperial input to metric on save', async () => {
+    saveMock.mockResolvedValue({ error: null });
+    renderIntake();
+
+    fireEvent.change(screen.getByLabelText(/Height \(in\)/), {
+      target: { value: '71' },
+    });
+    fireEvent.change(screen.getByLabelText(/Weight \(lb\)/), {
+      target: { value: '176.4' },
+    });
+    fireEvent.change(screen.getByLabelText(/^Age$/), { target: { value: '32' } });
+    fireEvent.click(screen.getByRole('button', { name: 'CIVILIAN' }));
+    fireEvent.click(screen.getByRole('button', { name: 'File the dossier' }));
+
+    await vi.waitFor(() => {
+      expect(saveMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          heightCm: 180,
+          weightKg: 80,
+          perceivedClassification: 'civilian',
+        })
+      );
+    });
+  });
+
+  it('converts fields in place when toggling unit systems', () => {
+    renderIntake();
+
+    fireEvent.change(screen.getByLabelText(/Height \(in\)/), {
+      target: { value: '70' },
+    });
+    fireEvent.change(screen.getByLabelText(/Weight \(lb\)/), {
+      target: { value: '176.4' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'cm / kg' }));
+
+    expect(screen.getByLabelText(/Height \(cm\)/)).toHaveProperty('value', '178');
+    expect(screen.getByLabelText(/Weight \(kg\)/)).toHaveProperty('value', '80');
+
+    fireEvent.click(screen.getByRole('button', { name: 'in / lb' }));
+
+    expect(screen.getByLabelText(/Height \(in\)/)).toHaveProperty('value', '70');
+    expect(screen.getByLabelText(/Weight \(lb\)/)).toHaveProperty('value', '176.4');
   });
 });

@@ -8,6 +8,15 @@ import {
   canSetPerceivedClassification,
   type PerceivedClassification,
 } from '@/lib/hud/compareClassificationRank';
+import {
+  cmToIn,
+  inToCm,
+  isValidHeight,
+  isValidWeight,
+  kgToLb,
+  lbToKg,
+  type BodyMetricUnitSystem,
+} from '@/lib/units/bodyMetrics';
 
 const RANKS: Array<{ id: PerceivedClassification; label: string }> = [
   { id: 'civilian', label: 'CIVILIAN' },
@@ -29,6 +38,42 @@ function ageFromBirthYear(birthYear: number, nowYear: number): number {
   return Math.max(13, nowYear - birthYear);
 }
 
+function convertHeightField(
+  raw: string,
+  from: BodyMetricUnitSystem,
+  to: BodyMetricUnitSystem
+): string {
+  if (from === to || raw.trim() === '') {
+    return raw;
+  }
+  const n = Number(raw);
+  if (!Number.isFinite(n)) {
+    return '';
+  }
+  if (from === 'imperial' && to === 'metric') {
+    return String(inToCm(n));
+  }
+  return String(cmToIn(n));
+}
+
+function convertWeightField(
+  raw: string,
+  from: BodyMetricUnitSystem,
+  to: BodyMetricUnitSystem
+): string {
+  if (from === to || raw.trim() === '') {
+    return raw;
+  }
+  const n = Number(raw);
+  if (!Number.isFinite(n)) {
+    return '';
+  }
+  if (from === 'imperial' && to === 'metric') {
+    return String(lbToKg(n));
+  }
+  return String(kgToLb(n));
+}
+
 interface IntakeFormProps {
   initial: AthleteProfile | null;
   nowYear: number;
@@ -37,11 +82,12 @@ interface IntakeFormProps {
 }
 
 function IntakeForm({ initial, nowYear, onSave, onSaved }: IntakeFormProps) {
-  const [heightCm, setHeightCm] = useState(
-    initial ? String(initial.heightCm) : ''
+  const [unitSystem, setUnitSystem] = useState<BodyMetricUnitSystem>('imperial');
+  const [height, setHeight] = useState(() =>
+    initial ? String(cmToIn(initial.heightCm)) : ''
   );
-  const [weightKg, setWeightKg] = useState(
-    initial ? String(initial.weightKg) : ''
+  const [weight, setWeight] = useState(() =>
+    initial ? String(kgToLb(initial.weightKg)) : ''
   );
   const [age, setAge] = useState(
     initial ? String(ageFromBirthYear(initial.birthYear, nowYear)) : ''
@@ -52,23 +98,31 @@ function IntakeForm({ initial, nowYear, onSave, onSaved }: IntakeFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const heightLabel = unitSystem === 'imperial' ? 'Height (in)' : 'Height (cm)';
+  const weightLabel = unitSystem === 'imperial' ? 'Weight (lb)' : 'Weight (kg)';
+
   const canSubmit = useMemo(() => {
-    const h = Number(heightCm);
-    const w = Number(weightKg);
+    const h = Number(height);
+    const w = Number(weight);
     const a = Number(age);
     return (
       rank !== null &&
-      Number.isInteger(h) &&
-      h >= 100 &&
-      h <= 250 &&
-      Number.isFinite(w) &&
-      w >= 30 &&
-      w <= 250 &&
+      isValidHeight(h, unitSystem) &&
+      isValidWeight(w, unitSystem) &&
       Number.isInteger(a) &&
       a >= 13 &&
       a <= 120
     );
-  }, [heightCm, weightKg, age, rank]);
+  }, [height, weight, age, rank, unitSystem]);
+
+  function switchUnitSystem(next: BodyMetricUnitSystem) {
+    if (next === unitSystem) {
+      return;
+    }
+    setHeight((prev) => convertHeightField(prev, unitSystem, next));
+    setWeight((prev) => convertWeightField(prev, unitSystem, next));
+    setUnitSystem(next);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -78,9 +132,15 @@ function IntakeForm({ initial, nowYear, onSave, onSaved }: IntakeFormProps) {
     setSubmitting(true);
     setError(null);
     try {
+      const heightValue = Number(height);
+      const weightValue = Number(weight);
+      const heightCm =
+        unitSystem === 'imperial' ? inToCm(heightValue) : heightValue;
+      const weightKg =
+        unitSystem === 'imperial' ? lbToKg(weightValue) : weightValue;
       const result = await onSave({
-        heightCm: Number(heightCm),
-        weightKg: Number(weightKg),
+        heightCm,
+        weightKg,
         birthYear: nowYear - Number(age),
         perceivedClassification: rank,
       });
@@ -98,27 +158,58 @@ function IntakeForm({ initial, nowYear, onSave, onSaved }: IntakeFormProps) {
 
   return (
     <form className="card space-y-6 p-6" onSubmit={handleSubmit}>
+      <div
+        className="flex gap-2"
+        role="group"
+        aria-label="Measurement units"
+      >
+        <button
+          type="button"
+          aria-pressed={unitSystem === 'imperial'}
+          className={
+            unitSystem === 'imperial'
+              ? 'rounded-card bg-accent px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-on-accent'
+              : 'rounded-card border border-border px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-ink hover:border-accent/40'
+          }
+          onClick={() => switchUnitSystem('imperial')}
+        >
+          in / lb
+        </button>
+        <button
+          type="button"
+          aria-pressed={unitSystem === 'metric'}
+          className={
+            unitSystem === 'metric'
+              ? 'rounded-card bg-accent px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-on-accent'
+              : 'rounded-card border border-border px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-ink hover:border-accent/40'
+          }
+          onClick={() => switchUnitSystem('metric')}
+        >
+          cm / kg
+        </button>
+      </div>
+
       <div className="grid grid-cols-3 gap-3">
         <label className="block space-y-1">
           <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
-            Height (cm)
+            {heightLabel}
           </span>
           <input
             className="input-field tabular-nums"
             inputMode="numeric"
-            value={heightCm}
-            onChange={(event) => setHeightCm(event.target.value)}
+            value={height}
+            onChange={(event) => setHeight(event.target.value)}
           />
         </label>
         <label className="block space-y-1">
           <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
-            Weight (kg)
+            {weightLabel}
           </span>
           <input
             className="input-field tabular-nums"
             inputMode="decimal"
-            value={weightKg}
-            onChange={(event) => setWeightKg(event.target.value)}
+            value={weight}
+            onChange={(event) => setWeight(event.target.value)}
           />
         </label>
         <label className="block space-y-1">
