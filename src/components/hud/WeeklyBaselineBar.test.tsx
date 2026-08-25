@@ -40,4 +40,20 @@ describe('WeeklyBaselineBar', () => {
     );
     expect(screen.getByText('12.8%')).toBeDefined();
   });
+
+  it('uses a scaled civilian baseline when provided', () => {
+    render(
+      <WeeklyBaselineBar
+        weekMinutes={120}
+        weekPviAverage={null}
+        weekEndsAt="2099-01-01T00:00:00.000Z"
+        baselineMinutes={120}
+      />
+    );
+
+    expect(screen.getByText('120 / 120 Min')).toBeDefined();
+    expect(screen.getByTestId('weekly-baseline-fill').getAttribute('style')).toContain(
+      'width: 100%'
+    );
+  });
 });

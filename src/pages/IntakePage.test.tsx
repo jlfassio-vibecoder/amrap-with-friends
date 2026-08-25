@@ -61,9 +61,10 @@ describe('IntakePage', () => {
       target: { value: '176' },
     });
     fireEvent.change(screen.getByLabelText(/^Age$/), { target: { value: '32' } });
+    fireEvent.click(screen.getByRole('button', { name: 'CIVILIAN' }));
     expect(submit).toHaveProperty('disabled', true);
 
-    fireEvent.click(screen.getByRole('button', { name: 'CIVILIAN' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Male' }));
     expect(submit).toHaveProperty('disabled', false);
   });
 
@@ -78,6 +79,7 @@ describe('IntakePage', () => {
       target: { value: '176.4' },
     });
     fireEvent.change(screen.getByLabelText(/^Age$/), { target: { value: '32' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Male' }));
     fireEvent.click(screen.getByRole('button', { name: 'CIVILIAN' }));
     fireEvent.click(screen.getByRole('button', { name: 'File the dossier' }));
 
@@ -86,6 +88,7 @@ describe('IntakePage', () => {
         expect.objectContaining({
           heightCm: 180,
           weightKg: 80,
+          biologicalSex: 'M',
           perceivedClassification: 'civilian',
         })
       );

@@ -1,3 +1,4 @@
+/** Alpha-male Civilian volume; live HUD uses scaled `quotas.civilianMinutes`. */
 export const WEEKLY_BASELINE_MINUTES = 150;
 
 export type HudDailyStatus = 'active' | 'dormant' | 'detraining' | 'never';

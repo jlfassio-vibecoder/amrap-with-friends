@@ -1,10 +1,12 @@
 import { supabase } from '@/lib/supabase';
+import type { BiologicalSex } from '@/lib/hud/classificationQuotas';
 import type { PerceivedClassification } from '@/lib/hud/compareClassificationRank';
 
 export type AthleteProfile = {
   heightCm: number;
   weightKg: number;
   birthYear: number;
+  biologicalSex: BiologicalSex;
   perceivedClassification: PerceivedClassification;
 };
 
@@ -18,11 +20,13 @@ const PERCEIVED = new Set<PerceivedClassification>([
   'special_ops',
 ]);
 
+const SEX = new Set<BiologicalSex>(['M', 'F']);
+
 function readNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
-function parseProfile(value: unknown): AthleteProfile | null {
+export function parseAthleteProfile(value: unknown): AthleteProfile | null {
   if (!value || typeof value !== 'object') {
     return null;
   }
@@ -30,11 +34,14 @@ function parseProfile(value: unknown): AthleteProfile | null {
   const heightCm = readNumber(row.heightCm);
   const weightKg = readNumber(row.weightKg);
   const birthYear = readNumber(row.birthYear);
+  const sex = row.biologicalSex;
   const perceived = row.perceivedClassification;
   if (
     heightCm === null ||
     weightKg === null ||
     birthYear === null ||
+    typeof sex !== 'string' ||
+    !SEX.has(sex as BiologicalSex) ||
     typeof perceived !== 'string' ||
     !PERCEIVED.has(perceived as PerceivedClassification)
   ) {
@@ -44,6 +51,7 @@ function parseProfile(value: unknown): AthleteProfile | null {
     heightCm,
     weightKg,
     birthYear,
+    biologicalSex: sex as BiologicalSex,
     perceivedClassification: perceived as PerceivedClassification,
   };
 }
@@ -83,7 +91,7 @@ export async function fetchAthleteProfile(): Promise<{
     };
   }
 
-  const profile = parseProfile(raw.profile);
+  const profile = parseAthleteProfile(raw.profile);
   if (!profile) {
     return {
       data: null,
@@ -103,6 +111,7 @@ export async function upsertAthleteProfile(input: AthleteProfile): Promise<{
     p_weight_kg: input.weightKg,
     p_birth_year: input.birthYear,
     p_perceived_classification: input.perceivedClassification,
+    p_biological_sex: input.biologicalSex,
   });
 
   if (error) {
@@ -117,7 +126,7 @@ export async function upsertAthleteProfile(input: AthleteProfile): Promise<{
     };
   }
 
-  const profile = parseProfile(raw.profile);
+  const profile = parseAthleteProfile(raw.profile);
   if (!profile) {
     return {
       data: null,

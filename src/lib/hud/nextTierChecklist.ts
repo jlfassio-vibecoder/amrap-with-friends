@@ -1,3 +1,4 @@
+import type { ClassificationQuotas } from '@/lib/hud/classificationQuotas';
 import type { ClassificationProgress, ClassificationRank } from '@/lib/hud/types';
 
 export type NextTierChecklistRow = {
@@ -25,23 +26,51 @@ function row(
 
 function rowsForTarget(
   target: ClassificationRank,
-  progress: ClassificationProgress
+  progress: ClassificationProgress,
+  quotas: ClassificationQuotas
 ): NextTierChecklistRow[] {
   if (target === 'civilian' || target === 'unclassified') {
-    return [row('volume-150', 'min', progress.weekMinutes, 150)];
+    return [
+      row('volume-civilian', 'min', progress.weekMinutes, quotas.civilianMinutes),
+    ];
   }
 
   if (target === 'operator') {
     return [
-      row('volume-240', 'min', progress.weekMinutes, 240),
-      row('i3-plus', 'Intensity 3+', progress.intensity3PlusCount, 2),
+      row(
+        'volume-operator',
+        'min',
+        progress.weekMinutes,
+        quotas.operatorMinutes
+      ),
+      row(
+        'i3-plus',
+        'Intensity 3+',
+        progress.intensity3PlusCount,
+        quotas.operatorIntensity3Plus
+      ),
     ];
   }
 
   return [
-    row('volume-300', 'min', progress.weekMinutes, 300),
-    row('i4-plus', 'Intensity 4+', progress.intensity4PlusCount, 3),
-    row('marathon-20', '20-min Marathon', progress.marathon20Count, 1),
+    row(
+      'volume-special-ops',
+      'min',
+      progress.weekMinutes,
+      quotas.specialOpsMinutes
+    ),
+    row(
+      'i4-plus',
+      'Intensity 4+',
+      progress.intensity4PlusCount,
+      quotas.specialOpsIntensity4Plus
+    ),
+    row(
+      'marathon-20',
+      '20-min Marathon',
+      progress.marathon20Count,
+      quotas.specialOpsMarathon20
+    ),
   ];
 }
 
@@ -55,13 +84,21 @@ function nextTierFrom(current: ClassificationRank): ClassificationRank {
   return 'special_ops';
 }
 
+export function checklistTarget(
+  current: ClassificationRank,
+  target?: ClassificationRank
+): ClassificationRank {
+  return target ?? nextTierFrom(current);
+}
+
 /**
  * Checklist for the next tier, or for an explicit target (claimed rank when behind).
  */
 export function nextTierChecklist(
   current: ClassificationRank,
   progress: ClassificationProgress,
+  quotas: ClassificationQuotas,
   target?: ClassificationRank
 ): NextTierChecklistRow[] {
-  return rowsForTarget(target ?? nextTierFrom(current), progress);
+  return rowsForTarget(checklistTarget(current, target), progress, quotas);
 }

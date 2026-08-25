@@ -14,6 +14,7 @@ import {
   categoryDisplayForDuration,
 } from '@/lib/workout/filterWorkoutTemplates';
 import { WorkoutTemplateCard } from '@/components/createSession/WorkoutTemplateCard';
+import type { ClassificationQuotas } from '@/lib/hud/classificationQuotas';
 import type { ClassificationRank, HudClassification } from '@/lib/hud/types';
 
 interface WorkoutTemplatePickerProps {
@@ -22,6 +23,7 @@ interface WorkoutTemplatePickerProps {
   selectedTemplateId: string | null;
   classification?: HudClassification | null;
   perceivedClassification?: ClassificationRank | null;
+  quotas?: ClassificationQuotas;
   onDurationChange: (duration: TimeDomain) => void;
   onCategoryChange: (category: WorkoutCategory) => void;
   onTemplateSelect: (template: WorkoutTemplate) => void;
@@ -33,6 +35,7 @@ export function WorkoutTemplatePicker({
   selectedTemplateId,
   classification = null,
   perceivedClassification = null,
+  quotas,
   onDurationChange,
   onCategoryChange,
   onTemplateSelect,
@@ -128,6 +131,7 @@ export function WorkoutTemplatePicker({
                 selected={selectedTemplateId === template.id}
                 classification={classification}
                 perceivedClassification={perceivedClassification}
+                quotas={quotas}
                 onSelect={onTemplateSelect}
               />
             ))}

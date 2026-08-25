@@ -390,7 +390,7 @@ HUD RPC requires auth. Guests can still create sessions. Skip fetch; render card
 
 #### Schema
 
-`athlete_profiles`: `user_id` PK, `height_cm`, `weight_kg`, `birth_year`, `perceived_classification` (`civilian` | `operator` | `special_ops`). Weight/height/year stay editable. Perceived rank may **only increase**. Verified rank is weekly HUD telemetry — the declared claim is never overwritten by a single workout.
+`athlete_profiles`: `user_id` PK, `height_cm`, `weight_kg`, `birth_year`, `biological_sex` (`M` | `F`), `perceived_classification` (`civilian` | `operator` | `special_ops`). Weight/height/year/sex stay editable. Perceived rank may **only increase**. Verified rank is weekly HUD telemetry — the declared claim is never overwritten by a single workout.
 
 #### Gates
 
@@ -419,6 +419,43 @@ Civilian claim is volume-only (no template prove-it badges).
 
 ---
 
+### Phase 5.5 — Biometric Scaling
+
+**Planning goal:** Scale Civilian and Operator weekly compliance quotas by age bracket and biological sex. Special Ops stays an absolute standard.
+
+#### Age brackets
+
+Age = current calendar year − `birth_year`. Under-18 maps to Alpha.
+
+| Bracket | Ages |
+| --- | --- |
+| Alpha | ≤ 25 |
+| Bravo | 26–35 |
+| Charlie | 36–45 |
+| Delta | ≥ 46 |
+
+#### Quota matrix
+
+| Rank | Alpha/Bravo M | Alpha/Bravo F | Charlie M | Charlie F | Delta M | Delta F |
+| --- | --- | --- | --- | --- | --- | --- |
+| Civilian minutes | 150 | 135 | 135 | 120 | 135 | 120 |
+| Operator minutes | 240 | 220 | 210 | 210 | 180 | 180 |
+| Operator I3+ | 2 | 2 | 1 | 1 | 1 | 1 |
+| Special Ops | 300 min + 3× I4+ + 1× 20-min Marathon (all cells) | | | | | |
+
+#### Deliverables
+
+- [x] `biological_sex` on `athlete_profiles`; 5-arg upsert; intake Male/Female
+- [x] `classificationQuotas` + `resolveWeeklyClassification` / `hud_telemetry` twin
+- [x] HUD checklist footnote; weekly bar and attrition use scaled Civilian minutes
+- [x] Operator I3+ template prescription uses scaled quota
+
+#### Out of scope
+
+- Changing workout difficulty; forcing existing dossiers to re-file (DEFAULT `'M'`)
+
+---
+
 ## Phase dependency graph
 
 ```
@@ -433,6 +470,8 @@ Phase 1 (RPC + weekly 150 bar + /hud)
          Phase 4.5 (Tactical Prescription)  -- mandates on template picker
             ↓
          Phase 5 (Intake Dossier)  -- claimed vs verified + create gate
+            ↓
+         Phase 5.5 (Biometric Scaling)  -- age/sex Civilian+Operator quotas
 ```
 
 ---
@@ -451,6 +490,7 @@ src/lib/hud/
   formatWeekCountdown.ts
   formatWeekCountdown.test.ts
   resolveWeeklyClassification.ts
+  classificationQuotas.ts
   nextTierChecklist.ts
   getTemplatePrescription.ts
   compareClassificationRank.ts

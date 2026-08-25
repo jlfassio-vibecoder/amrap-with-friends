@@ -7,17 +7,19 @@ interface WeeklyBaselineBarProps {
   weekMinutes: number;
   weekPviAverage: number | null;
   weekEndsAt: string;
+  baselineMinutes?: number;
 }
 
 export function WeeklyBaselineBar({
   weekMinutes,
   weekPviAverage,
   weekEndsAt,
+  baselineMinutes = WEEKLY_BASELINE_MINUTES,
 }: WeeklyBaselineBarProps) {
   const [nowMs, setNowMs] = useState(() => Date.now());
   const fillPercent = Math.min(
     100,
-    (weekMinutes / WEEKLY_BASELINE_MINUTES) * 100
+    (weekMinutes / baselineMinutes) * 100
   );
   const pviTier = getPviMultiplier(weekPviAverage);
   const countdown = formatWeekCountdown(weekEndsAt, nowMs);
@@ -39,7 +41,7 @@ export function WeeklyBaselineBar({
           Weekly baseline
         </p>
         <p className="text-display text-2xl tabular-nums text-ink">
-          {weekMinutes} / {WEEKLY_BASELINE_MINUTES} Min
+          {weekMinutes} / {baselineMinutes} Min
         </p>
       </div>
 
@@ -47,8 +49,8 @@ export function WeeklyBaselineBar({
         className="h-3 w-full overflow-hidden rounded-sm border border-border bg-page"
         role="progressbar"
         aria-valuemin={0}
-        aria-valuemax={WEEKLY_BASELINE_MINUTES}
-        aria-valuenow={Math.min(weekMinutes, WEEKLY_BASELINE_MINUTES)}
+        aria-valuemax={baselineMinutes}
+        aria-valuenow={Math.min(weekMinutes, baselineMinutes)}
         aria-label="Weekly minutes toward baseline"
       >
         <div

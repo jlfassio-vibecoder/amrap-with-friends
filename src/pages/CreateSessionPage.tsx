@@ -16,6 +16,7 @@ import {
 } from '@/data/workoutTemplates';
 import { createSession } from '@/lib/api/sessions';
 import { getSupabaseConfigError } from '@/lib/supabase';
+import { quotasFromProfile } from '@/lib/hud/classificationQuotas';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { useHudTelemetry } from '@/hooks/useHudTelemetry';
 import { firstAvailableCategoryForDuration } from '@/lib/workout/filterWorkoutTemplates';
@@ -27,6 +28,7 @@ export default function CreateSessionPage() {
   const navigate = useNavigate();
   const { telemetry } = useHudTelemetry();
   const { profile } = useAthleteProfile();
+  const quotas = quotasFromProfile(profile);
   const [workoutSource, setWorkoutSource] = useState<WorkoutSource>('library');
   const [nickname, setNickname] = useState('');
   const [durationMinutes, setDurationMinutes] = useState<number>(5);
@@ -169,6 +171,7 @@ export default function CreateSessionPage() {
                   selectedTemplateId={selectedTemplateId}
                   classification={telemetry?.classification ?? null}
                   perceivedClassification={profile?.perceivedClassification ?? null}
+                  quotas={quotas}
                   onDurationChange={handleDurationChange}
                   onCategoryChange={setSelectedCategory}
                   onTemplateSelect={handleTemplateSelect}

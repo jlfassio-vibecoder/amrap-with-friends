@@ -4,6 +4,7 @@ import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import type { AthleteProfile } from '@/lib/api/athleteProfile';
+import type { BiologicalSex } from '@/lib/hud/classificationQuotas';
 import {
   canSetPerceivedClassification,
   type PerceivedClassification,
@@ -95,6 +96,9 @@ function IntakeForm({ initial, nowYear, onSave, onSaved }: IntakeFormProps) {
   const [rank, setRank] = useState<PerceivedClassification | null>(
     initial?.perceivedClassification ?? null
   );
+  const [biologicalSex, setBiologicalSex] = useState<BiologicalSex | null>(
+    initial?.biologicalSex ?? null
+  );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -107,13 +111,14 @@ function IntakeForm({ initial, nowYear, onSave, onSaved }: IntakeFormProps) {
     const a = Number(age);
     return (
       rank !== null &&
+      biologicalSex !== null &&
       isValidHeight(h, unitSystem) &&
       isValidWeight(w, unitSystem) &&
       Number.isInteger(a) &&
       a >= 13 &&
       a <= 120
     );
-  }, [height, weight, age, rank, unitSystem]);
+  }, [height, weight, age, rank, biologicalSex, unitSystem]);
 
   function switchUnitSystem(next: BodyMetricUnitSystem) {
     if (next === unitSystem) {
@@ -126,7 +131,7 @@ function IntakeForm({ initial, nowYear, onSave, onSaved }: IntakeFormProps) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!canSubmit || !rank) {
+    if (!canSubmit || !rank || !biologicalSex) {
       return;
     }
     setSubmitting(true);
@@ -142,6 +147,7 @@ function IntakeForm({ initial, nowYear, onSave, onSaved }: IntakeFormProps) {
         heightCm,
         weightKg,
         birthYear: nowYear - Number(age),
+        biologicalSex,
         perceivedClassification: rank,
       });
       if (result.error) {
@@ -223,6 +229,37 @@ function IntakeForm({ initial, nowYear, onSave, onSaved }: IntakeFormProps) {
             onChange={(event) => setAge(event.target.value)}
           />
         </label>
+      </div>
+
+      <div className="space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-secondary">
+          Biological sex
+        </p>
+        <div className="grid grid-cols-2 gap-3" role="group" aria-label="Biological sex">
+          {(
+            [
+              { id: 'M' as const, label: 'Male' },
+              { id: 'F' as const, label: 'Female' },
+            ] as const
+          ).map((option) => {
+            const selected = biologicalSex === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={selected}
+                className={
+                  selected
+                    ? 'rounded-card bg-accent px-4 py-3 text-sm font-bold uppercase tracking-widest text-on-accent'
+                    : 'rounded-card border border-border px-4 py-3 text-sm font-bold uppercase tracking-widest text-ink hover:border-accent/40'
+                }
+                onClick={() => setBiologicalSex(option.id)}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="space-y-3">

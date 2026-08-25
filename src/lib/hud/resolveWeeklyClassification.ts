@@ -1,11 +1,13 @@
+import type { ClassificationQuotas } from '@/lib/hud/classificationQuotas';
 import type { ClassificationProgress, ClassificationRank } from '@/lib/hud/types';
 
 /**
  * Pure twin of SQL weekly classification rules (source of truth remains hud_telemetry).
- * Highest rank meeting all criteria wins.
+ * Highest rank meeting all criteria wins. Civilian/Operator quotas scale; Special Ops is absolute.
  */
 export function resolveWeeklyClassification(
-  progress: ClassificationProgress
+  progress: ClassificationProgress,
+  quotas: ClassificationQuotas
 ): ClassificationRank {
   const {
     weekMinutes,
@@ -15,16 +17,19 @@ export function resolveWeeklyClassification(
   } = progress;
 
   if (
-    weekMinutes >= 300 &&
-    intensity4PlusCount >= 3 &&
-    marathon20Count >= 1
+    weekMinutes >= quotas.specialOpsMinutes &&
+    intensity4PlusCount >= quotas.specialOpsIntensity4Plus &&
+    marathon20Count >= quotas.specialOpsMarathon20
   ) {
     return 'special_ops';
   }
-  if (weekMinutes >= 240 && intensity3PlusCount >= 2) {
+  if (
+    weekMinutes >= quotas.operatorMinutes &&
+    intensity3PlusCount >= quotas.operatorIntensity3Plus
+  ) {
     return 'operator';
   }
-  if (weekMinutes >= 150) {
+  if (weekMinutes >= quotas.civilianMinutes) {
     return 'civilian';
   }
   return 'unclassified';
