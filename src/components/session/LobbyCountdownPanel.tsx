@@ -4,6 +4,7 @@ import {
   cancelLobbyCountdown,
   setLobbyCountdown,
 } from '@/lib/api/sessionSync';
+import type { LiveSessionPhase } from '@/lib/sessionSync/types';
 import { getStoredHostToken } from '@/lib/sessionIdentity';
 
 const PRESET_SECONDS = [
@@ -15,7 +16,7 @@ const PRESET_SECONDS = [
 interface LobbyCountdownPanelProps {
   sessionId: string;
   isHost: boolean;
-  phase: string;
+  phase: LiveSessionPhase;
   countdownArmed: boolean;
   ticking: boolean;
   onStart: () => void;
@@ -145,7 +146,7 @@ export function LobbyCountdownPanel({
         </section>
       ) : null}
 
-      {countdownArmed && ticking ? (
+      {countdownArmed ? (
         <section className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -161,7 +162,7 @@ export function LobbyCountdownPanel({
             disabled={busy}
             onClick={() => onStart()}
           >
-            Override: start now
+            {ticking ? 'Override: start now' : 'Start now'}
           </button>
         </section>
       ) : null}

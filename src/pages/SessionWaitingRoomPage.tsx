@@ -278,6 +278,7 @@ function LiveSessionView({
     ghostPacer.error === null &&
     !ghostPacer.isLoading;
 
+  // Copilot suggestion ignored: ignition Start/Abort is restored in LobbyCountdownPanel when armed; changing showStart would duplicate host Start while ticking.
   const showStart = isHost && livePhase === 'waiting' && !lobbyCountdownArmed;
   const showPause = isHost && livePhase === 'work' && !live.isPaused;
   const showResume = isHost && livePhase === 'work' && live.isPaused;
