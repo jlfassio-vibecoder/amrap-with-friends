@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
+import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { AuthModal } from '@/components/AuthModal';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 export function AuthHeaderActions() {
   const { isAuthenticated, isAuthLoading, user, signOut } = useAmrapAuth();
+  const { profile } = useAthleteProfile();
   const [authOpen, setAuthOpen] = useState(false);
+
+  const accountLabel =
+    profile?.username?.trim() || user?.email || null;
 
   return (
     <>
@@ -22,7 +27,11 @@ export function AuthHeaderActions() {
             <Link className="link-accent" to="/my-sessions">
               My sessions
             </Link>
-            <span className="text-secondary">{user?.email}</span>
+            {accountLabel ? (
+              <Link className="text-secondary hover:text-accent" to="/intake">
+                {accountLabel}
+              </Link>
+            ) : null}
             <button type="button" className="link-accent" onClick={() => signOut()}>
               Sign out
             </button>

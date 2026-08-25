@@ -11,6 +11,16 @@ export interface AuthSignInResult {
   error: string | null;
 }
 
+export interface AuthUpdateEmailResult {
+  error: string | null;
+  /** True when Supabase accepted the change but requires email re-confirmation. */
+  needsEmailConfirmation: boolean;
+}
+
+export interface AuthUpdatePasswordResult {
+  error: string | null;
+}
+
 export interface AmrapAuthContextValue {
   user: User | null;
   session: Session | null;
@@ -19,6 +29,8 @@ export interface AmrapAuthContextValue {
   signInWithMagicLink: (email: string) => Promise<{ error: string | null }>;
   signUpWithPassword: (email: string, password: string) => Promise<AuthSignUpResult>;
   signInWithPassword: (email: string, password: string) => Promise<AuthSignInResult>;
+  updateEmail: (email: string) => Promise<AuthUpdateEmailResult>;
+  updatePassword: (password: string) => Promise<AuthUpdatePasswordResult>;
   signOut: () => Promise<void>;
 }
 

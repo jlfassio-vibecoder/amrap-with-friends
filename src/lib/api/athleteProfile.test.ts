@@ -8,10 +8,21 @@ describe('parseAthleteProfile', () => {
     birthYear: 1994,
     biologicalSex: 'M',
     perceivedClassification: 'civilian',
+    username: 'operator_one',
+    nickname: 'Ghost',
   };
 
   it('parses a complete dossier including biological sex', () => {
     expect(parseAthleteProfile(valid)).toEqual(valid);
+  });
+
+  it('defaults missing username and nickname to empty strings', () => {
+    const { username: _u, nickname: _n, ...rest } = valid;
+    expect(parseAthleteProfile(rest)).toEqual({
+      ...rest,
+      username: '',
+      nickname: '',
+    });
   });
 
   it('rejects missing or invalid biological sex', () => {

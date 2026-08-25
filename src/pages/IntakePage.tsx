@@ -28,6 +28,8 @@ const RANKS: Array<{ id: PerceivedClassification; label: string }> = [
 const DISCLAIMER =
   'Claiming this rank does not grant it. You will be prescribed the required volume and lethality to prove it.';
 
+const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,30}$/;
+
 function safeNext(raw: string | null): string {
   if (raw && raw.startsWith('/') && !raw.startsWith('//')) {
     return raw;
@@ -37,6 +39,15 @@ function safeNext(raw: string | null): string {
 
 function ageFromBirthYear(birthYear: number, nowYear: number): number {
   return Math.max(13, nowYear - birthYear);
+}
+
+function isValidUsername(value: string): boolean {
+  return USERNAME_PATTERN.test(value.trim());
+}
+
+function isValidNickname(value: string): boolean {
+  const trimmed = value.trim();
+  return trimmed.length >= 1 && trimmed.length <= 50;
 }
 
 function convertHeightField(
@@ -77,12 +88,29 @@ function convertWeightField(
 
 interface IntakeFormProps {
   initial: AthleteProfile | null;
+  initialEmail: string;
   nowYear: number;
-  onSave: (input: AthleteProfile) => Promise<{ error: string | null }>;
+  onSaveProfile: (input: AthleteProfile) => Promise<{ error: string | null }>;
+  onUpdateEmail: (
+    email: string
+  ) => Promise<{ error: string | null; needsEmailConfirmation: boolean }>;
+  onUpdatePassword: (password: string) => Promise<{ error: string | null }>;
   onSaved: () => void;
 }
 
-function IntakeForm({ initial, nowYear, onSave, onSaved }: IntakeFormProps) {
+function IntakeForm({
+  initial,
+  initialEmail,
+  nowYear,
+  onSaveProfile,
+  onUpdateEmail,
+  onUpdatePassword,
+  onSaved,
+}: IntakeFormProps) {
+  const [email, setEmail] = useState(initialEmail);
+  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState(initial?.username ?? '');
+  const [nickname, setNickname] = useState(initial?.nickname ?? '');
   const [unitSystem, setUnitSystem] = useState<BodyMetricUnitSystem>(() => {
     if (!initial) {
       return 'imperial';
@@ -125,6 +153,7 @@ function IntakeForm({ initial, nowYear, onSave, onSaved }: IntakeFormProps) {
     initial?.biologicalSex ?? null
   );
   const [error, setError] = useState<string | null>(null);
+  const [emailConfirmNotice, setEmailConfirmNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const heightLabel = unitSystem === 'imperial' ? 'Height (in)' : 'Height (cm)';
@@ -135,6 +164,9 @@ function IntakeForm({ initial, nowYear, onSave, onSaved }: IntakeFormProps) {
     const w = Number(weight);
     const a = Number(age);
     return (
+      email.trim().length > 0 &&
+      isValidUsername(username) &&
+      isValidNickname(nickname) &&
       rank !== null &&
       biologicalSex !== null &&
       isValidHeight(h, unitSystem) &&
@@ -143,7 +175,7 @@ function IntakeForm({ initial, nowYear, onSave, onSaved }: IntakeFormProps) {
       a >= 13 &&
       a <= 120
     );
-  }, [height, weight, age, rank, biologicalSex, unitSystem]);
+  }, [email, username, nickname, height, weight, age, rank, biologicalSex, unitSystem]);
 
   function switchUnitSystem(next: BodyMetricUnitSystem) {
     if (next === unitSystem) {
@@ -161,6 +193,7 @@ function IntakeForm({ initial, nowYear, onSave, onSaved }: IntakeFormProps) {
     }
     setSubmitting(true);
     setError(null);
+    setEmailConfirmNotice(null);
     try {
       const heightValue = Number(height);
       const weightValue = Number(weight);
@@ -168,15 +201,43 @@ function IntakeForm({ initial, nowYear, onSave, onSaved }: IntakeFormProps) {
         unitSystem === 'imperial' ? inToCm(heightValue) : heightValue;
       const weightKg =
         unitSystem === 'imperial' ? lbToKg(weightValue) : weightValue;
-      const result = await onSave({
+      const profileResult = await onSaveProfile({
         heightCm,
         weightKg,
         birthYear: nowYear - Number(age),
         biologicalSex,
         perceivedClassification: rank,
+        username: username.trim(),
+        nickname: nickname.trim(),
       });
-      if (result.error) {
-        setError(result.error);
+      if (profileResult.error) {
+        setError(profileResult.error);
+        return;
+      }
+
+      const trimmedEmail = email.trim();
+      let needsEmailConfirmation = false;
+      if (trimmedEmail.toLowerCase() !== initialEmail.trim().toLowerCase()) {
+        const emailResult = await onUpdateEmail(trimmedEmail);
+        if (emailResult.error) {
+          setError(emailResult.error);
+          return;
+        }
+        needsEmailConfirmation = emailResult.needsEmailConfirmation;
+      }
+
+      if (password.length > 0) {
+        const passwordResult = await onUpdatePassword(password);
+        if (passwordResult.error) {
+          setError(passwordResult.error);
+          return;
+        }
+      }
+
+      if (needsEmailConfirmation) {
+        setEmailConfirmNotice(
+          'Dossier filed. Check your inbox to confirm the new email address.'
+        );
         return;
       }
       onSaved();
@@ -187,8 +248,77 @@ function IntakeForm({ initial, nowYear, onSave, onSaved }: IntakeFormProps) {
     }
   }
 
+  if (emailConfirmNotice) {
+    return (
+      <div className="card space-y-4 p-6">
+        <p className="text-sm text-secondary">{emailConfirmNotice}</p>
+        <button type="button" className="btn-primary w-full" onClick={onSaved}>
+          Continue
+        </button>
+      </div>
+    );
+  }
+
   return (
     <form className="card space-y-6 p-6" onSubmit={handleSubmit}>
+      <div className="space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-secondary">
+          Account
+        </p>
+        <label className="block space-y-1">
+          <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
+            Email
+          </span>
+          <input
+            className="input-field"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+        </label>
+        <label className="block space-y-1">
+          <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
+            Password
+          </span>
+          <input
+            className="input-field"
+            type="password"
+            autoComplete="new-password"
+            placeholder="Leave blank to keep current"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+        </label>
+        <label className="block space-y-1">
+          <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
+            Username
+          </span>
+          <input
+            className="input-field"
+            autoComplete="username"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+          />
+        </label>
+        <p className="text-xs text-muted">
+          3–30 characters: letters, numbers, underscore
+        </p>
+        <label className="block space-y-1">
+          <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
+            Nickname
+          </span>
+          <input
+            className="input-field"
+            value={nickname}
+            onChange={(event) => setNickname(event.target.value)}
+          />
+        </label>
+        <p className="text-xs text-muted">
+          Default workout callsign (max 50 characters)
+        </p>
+      </div>
+
       <div
         className="flex gap-2"
         role="group"
@@ -340,7 +470,8 @@ function IntakeForm({ initial, nowYear, onSave, onSaved }: IntakeFormProps) {
 export default function IntakePage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const { isAuthenticated, isAuthLoading } = useAmrapAuth();
+  const { isAuthenticated, isAuthLoading, user, updateEmail, updatePassword } =
+    useAmrapAuth();
   const { profile, loading, save } = useAthleteProfile();
   const nowYear = new Date().getFullYear();
 
@@ -374,10 +505,13 @@ export default function IntakePage() {
       </div>
 
       <IntakeForm
-        key={profile ? profile.perceivedClassification : 'new'}
+        key={profile ? `${profile.perceivedClassification}:${profile.username}` : 'new'}
         initial={profile}
+        initialEmail={user?.email ?? ''}
         nowYear={nowYear}
-        onSave={save}
+        onSaveProfile={save}
+        onUpdateEmail={updateEmail}
+        onUpdatePassword={updatePassword}
         onSaved={() => navigate(safeNext(params.get('next')))}
       />
     </NarrowPageLayout>

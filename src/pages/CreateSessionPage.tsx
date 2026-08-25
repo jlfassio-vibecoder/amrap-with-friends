@@ -68,6 +68,13 @@ export default function CreateSessionPage() {
   const [activeCount, setActiveCount] = useState<number | null>(null);
 
   useEffect(() => {
+    if (!profile?.nickname) {
+      return;
+    }
+    setNickname((current) => (current.trim() === '' ? profile.nickname : current));
+  }, [profile?.nickname]);
+
+  useEffect(() => {
     let cancelled = false;
     fetchHostActiveSessionCount().then((result) => {
       if (cancelled) {

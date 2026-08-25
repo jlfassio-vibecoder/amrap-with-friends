@@ -123,6 +123,44 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
     return { error: null };
   }, []);
 
+  const updateEmail = useCallback(async (email: string) => {
+    const trimmed = trimEmail(email);
+    if (!trimmed) {
+      return { error: 'Enter your email address.', needsEmailConfirmation: false };
+    }
+
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.auth.updateUser({ email: trimmed });
+
+    if (error) {
+      return { error: error.message, needsEmailConfirmation: false };
+    }
+
+    const pendingEmail =
+      typeof data.user?.new_email === 'string' && data.user.new_email.length > 0;
+
+    return {
+      error: null,
+      needsEmailConfirmation: pendingEmail,
+    };
+  }, []);
+
+  const updatePassword = useCallback(async (password: string) => {
+    const passwordCheck = validatePasswordLength(password);
+    if (!passwordCheck.ok) {
+      return { error: passwordCheck.error };
+    }
+
+    const supabase = getSupabaseClient();
+    const { error } = await supabase.auth.updateUser({ password });
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    return { error: null };
+  }, []);
+
   const signOut = useCallback(async () => {
     const supabase = getSupabaseClient();
     await supabase.auth.signOut();
@@ -137,6 +175,8 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
       signInWithMagicLink,
       signUpWithPassword,
       signInWithPassword,
+      updateEmail,
+      updatePassword,
       signOut,
     }),
     [
@@ -146,6 +186,8 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
       signInWithMagicLink,
       signUpWithPassword,
       signInWithPassword,
+      updateEmail,
+      updatePassword,
       signOut,
     ]
   );
