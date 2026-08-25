@@ -1,14 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
+import { buildRallyInviteUrl } from '@/lib/session/buildRallyInviteUrl';
 
 interface CopyInviteLinkProps {
   sessionId: string;
 }
 
 const SECURED_MS = 2000;
-
-export function buildRallyInviteUrl(sessionId: string, origin: string): string {
-  return `${origin}/join?s=${sessionId}`;
-}
 
 export function CopyInviteLink({ sessionId }: CopyInviteLinkProps) {
   const [secured, setSecured] = useState(false);

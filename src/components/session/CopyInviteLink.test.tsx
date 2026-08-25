@@ -1,9 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import {
-  buildRallyInviteUrl,
-  CopyInviteLink,
-} from './CopyInviteLink';
+import { CopyInviteLink } from './CopyInviteLink';
+import { buildRallyInviteUrl } from '@/lib/session/buildRallyInviteUrl';
 
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
 

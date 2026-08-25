@@ -66,26 +66,23 @@ export default function SessionWaitingRoomPage() {
     null
   );
   const [resumeError, setResumeError] = useState<string | null>(null);
-  const [resuming, setResuming] = useState(false);
+
+  const shouldAttemptResume =
+    Boolean(sessionId) &&
+    !storedParticipantId &&
+    !isAuthLoading &&
+    isAuthenticated;
+
   const resumeStarted = useRef(false);
 
   useEffect(() => {
-    if (
-      !sessionId ||
-      storedParticipantId ||
-      isAuthLoading ||
-      !isAuthenticated ||
-      resumeStarted.current
-    ) {
+    if (!shouldAttemptResume || resumeStarted.current || !sessionId) {
       return;
     }
 
     resumeStarted.current = true;
-    setResuming(true);
-    setResumeError(null);
 
     void resumeSessionIdentity(sessionId).then((result) => {
-      setResuming(false);
       if (result.error) {
         setResumeError(result.error.message);
         return;
@@ -98,7 +95,7 @@ export default function SessionWaitingRoomPage() {
       }
       setRestoredParticipantId(result.data.participantId);
     });
-  }, [sessionId, storedParticipantId, isAuthLoading, isAuthenticated]);
+  }, [shouldAttemptResume, sessionId]);
 
   if (!sessionId) {
     return (
@@ -115,7 +112,11 @@ export default function SessionWaitingRoomPage() {
     return <LiveSessionView sessionId={sessionId} />;
   }
 
-  if (isAuthLoading || resuming) {
+  const isResuming =
+    isAuthLoading ||
+    (shouldAttemptResume && resumeError === null && restoredParticipantId === null);
+
+  if (isResuming) {
     return (
       <main className="mx-auto max-w-lg space-y-4 p-6">
         <p className="text-sm text-secondary">Restoring session identity…</p>
