@@ -55,6 +55,18 @@ function mapRpcError(message: string | undefined): string {
   if (message.includes('Intake required')) {
     return 'Complete intake before creating a session.';
   }
+  if (message.includes('Rally time must be in the future')) {
+    return 'Rally time must be in the future.';
+  }
+  if (message.includes('Rally time must be today or tomorrow')) {
+    return 'Rally time must be today or tomorrow.';
+  }
+  if (message.includes('Host session limit reached')) {
+    return 'You already have 3 active sessions.';
+  }
+  if (message.includes('invalid_timezone')) {
+    return 'Could not determine your timezone.';
+  }
   return message;
 }
 
@@ -93,12 +105,15 @@ export async function createSession(
     return { data: null, error: { message: 'Enter your name or a nickname.' } };
   }
 
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const { data, error } = await supabase.rpc('create_session', {
     p_duration_minutes: input.durationMinutes,
     p_nickname: nickname,
     p_workout: input.workout,
     p_template_id: input.templateId ?? null,
     p_intensity_tier: input.intensityTier ?? null,
+    p_scheduled_at: input.scheduledAt ?? null,
+    p_timezone: timeZone,
   });
 
   if (error) {
@@ -178,4 +193,22 @@ export async function joinSession(
     data: { participantId, claimToken },
     error: null,
   };
+}
+
+export async function fetchHostActiveSessionCount(): Promise<{
+  data: number | null;
+  error: SessionApiError | null;
+}> {
+  const { data, error } = await supabase.rpc('host_active_session_count');
+
+  if (error) {
+    return { data: null, error: { message: mapRpcError(error.message) } };
+  }
+
+  const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  if (raw.ok !== true || typeof raw.count !== 'number') {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  return { data: raw.count, error: null };
 }

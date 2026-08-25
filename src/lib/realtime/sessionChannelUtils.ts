@@ -64,6 +64,11 @@ export function parseSessionRow(record: Record<string, unknown>): SessionRow | n
       ? null
       : String(record.started_at);
 
+  const scheduledAt =
+    record.scheduled_at === null || record.scheduled_at === undefined
+      ? null
+      : String(record.scheduled_at);
+
   const templateIdRaw = record.template_id;
   const templateId =
     templateIdRaw === null || templateIdRaw === undefined
@@ -81,6 +86,7 @@ export function parseSessionRow(record: Record<string, unknown>): SessionRow | n
     time_left_sec: timeLeftSec,
     is_paused: isPaused,
     started_at: startedAt,
+    scheduled_at: scheduledAt,
     segment_index: segmentIndex,
     created_at: createdAt,
   };

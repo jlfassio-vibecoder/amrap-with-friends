@@ -11,6 +11,8 @@ export interface CreateSessionInput {
   templateId?: string;
   /** Snapshot intensity 1–5; custom workouts should pass 2. */
   intensityTier?: number;
+  /** ISO timestamptz; omit for Start now. */
+  scheduledAt?: string;
 }
 
 export interface CreateSessionResult {

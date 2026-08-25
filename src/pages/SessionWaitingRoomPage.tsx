@@ -393,6 +393,19 @@ function LiveSessionView({
               </p>
             </section>
 
+            {live.phase === 'waiting' && live.scheduledAt ? (
+              <p className="text-sm text-secondary">
+                Rally time:{' '}
+                {new Date(live.scheduledAt).toLocaleString(undefined, {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                })}
+              </p>
+            ) : null}
+
             {live.phase === 'waiting' ? (
               <CopyInviteLink sessionId={sessionId} />
             ) : null}

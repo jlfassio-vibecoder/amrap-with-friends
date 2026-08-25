@@ -12,6 +12,7 @@ export interface SessionRow {
   time_left_sec: number;
   is_paused: boolean;
   started_at: string | null;
+  scheduled_at: string | null;
   segment_index: number;
   created_at: string;
 }

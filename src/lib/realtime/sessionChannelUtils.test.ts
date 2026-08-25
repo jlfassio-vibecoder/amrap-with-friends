@@ -40,6 +40,24 @@ describe('sessionChannelUtils', () => {
 
     expect(row?.state).toBe('waiting');
     expect(row?.duration_minutes).toBe(15);
+    expect(row?.scheduled_at).toBeNull();
+  });
+
+  it('parseSessionRow keeps scheduled_at when present', () => {
+    const row = parseSessionRow({
+      id: SESSION_ID,
+      duration_minutes: 15,
+      workout: [{ name: 'Burpees' }],
+      state: 'waiting',
+      time_left_sec: 10,
+      is_paused: false,
+      started_at: null,
+      scheduled_at: '2026-08-25T16:30:00.000Z',
+      segment_index: 0,
+      created_at: '2026-08-22T12:00:00.000Z',
+    });
+
+    expect(row?.scheduled_at).toBe('2026-08-25T16:30:00.000Z');
   });
 
   it('mergePresenceState extracts online participants', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createSession, joinSession } from './sessions';
+import { createSession, fetchHostActiveSessionCount, joinSession } from './sessions';
 import { supabase } from '@/lib/supabase';
 import * as sessionIdentity from '@/lib/sessionIdentity';
 
@@ -51,6 +51,8 @@ describe('sessions API', () => {
       p_workout: [{ name: 'Burpees', target: 10, unit: 'reps' }],
       p_template_id: null,
       p_intensity_tier: null,
+      p_scheduled_at: null,
+      p_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
     expect(persistMock).toHaveBeenCalledWith(SESSION_ID, {
       nickname: 'Host',
@@ -98,6 +100,67 @@ describe('sessions API', () => {
 
     expect(result.data).toBeNull();
     expect(result.error?.message).toBe('This session is full.');
+  });
+
+  it('createSession passes scheduledAt and maps rally/cap RPC errors', async () => {
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: {
+        message: 'Host session limit reached',
+        name: 'PostgrestError',
+        details: '',
+        hint: '',
+        code: 'P0001',
+        toJSON: () => ({
+          name: 'PostgrestError',
+          message: 'Host session limit reached',
+          details: '',
+          hint: '',
+          code: 'P0001',
+        }),
+      },
+      success: false,
+      count: null,
+      status: 400,
+      statusText: 'Bad Request',
+    });
+
+    const scheduledAt = '2026-08-25T16:30:00.000Z';
+    const result = await createSession({
+      nickname: 'Host',
+      durationMinutes: 15,
+      workout: [{ name: 'Burpees' }],
+      scheduledAt,
+    });
+
+    expect(rpcMock).toHaveBeenCalledWith('create_session', {
+      p_duration_minutes: 15,
+      p_nickname: 'Host',
+      p_workout: [{ name: 'Burpees' }],
+      p_template_id: null,
+      p_intensity_tier: null,
+      p_scheduled_at: scheduledAt,
+      p_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+    expect(result.data).toBeNull();
+    expect(result.error?.message).toBe('You already have 3 active sessions.');
+  });
+
+  it('fetchHostActiveSessionCount returns the host queue size', async () => {
+    rpcMock.mockResolvedValue({
+      data: { ok: true, count: 2 },
+      error: null,
+      success: true,
+      count: null,
+      status: 200,
+      statusText: 'OK',
+    });
+
+    const result = await fetchHostActiveSessionCount();
+
+    expect(rpcMock).toHaveBeenCalledWith('host_active_session_count');
+    expect(result.error).toBeNull();
+    expect(result.data).toBe(2);
   });
 
   it('joinSession rejects invalid session ID before RPC', async () => {
