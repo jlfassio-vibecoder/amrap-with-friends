@@ -1,11 +1,17 @@
 import { Link, useParams } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
-import { getStoredParticipantId, getStoredClaimToken, getStoredNickname, getStoredGhostSelection } from '@/lib/sessionIdentity';
+import {
+  getStoredParticipantId,
+  getStoredClaimToken,
+  getStoredNickname,
+  getStoredGhostSelection,
+} from '@/lib/sessionIdentity';
 import { useLiveAmrapSession } from '@/hooks/useLiveAmrapSession';
 import { useParticipantClaim } from '@/hooks/useParticipantClaim';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useSessionChannel } from '@/lib/realtime/useSessionChannel';
 import { canOfferSessionSave } from '@/lib/claim/canOfferSessionSave';
+import { resumeSessionIdentity } from '@/lib/api/resumeSessionIdentity';
 import { AppHeader } from '@/components/AppHeader';
 import { AuthModal } from '@/components/AuthModal';
 import { ExerciseInfoTrigger } from '@/components/exerciseInfo/ExerciseInfoTrigger';
@@ -54,7 +60,45 @@ function formatExerciseLabel(exercise: {
 
 export default function SessionWaitingRoomPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
-  const participantId = sessionId ? getStoredParticipantId(sessionId) : null;
+  const storedParticipantId = sessionId ? getStoredParticipantId(sessionId) : null;
+  const { isAuthenticated, isAuthLoading } = useAmrapAuth();
+  const [restoredParticipantId, setRestoredParticipantId] = useState<string | null>(
+    null
+  );
+  const [resumeError, setResumeError] = useState<string | null>(null);
+  const [resuming, setResuming] = useState(false);
+  const resumeStarted = useRef(false);
+
+  useEffect(() => {
+    if (
+      !sessionId ||
+      storedParticipantId ||
+      isAuthLoading ||
+      !isAuthenticated ||
+      resumeStarted.current
+    ) {
+      return;
+    }
+
+    resumeStarted.current = true;
+    setResuming(true);
+    setResumeError(null);
+
+    void resumeSessionIdentity(sessionId).then((result) => {
+      setResuming(false);
+      if (result.error) {
+        setResumeError(result.error.message);
+        return;
+      }
+      if (result.missing || !result.data) {
+        setResumeError(
+          'No participant identity found for this session. Join or create again.'
+        );
+        return;
+      }
+      setRestoredParticipantId(result.data.participantId);
+    });
+  }, [sessionId, storedParticipantId, isAuthLoading, isAuthenticated]);
 
   if (!sessionId) {
     return (
@@ -65,21 +109,42 @@ export default function SessionWaitingRoomPage() {
     );
   }
 
-  if (!participantId) {
+  const participantId = storedParticipantId ?? restoredParticipantId;
+
+  if (participantId) {
+    return <LiveSessionView sessionId={sessionId} />;
+  }
+
+  if (isAuthLoading || resuming) {
     return (
       <main className="mx-auto max-w-lg space-y-4 p-6">
-        <p className="text-error">
-          Error: No participant identity found for this session. Join or create again.
-        </p>
-        <div className="flex gap-4 text-sm">
-          <Link className="link-accent" to="/join">Join session</Link>
-          <Link className="link-accent" to="/create">Create session</Link>
-        </div>
+        <p className="text-sm text-secondary">Restoring session identity…</p>
       </main>
     );
   }
 
-  return <LiveSessionView sessionId={sessionId} />;
+  return (
+    <main className="mx-auto max-w-lg space-y-4 p-6">
+      <p className="text-error">
+        Error:{' '}
+        {resumeError ??
+          'No participant identity found for this session. Join or create again.'}
+      </p>
+      <div className="flex flex-wrap gap-4 text-sm">
+        {!isAuthenticated ? (
+          <Link className="link-accent" to="/join">
+            Join session
+          </Link>
+        ) : null}
+        <Link className="link-accent" to="/my-sessions">
+          My sessions
+        </Link>
+        <Link className="link-accent" to="/create">
+          Create session
+        </Link>
+      </div>
+    </main>
+  );
 }
 
 function LiveSessionView({ sessionId }: { sessionId: string }) {

@@ -7,6 +7,7 @@ import {
   formatMySessionScoreDisplay,
   type MySessionEntry,
 } from '@/lib/api/mySessions';
+import { persistSessionIdentity } from '@/lib/sessionIdentity';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 
 function formatWorkoutSummary(workout: MySessionEntry['workout']): string {
@@ -92,7 +93,16 @@ export default function MySessionsPage() {
                 {formatMySessionScoreDisplay(entry)} · {entry.state}
               </p>
               <div className="flex flex-wrap items-center gap-3">
-                <Link className="link-accent" to={`/session/${entry.sessionId}`}>
+                <Link
+                  className="link-accent"
+                  to={`/session/${entry.sessionId}`}
+                  onClick={() => {
+                    persistSessionIdentity(entry.sessionId, {
+                      nickname: entry.nickname,
+                      participantId: entry.participantId,
+                    });
+                  }}
+                >
                   View session
                 </Link>
                 {entry.scoreBreakdown ? (
