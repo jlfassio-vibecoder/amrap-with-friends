@@ -34,7 +34,7 @@ export function CopyInviteLink({ sessionId }: CopyInviteLinkProps) {
         timerRef.current = null;
       }, SECURED_MS);
     } catch {
-      setError('Could not copy link. Copy it manually from the address bar after sharing.');
+      setError(`Could not copy link. Copy this rally URL manually: ${inviteUrl}`);
     }
   }
 

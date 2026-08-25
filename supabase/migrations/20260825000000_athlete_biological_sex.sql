@@ -253,6 +253,7 @@ BEGIN
     v_age := 22;
     v_sex := 'M';
   ELSE
+    -- Copilot suggestion ignored: local calendar year on the client mirrors this DB year extract; exact TZ alignment is out of scope for classification quotas.
     v_age := extract(year FROM now())::int - v_birth_year;
     v_sex := coalesce(v_sex, 'M');
   END IF;

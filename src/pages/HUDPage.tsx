@@ -12,8 +12,10 @@ import { useHudTelemetry } from '@/hooks/useHudTelemetry';
 export default function HUDPage() {
   const { telemetry, error, loading, isAuthenticated, isAuthLoading } =
     useHudTelemetry();
-  const { profile } = useAthleteProfile();
+  const { profile, loading: profileLoading } = useAthleteProfile();
   const quotas = quotasFromProfile(profile);
+  const showTelemetry =
+    !loading && !profileLoading && isAuthenticated && telemetry;
 
   return (
     <NarrowPageLayout title="HUD" subtitle="Operational telemetry">
@@ -28,7 +30,9 @@ export default function HUDPage() {
         </p>
       </div>
 
-      {loading ? <p className="text-sm text-secondary">Loading…</p> : null}
+      {loading || profileLoading ? (
+        <p className="text-sm text-secondary">Loading…</p>
+      ) : null}
 
       {!isAuthLoading && !isAuthenticated ? (
         <p className="text-sm text-secondary">
@@ -39,7 +43,7 @@ export default function HUDPage() {
 
       {error ? <p className="text-error">Error: {error}</p> : null}
 
-      {!loading && isAuthenticated && telemetry ? (
+      {showTelemetry ? (
         <div className="space-y-4">
           <ClassificationBadge
             classification={telemetry.classification}

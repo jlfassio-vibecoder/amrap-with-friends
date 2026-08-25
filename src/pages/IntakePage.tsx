@@ -83,13 +83,38 @@ interface IntakeFormProps {
 }
 
 function IntakeForm({ initial, nowYear, onSave, onSaved }: IntakeFormProps) {
-  const [unitSystem, setUnitSystem] = useState<BodyMetricUnitSystem>('imperial');
-  const [height, setHeight] = useState(() =>
-    initial ? String(cmToIn(initial.heightCm)) : ''
-  );
-  const [weight, setWeight] = useState(() =>
-    initial ? String(kgToLb(initial.weightKg)) : ''
-  );
+  const [unitSystem, setUnitSystem] = useState<BodyMetricUnitSystem>(() => {
+    if (!initial) {
+      return 'imperial';
+    }
+    const inches = cmToIn(initial.heightCm);
+    const pounds = kgToLb(initial.weightKg);
+    // Prefer imperial unless converted values fall outside persistable bounds.
+    if (isValidHeight(inches, 'imperial') && isValidWeight(pounds, 'imperial')) {
+      return 'imperial';
+    }
+    return 'metric';
+  });
+  const [height, setHeight] = useState(() => {
+    if (!initial) {
+      return '';
+    }
+    const inches = cmToIn(initial.heightCm);
+    const pounds = kgToLb(initial.weightKg);
+    const preferImperial =
+      isValidHeight(inches, 'imperial') && isValidWeight(pounds, 'imperial');
+    return String(preferImperial ? inches : initial.heightCm);
+  });
+  const [weight, setWeight] = useState(() => {
+    if (!initial) {
+      return '';
+    }
+    const inches = cmToIn(initial.heightCm);
+    const pounds = kgToLb(initial.weightKg);
+    const preferImperial =
+      isValidHeight(inches, 'imperial') && isValidWeight(pounds, 'imperial');
+    return String(preferImperial ? pounds : initial.weightKg);
+  });
   const [age, setAge] = useState(
     initial ? String(ageFromBirthYear(initial.birthYear, nowYear)) : ''
   );

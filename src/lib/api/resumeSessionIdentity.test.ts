@@ -31,6 +31,7 @@ describe('resumeSessionIdentity', () => {
         participantId: PARTICIPANT_ID,
         nickname: 'Operator',
         role: 'host',
+        hostToken: 'host-secret',
       },
       error: null,
       success: true,
@@ -47,6 +48,7 @@ describe('resumeSessionIdentity', () => {
     expect(persistMock).toHaveBeenCalledWith(SESSION_ID, {
       participantId: PARTICIPANT_ID,
       nickname: 'Operator',
+      hostToken: 'host-secret',
     });
     expect(result.error).toBeNull();
     expect(result.missing).toBe(false);
@@ -54,6 +56,7 @@ describe('resumeSessionIdentity', () => {
       participantId: PARTICIPANT_ID,
       nickname: 'Operator',
       role: 'host',
+      hostToken: 'host-secret',
     });
   });
 

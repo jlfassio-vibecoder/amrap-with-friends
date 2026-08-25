@@ -5,6 +5,7 @@ export type ResumeSessionIdentityResult = {
   participantId: string;
   nickname: string;
   role: string;
+  hostToken: string | null;
 };
 
 export type ResumeSessionIdentityError = {
@@ -64,6 +65,7 @@ export async function resumeSessionIdentity(sessionId: string): Promise<{
   const participantId = readString(raw.participantId);
   const nickname = readString(raw.nickname);
   const role = readString(raw.role) ?? 'joiner';
+  const hostToken = role === 'host' ? readString(raw.hostToken) : null;
 
   if (!participantId || !nickname) {
     return {
@@ -73,10 +75,14 @@ export async function resumeSessionIdentity(sessionId: string): Promise<{
     };
   }
 
-  persistSessionIdentity(sessionId, { participantId, nickname });
+  persistSessionIdentity(sessionId, {
+    participantId,
+    nickname,
+    ...(hostToken ? { hostToken } : {}),
+  });
 
   return {
-    data: { participantId, nickname, role },
+    data: { participantId, nickname, role, hostToken },
     missing: false,
     error: null,
   };

@@ -37,7 +37,9 @@ export function isValidHeight(value: number, system: BodyMetricUnitSystem): bool
     return false;
   }
   if (system === 'imperial') {
-    return value >= HEIGHT_IN_MIN && value <= HEIGHT_IN_MAX;
+    // Validate converted cm so every enabled imperial value is persistable.
+    const cm = inToCm(value);
+    return cm >= HEIGHT_CM_MIN && cm <= HEIGHT_CM_MAX;
   }
   return value >= HEIGHT_CM_MIN && value <= HEIGHT_CM_MAX;
 }
@@ -47,7 +49,9 @@ export function isValidWeight(value: number, system: BodyMetricUnitSystem): bool
     return false;
   }
   if (system === 'imperial') {
-    return value >= WEIGHT_LB_MIN && value <= WEIGHT_LB_MAX;
+    // Validate converted kg: WEIGHT_LB_MIN 66 → 29.9 kg fails the DB check.
+    const kg = lbToKg(value);
+    return kg >= WEIGHT_KG_MIN && kg <= WEIGHT_KG_MAX;
   }
   return value >= WEIGHT_KG_MIN && value <= WEIGHT_KG_MAX;
 }

@@ -37,6 +37,7 @@ describe('bodyMetrics', () => {
   it('validates imperial and metric height ranges', () => {
     expect(isValidHeight(71, 'imperial')).toBe(true);
     expect(isValidHeight(39, 'imperial')).toBe(false);
+    expect(isValidHeight(40, 'imperial')).toBe(true);
     expect(isValidHeight(180, 'metric')).toBe(true);
     expect(isValidHeight(99, 'metric')).toBe(false);
     expect(isValidHeight(71.5, 'imperial')).toBe(false);
@@ -45,6 +46,8 @@ describe('bodyMetrics', () => {
   it('validates imperial and metric weight ranges', () => {
     expect(isValidWeight(176.4, 'imperial')).toBe(true);
     expect(isValidWeight(65, 'imperial')).toBe(false);
+    expect(isValidWeight(66, 'imperial')).toBe(false);
+    expect(isValidWeight(66.1, 'imperial')).toBe(true);
     expect(isValidWeight(80, 'metric')).toBe(true);
     expect(isValidWeight(29, 'metric')).toBe(false);
   });

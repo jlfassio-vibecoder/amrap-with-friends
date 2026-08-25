@@ -11,6 +11,7 @@ DECLARE
   v_participant_id uuid;
   v_nickname text;
   v_role text;
+  v_host_token text;
 BEGIN
   v_uid := auth.uid();
   IF v_uid IS NULL THEN
@@ -33,11 +34,19 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'reason', 'not_claimed');
   END IF;
 
+  IF v_role = 'host' THEN
+    SELECT s.host_token
+    INTO v_host_token
+    FROM public.sessions s
+    WHERE s.id = p_session_id;
+  END IF;
+
   RETURN jsonb_build_object(
     'ok', true,
     'participantId', v_participant_id,
     'nickname', v_nickname,
-    'role', v_role
+    'role', v_role,
+    'hostToken', v_host_token
   );
 END;
 $$;

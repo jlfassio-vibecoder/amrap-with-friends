@@ -62,10 +62,15 @@ export default function SessionWaitingRoomPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const storedParticipantId = sessionId ? getStoredParticipantId(sessionId) : null;
   const { isAuthenticated, isAuthLoading } = useAmrapAuth();
-  const [restoredParticipantId, setRestoredParticipantId] = useState<string | null>(
-    null
-  );
-  const [resumeError, setResumeError] = useState<string | null>(null);
+  const [restoredIdentity, setRestoredIdentity] = useState<{
+    sessionId: string;
+    participantId: string;
+    nickname: string;
+  } | null>(null);
+  const [resumeError, setResumeError] = useState<{
+    sessionId: string;
+    message: string;
+  } | null>(null);
 
   const shouldAttemptResume =
     Boolean(sessionId) &&
@@ -73,28 +78,53 @@ export default function SessionWaitingRoomPage() {
     !isAuthLoading &&
     isAuthenticated;
 
-  const resumeStarted = useRef(false);
+  const resumeStartedForSession = useRef<string | null>(null);
+  const activeRestored =
+    restoredIdentity && restoredIdentity.sessionId === sessionId
+      ? restoredIdentity
+      : null;
+  const activeResumeError =
+    resumeError && resumeError.sessionId === sessionId
+      ? resumeError.message
+      : null;
 
   useEffect(() => {
-    if (!shouldAttemptResume || resumeStarted.current || !sessionId) {
+    if (!shouldAttemptResume || !sessionId) {
+      return;
+    }
+    if (resumeStartedForSession.current === sessionId) {
       return;
     }
 
-    resumeStarted.current = true;
+    resumeStartedForSession.current = sessionId;
+    let cancelled = false;
 
     void resumeSessionIdentity(sessionId).then((result) => {
+      if (cancelled) {
+        return;
+      }
       if (result.error) {
-        setResumeError(result.error.message);
+        setResumeError({ sessionId, message: result.error.message });
         return;
       }
       if (result.missing || !result.data) {
-        setResumeError(
-          'No participant identity found for this session. Join or create again.'
-        );
+        setResumeError({
+          sessionId,
+          message:
+            'No participant identity found for this session. Join or create again.',
+        });
         return;
       }
-      setRestoredParticipantId(result.data.participantId);
+      setRestoredIdentity({
+        sessionId,
+        participantId: result.data.participantId,
+        nickname: result.data.nickname,
+      });
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, [shouldAttemptResume, sessionId]);
 
   if (!sessionId) {
@@ -106,15 +136,26 @@ export default function SessionWaitingRoomPage() {
     );
   }
 
-  const participantId = storedParticipantId ?? restoredParticipantId;
+  const participantId =
+    storedParticipantId ?? activeRestored?.participantId ?? null;
+  const nickname =
+    (sessionId ? getStoredNickname(sessionId) : null) ??
+    activeRestored?.nickname ??
+    'Unknown';
 
   if (participantId) {
-    return <LiveSessionView sessionId={sessionId} />;
+    return (
+      <LiveSessionView
+        sessionId={sessionId}
+        participantId={participantId}
+        nickname={nickname}
+      />
+    );
   }
 
   const isResuming =
     isAuthLoading ||
-    (shouldAttemptResume && resumeError === null && restoredParticipantId === null);
+    (shouldAttemptResume && activeResumeError === null && activeRestored === null);
 
   if (isResuming) {
     return (
@@ -128,7 +169,7 @@ export default function SessionWaitingRoomPage() {
     <main className="mx-auto max-w-lg space-y-4 p-6">
       <p className="text-error">
         Error:{' '}
-        {resumeError ??
+        {activeResumeError ??
           'No participant identity found for this session. Join or create again.'}
       </p>
       <div className="flex flex-wrap gap-4 text-sm">
@@ -148,9 +189,15 @@ export default function SessionWaitingRoomPage() {
   );
 }
 
-function LiveSessionView({ sessionId }: { sessionId: string }) {
-  const participantId = getStoredParticipantId(sessionId) ?? '';
-  const nickname = getStoredNickname(sessionId) ?? 'Unknown';
+function LiveSessionView({
+  sessionId,
+  participantId,
+  nickname,
+}: {
+  sessionId: string;
+  participantId: string;
+  nickname: string;
+}) {
   const claimToken = getStoredClaimToken(sessionId);
   const { isAuthenticated, isAuthLoading } = useAmrapAuth();
   const [isSubmittingPartialReps, setIsSubmittingPartialReps] = useState(false);

@@ -29,7 +29,7 @@ export default function JoinSessionPage() {
     deepLink && !rallyUuidValid ? SESSION_LOCKED_OR_INVALID : null
   );
   const [loading, setLoading] = useState(false);
-  const autoJoinStarted = useRef(false);
+  const autoJoinedSessionIdRef = useRef<string | null>(null);
 
   async function performJoin(targetSessionId: string, callsign: string, deep: boolean) {
     setError(null);
@@ -67,12 +67,15 @@ export default function JoinSessionPage() {
   }
 
   useEffect(() => {
-    if (!canAutoJoin || isAuthLoading || autoJoinStarted.current || !authCallsign) {
+    if (!canAutoJoin || isAuthLoading || !authCallsign) {
       return;
     }
-    autoJoinStarted.current = true;
+    if (autoJoinedSessionIdRef.current === rallySessionId) {
+      return;
+    }
+    autoJoinedSessionIdRef.current = rallySessionId;
     void performJoin(rallySessionId, authCallsign, true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot auto-join when auth ready
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot auto-join per rally session id
   }, [canAutoJoin, isAuthLoading, authCallsign, rallySessionId]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -82,7 +85,7 @@ export default function JoinSessionPage() {
         setError(SESSION_LOCKED_OR_INVALID);
         return;
       }
-      await performJoin(rallySessionId, nickname, true);
+      await performJoin(rallySessionId, nickname || authCallsign || '', true);
       return;
     }
     await performJoin(sessionId, nickname, false);
@@ -109,13 +112,12 @@ export default function JoinSessionPage() {
     );
   }
 
-  if (deepLink && canAutoJoin) {
+  if (deepLink && canAutoJoin && !error) {
     return (
       <NarrowPageLayout title="Join session" subtitle="Rally point">
         <p className="text-sm text-secondary">
           Welcome, {authCallsign}. Breaching lobby…
         </p>
-        {error ? <p className="text-error">{error}</p> : null}
         {loading ? <p className="text-sm text-secondary">Joining…</p> : null}
       </NarrowPageLayout>
     );
@@ -143,7 +145,7 @@ export default function JoinSessionPage() {
               className="input-field"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
-              placeholder="Callsign"
+              placeholder={authCallsign ?? 'Callsign'}
               maxLength={50}
               required
               autoFocus

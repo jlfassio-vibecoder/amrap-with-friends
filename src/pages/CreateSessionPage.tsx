@@ -27,7 +27,7 @@ import { parseWorkoutText } from '@/lib/workout/parseWorkoutLines';
 export default function CreateSessionPage() {
   const navigate = useNavigate();
   const { telemetry } = useHudTelemetry();
-  const { profile } = useAthleteProfile();
+  const { profile, loading: profileLoading } = useAthleteProfile();
   const quotas = quotasFromProfile(profile);
   const [workoutSource, setWorkoutSource] = useState<WorkoutSource>('library');
   const [nickname, setNickname] = useState('');
@@ -149,6 +149,9 @@ export default function CreateSessionPage() {
             </p>
           </div>
 
+          {profileLoading ? (
+            <p className="text-sm text-secondary">Loading athlete profile…</p>
+          ) : (
           <div className="space-y-6 lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start lg:gap-6 lg:space-y-0">
             <div className="card space-y-6 p-6">
               <WorkoutSourceToggle value={workoutSource} onChange={handleWorkoutSourceChange} />
@@ -191,6 +194,7 @@ export default function CreateSessionPage() {
               onSubmit={handleSubmit}
             />
           </div>
+          )}
 
           <p className="text-center text-sm">
             <Link className="link-accent" to="/join">
