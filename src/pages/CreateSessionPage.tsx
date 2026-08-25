@@ -16,16 +16,15 @@ import {
 } from '@/data/workoutTemplates';
 import { createSession } from '@/lib/api/sessions';
 import { getSupabaseConfigError } from '@/lib/supabase';
+import { useHudTelemetry } from '@/hooks/useHudTelemetry';
 import { firstAvailableCategoryForDuration } from '@/lib/workout/filterWorkoutTemplates';
-import {
-  CUSTOM_WORKOUT_INTENSITY_TIER,
-  resolveTemplateIntensity,
-} from '@/lib/workout/resolveTemplateIntensity';
+import { CUSTOM_WORKOUT_INTENSITY_TIER } from '@/lib/workout/resolveTemplateIntensity';
 import { applyTemplate } from '@/lib/workout/templateToExercises';
 import { parseWorkoutText } from '@/lib/workout/parseWorkoutLines';
 
 export default function CreateSessionPage() {
   const navigate = useNavigate();
+  const { telemetry } = useHudTelemetry();
   const [workoutSource, setWorkoutSource] = useState<WorkoutSource>('library');
   const [nickname, setNickname] = useState('');
   const [durationMinutes, setDurationMinutes] = useState<number>(5);
@@ -101,7 +100,7 @@ export default function CreateSessionPage() {
       const workout = parseWorkoutText(workoutText);
       const intensityTier =
         workoutSource === 'library' && selectedTemplate
-          ? resolveTemplateIntensity(selectedTemplate)
+          ? selectedTemplate.intensityTier
           : CUSTOM_WORKOUT_INTENSITY_TIER;
       const result = await createSession({
         nickname,
@@ -166,6 +165,7 @@ export default function CreateSessionPage() {
                   durationMinutes={durationMinutes as TimeDomain}
                   selectedCategory={selectedCategory}
                   selectedTemplateId={selectedTemplateId}
+                  classification={telemetry?.classification ?? null}
                   onDurationChange={handleDurationChange}
                   onCategoryChange={setSelectedCategory}
                   onTemplateSelect={handleTemplateSelect}

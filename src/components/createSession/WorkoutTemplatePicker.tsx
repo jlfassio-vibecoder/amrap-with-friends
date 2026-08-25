@@ -14,11 +14,13 @@ import {
   categoryDisplayForDuration,
 } from '@/lib/workout/filterWorkoutTemplates';
 import { WorkoutTemplateCard } from '@/components/createSession/WorkoutTemplateCard';
+import type { HudClassification } from '@/lib/hud/types';
 
 interface WorkoutTemplatePickerProps {
   durationMinutes: TimeDomain;
   selectedCategory: WorkoutCategory;
   selectedTemplateId: string | null;
+  classification?: HudClassification | null;
   onDurationChange: (duration: TimeDomain) => void;
   onCategoryChange: (category: WorkoutCategory) => void;
   onTemplateSelect: (template: WorkoutTemplate) => void;
@@ -28,6 +30,7 @@ export function WorkoutTemplatePicker({
   durationMinutes,
   selectedCategory,
   selectedTemplateId,
+  classification = null,
   onDurationChange,
   onCategoryChange,
   onTemplateSelect,
@@ -121,6 +124,7 @@ export function WorkoutTemplatePicker({
                 key={template.id}
                 template={template}
                 selected={selectedTemplateId === template.id}
+                classification={classification}
                 onSelect={onTemplateSelect}
               />
             ))}

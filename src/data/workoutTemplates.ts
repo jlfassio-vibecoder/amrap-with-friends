@@ -40,8 +40,7 @@ export interface WorkoutTemplate {
   focus?: string;
   durationMinutes: TimeDomain;
   category: WorkoutCategory | null;
-  /** Optional override; otherwise resolved from category via `resolveTemplateIntensity`. */
-  intensityTier?: IntensityTier;
+  intensityTier: IntensityTier;
   movements: WorkoutTemplateMovement[];
   tacticalNote: string;
 }
@@ -149,6 +148,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Piston',
     durationMinutes: 5,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Air Squats', reps: 10 },
       { name: 'Hand-Release Push-ups', reps: 10 },
@@ -161,6 +161,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Shock & Awe',
     durationMinutes: 5,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Jump Squats', reps: 10 },
       { name: 'Plank Shoulder Taps', reps: 20 },
@@ -173,6 +174,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Pendulum',
     durationMinutes: 5,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Alternating Lunges', reps: 12 },
       { name: 'Pike Push-ups', reps: 8 },
@@ -185,6 +187,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'System Override',
     durationMinutes: 5,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Tuck Jumps', reps: 10 },
       { name: 'Commando Planks (Up-Downs)', reps: 10 },
@@ -196,6 +199,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Gravity Well',
     durationMinutes: 5,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Glute Bridges', reps: 15 },
       { name: 'Diamond Push-ups', reps: 10 },
@@ -208,6 +212,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Flash Flood',
     durationMinutes: 5,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Skater Jumps (Total)', reps: 12 },
       { name: 'Wide-Grip Push-ups', reps: 10 },
@@ -219,6 +224,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The See-Saw',
     durationMinutes: 5,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Surrenders (Kneel-to-Stand)', reps: 10 },
       { name: 'Plank Jacks', reps: 15 },
@@ -231,6 +237,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Pulse Spike',
     durationMinutes: 5,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Jumping Lunges (Total)', reps: 12 },
       { name: 'Dive-Bomber Push-ups', reps: 8 },
@@ -243,6 +250,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Metronome',
     durationMinutes: 5,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Fast Air Squats', reps: 15 },
       { name: 'T-Push-ups (Rotate & Reach)', reps: 10 },
@@ -254,6 +262,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Whiplash',
     durationMinutes: 5,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Broad Jumps (Turn and repeat)', reps: 8 },
       { name: 'Standard Push-ups', reps: 12 },
@@ -265,6 +274,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Valve',
     durationMinutes: 10,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Air Squats', reps: 15 },
       { name: 'Hand-Release Push-ups', reps: 10 },
@@ -278,6 +288,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Arterial Shift',
     durationMinutes: 10,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Alternating Lunges (Total)', reps: 20 },
       { name: 'Pike Push-ups', reps: 10 },
@@ -291,6 +302,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Regulator',
     durationMinutes: 10,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Glute Bridges', reps: 20 },
       { name: 'Standard Push-ups', reps: 10 },
@@ -304,6 +316,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'High Tide',
     durationMinutes: 10,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Jump Squats', reps: 12 },
       { name: 'Commando Planks', reps: 12 },
@@ -317,6 +330,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Centrifuge',
     durationMinutes: 10,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Surrenders', reps: 10 },
       { name: 'Dive-Bomber Push-ups', reps: 8 },
@@ -330,6 +344,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Vascular Drive',
     durationMinutes: 10,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Combat Sprawls', reps: 10 },
       { name: 'Plank Shoulder Taps', reps: 12 },
@@ -343,6 +358,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Pressure Cooker',
     durationMinutes: 10,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Broad Jumps', reps: 8 },
       { name: 'Wide Push-ups', reps: 10 },
@@ -356,6 +372,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Crimson Flow',
     durationMinutes: 10,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Bear Crawl to Broad Jumps', reps: 5 },
       { name: 'T-Push-ups', reps: 10 },
@@ -369,6 +386,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Diverter',
     durationMinutes: 10,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Reverse Lunges (Total)', reps: 16 },
       { name: 'Diamond Push-ups', reps: 8 },
@@ -382,6 +400,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Hemodynamic',
     durationMinutes: 10,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Fast Air Squats', reps: 15 },
       { name: 'Down-Ups', reps: 10 },
@@ -395,6 +414,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Long Haul',
     durationMinutes: 15,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Air Squats', reps: 20 },
       { name: 'Pike Push-ups', reps: 10 },
@@ -408,6 +428,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Deep Circulation',
     durationMinutes: 15,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Reverse Lunges (Total)', reps: 20 },
       { name: 'Hand-Release Push-ups', reps: 12 },
@@ -421,6 +442,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Piston Grind',
     durationMinutes: 15,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Glute Bridges', reps: 20 },
       { name: 'Dive-Bomber Push-ups', reps: 10 },
@@ -434,6 +456,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Sustained Pressure',
     durationMinutes: 15,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Surrenders', reps: 16 },
       { name: 'Wide Push-ups', reps: 12 },
@@ -447,6 +470,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Marathon Shunt',
     durationMinutes: 15,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Combat Sprawls', reps: 10 },
       { name: 'Commando Planks', reps: 16 },
@@ -460,6 +484,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Aerobic Shift',
     durationMinutes: 15,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Alternating Lunges', reps: 20 },
       { name: 'T-Push-ups', reps: 10 },
@@ -473,6 +498,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Steady State',
     durationMinutes: 15,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Air Squats', reps: 20 },
       { name: 'Diamond Push-ups', reps: 10 },
@@ -486,6 +512,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Arterial Endurance',
     durationMinutes: 15,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Bear Crawl to Broad Jumps', reps: 8 },
       { name: 'Plank Shoulder Taps', reps: 16 },
@@ -499,6 +526,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Metronome',
     durationMinutes: 15,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Single-Leg Glute Bridges (10/leg)', reps: 20 },
       { name: 'Standard Push-ups', reps: 10 },
@@ -512,6 +540,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'System Flush',
     durationMinutes: 15,
     category: 'blood-shunt',
+    intensityTier: 3,
     movements: [
       { name: 'Reverse Lunges', reps: 16 },
       { name: 'Pike Push-ups', reps: 10 },
@@ -526,6 +555,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     focus: 'Quads',
     durationMinutes: 5,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Jump Squats', reps: 8 },
       { name: 'Air Squats', reps: 12 },
@@ -540,6 +570,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     focus: 'Chest/Tris',
     durationMinutes: 5,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Hand-Release Push-ups', reps: 6 },
       { name: 'Standard Push-ups', reps: 8 },
@@ -553,6 +584,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     focus: 'Shoulders',
     durationMinutes: 5,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Pike Push-ups', reps: 8 },
       { name: 'Commando Planks', reps: 12 },
@@ -566,6 +598,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     focus: 'Midline',
     durationMinutes: 5,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'V-Ups', reps: 10 },
       { name: 'Butterfly Sit-ups', reps: 15 },
@@ -580,6 +613,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     focus: 'Legs',
     durationMinutes: 5,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Jumping Lunges (Total)', reps: 12 },
       { name: 'Reverse Lunges (Total)', reps: 12 },
@@ -593,6 +627,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     focus: 'Arms',
     durationMinutes: 5,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Sphinx Push-ups (Forearm to hand)', reps: 6 },
       { name: 'Floor Dips', reps: 12 },
@@ -606,6 +641,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     focus: 'Glutes',
     durationMinutes: 5,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Single-Leg Glute Bridges (5/leg)', reps: 10 },
       { name: 'Standard Glute Bridges', reps: 15 },
@@ -619,6 +655,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     focus: 'Obliques',
     durationMinutes: 5,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Side Plank Dips (Left)', reps: 10 },
       { name: 'Side Plank Dips (Right)', reps: 10 },
@@ -632,6 +669,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     focus: 'Chest',
     durationMinutes: 5,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Diamond Push-ups', reps: 5 },
       { name: 'Standard Push-ups', reps: 5 },
@@ -646,6 +684,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     focus: 'Calves',
     durationMinutes: 5,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Pogo Jumps', reps: 20 },
       { name: 'Fast Calf Raises', reps: 20 },
@@ -658,6 +697,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The See-Saw',
     durationMinutes: 10,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Hand-Release Push-ups', reps: 10 },
       { name: 'Supermans', reps: 15 },
@@ -671,6 +711,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Counterbalance',
     durationMinutes: 10,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Pike Push-ups', reps: 10 },
       { name: 'Glute Bridges', reps: 20 },
@@ -683,6 +724,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Equilibrium',
     durationMinutes: 10,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Standard Push-ups', reps: 12 },
       { name: 'Reverse Snow Angels', reps: 15 },
@@ -695,6 +737,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Hinge & Press',
     durationMinutes: 10,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Dive-Bomber Push-ups', reps: 10 },
       { name: 'Bodyweight Good Mornings', reps: 15 },
@@ -707,6 +750,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Tension Shift',
     durationMinutes: 10,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Diamond Push-ups', reps: 10 },
       { name: 'Single-Leg Glute Bridges (Total)', reps: 16 },
@@ -719,6 +763,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Fulcrum',
     durationMinutes: 10,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Wide Push-ups', reps: 12 },
       { name: 'Alternating Bird-Dogs', reps: 16 },
@@ -731,6 +776,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Posterior Strike',
     durationMinutes: 10,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Sphinx Push-ups', reps: 10 },
       { name: 'Glute Bridge Walkouts', reps: 10 },
@@ -743,6 +789,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Anterior Retreat',
     durationMinutes: 10,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Commando Planks', reps: 12 },
       { name: 'Superman Pull-downs', reps: 15 },
@@ -755,6 +802,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Tug-of-War',
     durationMinutes: 10,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Burpees', reps: 8 },
       { name: 'Strict Reverse Lunges', reps: 16 },
@@ -767,6 +815,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Symmetry',
     durationMinutes: 10,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'T-Push-ups', reps: 10 },
       { name: 'Plank Reaches (Total)', reps: 20 },
@@ -779,6 +828,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Trinity',
     durationMinutes: 15,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Air Squats', reps: 20 },
       { name: 'Hand-Release Push-ups', reps: 10 },
@@ -792,6 +842,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Fulcrum',
     durationMinutes: 15,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Reverse Lunges (Total)', reps: 24 },
       { name: 'Pike Push-ups', reps: 10 },
@@ -805,6 +856,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Global Warning',
     durationMinutes: 15,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Jump Squats', reps: 15 },
       { name: 'Commando Planks', reps: 12 },
@@ -818,6 +870,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Apex',
     durationMinutes: 15,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Glute Bridges', reps: 20 },
       { name: 'Dive-Bomber Push-ups', reps: 10 },
@@ -831,6 +884,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Axis',
     durationMinutes: 15,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Surrenders', reps: 16 },
       { name: 'T-Push-ups', reps: 10 },
@@ -844,6 +898,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Triad',
     durationMinutes: 15,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Wide Push-ups', reps: 12 },
       { name: 'Single-Leg Glute Bridges', reps: 20 },
@@ -857,6 +912,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Perimeter Defense',
     durationMinutes: 15,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Skater Jumps (Total)', reps: 20 },
       { name: 'Sphinx Push-ups', reps: 10 },
@@ -870,6 +926,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Base Camp',
     durationMinutes: 15,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Fast Air Squats', reps: 15 },
       { name: 'Standard Push-ups', reps: 10 },
@@ -883,6 +940,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Equalizer',
     durationMinutes: 15,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Down-Ups', reps: 10 },
       { name: 'Alternating Lunges', reps: 20 },
@@ -896,6 +954,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Spire',
     durationMinutes: 15,
     category: 'localized-trap',
+    intensityTier: 3,
     movements: [
       { name: 'Diamond Push-ups', reps: 10 },
       { name: 'Fast Calf Raises', reps: 20 },
@@ -909,6 +968,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Gas Pedal',
     durationMinutes: 5,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Burpees', reps: 10 },
       { name: 'Jumping Jacks', reps: 20 },
@@ -921,6 +981,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Redline',
     durationMinutes: 5,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Mountain Climbers (Total)', reps: 30 },
       { name: 'High Knees (Total)', reps: 30 },
@@ -933,6 +994,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: "The Sprinter's Tax",
     durationMinutes: 5,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Sprawls (No-Push-up Burpees)', reps: 12 },
       { name: 'Lateral Line Hops', reps: 20 },
@@ -945,6 +1007,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Lateral Combustion',
     durationMinutes: 5,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Skater Jumps (Total)', reps: 15 },
       { name: 'Jumping Jacks', reps: 15 },
@@ -957,6 +1020,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Phantom Rope',
     durationMinutes: 5,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Double-Tap Jumps (Penguin Taps)', reps: 30 },
       { name: 'Down-Ups', reps: 10 },
@@ -969,6 +1033,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Turbine',
     durationMinutes: 5,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'High Knees (Total)', reps: 20 },
       { name: 'Butt Kicks (Total)', reps: 20 },
@@ -982,6 +1047,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Cross-Current',
     durationMinutes: 5,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Cross-Body Mountain Climbers', reps: 20 },
       { name: 'Sprawls', reps: 10 },
@@ -994,6 +1060,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Boomerang',
     durationMinutes: 5,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Broad Jumps (With backpedal return)', reps: 5 },
       { name: 'High Knees', reps: 20 },
@@ -1006,6 +1073,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Rapid Fire',
     durationMinutes: 5,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Half-Burpees (Plank to squat stance)', reps: 15 },
       { name: 'Jumping Jacks', reps: 15 },
@@ -1018,6 +1086,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Escalator',
     durationMinutes: 5,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Burpees', reps: 5 },
       { name: 'Mountain Climbers', reps: 10 },
@@ -1031,6 +1100,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Locomotive',
     durationMinutes: 10,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Down-Ups', reps: 10 },
       { name: 'Air Squats', reps: 20 },
@@ -1043,6 +1113,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Steady State',
     durationMinutes: 10,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Sprawls', reps: 12 },
       { name: 'Mountain Climbers', reps: 24 },
@@ -1055,6 +1126,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Pacing Trap',
     durationMinutes: 10,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Burpees', reps: 8 },
       { name: 'Alternating Lunges', reps: 16 },
@@ -1067,6 +1139,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Aerobic Flush',
     durationMinutes: 10,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Air Squats', reps: 15 },
       { name: 'Jumping Jacks', reps: 30 },
@@ -1079,6 +1152,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Treadmill',
     durationMinutes: 10,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Half-Burpees', reps: 10 },
       { name: 'Skater Jumps (Total)', reps: 20 },
@@ -1091,6 +1165,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Rhythmic Fire',
     durationMinutes: 10,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Combat Sprawls', reps: 10 },
       { name: 'Jumping Jacks', reps: 20 },
@@ -1103,6 +1178,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Long Stride',
     durationMinutes: 10,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Reverse Lunges', reps: 16 },
       { name: 'Mountain Climbers', reps: 30 },
@@ -1115,6 +1191,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Cruiser',
     durationMinutes: 10,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Burpees', reps: 5 },
       { name: 'Air Squats', reps: 15 },
@@ -1128,6 +1205,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Constant Current',
     durationMinutes: 10,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Sprawls', reps: 12 },
       { name: 'Cross-Body Mountain Climbers', reps: 24 },
@@ -1140,6 +1218,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Oscillator',
     durationMinutes: 10,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Down-Ups', reps: 10 },
       { name: 'High Knees', reps: 20 },
@@ -1152,6 +1231,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Pacesetter',
     durationMinutes: 15,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Combat Sprawls', reps: 10 },
       { name: 'Air Squats', reps: 20 },
@@ -1165,6 +1245,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Steady Altitude',
     durationMinutes: 15,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Burpees', reps: 8 },
       { name: 'Alternating Lunges', reps: 16 },
@@ -1178,6 +1259,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Rhythmic Grind',
     durationMinutes: 15,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Down-Ups', reps: 10 },
       { name: 'Skater Jumps (Total)', reps: 20 },
@@ -1191,6 +1273,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Aerobic Threshold',
     durationMinutes: 15,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Sprawls (Standard)', reps: 12 },
       { name: 'Air Squats', reps: 24 },
@@ -1204,6 +1287,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Long Stride',
     durationMinutes: 15,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Combat Sprawls', reps: 15 },
       { name: 'Reverse Lunges', reps: 15 },
@@ -1217,6 +1301,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Cadence',
     durationMinutes: 15,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Half-Burpees', reps: 10 },
       { name: 'Air Squats', reps: 20 },
@@ -1230,6 +1315,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Endurance Protocol',
     durationMinutes: 15,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Bear Crawl to Broad Jumps', reps: 5 },
       { name: 'Air Squats', reps: 15 },
@@ -1243,6 +1329,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Cruiser',
     durationMinutes: 15,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Burpees', reps: 10 },
       { name: 'Skater Jumps', reps: 20 },
@@ -1256,6 +1343,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Systemic Flush',
     durationMinutes: 15,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Jump Squats', reps: 15 },
       { name: 'Sprawls (Standard)', reps: 15 },
@@ -1269,6 +1357,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Engine Block',
     durationMinutes: 15,
     category: 'engine-room',
+    intensityTier: 3,
     movements: [
       { name: 'Down-Ups', reps: 12 },
       { name: 'Alternating Lunges', reps: 24 },
@@ -1282,6 +1371,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Folding Knife',
     durationMinutes: 5,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Sprawls', reps: 10 },
       { name: 'V-Ups', reps: 10 },
@@ -1294,6 +1384,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Hull Breach',
     durationMinutes: 5,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Burpees', reps: 8 },
       { name: 'Hollow Rocks', reps: 15 },
@@ -1306,6 +1397,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Vice Grip',
     durationMinutes: 5,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Mountain Climbers', reps: 20 },
       { name: 'Strict Sit-Ups', reps: 10 },
@@ -1318,6 +1410,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Shock Absorber',
     durationMinutes: 5,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Jump Squats', reps: 10 },
       { name: 'Plank Knee-to-Elbows', reps: 12 },
@@ -1330,6 +1423,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Tornado',
     durationMinutes: 5,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Jumping Jacks', reps: 15 },
       { name: 'Bicycle Crunches', reps: 20 },
@@ -1342,6 +1436,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Contrast',
     durationMinutes: 5,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Tuck Jumps', reps: 8 },
       { name: 'Dead Bugs', reps: 12 },
@@ -1354,6 +1449,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Iron Pendulum',
     durationMinutes: 5,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Skater Jumps', reps: 12 },
       { name: 'Russian Twists', reps: 20 },
@@ -1366,6 +1462,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Anti-Gravity',
     durationMinutes: 5,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Down-Ups', reps: 10 },
       { name: 'Leg Raises', reps: 10 },
@@ -1378,6 +1475,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Scissors',
     durationMinutes: 5,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'High Knees', reps: 20 },
       { name: 'Flutter Kicks', reps: 20 },
@@ -1390,6 +1488,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Coil',
     durationMinutes: 5,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Plank Jacks', reps: 10 },
       { name: 'Superman Raises', reps: 10 },
@@ -1402,6 +1501,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Iron Cross',
     durationMinutes: 10,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Plank Knee-to-Elbows', reps: 12 },
       { name: 'Air Squats', reps: 15 },
@@ -1415,6 +1515,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Static Lock',
     durationMinutes: 10,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Hollow Hold', reps: 15, unit: 'sec' },
       { name: 'Reverse Lunges', reps: 10 },
@@ -1428,6 +1529,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Vault',
     durationMinutes: 10,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Commando Planks', reps: 10 },
       { name: 'Glute Bridges', reps: 15 },
@@ -1441,6 +1543,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Anti-Rotation',
     durationMinutes: 10,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Plank Shoulder Taps', reps: 16 },
       { name: 'Jump Squats', reps: 10 },
@@ -1454,6 +1557,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Anchor',
     durationMinutes: 10,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Side Plank Dips (L)', reps: 10 },
       { name: 'Side Plank Dips (R)', reps: 10 },
@@ -1467,6 +1571,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Core Suspension',
     durationMinutes: 10,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Dead Bugs', reps: 12 },
       { name: 'Fast Air Squats', reps: 15 },
@@ -1480,6 +1585,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Bridge',
     durationMinutes: 10,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Superman Raises', reps: 15 },
       { name: 'Down-Ups', reps: 10 },
@@ -1493,6 +1599,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Stabilizer',
     durationMinutes: 10,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Alternating Bird-Dogs', reps: 16 },
       { name: 'Reverse Lunges', reps: 16 },
@@ -1506,6 +1613,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Tension Grid',
     durationMinutes: 10,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'T-Push-ups', reps: 10 },
       { name: 'Strict Sit-ups', reps: 12 },
@@ -1519,6 +1627,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Sling',
     durationMinutes: 10,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Russian Twists', reps: 20 },
       { name: 'Sprawls', reps: 10 },
@@ -1532,6 +1641,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Monolith',
     durationMinutes: 15,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Plank Hold', reps: 20, unit: 'sec' },
       { name: 'Air Squats', reps: 20 },
@@ -1545,6 +1655,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Iron Spine',
     durationMinutes: 15,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Alternating Bird-Dogs', reps: 16 },
       { name: 'Reverse Lunges', reps: 16 },
@@ -1558,6 +1669,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Static Equilibrium',
     durationMinutes: 15,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Hollow Hold', reps: 20, unit: 'sec' },
       { name: 'Combat Sprawls', reps: 10 },
@@ -1571,6 +1683,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Suspended Bridge',
     durationMinutes: 15,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Superman Raises', reps: 15 },
       { name: 'Glute Bridges', reps: 15 },
@@ -1584,6 +1697,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Rotational Lock',
     durationMinutes: 15,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Plank Shoulder Taps', reps: 20 },
       { name: 'Alternating Lunges', reps: 20 },
@@ -1597,6 +1711,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Pillar',
     durationMinutes: 15,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Side Plank Dips (L)', reps: 10 },
       { name: 'Side Plank Dips (R)', reps: 10 },
@@ -1610,6 +1725,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Dead Stop',
     durationMinutes: 15,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Dead Bugs (Slow)', reps: 20 },
       { name: 'Down-Ups', reps: 10 },
@@ -1623,6 +1739,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Brace',
     durationMinutes: 15,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Plank Knee-to-Elbows', reps: 16 },
       { name: 'Reverse Lunges', reps: 16 },
@@ -1636,6 +1753,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Tension Span',
     durationMinutes: 15,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Strict Sit-ups', reps: 15 },
       { name: 'Superman Raises', reps: 15 },
@@ -1649,6 +1767,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Citadel',
     durationMinutes: 15,
     category: 'midline-tension',
+    intensityTier: 3,
     movements: [
       { name: 'Russian Twists', reps: 20 },
       { name: 'T-Push-ups', reps: 10 },
@@ -1662,6 +1781,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Four Horsemen',
     durationMinutes: 20,
     category: 'aerobic-matrix',
+    intensityTier: 2,
     movements: [
       { name: 'Push-ups', reps: 10 },
       { name: 'V-Ups', reps: 15 },
@@ -1676,6 +1796,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Long Slog',
     durationMinutes: 20,
     category: 'aerobic-matrix',
+    intensityTier: 2,
     movements: [
       { name: 'Hand-Release Push-ups', reps: 10 },
       { name: 'Walking Lunges', reps: 20 },
@@ -1690,6 +1811,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Gridlock',
     durationMinutes: 20,
     category: 'aerobic-matrix',
+    intensityTier: 2,
     movements: [
       { name: 'Combat Sprawls', reps: 10 },
       { name: 'Leg Raises', reps: 15 },
@@ -1704,6 +1826,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Horizon',
     durationMinutes: 20,
     category: 'aerobic-matrix',
+    intensityTier: 2,
     movements: [
       { name: 'Wide Push-ups', reps: 12 },
       { name: 'Air Squats', reps: 24 },
@@ -1718,6 +1841,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Pacer',
     durationMinutes: 20,
     category: 'aerobic-matrix',
+    intensityTier: 2,
     movements: [
       { name: 'T-Push-ups', reps: 10 },
       { name: 'Reverse Lunges', reps: 20 },
@@ -1732,6 +1856,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Slow Burn',
     durationMinutes: 20,
     category: 'aerobic-matrix',
+    intensityTier: 2,
     movements: [
       { name: 'Pike Push-ups', reps: 10 },
       { name: 'Dead Bugs', reps: 15 },
@@ -1746,6 +1871,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Ground War',
     durationMinutes: 20,
     category: 'aerobic-matrix',
+    intensityTier: 2,
     movements: [
       { name: 'Surrenders', reps: 10 },
       { name: 'Down-Ups', reps: 10 },
@@ -1760,6 +1886,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Endurance Engine',
     durationMinutes: 20,
     category: 'aerobic-matrix',
+    intensityTier: 2,
     movements: [
       { name: 'Dive-Bomber Push-ups', reps: 10 },
       { name: 'Alternating Lunges', reps: 20 },
@@ -1774,6 +1901,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Centurion',
     durationMinutes: 20,
     category: 'aerobic-matrix',
+    intensityTier: 2,
     movements: [
       { name: 'Diamond Push-ups', reps: 10 },
       { name: 'V-Ups', reps: 15 },
@@ -1788,6 +1916,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Sentinel',
     durationMinutes: 20,
     category: 'aerobic-matrix',
+    intensityTier: 2,
     movements: [
       { name: 'Sprawls', reps: 10 },
       { name: 'Superman Raises', reps: 15 },
@@ -1802,6 +1931,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Baseline',
     durationMinutes: 20,
     category: 'four-point-cascade',
+    intensityTier: 4,
     movements: [
       { name: 'Jumping Jacks', reps: 20 },
       { name: 'Hand-Release Push-ups', reps: 10 },
@@ -1816,6 +1946,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Tactical Shift',
     durationMinutes: 20,
     category: 'four-point-cascade',
+    intensityTier: 4,
     movements: [
       { name: 'High Knees', reps: 20 },
       { name: 'Pike Push-ups', reps: 10 },
@@ -1830,6 +1961,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Vanguard',
     durationMinutes: 20,
     category: 'four-point-cascade',
+    intensityTier: 4,
     movements: [
       { name: 'Combat Sprawls', reps: 15 },
       { name: 'Glute Bridges', reps: 15 },
@@ -1844,6 +1976,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Overwatch',
     durationMinutes: 20,
     category: 'four-point-cascade',
+    intensityTier: 4,
     movements: [
       { name: 'Mountain Climbers', reps: 20 },
       { name: 'T-Push-ups', reps: 10 },
@@ -1858,6 +1991,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Perimeter',
     durationMinutes: 20,
     category: 'four-point-cascade',
+    intensityTier: 4,
     movements: [
       { name: 'Lateral Line Hops', reps: 20 },
       { name: 'Dive-Bomber Push-ups', reps: 10 },
@@ -1872,6 +2006,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Shockwave',
     durationMinutes: 20,
     category: 'four-point-cascade',
+    intensityTier: 4,
     movements: [
       { name: 'Down-Ups', reps: 15 },
       { name: 'Diamond Push-ups', reps: 10 },
@@ -1886,6 +2021,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Sentinel',
     durationMinutes: 20,
     category: 'four-point-cascade',
+    intensityTier: 4,
     movements: [
       { name: 'Butt Kicks', reps: 20 },
       { name: 'Sphinx Push-ups', reps: 10 },
@@ -1900,6 +2036,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Crossfire',
     durationMinutes: 20,
     category: 'four-point-cascade',
+    intensityTier: 4,
     movements: [
       { name: 'Cross-Body Climbers', reps: 20 },
       { name: 'Standard Push-ups', reps: 10 },
@@ -1914,6 +2051,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Piston',
     durationMinutes: 20,
     category: 'four-point-cascade',
+    intensityTier: 4,
     movements: [
       { name: 'Half-Burpees', reps: 15 },
       { name: 'Wide Push-ups', reps: 10 },
@@ -1928,6 +2066,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'Atmosphere',
     durationMinutes: 20,
     category: 'four-point-cascade',
+    intensityTier: 4,
     movements: [
       { name: 'Skater Jumps', reps: 20 },
       { name: 'Superman Raises', reps: 15 },
@@ -1942,6 +2081,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Phalanx',
     durationMinutes: 20,
     category: 'armor-protocol',
+    intensityTier: 4,
     movements: [
       { name: 'Bottom Squat Hold', reps: 20, unit: 'sec' },
       { name: 'Hand-Release Push-ups', reps: 10 },
@@ -1971,6 +2111,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Garrison',
     durationMinutes: 20,
     category: 'armor-protocol',
+    intensityTier: 4,
     movements: [
       { name: 'High Plank Hold', reps: 20, unit: 'sec' },
       { name: 'Alternating Lunges', reps: 20 },
@@ -1985,6 +2126,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Stronghold',
     durationMinutes: 20,
     category: 'armor-protocol',
+    intensityTier: 4,
     movements: [
       { name: 'Glute Bridge Hold', reps: 20, unit: 'sec' },
       { name: 'Pike Push-ups', reps: 10 },
@@ -1999,6 +2141,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Barricade',
     durationMinutes: 20,
     category: 'armor-protocol',
+    intensityTier: 4,
     movements: [
       { name: 'Side Plank Hold (Switch sides each round)', reps: 20, unit: 'sec' },
       { name: 'Air Squats', reps: 15 },
@@ -2013,6 +2156,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Fortress',
     durationMinutes: 20,
     category: 'armor-protocol',
+    intensityTier: 4,
     movements: [
       { name: 'Superman Hold', reps: 20, unit: 'sec' },
       { name: 'Commando Planks', reps: 10 },
@@ -2042,6 +2186,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Bastion',
     durationMinutes: 20,
     category: 'armor-protocol',
+    intensityTier: 4,
     movements: [
       { name: 'V-Sit Hold', reps: 20, unit: 'sec' },
       { name: 'Glute Bridges', reps: 15 },
@@ -2071,6 +2216,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     name: 'The Wall',
     durationMinutes: 20,
     category: 'armor-protocol',
+    intensityTier: 4,
     movements: [
       { name: 'Bottom Squat Hold', reps: 20, unit: 'sec' },
       { name: 'Dead Bugs', reps: 15 },
