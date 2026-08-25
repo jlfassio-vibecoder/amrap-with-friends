@@ -21,6 +21,7 @@ export interface UseAmrapTimerReturn {
   resume: () => void;
   finish: () => void;
   logRound: () => void;
+  reset: () => void;
 }
 
 export function useAmrapTimer(): UseAmrapTimerReturn {
@@ -71,6 +72,10 @@ export function useAmrapTimer(): UseAmrapTimerReturn {
     dispatch({ type: 'logRound', nowMs: Date.now() });
   }, []);
 
+  const reset = useCallback(() => {
+    dispatch({ type: 'reset' });
+  }, []);
+
   return {
     phase: state.phase,
     timeLeftSec: state.timeLeftSec,
@@ -85,5 +90,6 @@ export function useAmrapTimer(): UseAmrapTimerReturn {
     resume,
     finish,
     logRound,
+    reset,
   };
 }

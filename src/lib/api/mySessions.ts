@@ -71,6 +71,10 @@ export function formatMySessionScoreDisplay(entry: MySessionEntry): string {
   return `${computeMySessionBaseScore(entry)} reps`;
 }
 
+export function canDeleteMySession(entry: MySessionEntry): boolean {
+  return entry.role === 'host' && entry.scoreBreakdown === null;
+}
+
 export function displayMySessionScore(entry: MySessionEntry): string | number {
   if (entry.finalScore !== null) {
     return entry.finalScore;
@@ -179,4 +183,46 @@ export async function fetchMySessions(): Promise<{
     .filter((entry): entry is MySessionEntry => entry !== null);
 
   return { data: entries, error: null };
+}
+
+function mapDeleteError(message: string | undefined): string {
+  if (!message) {
+    return 'Something went wrong. Please try again.';
+  }
+  if (message.includes('Authentication required')) {
+    return 'Sign in to delete this session.';
+  }
+  if (message.includes('Only the host can delete')) {
+    return 'Only the host can delete this session.';
+  }
+  if (message.includes('Completed sessions cannot be deleted')) {
+    return 'Completed sessions cannot be deleted.';
+  }
+  if (message.includes('Session not found')) {
+    return 'Session not found.';
+  }
+  return message;
+}
+
+export async function deleteIncompleteSession(
+  sessionId: string
+): Promise<{ error: MySessionsApiError | null }> {
+  const { data, error } = await supabase.rpc('delete_incomplete_session', {
+    p_session_id: sessionId,
+  });
+
+  if (error) {
+    return { error: { message: mapDeleteError(error.message) } };
+  }
+
+  const raw =
+    data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+
+  if (raw.ok !== true) {
+    return {
+      error: { message: 'Something went wrong. Please try again.' },
+    };
+  }
+
+  return { error: null };
 }

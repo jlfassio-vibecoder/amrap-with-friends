@@ -8,6 +8,8 @@ export type AthleteProfile = {
   birthYear: number;
   biologicalSex: BiologicalSex;
   perceivedClassification: PerceivedClassification;
+  username: string;
+  nickname: string;
 };
 
 export type AthleteProfileApiError = {
@@ -24,6 +26,10 @@ const SEX = new Set<BiologicalSex>(['M', 'F']);
 
 function readNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function readOptionalString(value: unknown): string {
+  return typeof value === 'string' ? value : '';
 }
 
 export function parseAthleteProfile(value: unknown): AthleteProfile | null {
@@ -53,6 +59,8 @@ export function parseAthleteProfile(value: unknown): AthleteProfile | null {
     birthYear,
     biologicalSex: sex as BiologicalSex,
     perceivedClassification: perceived as PerceivedClassification,
+    username: readOptionalString(row.username),
+    nickname: readOptionalString(row.nickname),
   };
 }
 
@@ -112,6 +120,8 @@ export async function upsertAthleteProfile(input: AthleteProfile): Promise<{
     p_birth_year: input.birthYear,
     p_perceived_classification: input.perceivedClassification,
     p_biological_sex: input.biologicalSex,
+    p_username: input.username,
+    p_nickname: input.nickname,
   });
 
   if (error) {

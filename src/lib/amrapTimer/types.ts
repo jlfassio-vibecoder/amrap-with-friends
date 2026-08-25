@@ -33,4 +33,5 @@ export type AmrapTimerAction =
   | { type: 'pause' }
   | { type: 'resume' }
   | { type: 'finish' }
-  | { type: 'logRound'; nowMs: number };
+  | { type: 'logRound'; nowMs: number }
+  | { type: 'reset' };

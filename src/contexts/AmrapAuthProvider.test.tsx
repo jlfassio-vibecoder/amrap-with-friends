@@ -8,6 +8,7 @@ import { AUTH_MIN_PASSWORD_LENGTH } from '@/lib/auth/passwordPolicy';
 
 const signUpMock = vi.fn();
 const signInWithPasswordMock = vi.fn();
+const updateUserMock = vi.fn();
 
 vi.mock('@/lib/supabase', () => ({
   getSupabaseClient: vi.fn(() => ({
@@ -19,6 +20,7 @@ vi.mock('@/lib/supabase', () => ({
       signInWithOtp: vi.fn(),
       signUp: signUpMock,
       signInWithPassword: signInWithPasswordMock,
+      updateUser: updateUserMock,
       signOut: vi.fn(),
     },
   })),
@@ -133,5 +135,46 @@ describe('AmrapAuthProvider password auth', () => {
 
     expect(signInWithPasswordMock).not.toHaveBeenCalled();
     expect(result.error).toContain(String(AUTH_MIN_PASSWORD_LENGTH));
+  });
+
+  it('updateEmail flags needsEmailConfirmation when new_email is pending', async () => {
+    updateUserMock.mockResolvedValue({
+      data: {
+        user: { id: 'user-1', email: 'old@example.com', new_email: 'new@example.com' },
+      },
+      error: null,
+    });
+
+    await renderProvider();
+
+    const result = await authApi!.updateEmail('new@example.com');
+
+    expect(updateUserMock).toHaveBeenCalledWith({ email: 'new@example.com' });
+    expect(result.error).toBeNull();
+    expect(result.needsEmailConfirmation).toBe(true);
+  });
+
+  it('updatePassword rejects short passwords before RPC', async () => {
+    await renderProvider();
+
+    const shortPassword = 'a'.repeat(AUTH_MIN_PASSWORD_LENGTH - 1);
+    const result = await authApi!.updatePassword(shortPassword);
+
+    expect(updateUserMock).not.toHaveBeenCalled();
+    expect(result.error).toContain(String(AUTH_MIN_PASSWORD_LENGTH));
+  });
+
+  it('updatePassword calls updateUser on success', async () => {
+    updateUserMock.mockResolvedValue({
+      data: { user: { id: 'user-1' } },
+      error: null,
+    });
+
+    await renderProvider();
+
+    const result = await authApi!.updatePassword('password1');
+
+    expect(updateUserMock).toHaveBeenCalledWith({ password: 'password1' });
+    expect(result.error).toBeNull();
   });
 });

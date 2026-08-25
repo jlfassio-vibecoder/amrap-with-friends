@@ -6,12 +6,15 @@ interface AppHeaderProps {
   subtitle?: string;
   /** When true, the desktop header center title is the page's sole h1 (Home, Session). */
   desktopTitleAsPageHeading?: boolean;
+  /** Hide the desktop center title (e.g. home — brand already in the nav link). */
+  hideDesktopTitle?: boolean;
 }
 
 export function AppHeader({
   title,
   subtitle,
   desktopTitleAsPageHeading = false,
+  hideDesktopTitle = false,
 }: AppHeaderProps) {
   const desktopTitleClassName = 'text-display text-xl text-ink';
 
@@ -22,11 +25,13 @@ export function AppHeader({
           AMRAP With Friends
         </Link>
         <div className="text-center">
-          {desktopTitleAsPageHeading ? (
-            <h1 className={desktopTitleClassName}>{title}</h1>
-          ) : (
-            <p className={desktopTitleClassName}>{title}</p>
-          )}
+          {!hideDesktopTitle ? (
+            desktopTitleAsPageHeading ? (
+              <h1 className={desktopTitleClassName}>{title}</h1>
+            ) : (
+              <p className={desktopTitleClassName}>{title}</p>
+            )
+          ) : null}
           {subtitle ? <p className="text-sm text-secondary">{subtitle}</p> : null}
         </div>
         <AuthHeaderActions />

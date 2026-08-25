@@ -56,7 +56,7 @@ export function RequireIntake({ children, guestMode }: RequireIntakeProps) {
     );
   }
 
-  if (missing || !profile) {
+  if (missing || !profile || !profile.username.trim() || !profile.nickname.trim()) {
     const next = `${location.pathname}${location.search}`;
     return <Navigate to={`/intake?next=${encodeURIComponent(next)}`} replace />;
   }

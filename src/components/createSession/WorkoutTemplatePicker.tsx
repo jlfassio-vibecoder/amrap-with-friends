@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   TIME_DOMAINS,
   WORKOUT_CATEGORIES,
@@ -14,6 +15,7 @@ import {
   categoryDisplayForDuration,
 } from '@/lib/workout/filterWorkoutTemplates';
 import { WorkoutTemplateCard } from '@/components/createSession/WorkoutTemplateCard';
+import { WorkoutStyleInfoModal } from '@/components/workoutStyle/WorkoutStyleInfoModal';
 import type { ClassificationQuotas } from '@/lib/hud/classificationQuotas';
 import type { ClassificationRank, HudClassification } from '@/lib/hud/types';
 
@@ -40,6 +42,7 @@ export function WorkoutTemplatePicker({
   onCategoryChange,
   onTemplateSelect,
 }: WorkoutTemplatePickerProps) {
+  const [infoCategory, setInfoCategory] = useState<WorkoutCategory | null>(null);
   const visibleTemplates = filterWorkoutTemplates(WORKOUT_TEMPLATES, {
     durationMinutes,
     category: selectedCategory,
@@ -51,6 +54,13 @@ export function WorkoutTemplatePicker({
   const selectedCategoryDisplay = selectedCategoryMeta
     ? categoryDisplayForDuration(selectedCategoryMeta, durationMinutes)
     : null;
+
+  function handleBrowse(category: WorkoutCategory, soleDuration?: TimeDomain) {
+    if (soleDuration !== undefined) {
+      onDurationChange(soleDuration);
+    }
+    onCategoryChange(category);
+  }
 
   return (
     <div className="space-y-6">
@@ -97,22 +107,31 @@ export function WorkoutTemplatePicker({
             const selected = selectedCategory === category.id;
 
             return (
-              <button
-                key={category.id}
-                type="button"
-                disabled={!available}
-                className={
-                  selected
-                    ? 'rounded-full bg-accent px-4 py-2 text-sm font-semibold text-on-accent'
-                    : available
-                      ? 'rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold text-ink hover:border-accent/40'
-                      : 'rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold text-muted opacity-60'
-                }
-                onClick={() => onCategoryChange(category.id)}
-              >
-                {categoryDisplayForDuration(category, durationMinutes).label}
-                {!available ? <span className="ml-1 text-xs uppercase">Soon</span> : null}
-              </button>
+              <div key={category.id} className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={!available}
+                  className={
+                    selected
+                      ? 'rounded-full bg-accent px-4 py-2 text-sm font-semibold text-on-accent'
+                      : available
+                        ? 'rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold text-ink hover:border-accent/40'
+                        : 'rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold text-muted opacity-60'
+                  }
+                  onClick={() => onCategoryChange(category.id)}
+                >
+                  {categoryDisplayForDuration(category, durationMinutes).label}
+                  {!available ? <span className="ml-1 text-xs uppercase">Soon</span> : null}
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-surface text-xs font-semibold text-secondary hover:border-accent/40 hover:text-ink"
+                  aria-label={`About ${category.label}`}
+                  onClick={() => setInfoCategory(category.id)}
+                >
+                  i
+                </button>
+              </div>
             );
           })}
         </div>
@@ -142,6 +161,14 @@ export function WorkoutTemplatePicker({
           </p>
         )}
       </div>
+
+      {infoCategory ? (
+        <WorkoutStyleInfoModal
+          category={infoCategory}
+          onClose={() => setInfoCategory(null)}
+          onBrowse={handleBrowse}
+        />
+      ) : null}
     </div>
   );
 }

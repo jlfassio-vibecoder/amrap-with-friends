@@ -26,7 +26,7 @@ const baseProps = {
 };
 
 describe('CreateSessionSummaryPanel', () => {
-  it('shows Start now by default and Schedule rally time controls when selected', () => {
+  it('shows Open staging area by default and Schedule staging time controls when selected', () => {
     const { rerender } = render(
       <CreateSessionSummaryPanel
         {...baseProps}
@@ -35,7 +35,7 @@ describe('CreateSessionSummaryPanel', () => {
       />
     );
 
-    expect(screen.getByRole('button', { name: 'Start now' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Open staging area' })).toBeTruthy();
     expect(screen.queryByLabelText('Time')).toBeNull();
 
     rerender(
@@ -46,7 +46,7 @@ describe('CreateSessionSummaryPanel', () => {
       />
     );
 
-    expect(screen.getByRole('button', { name: 'Schedule rally' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Schedule staging' })).toBeTruthy();
     expect(screen.getByLabelText('Time')).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Today' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Tomorrow' })).toBeTruthy();
@@ -62,7 +62,7 @@ describe('CreateSessionSummaryPanel', () => {
     );
 
     expect(screen.getByText(/3 active sessions/i)).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Start now' })).toHaveProperty(
+    expect(screen.getByRole('button', { name: 'Open staging area' })).toHaveProperty(
       'disabled',
       true
     );
@@ -79,7 +79,7 @@ describe('CreateSessionSummaryPanel', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Schedule rally' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Schedule staging' }));
     expect(onScheduleModeChange).toHaveBeenCalledWith('rally');
   });
 });

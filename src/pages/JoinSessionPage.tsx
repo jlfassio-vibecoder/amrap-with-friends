@@ -10,6 +10,7 @@ import {
 } from '@/lib/api/sessions';
 import { callsignFromEmail } from '@/lib/sessionIdentity';
 import { getSupabaseConfigError } from '@/lib/supabase';
+import { unlockTacticalAudio } from '@/lib/audio/tacticalSynthesis';
 
 export default function JoinSessionPage() {
   const navigate = useNavigate();
@@ -80,6 +81,7 @@ export default function JoinSessionPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    unlockTacticalAudio();
     if (deepLink) {
       if (!rallyUuidValid) {
         setError(SESSION_LOCKED_OR_INVALID);

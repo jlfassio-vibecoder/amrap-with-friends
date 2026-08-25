@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { HomeSeoContent } from '@/components/home/HomeSeoContent';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 
@@ -8,8 +9,10 @@ function HomePage() {
   return (
     <NarrowPageLayout
       title="AMRAP With Friends"
-      subtitle="Train together"
-      desktopTitleAsPageHeading
+      subtitle="Enter the crucible, earn the title."
+      hideDesktopTitle
+      contentMaxWidthClassName="max-w-[860px]"
+      brandWatermark
     >
       <div className="flex flex-col items-center gap-6 py-6 text-center lg:py-16">
         <div className="flex flex-wrap justify-center gap-4">
@@ -29,6 +32,7 @@ function HomePage() {
           </Link>
         </div>
       </div>
+      <HomeSeoContent />
     </NarrowPageLayout>
   );
 }
