@@ -336,6 +336,89 @@ Highest rank meeting **all** criteria wins. Eligibility unchanged: claimed + loc
 
 ---
 
+### Phase 4.5 — Tactical Prescription
+
+**Planning goal:** Point the athlete at the fire. Cards that fulfill an unmet next-tier lethality or domain quota get a brutalist `MANDATE` badge on create-session. Easy work stays visible.
+
+#### Intensity is explicit
+
+Every library template hardcodes `intensityTier: 1 | 2 | 3 | 4 | 5`. No category fallback. Snapshot at create still uses the template field; custom workouts remain **2**.
+
+| Category | Tier |
+| --- | --- |
+| `aerobic-matrix` | 2 |
+| `blood-shunt` / `localized-trap` / `engine-room` / `midline-tension` | 3 |
+| `four-point-cascade` | 4 |
+| `armor-protocol` (standard) | 4 |
+| `the-trench`, `iron-will`, `the-shield` | 5 |
+
+No Intensity 1 templates in this phase.
+
+#### Prescription hierarchy
+
+`getTemplatePrescription(template, current, progress)` — first match wins:
+
+| `current` | Badge |
+| --- | --- |
+| `unclassified` | none (Civilian is volume only) |
+| `civilian` | `MANDATE: INTENSITY 3+` if I3+ quota open and `intensityTier >= 3` |
+| `operator` | `MANDATE: MARATHON` if marathon quota open and duration is 20; else `MANDATE: TIER 4+` if I4+ quota open and `intensityTier >= 4` |
+| `special_ops` | none — already top; badges disappear |
+
+Marathon beats Tier 4+ when both apply.
+
+#### Guest ruling
+
+HUD RPC requires auth. Guests can still create sessions. Skip fetch; render cards without mandates. Do not block create.
+
+#### Deliverables
+
+- [x] `intensityTier` required on every library template
+- [x] `getTemplatePrescription` + tests
+- [x] `useHudTelemetry` shared by HUD + create-session
+- [x] `MANDATE` pill on `WorkoutTemplateCard` (do not hide easy templates)
+
+#### Out of scope
+
+- Auto-generated custom workouts; hiding easy templates; changing classification thresholds
+
+---
+
+### Phase 5 — The Intake Dossier
+
+**Planning goal:** Capture biometrics and a declared (ego) rank. Block HUD and session creation until the dossier exists. Join stays guest-open. Guests can no longer create.
+
+#### Schema
+
+`athlete_profiles`: `user_id` PK, `height_cm`, `weight_kg`, `birth_year`, `perceived_classification` (`civilian` | `operator` | `special_ops`). Weight/height/year stay editable. Perceived rank may **only increase**. Verified rank is weekly HUD telemetry — the declared claim is never overwritten by a single workout.
+
+#### Gates
+
+- `/hud` and `/create` require auth + dossier (`RequireIntake`)
+- `create_session` requires `auth.uid()` and a dossier row; `anon` execute revoked
+- `/join` and `/session/:id` unchanged; My Sessions stays open
+
+#### Ego trap
+
+If `verified < perceived`: badge reads **Claimed: OPERATOR | Verified: CIVILIAN**. Checklist shows claimed-rank requirements. Template badges use `PROVE IT:` targeting the **claimed** rank.
+
+If `verified >= perceived`: Claimed copy disappears; Phase 4.5 `MANDATE:` next-tier resumes.
+
+Civilian claim is volume-only (no template prove-it badges).
+
+#### Deliverables
+
+- [x] `athlete_profiles` + get/upsert RPCs; `create_session` auth + dossier gate
+- [x] `/intake` UI + `RequireIntake`
+- [x] ClassificationBadge claimed vs verified
+- [x] `getTemplatePrescription` PROVE IT override
+
+#### Out of scope
+
+- Auto-rewriting perceived rank from one session; friends seeing claims; gating My Sessions or join
+
+---
+
 ## Phase dependency graph
 
 ```
@@ -346,6 +429,10 @@ Phase 1 (RPC + weekly 150 bar + /hud)
     ├── Phase 2 (daily clock + attrition)
     ├── Phase 3 (domain matrix)
     └── Phase 4 (Benchmark Matrix)  -- after intensity snapshot exists
+            ↓
+         Phase 4.5 (Tactical Prescription)  -- mandates on template picker
+            ↓
+         Phase 5 (Intake Dossier)  -- claimed vs verified + create gate
 ```
 
 ---
@@ -365,9 +452,16 @@ src/lib/hud/
   formatWeekCountdown.test.ts
   resolveWeeklyClassification.ts
   nextTierChecklist.ts
+  getTemplatePrescription.ts
+  compareClassificationRank.ts
 
 src/lib/workout/
   resolveTemplateIntensity.ts
+
+src/hooks/useHudTelemetry.ts
+src/hooks/useAthleteProfile.ts
+src/pages/IntakePage.tsx
+src/components/RequireIntake.tsx
 
 src/lib/api/hudTelemetry.ts
 

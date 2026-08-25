@@ -1,8 +1,9 @@
 import { useId, useState } from 'react';
-import type { HudClassification } from '@/lib/hud/types';
+import { compareClassificationRank } from '@/lib/hud/compareClassificationRank';
 import { nextTierChecklist } from '@/lib/hud/nextTierChecklist';
+import type { ClassificationRank, HudClassification } from '@/lib/hud/types';
 
-const RANK_LABEL: Record<HudClassification['current'], string> = {
+const RANK_LABEL: Record<ClassificationRank, string> = {
   unclassified: 'UNCLASSIFIED',
   civilian: 'CIVILIAN',
   operator: 'OPERATOR',
@@ -11,18 +12,28 @@ const RANK_LABEL: Record<HudClassification['current'], string> = {
 
 interface ClassificationBadgeProps {
   classification: HudClassification;
+  perceivedClassification?: ClassificationRank | null;
 }
 
-export function ClassificationBadge({ classification }: ClassificationBadgeProps) {
+export function ClassificationBadge({
+  classification,
+  perceivedClassification = null,
+}: ClassificationBadgeProps) {
   const [expanded, setExpanded] = useState(false);
   const panelId = useId();
+  const behind =
+    perceivedClassification != null &&
+    compareClassificationRank(classification.current, perceivedClassification) <
+      0;
   const checklist = nextTierChecklist(
     classification.current,
-    classification.progress
+    classification.progress,
+    behind ? perceivedClassification : undefined
   );
 
-  const nextLabel =
-    classification.current === 'special_ops'
+  const nextLabel = behind
+    ? `Prove: ${RANK_LABEL[perceivedClassification]}`
+    : classification.current === 'special_ops'
       ? 'Maintain SPECIAL OPS'
       : classification.current === 'operator'
         ? 'Next: SPECIAL OPS'
@@ -43,17 +54,25 @@ export function ClassificationBadge({ classification }: ClassificationBadgeProps
           <p className="text-xs uppercase tracking-wide text-secondary">
             Classification
           </p>
-          <div className="space-y-1">
+          {behind && perceivedClassification ? (
+            <p
+              className="text-display text-xl text-ink"
+              data-testid="classification-gap"
+            >
+              Claimed: {RANK_LABEL[perceivedClassification]} | Verified:{' '}
+              {RANK_LABEL[classification.current]}
+            </p>
+          ) : (
             <p className="text-display text-2xl text-ink" data-testid="classification-current">
               {RANK_LABEL[classification.current]}
             </p>
-            <p className="text-sm text-secondary">
-              Previous:{' '}
-              <span className="tabular-nums text-ink">
-                {RANK_LABEL[classification.previous]}
-              </span>
-            </p>
-          </div>
+          )}
+          <p className="text-sm text-secondary">
+            Previous:{' '}
+            <span className="tabular-nums text-ink">
+              {RANK_LABEL[classification.previous]}
+            </span>
+          </p>
         </div>
         <span className="shrink-0 text-xs uppercase tracking-wide text-secondary">
           {expanded ? 'Hide' : 'Checklist'}

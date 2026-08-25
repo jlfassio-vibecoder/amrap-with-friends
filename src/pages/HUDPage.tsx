@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { AttritionGrid } from '@/components/hud/AttritionGrid';
@@ -6,55 +5,13 @@ import { ClassificationBadge } from '@/components/hud/ClassificationBadge';
 import { DailyTelemetry } from '@/components/hud/DailyTelemetry';
 import { DomainMatrixChart } from '@/components/hud/DomainMatrixChart';
 import { WeeklyBaselineBar } from '@/components/hud/WeeklyBaselineBar';
-import { fetchHudTelemetry } from '@/lib/api/hudTelemetry';
-import type { HUDTelemetryPayload } from '@/lib/hud/types';
-import { useAmrapAuth } from '@/hooks/useAmrapAuth';
+import { useAthleteProfile } from '@/hooks/useAthleteProfile';
+import { useHudTelemetry } from '@/hooks/useHudTelemetry';
 
 export default function HUDPage() {
-  const { user, isAuthenticated, isAuthLoading } = useAmrapAuth();
-  const [telemetry, setTelemetry] = useState<HUDTelemetryPayload | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [hasLoaded, setHasLoaded] = useState(false);
-
-  useEffect(() => {
-    if (isAuthLoading || !isAuthenticated || !user) {
-      return;
-    }
-
-    let cancelled = false;
-
-    fetchHudTelemetry()
-      .then((result) => {
-        if (cancelled) {
-          return;
-        }
-        if (result.error) {
-          setError(result.error.message);
-          setTelemetry(null);
-        } else {
-          setTelemetry(result.data);
-          setError(null);
-        }
-      })
-      .catch(() => {
-        if (cancelled) {
-          return;
-        }
-        setError('Something went wrong. Please try again.');
-        setTelemetry(null);
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setHasLoaded(true);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isAuthLoading, isAuthenticated, user]);
-
-  const loading = isAuthLoading || (isAuthenticated && user !== null && !hasLoaded);
+  const { telemetry, error, loading, isAuthenticated, isAuthLoading } =
+    useHudTelemetry();
+  const { profile } = useAthleteProfile();
 
   return (
     <NarrowPageLayout title="HUD" subtitle="Operational telemetry">
@@ -82,7 +39,10 @@ export default function HUDPage() {
 
       {!loading && isAuthenticated && telemetry ? (
         <div className="space-y-4">
-          <ClassificationBadge classification={telemetry.classification} />
+          <ClassificationBadge
+            classification={telemetry.classification}
+            perceivedClassification={profile?.perceivedClassification ?? null}
+          />
           <DailyTelemetry lastLockedAt={telemetry.lastLockedAt} />
           <WeeklyBaselineBar
             weekMinutes={telemetry.weekMinutes}

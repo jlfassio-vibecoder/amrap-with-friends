@@ -23,43 +23,45 @@ function row(
   };
 }
 
-/**
- * Checklist for the next tier (or SPECIAL OPS maintenance when already top).
- */
-export function nextTierChecklist(
-  current: ClassificationRank,
+function rowsForTarget(
+  target: ClassificationRank,
   progress: ClassificationProgress
 ): NextTierChecklistRow[] {
-  if (current === 'unclassified') {
+  if (target === 'civilian' || target === 'unclassified') {
     return [row('volume-150', 'min', progress.weekMinutes, 150)];
   }
 
-  if (current === 'civilian') {
+  if (target === 'operator') {
     return [
       row('volume-240', 'min', progress.weekMinutes, 240),
-      row(
-        'i3-plus',
-        'Intensity 3+',
-        progress.intensity3PlusCount,
-        2
-      ),
+      row('i3-plus', 'Intensity 3+', progress.intensity3PlusCount, 2),
     ];
   }
 
-  // operator → special ops, or special_ops maintenance
   return [
     row('volume-300', 'min', progress.weekMinutes, 300),
-    row(
-      'i4-plus',
-      'Intensity 4+',
-      progress.intensity4PlusCount,
-      3
-    ),
-    row(
-      'marathon-20',
-      '20-min Marathon',
-      progress.marathon20Count,
-      1
-    ),
+    row('i4-plus', 'Intensity 4+', progress.intensity4PlusCount, 3),
+    row('marathon-20', '20-min Marathon', progress.marathon20Count, 1),
   ];
+}
+
+function nextTierFrom(current: ClassificationRank): ClassificationRank {
+  if (current === 'unclassified') {
+    return 'civilian';
+  }
+  if (current === 'civilian') {
+    return 'operator';
+  }
+  return 'special_ops';
+}
+
+/**
+ * Checklist for the next tier, or for an explicit target (claimed rank when behind).
+ */
+export function nextTierChecklist(
+  current: ClassificationRank,
+  progress: ClassificationProgress,
+  target?: ClassificationRank
+): NextTierChecklistRow[] {
+  return rowsForTarget(target ?? nextTierFrom(current), progress);
 }

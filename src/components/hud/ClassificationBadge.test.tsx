@@ -51,4 +51,41 @@ describe('ClassificationBadge', () => {
     expect(panel.textContent).toContain('1 / 2 Intensity 3+');
     expect(panel.textContent).toContain('180 / 240 min');
   });
+
+  it('shows claimed vs verified when behind the declaration', () => {
+    render(
+      <ClassificationBadge
+        classification={belowBaseline}
+        perceivedClassification="operator"
+      />
+    );
+
+    expect(screen.getByTestId('classification-gap').textContent).toBe(
+      'Claimed: OPERATOR | Verified: UNCLASSIFIED'
+    );
+    expect(screen.queryByTestId('classification-current')).toBeNull();
+  });
+
+  it('hides claimed copy when verified meets the declaration', () => {
+    render(
+      <ClassificationBadge
+        classification={{
+          current: 'operator',
+          previous: 'civilian',
+          progress: {
+            weekMinutes: 250,
+            intensity3PlusCount: 2,
+            intensity4PlusCount: 0,
+            marathon20Count: 0,
+          },
+        }}
+        perceivedClassification="operator"
+      />
+    );
+
+    expect(screen.getByTestId('classification-current').textContent).toBe(
+      'OPERATOR'
+    );
+    expect(screen.queryByTestId('classification-gap')).toBeNull();
+  });
 });

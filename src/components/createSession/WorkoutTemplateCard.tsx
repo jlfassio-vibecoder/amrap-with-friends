@@ -1,17 +1,34 @@
 import type { KeyboardEvent } from 'react';
 import type { WorkoutTemplate } from '@/data/workoutTemplates';
 import { ExerciseInfoTrigger } from '@/components/exerciseInfo/ExerciseInfoTrigger';
-import { resolveTemplateIntensity } from '@/lib/workout/resolveTemplateIntensity';
+import { getTemplatePrescription } from '@/lib/hud/getTemplatePrescription';
+import type { ClassificationRank, HudClassification } from '@/lib/hud/types';
 import { formatTemplateMovementLine } from '@/lib/workout/templateToExercises';
 
 interface WorkoutTemplateCardProps {
   template: WorkoutTemplate;
   selected: boolean;
   onSelect: (template: WorkoutTemplate) => void;
+  classification?: HudClassification | null;
+  perceivedClassification?: ClassificationRank | null;
 }
 
-export function WorkoutTemplateCard({ template, selected, onSelect }: WorkoutTemplateCardProps) {
-  const intensityTier = resolveTemplateIntensity(template);
+export function WorkoutTemplateCard({
+  template,
+  selected,
+  onSelect,
+  classification = null,
+  perceivedClassification = null,
+}: WorkoutTemplateCardProps) {
+  const intensityTier = template.intensityTier;
+  const prescription = classification
+    ? getTemplatePrescription(
+        template,
+        classification.current,
+        classification.progress,
+        perceivedClassification
+      )
+    : { required: false as const };
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -28,7 +45,7 @@ export function WorkoutTemplateCard({ template, selected, onSelect }: WorkoutTem
       className={
         selected
           ? 'card relative w-full cursor-pointer space-y-3 border-2 border-accent p-4 text-left shadow-card'
-          : 'card w-full cursor-pointer space-y-3 p-4 text-left hover:border-accent/40'
+          : 'card relative w-full cursor-pointer space-y-3 p-4 text-left hover:border-accent/40'
       }
       onClick={() => onSelect(template)}
       onKeyDown={handleKeyDown}
@@ -51,6 +68,14 @@ export function WorkoutTemplateCard({ template, selected, onSelect }: WorkoutTem
             I{intensityTier}
           </span>
         </div>
+        {prescription.required ? (
+          <span
+            className="inline-block bg-accent px-2 py-1 text-xs font-bold uppercase tracking-widest text-page"
+            data-testid="mandate-badge"
+          >
+            {prescription.label}
+          </span>
+        ) : null}
         {template.focus ? (
           <span className="inline-block rounded-full border border-border bg-page px-2 py-0.5 text-xs font-semibold text-secondary">
             {template.focus}
