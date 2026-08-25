@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import type { WorkoutTemplate } from '@/data/workoutTemplates';
 import { ALPHA_MALE_QUOTAS, getClassificationQuotas } from './classificationQuotas';
 import { getTemplatePrescription } from './getTemplatePrescription';
 import type { ClassificationProgress } from './types';
@@ -16,7 +17,7 @@ function progress(
 }
 
 function prescribe(
-  template: { intensityTier: number; durationMinutes: number },
+  template: Pick<WorkoutTemplate, 'intensityTier' | 'durationMinutes'>,
   verified: Parameters<typeof getTemplatePrescription>[1],
   prog: ClassificationProgress,
   perceived?: Parameters<typeof getTemplatePrescription>[4],
