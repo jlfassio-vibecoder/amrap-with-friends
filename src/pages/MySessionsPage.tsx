@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { MySessionScoreBreakdownModal } from '@/components/MySessionScoreBreakdownModal';
 import {
+  canDeleteMySession,
+  deleteIncompleteSession,
   fetchMySessions,
   formatMySessionScoreDisplay,
   type MySessionEntry,
@@ -26,6 +28,7 @@ export default function MySessionsPage() {
   const [error, setError] = useState<string | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [breakdownEntry, setBreakdownEntry] = useState<MySessionEntry | null>(null);
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isAuthLoading || !isAuthenticated || !user) {
@@ -52,6 +55,35 @@ export default function MySessionsPage() {
   }, [isAuthLoading, isAuthenticated, user]);
 
   const loading = isAuthLoading || (isAuthenticated && user !== null && !hasLoaded);
+
+  async function handleDelete(entry: MySessionEntry) {
+    if (!canDeleteMySession(entry) || deletingSessionId) {
+      return;
+    }
+    const confirmed = window.confirm(
+      'Permanently delete this incomplete session?'
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingSessionId(entry.sessionId);
+    setError(null);
+    try {
+      const result = await deleteIncompleteSession(entry.sessionId);
+      if (result.error) {
+        setError(result.error.message);
+        return;
+      }
+      setEntries((prev) =>
+        prev.filter((item) => item.sessionId !== entry.sessionId)
+      );
+    } catch {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setDeletingSessionId(null);
+    }
+  }
 
   return (
     <NarrowPageLayout title="My sessions" subtitle="Saved to your account">
@@ -105,6 +137,16 @@ export default function MySessionsPage() {
                     onClick={() => setBreakdownEntry(entry)}
                   >
                     View breakdown
+                  </button>
+                ) : null}
+                {canDeleteMySession(entry) ? (
+                  <button
+                    type="button"
+                    className="text-error"
+                    disabled={deletingSessionId === entry.sessionId}
+                    onClick={() => void handleDelete(entry)}
+                  >
+                    {deletingSessionId === entry.sessionId ? 'Deleting…' : 'Delete'}
                   </button>
                 ) : null}
               </div>
