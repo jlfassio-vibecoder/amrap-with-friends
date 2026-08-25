@@ -6,6 +6,7 @@ interface NarrowPageLayoutProps {
   subtitle?: string;
   showFooter?: boolean;
   desktopTitleAsPageHeading?: boolean;
+  contentMaxWidthClassName?: string;
   children: ReactNode;
 }
 
@@ -14,6 +15,7 @@ export function NarrowPageLayout({
   subtitle,
   showFooter = true,
   desktopTitleAsPageHeading = false,
+  contentMaxWidthClassName = 'max-w-xl',
   children,
 }: NarrowPageLayoutProps) {
   return (
@@ -24,7 +26,11 @@ export function NarrowPageLayout({
         desktopTitleAsPageHeading={desktopTitleAsPageHeading}
       />
       <div className="flex-1 px-6 pb-6 pt-0 lg:px-8 lg:py-10">
-        <div className="mx-auto w-full max-w-xl space-y-6">{children}</div>
+        <div
+          className={`mx-auto w-full space-y-6 ${contentMaxWidthClassName}`}
+        >
+          {children}
+        </div>
       </div>
       {showFooter ? (
         <footer className="hidden pb-6 text-center text-xs text-muted lg:block">

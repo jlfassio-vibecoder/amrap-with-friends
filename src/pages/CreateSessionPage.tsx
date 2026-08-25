@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
 import {
   CreateSessionSummaryPanel,
@@ -11,6 +11,7 @@ import {
 } from '@/components/createSession/WorkoutSourceToggle';
 import { WorkoutTemplatePicker } from '@/components/createSession/WorkoutTemplatePicker';
 import {
+  TIME_DOMAINS,
   WORKOUT_CATEGORIES,
   WORKOUT_TEMPLATES,
   type TimeDomain,
@@ -34,8 +35,17 @@ import {
   type RallyDay,
 } from '@/lib/session/rallySchedule';
 
+function isWorkoutCategory(value: string): value is WorkoutCategory {
+  return WORKOUT_CATEGORIES.some((category) => category.id === value);
+}
+
+function isTimeDomain(value: number): value is TimeDomain {
+  return (TIME_DOMAINS as number[]).includes(value);
+}
+
 export default function CreateSessionPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { telemetry } = useHudTelemetry();
   const { profile, loading: profileLoading } = useAthleteProfile();
   const quotas = quotasFromProfile(profile);
@@ -70,6 +80,54 @@ export default function CreateSessionPage() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    const categoryParam = searchParams.get('category');
+    const durationParam = searchParams.get('duration');
+    if (!categoryParam && !durationParam) {
+      return;
+    }
+
+    setWorkoutSource('library');
+
+    const parsedDuration =
+      durationParam !== null && Number.isInteger(Number(durationParam))
+        ? Number(durationParam)
+        : null;
+    const duration =
+      parsedDuration !== null && isTimeDomain(parsedDuration) ? parsedDuration : null;
+    const category =
+      categoryParam !== null && isWorkoutCategory(categoryParam) ? categoryParam : null;
+
+    if (category !== null) {
+      const meta = WORKOUT_CATEGORIES.find((entry) => entry.id === category);
+      const resolvedDuration: TimeDomain | undefined =
+        duration !== null && meta?.availableForDurations.includes(duration)
+          ? duration
+          : meta?.availableForDurations[0];
+      if (resolvedDuration !== undefined) {
+        setDurationMinutes(resolvedDuration);
+        setSelectedTemplateId(null);
+      }
+      setSelectedCategory(category);
+      return;
+    }
+
+    if (duration !== null) {
+      setDurationMinutes(duration);
+      setSelectedTemplateId(null);
+      const nextCategory = firstAvailableCategoryForDuration(
+        WORKOUT_CATEGORIES,
+        duration,
+        WORKOUT_TEMPLATES
+      );
+      if (nextCategory) {
+        setSelectedCategory(nextCategory);
+      }
+    }
+    // Deep-link filters apply once from the landing URL.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const capReached = (activeCount ?? 0) >= HOST_ACTIVE_SESSION_LIMIT;
