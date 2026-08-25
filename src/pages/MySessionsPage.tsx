@@ -92,7 +92,10 @@ export default function MySessionsPage() {
                 {formatMySessionScoreDisplay(entry)} · {entry.state}
               </p>
               <div className="flex flex-wrap items-center gap-3">
-                <Link className="link-accent" to={`/session/${entry.sessionId}`}>
+                <Link
+                  className="link-accent"
+                  to={`/session/${entry.sessionId}`}
+                >
                   View session
                 </Link>
                 {entry.scoreBreakdown ? (

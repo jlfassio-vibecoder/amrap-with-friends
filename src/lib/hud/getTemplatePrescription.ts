@@ -1,4 +1,5 @@
 import type { WorkoutTemplate } from '@/data/workoutTemplates';
+import type { ClassificationQuotas } from '@/lib/hud/classificationQuotas';
 import { compareClassificationRank } from '@/lib/hud/compareClassificationRank';
 import type { ClassificationProgress, ClassificationRank } from '@/lib/hud/types';
 
@@ -22,11 +23,15 @@ function nextTierFrom(verified: ClassificationRank): ClassificationRank | null {
 function prescribeForTarget(
   template: Pick<WorkoutTemplate, 'intensityTier' | 'durationMinutes'>,
   progress: ClassificationProgress,
+  quotas: ClassificationQuotas,
   target: ClassificationRank,
   prefix: 'MANDATE' | 'PROVE IT'
 ): TemplatePrescription {
   if (target === 'operator') {
-    if (progress.intensity3PlusCount < 2 && template.intensityTier >= 3) {
+    if (
+      progress.intensity3PlusCount < quotas.operatorIntensity3Plus &&
+      template.intensityTier >= 3
+    ) {
       return { required: true, label: `${prefix}: INTENSITY 3+` };
     }
     return { required: false };
@@ -49,6 +54,7 @@ export function getTemplatePrescription(
   template: Pick<WorkoutTemplate, 'intensityTier' | 'durationMinutes'>,
   verified: ClassificationRank,
   progress: ClassificationProgress,
+  quotas: ClassificationQuotas,
   perceived?: ClassificationRank | null
 ): TemplatePrescription {
   const behind =
@@ -60,6 +66,7 @@ export function getTemplatePrescription(
   return prescribeForTarget(
     template,
     progress,
+    quotas,
     target,
     behind ? 'PROVE IT' : 'MANDATE'
   );

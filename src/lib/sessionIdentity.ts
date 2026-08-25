@@ -34,6 +34,14 @@ export function setStoredHostToken(sessionId: string, token: string): void {
   writeItem(storageKey(STORAGE_PREFIX.hostToken, sessionId), token);
 }
 
+export function clearStoredHostToken(sessionId: string): void {
+  try {
+    sessionStorage.removeItem(storageKey(STORAGE_PREFIX.hostToken, sessionId));
+  } catch {
+    /* sessionStorage unavailable */
+  }
+}
+
 export function getStoredParticipantId(sessionId: string): string | null {
   return readItem(storageKey(STORAGE_PREFIX.participantId, sessionId));
 }
@@ -79,6 +87,9 @@ export function persistSessionIdentity(
   setStoredNickname(sessionId, identity.nickname);
   if (identity.hostToken) {
     setStoredHostToken(sessionId, identity.hostToken);
+  } else {
+    // Drop stale host authority when reseeding as a non-host (or unknown role).
+    clearStoredHostToken(sessionId);
   }
   if (identity.claimToken) {
     setStoredClaimToken(sessionId, identity.claimToken);
@@ -135,4 +146,16 @@ export function clearStoredGhostSelection(sessionId: string): void {
   } catch {
     /* sessionStorage unavailable */
   }
+}
+
+/** Lobby display name from email local-part (max 50). */
+export function callsignFromEmail(email: string | null | undefined): string | null {
+  if (!email) {
+    return null;
+  }
+  const local = email.trim().split('@')[0]?.trim() ?? '';
+  if (!local) {
+    return null;
+  }
+  return local.slice(0, 50);
 }

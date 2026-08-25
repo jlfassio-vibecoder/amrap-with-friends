@@ -2,6 +2,8 @@ import type { KeyboardEvent } from 'react';
 import type { WorkoutTemplate } from '@/data/workoutTemplates';
 import { ExerciseInfoTrigger } from '@/components/exerciseInfo/ExerciseInfoTrigger';
 import { getTemplatePrescription } from '@/lib/hud/getTemplatePrescription';
+import type { ClassificationQuotas } from '@/lib/hud/classificationQuotas';
+import { ALPHA_MALE_QUOTAS } from '@/lib/hud/classificationQuotas';
 import type { ClassificationRank, HudClassification } from '@/lib/hud/types';
 import { formatTemplateMovementLine } from '@/lib/workout/templateToExercises';
 
@@ -11,6 +13,7 @@ interface WorkoutTemplateCardProps {
   onSelect: (template: WorkoutTemplate) => void;
   classification?: HudClassification | null;
   perceivedClassification?: ClassificationRank | null;
+  quotas?: ClassificationQuotas;
 }
 
 export function WorkoutTemplateCard({
@@ -19,6 +22,7 @@ export function WorkoutTemplateCard({
   onSelect,
   classification = null,
   perceivedClassification = null,
+  quotas = ALPHA_MALE_QUOTAS,
 }: WorkoutTemplateCardProps) {
   const intensityTier = template.intensityTier;
   const prescription = classification
@@ -26,6 +30,7 @@ export function WorkoutTemplateCard({
         template,
         classification.current,
         classification.progress,
+        quotas,
         perceivedClassification
       )
     : { required: false as const };

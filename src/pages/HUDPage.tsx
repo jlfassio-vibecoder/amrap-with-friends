@@ -5,13 +5,17 @@ import { ClassificationBadge } from '@/components/hud/ClassificationBadge';
 import { DailyTelemetry } from '@/components/hud/DailyTelemetry';
 import { DomainMatrixChart } from '@/components/hud/DomainMatrixChart';
 import { WeeklyBaselineBar } from '@/components/hud/WeeklyBaselineBar';
+import { quotasFromProfile } from '@/lib/hud/classificationQuotas';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { useHudTelemetry } from '@/hooks/useHudTelemetry';
 
 export default function HUDPage() {
   const { telemetry, error, loading, isAuthenticated, isAuthLoading } =
     useHudTelemetry();
-  const { profile } = useAthleteProfile();
+  const { profile, loading: profileLoading } = useAthleteProfile();
+  const quotas = quotasFromProfile(profile);
+  const showTelemetry =
+    !loading && !profileLoading && isAuthenticated && telemetry;
 
   return (
     <NarrowPageLayout title="HUD" subtitle="Operational telemetry">
@@ -26,7 +30,9 @@ export default function HUDPage() {
         </p>
       </div>
 
-      {loading ? <p className="text-sm text-secondary">Loading…</p> : null}
+      {loading || profileLoading ? (
+        <p className="text-sm text-secondary">Loading…</p>
+      ) : null}
 
       {!isAuthLoading && !isAuthenticated ? (
         <p className="text-sm text-secondary">
@@ -37,17 +43,19 @@ export default function HUDPage() {
 
       {error ? <p className="text-error">Error: {error}</p> : null}
 
-      {!loading && isAuthenticated && telemetry ? (
+      {showTelemetry ? (
         <div className="space-y-4">
           <ClassificationBadge
             classification={telemetry.classification}
             perceivedClassification={profile?.perceivedClassification ?? null}
+            quotas={quotas}
           />
           <DailyTelemetry lastLockedAt={telemetry.lastLockedAt} />
           <WeeklyBaselineBar
             weekMinutes={telemetry.weekMinutes}
             weekPviAverage={telemetry.weekPviAverage}
             weekEndsAt={telemetry.weekEndsAt}
+            baselineMinutes={quotas.civilianMinutes}
           />
           <AttritionGrid
             attrition={telemetry.attrition}
@@ -57,7 +65,12 @@ export default function HUDPage() {
         </div>
       ) : null}
 
-      <p className="text-center text-sm">
+      <p className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm">
+        {isAuthenticated ? (
+          <Link className="link-accent" to="/intake?next=%2Fhud">
+            Edit dossier
+          </Link>
+        ) : null}
         <Link className="link-accent" to="/">
           Back home
         </Link>

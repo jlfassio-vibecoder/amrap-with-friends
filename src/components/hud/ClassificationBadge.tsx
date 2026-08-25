@@ -1,6 +1,11 @@
 import { useId, useState } from 'react';
+import type { ClassificationQuotas } from '@/lib/hud/classificationQuotas';
+import { ALPHA_MALE_QUOTAS } from '@/lib/hud/classificationQuotas';
 import { compareClassificationRank } from '@/lib/hud/compareClassificationRank';
-import { nextTierChecklist } from '@/lib/hud/nextTierChecklist';
+import {
+  checklistTarget,
+  nextTierChecklist,
+} from '@/lib/hud/nextTierChecklist';
 import type { ClassificationRank, HudClassification } from '@/lib/hud/types';
 
 const RANK_LABEL: Record<ClassificationRank, string> = {
@@ -13,11 +18,13 @@ const RANK_LABEL: Record<ClassificationRank, string> = {
 interface ClassificationBadgeProps {
   classification: HudClassification;
   perceivedClassification?: ClassificationRank | null;
+  quotas?: ClassificationQuotas;
 }
 
 export function ClassificationBadge({
   classification,
   perceivedClassification = null,
+  quotas = ALPHA_MALE_QUOTAS,
 }: ClassificationBadgeProps) {
   const [expanded, setExpanded] = useState(false);
   const panelId = useId();
@@ -25,9 +32,14 @@ export function ClassificationBadge({
     perceivedClassification != null &&
     compareClassificationRank(classification.current, perceivedClassification) <
       0;
+  const target = checklistTarget(
+    classification.current,
+    behind ? perceivedClassification : undefined
+  );
   const checklist = nextTierChecklist(
     classification.current,
     classification.progress,
+    quotas,
     behind ? perceivedClassification : undefined
   );
 
@@ -40,6 +52,11 @@ export function ClassificationBadge({
         : classification.current === 'civilian'
           ? 'Next: OPERATOR'
           : 'Next: CIVILIAN';
+
+  const quotaNote =
+    target === 'special_ops'
+      ? '(Absolute Standard. No Demographic Scaling)'
+      : '(Quotas scaled for Demographic Profile)';
 
   return (
     <div className="border border-border bg-page">
@@ -102,6 +119,9 @@ export function ClassificationBadge({
               </li>
             ))}
           </ul>
+          <p className="mt-3 text-xs text-secondary" data-testid="quota-note">
+            {quotaNote}
+          </p>
         </div>
       ) : null}
     </div>

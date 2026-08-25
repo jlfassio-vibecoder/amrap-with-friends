@@ -50,6 +50,9 @@ describe('ClassificationBadge', () => {
     expect(panel.textContent).toContain('Next: OPERATOR');
     expect(panel.textContent).toContain('1 / 2 Intensity 3+');
     expect(panel.textContent).toContain('180 / 240 min');
+    expect(panel.textContent).toContain(
+      '(Quotas scaled for Demographic Profile)'
+    );
   });
 
   it('shows claimed vs verified when behind the declaration', () => {
@@ -87,5 +90,19 @@ describe('ClassificationBadge', () => {
       'OPERATOR'
     );
     expect(screen.queryByTestId('classification-gap')).toBeNull();
+  });
+
+  it('shows absolute-standard copy when proving Special Ops', () => {
+    render(
+      <ClassificationBadge
+        classification={belowBaseline}
+        perceivedClassification="special_ops"
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /checklist/i }));
+    expect(screen.getByTestId('quota-note').textContent).toBe(
+      '(Absolute Standard. No Demographic Scaling)'
+    );
   });
 });

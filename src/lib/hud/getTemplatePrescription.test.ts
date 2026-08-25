@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import type { WorkoutTemplate } from '@/data/workoutTemplates';
+import { ALPHA_MALE_QUOTAS, getClassificationQuotas } from './classificationQuotas';
 import { getTemplatePrescription } from './getTemplatePrescription';
 import type { ClassificationProgress } from './types';
 
@@ -14,10 +16,20 @@ function progress(
   };
 }
 
+function prescribe(
+  template: Pick<WorkoutTemplate, 'intensityTier' | 'durationMinutes'>,
+  verified: Parameters<typeof getTemplatePrescription>[1],
+  prog: ClassificationProgress,
+  perceived?: Parameters<typeof getTemplatePrescription>[4],
+  quotas = ALPHA_MALE_QUOTAS
+) {
+  return getTemplatePrescription(template, verified, prog, quotas, perceived);
+}
+
 describe('getTemplatePrescription', () => {
   it('returns none for unclassified (Civilian is volume only)', () => {
     expect(
-      getTemplatePrescription(
+      prescribe(
         { intensityTier: 5, durationMinutes: 20 },
         'unclassified',
         progress({ weekMinutes: 40 })
@@ -27,7 +39,7 @@ describe('getTemplatePrescription', () => {
 
   it('flags Intensity 3+ for civilian when quota is open', () => {
     expect(
-      getTemplatePrescription(
+      prescribe(
         { intensityTier: 3, durationMinutes: 10 },
         'civilian',
         progress({ intensity3PlusCount: 1 })
@@ -37,7 +49,7 @@ describe('getTemplatePrescription', () => {
 
   it('does not flag Intensity 2 for civilian I3+ quota', () => {
     expect(
-      getTemplatePrescription(
+      prescribe(
         { intensityTier: 2, durationMinutes: 20 },
         'civilian',
         progress({ intensity3PlusCount: 0 })
@@ -47,7 +59,7 @@ describe('getTemplatePrescription', () => {
 
   it('drops the civilian I3+ badge once the quota is met', () => {
     expect(
-      getTemplatePrescription(
+      prescribe(
         { intensityTier: 5, durationMinutes: 10 },
         'civilian',
         progress({ intensity3PlusCount: 2 })
@@ -57,7 +69,7 @@ describe('getTemplatePrescription', () => {
 
   it('flags Tier 4+ for an operator on Intensity 5 when I4+ quota is open and duration is not 20', () => {
     expect(
-      getTemplatePrescription(
+      prescribe(
         { intensityTier: 5, durationMinutes: 10 },
         'operator',
         progress({ intensity4PlusCount: 1 })
@@ -67,7 +79,7 @@ describe('getTemplatePrescription', () => {
 
   it('does not flag Intensity 3 for an operator I4+ quota', () => {
     expect(
-      getTemplatePrescription(
+      prescribe(
         { intensityTier: 3, durationMinutes: 10 },
         'operator',
         progress({ intensity4PlusCount: 1 })
@@ -77,7 +89,7 @@ describe('getTemplatePrescription', () => {
 
   it('prioritizes Marathon over Tier 4+ on a 20-min Intensity 5', () => {
     expect(
-      getTemplatePrescription(
+      prescribe(
         { intensityTier: 5, durationMinutes: 20 },
         'operator',
         progress({ intensity4PlusCount: 1, marathon20Count: 0 })
@@ -87,7 +99,7 @@ describe('getTemplatePrescription', () => {
 
   it('falls back to Tier 4+ on a 20-min Intensity 5 after marathon quota is met', () => {
     expect(
-      getTemplatePrescription(
+      prescribe(
         { intensityTier: 5, durationMinutes: 20 },
         'operator',
         progress({ intensity4PlusCount: 1, marathon20Count: 1 })
@@ -97,7 +109,7 @@ describe('getTemplatePrescription', () => {
 
   it('returns none when already special_ops', () => {
     expect(
-      getTemplatePrescription(
+      prescribe(
         { intensityTier: 5, durationMinutes: 20 },
         'special_ops',
         progress({
@@ -111,7 +123,7 @@ describe('getTemplatePrescription', () => {
 
   it('uses PROVE IT Intensity 3+ when civilian-behind-operator', () => {
     expect(
-      getTemplatePrescription(
+      prescribe(
         { intensityTier: 3, durationMinutes: 10 },
         'civilian',
         progress({ intensity3PlusCount: 1 }),
@@ -122,7 +134,7 @@ describe('getTemplatePrescription', () => {
 
   it('uses PROVE IT Marathon when civilian-behind-special_ops on a 20-min I5', () => {
     expect(
-      getTemplatePrescription(
+      prescribe(
         { intensityTier: 5, durationMinutes: 20 },
         'civilian',
         progress({ intensity4PlusCount: 0, marathon20Count: 0 }),
@@ -133,12 +145,24 @@ describe('getTemplatePrescription', () => {
 
   it('resumes MANDATE next-tier when verified meets the claim', () => {
     expect(
-      getTemplatePrescription(
+      prescribe(
         { intensityTier: 5, durationMinutes: 10 },
         'operator',
         progress({ intensity4PlusCount: 1 }),
         'operator'
       )
     ).toEqual({ required: true, label: 'MANDATE: TIER 4+' });
+  });
+
+  it('drops Operator I3+ mandate once Delta quota of 1 is met', () => {
+    expect(
+      prescribe(
+        { intensityTier: 3, durationMinutes: 10 },
+        'civilian',
+        progress({ intensity3PlusCount: 1 }),
+        'operator',
+        getClassificationQuotas(50, 'F')
+      )
+    ).toEqual({ required: false });
   });
 });

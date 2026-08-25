@@ -1,11 +1,17 @@
 import { Link, useParams } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
-import { getStoredParticipantId, getStoredClaimToken, getStoredNickname, getStoredGhostSelection } from '@/lib/sessionIdentity';
+import {
+  getStoredParticipantId,
+  getStoredClaimToken,
+  getStoredNickname,
+  getStoredGhostSelection,
+} from '@/lib/sessionIdentity';
 import { useLiveAmrapSession } from '@/hooks/useLiveAmrapSession';
 import { useParticipantClaim } from '@/hooks/useParticipantClaim';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useSessionChannel } from '@/lib/realtime/useSessionChannel';
 import { canOfferSessionSave } from '@/lib/claim/canOfferSessionSave';
+import { resumeSessionIdentity } from '@/lib/api/resumeSessionIdentity';
 import { AppHeader } from '@/components/AppHeader';
 import { AuthModal } from '@/components/AuthModal';
 import { ExerciseInfoTrigger } from '@/components/exerciseInfo/ExerciseInfoTrigger';
@@ -15,6 +21,7 @@ import { SessionScorecard, type SessionScorecardSaveState } from '@/components/S
 import { SessionChat } from '@/components/SessionChat';
 import { GhostPicker } from '@/components/GhostPicker';
 import { GhostPacerStrip } from '@/components/GhostPacerStrip';
+import { CopyInviteLink } from '@/components/session/CopyInviteLink';
 import { useGhostPacer } from '@/hooks/useGhostPacer';
 import type { StoredGhostSelection } from '@/lib/sessionIdentity';
 
@@ -53,7 +60,72 @@ function formatExerciseLabel(exercise: {
 
 export default function SessionWaitingRoomPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
-  const participantId = sessionId ? getStoredParticipantId(sessionId) : null;
+  const storedParticipantId = sessionId ? getStoredParticipantId(sessionId) : null;
+  const { isAuthenticated, isAuthLoading } = useAmrapAuth();
+  const [restoredIdentity, setRestoredIdentity] = useState<{
+    sessionId: string;
+    participantId: string;
+    nickname: string;
+  } | null>(null);
+  const [resumeError, setResumeError] = useState<{
+    sessionId: string;
+    message: string;
+  } | null>(null);
+
+  const shouldAttemptResume =
+    Boolean(sessionId) &&
+    !storedParticipantId &&
+    !isAuthLoading &&
+    isAuthenticated;
+
+  const resumeStartedForSession = useRef<string | null>(null);
+  const activeRestored =
+    restoredIdentity && restoredIdentity.sessionId === sessionId
+      ? restoredIdentity
+      : null;
+  const activeResumeError =
+    resumeError && resumeError.sessionId === sessionId
+      ? resumeError.message
+      : null;
+
+  useEffect(() => {
+    if (!shouldAttemptResume || !sessionId) {
+      return;
+    }
+    if (resumeStartedForSession.current === sessionId) {
+      return;
+    }
+
+    resumeStartedForSession.current = sessionId;
+    let cancelled = false;
+
+    void resumeSessionIdentity(sessionId).then((result) => {
+      if (cancelled) {
+        return;
+      }
+      if (result.error) {
+        setResumeError({ sessionId, message: result.error.message });
+        return;
+      }
+      if (result.missing || !result.data) {
+        setResumeError({
+          sessionId,
+          message:
+            'No participant identity found for this session. Join or create again.',
+        });
+        return;
+      }
+      setRestoredIdentity({
+        sessionId,
+        participantId: result.data.participantId,
+        nickname: result.data.nickname,
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [shouldAttemptResume, sessionId]);
 
   if (!sessionId) {
     return (
@@ -64,26 +136,68 @@ export default function SessionWaitingRoomPage() {
     );
   }
 
-  if (!participantId) {
+  const participantId =
+    storedParticipantId ?? activeRestored?.participantId ?? null;
+  const nickname =
+    (sessionId ? getStoredNickname(sessionId) : null) ??
+    activeRestored?.nickname ??
+    'Unknown';
+
+  if (participantId) {
+    return (
+      <LiveSessionView
+        sessionId={sessionId}
+        participantId={participantId}
+        nickname={nickname}
+      />
+    );
+  }
+
+  const isResuming =
+    isAuthLoading ||
+    (shouldAttemptResume && activeResumeError === null && activeRestored === null);
+
+  if (isResuming) {
     return (
       <main className="mx-auto max-w-lg space-y-4 p-6">
-        <p className="text-error">
-          Error: No participant identity found for this session. Join or create again.
-        </p>
-        <div className="flex gap-4 text-sm">
-          <Link className="link-accent" to="/join">Join session</Link>
-          <Link className="link-accent" to="/create">Create session</Link>
-        </div>
+        <p className="text-sm text-secondary">Restoring session identity…</p>
       </main>
     );
   }
 
-  return <LiveSessionView sessionId={sessionId} />;
+  return (
+    <main className="mx-auto max-w-lg space-y-4 p-6">
+      <p className="text-error">
+        Error:{' '}
+        {activeResumeError ??
+          'No participant identity found for this session. Join or create again.'}
+      </p>
+      <div className="flex flex-wrap gap-4 text-sm">
+        {!isAuthenticated ? (
+          <Link className="link-accent" to="/join">
+            Join session
+          </Link>
+        ) : null}
+        <Link className="link-accent" to="/my-sessions">
+          My sessions
+        </Link>
+        <Link className="link-accent" to="/create">
+          Create session
+        </Link>
+      </div>
+    </main>
+  );
 }
 
-function LiveSessionView({ sessionId }: { sessionId: string }) {
-  const participantId = getStoredParticipantId(sessionId) ?? '';
-  const nickname = getStoredNickname(sessionId) ?? 'Unknown';
+function LiveSessionView({
+  sessionId,
+  participantId,
+  nickname,
+}: {
+  sessionId: string;
+  participantId: string;
+  nickname: string;
+}) {
   const claimToken = getStoredClaimToken(sessionId);
   const { isAuthenticated, isAuthLoading } = useAmrapAuth();
   const [isSubmittingPartialReps, setIsSubmittingPartialReps] = useState(false);
@@ -278,6 +392,10 @@ function LiveSessionView({ sessionId }: { sessionId: string }) {
                 Realtime: {live.isRealtimeConnected ? 'connected' : 'connecting…'}
               </p>
             </section>
+
+            {live.phase === 'waiting' ? (
+              <CopyInviteLink sessionId={sessionId} />
+            ) : null}
 
             {showGhostPicker && live.templateId ? (
               <GhostPicker
