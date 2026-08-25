@@ -287,20 +287,32 @@ function LiveSessionView({
     !ghostPacer.isLoading;
 
   // Copilot suggestion ignored: ignition Start/Abort is restored in LobbyCountdownPanel when armed; changing showStart would duplicate host Start while ticking.
-  const showStart = isHost && livePhase === 'waiting' && !lobbyCountdownArmed;
-  const showPause = isHost && livePhase === 'work' && !live.isPaused;
-  const showResume = isHost && livePhase === 'work' && live.isPaused;
+  const showStart = isHost && livePhase === 'waiting' && !lobbyCountdownArmed && !live.isPractice;
+  const showPractice =
+    livePhase === 'waiting' && !lobbyCountdownArmed && !live.isPractice;
+  const showPause =
+    livePhase === 'work' &&
+    !live.isPaused &&
+    (isHost || live.isPractice);
+  const showResume =
+    livePhase === 'work' &&
+    live.isPaused &&
+    (isHost || live.isPractice);
   const showLogRound = livePhase === 'work' && !live.isPaused;
+  const showEndPractice = live.isPractice && livePhase === 'finished';
   const showPartialRepsModal =
+    !live.isPractice &&
     livePhase === 'finished' &&
     live.repsPerRound > 0 &&
     !live.hasSubmittedPartialReps;
   const showScorecard =
+    !live.isPractice &&
     livePhase === 'finished' &&
     live.hasSubmittedPartialReps &&
     !scorecardDismissed &&
     selfLeaderboardEntry !== null;
   const showFinishedClaimPrompt =
+    !live.isPractice &&
     livePhase === 'finished' &&
     claim.showClaimPrompt &&
     !showPartialRepsModal &&
@@ -367,9 +379,11 @@ function LiveSessionView({
     unlockAudio();
   }
 
-  const hostStatusText = isHost
-    ? 'You are the host.'
-    : 'Waiting on host for session control.';
+  const hostStatusText = live.isPractice
+    ? 'Practice — 2 min, not recorded.'
+    : isHost
+      ? 'You are the host.'
+      : 'Waiting on host for session control.';
 
   return (
     <main
@@ -531,6 +545,18 @@ function LiveSessionView({
                   Start
                 </button>
               )}
+              {showPractice && (
+                <button
+                  type="button"
+                  className="btn-outline lg:px-6 lg:py-3 lg:text-base"
+                  onClick={() => {
+                    handleAudioUnlock();
+                    live.startPractice();
+                  }}
+                >
+                  Practice
+                </button>
+              )}
               {showPause && (
                 <button
                   type="button"
@@ -567,7 +593,31 @@ function LiveSessionView({
                   Log round
                 </button>
               )}
+              {showEndPractice && (
+                <button
+                  type="button"
+                  className="btn-primary lg:px-6 lg:py-3 lg:text-base"
+                  onClick={() => live.endPractice()}
+                >
+                  Back to staging
+                </button>
+              )}
             </section>
+
+            {live.isPractice && live.practiceRounds.length > 0 ? (
+              <section className="rounded-card border border-border bg-page p-4 text-left">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted">
+                  Practice splits
+                </p>
+                <ul className="mt-2 space-y-1 text-sm text-ink">
+                  {live.practiceRounds.map((round) => (
+                    <li key={round.roundIndex}>
+                      Round {round.roundIndex + 1}: {round.elapsedSecAtRound}s
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
           </div>
 
           <ParticipantsPanel

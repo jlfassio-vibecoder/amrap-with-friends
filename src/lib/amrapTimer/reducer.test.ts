@@ -234,6 +234,18 @@ describe('amrapTimerReducer', () => {
 
       expect(amrapTimerReducer(setup, { type: 'finish' })).toEqual(setup);
     });
+
+    it('reset returns idle initial state', () => {
+      const inWork = reduce(
+        started,
+        { type: 'start', setupDurationSec: 1, workDurationSec: 60 },
+        { type: 'tick', nowMs: 1_000 },
+        { type: 'logRound', nowMs: 2_000 }
+      );
+
+      const reset = amrapTimerReducer(inWork, { type: 'reset' });
+      expect(reset).toEqual(createInitialState());
+    });
   });
 
   describe('selectors', () => {

@@ -1,4 +1,4 @@
-export { DEFAULT_SETUP_DURATION_SEC } from './constants';
+export { DEFAULT_SETUP_DURATION_SEC, PRACTICE_WORK_DURATION_SEC } from './constants';
 export { computeElapsedSecForLogRound } from './computeElapsedSecForLogRound';
 export {
   amrapTimerReducer,

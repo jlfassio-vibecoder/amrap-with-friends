@@ -130,6 +130,9 @@ export function amrapTimerReducer(
 
       return state;
 
+    case 'reset':
+      return createInitialState();
+
     default:
       return state;
   }
