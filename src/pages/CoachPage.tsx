@@ -3,6 +3,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { CoachDataTable } from '@/components/coach/CoachDataTable';
 import { CoachEventsExplorer } from '@/components/coach/CoachEventsExplorer';
 import { CoachFunnelCard } from '@/components/coach/CoachFunnelCard';
+import { CoachSectionHeader } from '@/components/coach/CoachSectionHeader';
 import { CoachStatGrid } from '@/components/coach/CoachStatGrid';
 import { CoachUserDetailPanel } from '@/components/coach/CoachUserDetailPanel';
 import { CoachUserPicker } from '@/components/coach/CoachUserPicker';
@@ -58,7 +59,7 @@ export default function CoachPage() {
         {!selectedUser && dashboard ? (
           <>
             <section className="space-y-3">
-              <h2 className="text-lg font-semibold text-ink">Overview</h2>
+              <CoachSectionHeader title="Overview" />
               <CoachStatGrid
                 stats={[
                   { label: 'Sessions created (7d)', value: dashboard.topStrip.sessionsCreated7d },
@@ -74,7 +75,7 @@ export default function CoachPage() {
             </section>
 
             <section className="space-y-3">
-              <h2 className="text-lg font-semibold text-ink">Where commitment dies</h2>
+              <CoachSectionHeader title="Where commitment dies" />
               <div className="grid gap-4 sm:grid-cols-3">
                 <CoachFunnelCard
                   title="Guest → account (claim)"
@@ -108,9 +109,7 @@ export default function CoachPage() {
             </section>
 
             <section className="space-y-3">
-              <h2 className="text-lg font-semibold text-ink">
-                Which workouts / flows to fix or promote
-              </h2>
+              <CoachSectionHeader title="Which workouts / flows to fix or promote" />
               <div className="card space-y-4 p-4">
                 <CoachDataTable
                   rows={dashboard.templatePerformance}
@@ -141,7 +140,7 @@ export default function CoachPage() {
             </section>
 
             <section className="space-y-3">
-              <h2 className="text-lg font-semibold text-ink">Build for hosts, joiners, or both</h2>
+              <CoachSectionHeader title="Build for hosts, joiners, or both" />
               <div className="card p-4">
                 <CoachDataTable
                   rows={dashboard.hostVsJoinerRetention}
@@ -166,9 +165,7 @@ export default function CoachPage() {
             </section>
 
             <section className="space-y-3">
-              <h2 className="text-lg font-semibold text-ink">
-                Safari / PWA friction worth engineering time
-              </h2>
+              <CoachSectionHeader title="Safari / PWA friction worth engineering time" />
               <div className="card p-4">
                 <CoachDataTable
                   rows={dashboard.audioUnlockRate}
@@ -184,7 +181,7 @@ export default function CoachPage() {
             </section>
 
             <section className="space-y-3">
-              <h2 className="text-lg font-semibold text-ink">Dev reliability</h2>
+              <CoachSectionHeader title="Dev reliability" />
               <div className="grid gap-4 lg:grid-cols-2">
                 <div className="card space-y-2 p-4">
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-secondary">
@@ -227,7 +224,7 @@ export default function CoachPage() {
             </section>
 
             <section className="space-y-3">
-              <h2 className="text-lg font-semibold text-ink">Explore</h2>
+              <CoachSectionHeader title="Explore" />
               <CoachEventsExplorer />
             </section>
           </>

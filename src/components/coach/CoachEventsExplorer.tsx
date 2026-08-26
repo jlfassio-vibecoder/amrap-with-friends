@@ -30,6 +30,7 @@ const KNOWN_EVENT_NAMES = [
 ] as const;
 
 const RECENT_EVENTS_LIMIT = 100;
+const EXPLORE_SCROLL_AFTER_ROWS = 20;
 
 interface CoachEventsExplorerProps {
   /** Scopes results to one user (via user_id or their participant rows) instead of every event. */
@@ -99,6 +100,7 @@ export function CoachEventsExplorer({ userId }: CoachEventsExplorerProps) {
           rows={rows}
           rowKey={(row) => row.id}
           emptyLabel="No events yet."
+          scrollAfterRows={EXPLORE_SCROLL_AFTER_ROWS}
           columns={[
             {
               header: 'When',
