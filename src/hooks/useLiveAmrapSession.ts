@@ -31,7 +31,7 @@ import {
   getStoredNickname,
   getStoredParticipantId,
 } from '@/lib/sessionIdentity';
-import { trackBeacon } from '@/lib/analytics/track';
+import { track, trackBeacon } from '@/lib/analytics/track';
 
 const PUSH_INTERVAL_MS = 3000;
 
@@ -448,15 +448,21 @@ export function useLiveAmrapSession(
       setupDurationSec,
       workDurationSec: PRACTICE_WORK_DURATION_SEC,
     });
-  }, [isPractice, session?.state, displayPhase, timer, setupDurationSec]);
+    track('practice_started', {}, { sessionId, participantId });
+  }, [isPractice, session?.state, displayPhase, timer, setupDurationSec, sessionId, participantId]);
 
   const endPractice = useCallback(() => {
     if (!isPractice) {
       return;
     }
+    track(
+      'practice_finished',
+      { round_count: timer.rounds.length },
+      { sessionId, participantId }
+    );
     setIsPractice(false);
     timer.reset();
-  }, [isPractice, timer]);
+  }, [isPractice, timer, sessionId, participantId]);
 
   const pause = useCallback(async () => {
     if (timer.phase !== 'work' || timer.isPaused) {

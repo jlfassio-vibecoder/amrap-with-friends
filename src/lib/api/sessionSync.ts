@@ -1,4 +1,6 @@
 import { supabase } from '@/lib/supabase';
+import { callRpc } from '@/lib/api/callRpc';
+import { track } from '@/lib/analytics/track';
 import type { ScoreBreakdown } from '@/lib/scoring/types';
 import { parseScoreBreakdownJson } from '@/lib/scoring/parseScoreBreakdownJson';
 import type {
@@ -331,7 +333,7 @@ export async function setLobbyCountdown(input: {
   data: LobbyCountdownResult | null;
   error: SessionSyncApiError | null;
 }> {
-  const { data, error } = await supabase.rpc('set_lobby_countdown', {
+  const { data, error } = await callRpc('set_lobby_countdown', {
     p_session_id: input.sessionId,
     p_host_token: input.hostToken,
     p_seconds: input.seconds,
@@ -365,6 +367,12 @@ export async function setLobbyCountdown(input: {
     };
   }
 
+  track(
+    'lobby_countdown_started',
+    { seconds: input.seconds },
+    { sessionId: input.sessionId }
+  );
+
   return {
     data: { ok: true, lobbyCountdownEndsAt },
     error: null,
@@ -378,7 +386,7 @@ export async function cancelLobbyCountdown(input: {
   data: CancelLobbyCountdownResult | null;
   error: SessionSyncApiError | null;
 }> {
-  const { data, error } = await supabase.rpc('cancel_lobby_countdown', {
+  const { data, error } = await callRpc('cancel_lobby_countdown', {
     p_session_id: input.sessionId,
     p_host_token: input.hostToken,
   });
@@ -397,6 +405,8 @@ export async function cancelLobbyCountdown(input: {
       error: { message: mapLobbyCountdownReason(reason) },
     };
   }
+
+  track('lobby_countdown_canceled', {}, { sessionId: input.sessionId });
 
   return { data: { ok: true }, error: null };
 }
