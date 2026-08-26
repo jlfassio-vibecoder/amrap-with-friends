@@ -35,6 +35,11 @@ function HomePage() {
       </div>
       <HostScheduledSessionsPanel />
       <HomeSeoContent />
+      <p className="pb-2 text-center text-xs text-muted">
+        <Link className="link-accent" to="/coach">
+          Coach
+        </Link>
+      </p>
     </NarrowPageLayout>
   );
 }
