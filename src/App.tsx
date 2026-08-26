@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import { RequireIntake } from '@/components/RequireIntake';
+import { RequireCoach } from '@/components/RequireCoach';
 
 const CreateSessionPage = lazy(() => import('./pages/CreateSessionPage'));
 const JoinSessionPage = lazy(() => import('./pages/JoinSessionPage'));
@@ -9,6 +10,7 @@ const SessionWaitingRoomPage = lazy(() => import('./pages/SessionWaitingRoomPage
 const MySessionsPage = lazy(() => import('./pages/MySessionsPage'));
 const HUDPage = lazy(() => import('./pages/HUDPage'));
 const IntakePage = lazy(() => import('./pages/IntakePage'));
+const CoachPage = lazy(() => import('./pages/CoachPage'));
 const TimerDevPage = lazy(() => import('./pages/dev/TimerDevPage'));
 
 function RouteFallback() {
@@ -43,6 +45,14 @@ function App() {
             <RequireIntake guestMode="passthrough">
               <HUDPage />
             </RequireIntake>
+          }
+        />
+        <Route
+          path="/coach"
+          element={
+            <RequireCoach>
+              <CoachPage />
+            </RequireCoach>
           }
         />
         {import.meta.env.DEV && <Route path="/dev/timer" element={<TimerDevPage />} />}
