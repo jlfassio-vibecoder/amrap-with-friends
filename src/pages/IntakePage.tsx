@@ -1,6 +1,7 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
+import { track, trackBeacon } from '@/lib/analytics/track';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import type { AthleteProfile } from '@/lib/api/athleteProfile';
@@ -156,6 +157,34 @@ function IntakeForm({
   const [emailConfirmNotice, setEmailConfirmNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const dirtyRef = useRef(false);
+  const submittedRef = useRef(false);
+  function markDirty() {
+    dirtyRef.current = true;
+  }
+
+  useEffect(() => {
+    function handleAbandon() {
+      if (submittedRef.current || !dirtyRef.current) {
+        return;
+      }
+      trackBeacon('intake_abandoned', { is_first_time: initial === null });
+    }
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'hidden') {
+        handleAbandon();
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handleAbandon);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handleAbandon);
+      handleAbandon();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one abandonment listener per form mount
+  }, []);
+
   const heightLabel = unitSystem === 'imperial' ? 'Height (in)' : 'Height (cm)';
   const weightLabel = unitSystem === 'imperial' ? 'Weight (lb)' : 'Weight (kg)';
 
@@ -214,6 +243,14 @@ function IntakeForm({
         setError(profileResult.error);
         return;
       }
+
+      submittedRef.current = true;
+      track('intake_submitted', {
+        is_first_time: initial === null,
+        perceived_classification: rank,
+        biological_sex: biologicalSex,
+        unit_system: unitSystem,
+      });
 
       const trimmedEmail = email.trim();
       let needsEmailConfirmation = false;
@@ -274,7 +311,7 @@ function IntakeForm({
             type="email"
             autoComplete="email"
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={(event) => { setEmail(event.target.value); markDirty(); }}
           />
         </label>
         <label className="block space-y-1">
@@ -287,7 +324,7 @@ function IntakeForm({
             autoComplete="new-password"
             placeholder="Leave blank to keep current"
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={(event) => { setPassword(event.target.value); markDirty(); }}
           />
         </label>
         <label className="block space-y-1">
@@ -298,7 +335,7 @@ function IntakeForm({
             className="input-field"
             autoComplete="username"
             value={username}
-            onChange={(event) => setUsername(event.target.value)}
+            onChange={(event) => { setUsername(event.target.value); markDirty(); }}
           />
         </label>
         <p className="text-xs text-muted">
@@ -311,7 +348,7 @@ function IntakeForm({
           <input
             className="input-field"
             value={nickname}
-            onChange={(event) => setNickname(event.target.value)}
+            onChange={(event) => { setNickname(event.target.value); markDirty(); }}
           />
         </label>
         <p className="text-xs text-muted">
@@ -359,7 +396,7 @@ function IntakeForm({
             className="input-field tabular-nums"
             inputMode="numeric"
             value={height}
-            onChange={(event) => setHeight(event.target.value)}
+            onChange={(event) => { setHeight(event.target.value); markDirty(); }}
           />
         </label>
         <label className="block space-y-1">
@@ -370,7 +407,7 @@ function IntakeForm({
             className="input-field tabular-nums"
             inputMode="decimal"
             value={weight}
-            onChange={(event) => setWeight(event.target.value)}
+            onChange={(event) => { setWeight(event.target.value); markDirty(); }}
           />
         </label>
         <label className="block space-y-1">
@@ -381,7 +418,7 @@ function IntakeForm({
             className="input-field tabular-nums"
             inputMode="numeric"
             value={age}
-            onChange={(event) => setAge(event.target.value)}
+            onChange={(event) => { setAge(event.target.value); markDirty(); }}
           />
         </label>
       </div>
@@ -408,7 +445,7 @@ function IntakeForm({
                     ? 'rounded-card bg-accent px-4 py-3 text-sm font-bold uppercase tracking-widest text-on-accent'
                     : 'rounded-card border border-border px-4 py-3 text-sm font-bold uppercase tracking-widest text-ink hover:border-accent/40'
                 }
-                onClick={() => setBiologicalSex(option.id)}
+                onClick={() => { setBiologicalSex(option.id); markDirty(); }}
               >
                 {option.label}
               </button>
@@ -441,7 +478,7 @@ function IntakeForm({
                         ? 'w-full rounded-card border border-border px-4 py-3 text-left text-sm font-bold uppercase tracking-widest text-muted opacity-50'
                         : 'w-full rounded-card border border-border px-4 py-3 text-left text-sm font-bold uppercase tracking-widest text-ink hover:border-accent/40'
                   }
-                  onClick={() => setRank(option.id)}
+                  onClick={() => { setRank(option.id); markDirty(); }}
                 >
                   {option.label}
                 </button>
