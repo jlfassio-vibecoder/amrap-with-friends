@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchCoachDashboard, fetchCoachRecentEvents } from './coach';
+import {
+  fetchCoachDashboard,
+  fetchCoachRecentEvents,
+  fetchCoachUserDetail,
+  fetchCoachUsersList,
+} from './coach';
 
 const callRpcMock = vi.fn();
 
@@ -162,6 +167,7 @@ describe('fetchCoachRecentEvents', () => {
     expect(callRpcMock).toHaveBeenCalledWith('coach_events_recent', {
       p_event_name: 'session_joined',
       p_limit: 50,
+      p_user_id: null,
     });
     expect(result.error).toBeNull();
     expect(result.data).toHaveLength(1);
@@ -179,5 +185,106 @@ describe('fetchCoachRecentEvents', () => {
 
     expect(result.data).toBeNull();
     expect(result.error?.message).toBe('Sign in to view the coach dashboard.');
+  });
+});
+
+describe('fetchCoachUsersList', () => {
+  it('wires RPC params and parses user rows', async () => {
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        users: [
+          {
+            user_id: '11111111-1111-4111-8111-111111111111',
+            username: 'ghost_ops',
+            nickname: 'Ghost',
+            email: 'ghost@example.com',
+            perceived_classification: 'operator',
+            account_created_at: '2026-08-26T10:00:00.000Z',
+            last_active_at: '2026-08-26T12:00:00.000Z',
+            total_sessions: 3,
+          },
+          {
+            user_id: 'bad-row',
+            username: null,
+            email: null,
+          },
+        ],
+      },
+      error: null,
+    });
+
+    const result = await fetchCoachUsersList({ search: 'ghost', limit: 20 });
+
+    expect(callRpcMock).toHaveBeenCalledWith('coach_users_list', {
+      p_search: 'ghost',
+      p_limit: 20,
+    });
+    expect(result.error).toBeNull();
+    expect(result.data).toHaveLength(1);
+    expect(result.data?.[0].username).toBe('ghost_ops');
+  });
+});
+
+describe('fetchCoachUserDetail', () => {
+  it('wires RPC params and parses profile, summary, and nested rows', async () => {
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        profile: {
+          userId: '11111111-1111-4111-8111-111111111111',
+          username: 'ghost_ops',
+          nickname: 'Ghost',
+          email: 'ghost@example.com',
+          heightCm: 180,
+          weightKg: 80,
+          birthYear: 1990,
+          biologicalSex: 'M',
+          perceivedClassification: 'operator',
+          accountCreatedAt: '2026-08-26T10:00:00.000Z',
+        },
+        summary: {
+          sessionsAsHost: 2,
+          sessionsAsJoiner: 1,
+          totalSessions: 3,
+          practiceSessionsStarted: 0,
+          firstSeenAt: '2026-08-26T10:00:00.000Z',
+          lastActiveAt: '2026-08-26T12:00:00.000Z',
+        },
+        classificationHistory: [
+          {
+            kind: 'perceived',
+            previous_value: 'civilian',
+            new_value: 'operator',
+            occurred_at: '2026-08-26T11:00:00.000Z',
+          },
+        ],
+        sessions: [
+          {
+            session_id: '22222222-2222-4222-8222-222222222222',
+            role: 'host',
+            template_id: 'blood-shunt-5',
+            intensity_tier: 3,
+            duration_minutes: 5,
+            state: 'finished',
+            final_score: 42,
+            created_at: '2026-08-26T10:30:00.000Z',
+            joined_at: '2026-08-26T10:30:00.000Z',
+          },
+        ],
+      },
+      error: null,
+    });
+
+    const result = await fetchCoachUserDetail('11111111-1111-4111-8111-111111111111');
+
+    expect(callRpcMock).toHaveBeenCalledWith('coach_user_detail', {
+      p_user_id: '11111111-1111-4111-8111-111111111111',
+    });
+    expect(result.error).toBeNull();
+    expect(result.data?.profile.nickname).toBe('Ghost');
+    expect(result.data?.summary.totalSessions).toBe(3);
+    expect(result.data?.classificationHistory).toHaveLength(1);
+    expect(result.data?.sessions[0]?.finalScore).toBe(42);
   });
 });

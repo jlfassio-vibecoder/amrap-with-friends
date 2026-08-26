@@ -3,8 +3,16 @@ import { AppHeader } from '@/components/AppHeader';
 import { CoachDataTable } from '@/components/coach/CoachDataTable';
 import { CoachEventsExplorer } from '@/components/coach/CoachEventsExplorer';
 import { CoachFunnelCard } from '@/components/coach/CoachFunnelCard';
+import { CoachSectionHeader } from '@/components/coach/CoachSectionHeader';
 import { CoachStatGrid } from '@/components/coach/CoachStatGrid';
-import { fetchCoachDashboard, type CoachDashboard } from '@/lib/api/coach';
+import { CoachUserDetailPanel } from '@/components/coach/CoachUserDetailPanel';
+import { CoachUserPicker } from '@/components/coach/CoachUserPicker';
+import {
+  fetchCoachDashboard,
+  type CoachDashboard,
+  type CoachUserListRow,
+} from '@/lib/api/coach';
+import { formatCoachLabel } from '@/lib/coach/formatCoachLabel';
 
 function pct(value: number | null): string {
   return value === null ? '—' : `${value}%`;
@@ -14,6 +22,7 @@ export default function CoachPage() {
   const [dashboard, setDashboard] = useState<CoachDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<CoachUserListRow | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,13 +47,21 @@ export default function CoachPage() {
       <AppHeader title="Coach" subtitle="Product analytics" />
 
       <div className="mx-auto max-w-6xl space-y-8 px-6 pb-10 pt-0 lg:px-8 lg:py-10">
-        {loading ? <p className="text-sm text-secondary">Loading…</p> : null}
-        {error ? <p className="text-error text-sm">{error}</p> : null}
+        <CoachUserPicker selectedUser={selectedUser} onSelect={setSelectedUser} />
 
-        {dashboard ? (
+        {selectedUser ? (
+          <CoachUserDetailPanel key={selectedUser.userId} userId={selectedUser.userId} />
+        ) : null}
+
+        {!selectedUser && loading ? (
+          <p className="text-sm text-secondary">Loading…</p>
+        ) : null}
+        {!selectedUser && error ? <p className="text-error text-sm">{error}</p> : null}
+
+        {!selectedUser && dashboard ? (
           <>
             <section className="space-y-3">
-              <h2 className="text-lg font-semibold text-ink">Overview</h2>
+              <CoachSectionHeader title="Overview" />
               <CoachStatGrid
                 stats={[
                   { label: 'Sessions created (7d)', value: dashboard.topStrip.sessionsCreated7d },
@@ -60,7 +77,7 @@ export default function CoachPage() {
             </section>
 
             <section className="space-y-3">
-              <h2 className="text-lg font-semibold text-ink">Where commitment dies</h2>
+              <CoachSectionHeader title="Where commitment dies" />
               <div className="grid gap-4 sm:grid-cols-3">
                 <CoachFunnelCard
                   title="Guest → account (claim)"
@@ -94,16 +111,14 @@ export default function CoachPage() {
             </section>
 
             <section className="space-y-3">
-              <h2 className="text-lg font-semibold text-ink">
-                Which workouts / flows to fix or promote
-              </h2>
+              <CoachSectionHeader title="Which workouts / flows to fix or promote" />
               <div className="card space-y-4 p-4">
                 <CoachDataTable
                   rows={dashboard.templatePerformance}
                   rowKey={(row) => `${row.templateId}-${row.durationMinutes}-${row.intensityTier}`}
                   emptyLabel="No sessions with a template yet."
                   columns={[
-                    { header: 'Template', render: (row) => row.templateId },
+                    { header: 'Template', render: (row) => formatCoachLabel(row.templateId) },
                     { header: 'Intensity', render: (row) => row.intensityTier ?? '—', align: 'right' },
                     { header: 'Duration', render: (row) => `${row.durationMinutes}m`, align: 'right' },
                     { header: 'Created', render: (row) => row.sessionsCreated, align: 'right' },
@@ -127,14 +142,14 @@ export default function CoachPage() {
             </section>
 
             <section className="space-y-3">
-              <h2 className="text-lg font-semibold text-ink">Build for hosts, joiners, or both</h2>
+              <CoachSectionHeader title="Build for hosts, joiners, or both" />
               <div className="card p-4">
                 <CoachDataTable
                   rows={dashboard.hostVsJoinerRetention}
                   rowKey={(row) => row.firstRole}
                   emptyLabel="No registered users with session history yet."
                   columns={[
-                    { header: 'First role', render: (row) => row.firstRole },
+                    { header: 'First role', render: (row) => formatCoachLabel(row.firstRole) },
                     { header: 'Users', render: (row) => row.userCount, align: 'right' },
                     {
                       header: 'Avg. sessions / user',
@@ -152,16 +167,14 @@ export default function CoachPage() {
             </section>
 
             <section className="space-y-3">
-              <h2 className="text-lg font-semibold text-ink">
-                Safari / PWA friction worth engineering time
-              </h2>
+              <CoachSectionHeader title="Safari / PWA friction worth engineering time" />
               <div className="card p-4">
                 <CoachDataTable
                   rows={dashboard.audioUnlockRate}
                   rowKey={(row) => row.audioContextState}
                   emptyLabel="No audio unlock attempts logged yet."
                   columns={[
-                    { header: 'AudioContext state', render: (row) => row.audioContextState },
+                    { header: 'AudioContext state', render: (row) => formatCoachLabel(row.audioContextState) },
                     { header: 'Count', render: (row) => row.unlockCount, align: 'right' },
                     { header: '% of unlocks', render: (row) => pct(row.pctOfUnlocks), align: 'right' },
                   ]}
@@ -170,7 +183,7 @@ export default function CoachPage() {
             </section>
 
             <section className="space-y-3">
-              <h2 className="text-lg font-semibold text-ink">Dev reliability</h2>
+              <CoachSectionHeader title="Dev reliability" />
               <div className="grid gap-4 lg:grid-cols-2">
                 <div className="card space-y-2 p-4">
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-secondary">
@@ -181,7 +194,7 @@ export default function CoachPage() {
                     rowKey={(row) => row.rpcName}
                     emptyLabel="No RPC calls logged yet."
                     columns={[
-                      { header: 'RPC', render: (row) => row.rpcName },
+                      { header: 'RPC', render: (row) => formatCoachLabel(row.rpcName) },
                       { header: 'Calls', render: (row) => row.callCount, align: 'right' },
                       { header: 'Errors', render: (row) => row.errorCount, align: 'right' },
                       { header: 'Error %', render: (row) => pct(row.errorRatePct), align: 'right' },
@@ -199,7 +212,7 @@ export default function CoachPage() {
                     rowKey={(row) => row.status}
                     emptyLabel="No realtime status events logged yet."
                     columns={[
-                      { header: 'Status', render: (row) => row.status },
+                      { header: 'Status', render: (row) => formatCoachLabel(row.status) },
                       { header: 'Count', render: (row) => row.eventCount, align: 'right' },
                       {
                         header: 'p50 subscribe ms',
@@ -213,7 +226,7 @@ export default function CoachPage() {
             </section>
 
             <section className="space-y-3">
-              <h2 className="text-lg font-semibold text-ink">Explore</h2>
+              <CoachSectionHeader title="Explore" />
               <CoachEventsExplorer />
             </section>
           </>

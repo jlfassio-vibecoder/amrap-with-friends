@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { CoachDataTable } from '@/components/coach/CoachDataTable';
 import { fetchCoachRecentEvents, type CoachEventRow } from '@/lib/api/coach';
+import {
+  formatCoachEventLabel,
+  formatCoachLabel,
+  formatCoachProps,
+} from '@/lib/coach/formatCoachLabel';
 
 const KNOWN_EVENT_NAMES = [
   'session_created',
@@ -18,14 +23,21 @@ const KNOWN_EVENT_NAMES = [
   'practice_finished',
   'intake_submitted',
   'intake_abandoned',
+  'intake_save_failed',
   'rpc_call',
   'realtime_status',
   'realtime_correction',
 ] as const;
 
 const RECENT_EVENTS_LIMIT = 100;
+const EXPLORE_SCROLL_AFTER_ROWS = 20;
 
-export function CoachEventsExplorer() {
+interface CoachEventsExplorerProps {
+  /** Scopes results to one user (via user_id or their participant rows) instead of every event. */
+  userId?: string;
+}
+
+export function CoachEventsExplorer({ userId }: CoachEventsExplorerProps) {
   const [eventName, setEventName] = useState('');
   const [rows, setRows] = useState<CoachEventRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,24 +45,26 @@ export function CoachEventsExplorer() {
 
   useEffect(() => {
     let cancelled = false;
-    fetchCoachRecentEvents({ eventName: eventName || null, limit: RECENT_EVENTS_LIMIT }).then(
-      (result) => {
-        if (cancelled) {
-          return;
-        }
-        setLoading(false);
-        if (result.error) {
-          setError(result.error.message);
-          return;
-        }
-        setError(null);
-        setRows(result.data ?? []);
+    fetchCoachRecentEvents({
+      eventName: eventName || null,
+      limit: RECENT_EVENTS_LIMIT,
+      userId: userId ?? null,
+    }).then((result) => {
+      if (cancelled) {
+        return;
       }
-    );
+      setLoading(false);
+      if (result.error) {
+        setError(result.error.message);
+        return;
+      }
+      setError(null);
+      setRows(result.data ?? []);
+    });
     return () => {
       cancelled = true;
     };
-  }, [eventName]);
+  }, [eventName, userId]);
 
   function handleEventNameChange(next: string) {
     setEventName(next);
@@ -72,7 +86,7 @@ export function CoachEventsExplorer() {
           <option value="">All events</option>
           {KNOWN_EVENT_NAMES.map((name) => (
             <option key={name} value={name}>
-              {name}
+              {formatCoachLabel(name)}
             </option>
           ))}
         </select>
@@ -86,12 +100,13 @@ export function CoachEventsExplorer() {
           rows={rows}
           rowKey={(row) => row.id}
           emptyLabel="No events yet."
+          scrollAfterRows={EXPLORE_SCROLL_AFTER_ROWS}
           columns={[
             {
               header: 'When',
               render: (row) => new Date(row.occurredAt).toLocaleString(),
             },
-            { header: 'Event', render: (row) => row.eventName },
+            { header: 'Event', render: (row) => formatCoachEventLabel(row.eventName, row.props) },
             {
               header: 'Session',
               render: (row) => (row.sessionId ? row.sessionId.slice(0, 8) : '—'),
@@ -104,7 +119,7 @@ export function CoachEventsExplorer() {
               header: 'Props',
               render: (row) => (
                 <code className="text-xs text-secondary">
-                  {JSON.stringify(row.props)}
+                  {formatCoachProps(row.props)}
                 </code>
               ),
             },

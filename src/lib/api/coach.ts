@@ -100,6 +100,65 @@ export interface CoachEventRow {
   props: Record<string, unknown>;
 }
 
+export interface CoachUserListRow {
+  userId: string;
+  username: string;
+  nickname: string;
+  email: string;
+  perceivedClassification: string;
+  accountCreatedAt: string;
+  lastActiveAt: string | null;
+  totalSessions: number;
+}
+
+export interface CoachUserProfile {
+  userId: string;
+  username: string;
+  nickname: string;
+  email: string;
+  heightCm: number | null;
+  weightKg: number | null;
+  birthYear: number | null;
+  biologicalSex: string | null;
+  perceivedClassification: string;
+  accountCreatedAt: string;
+}
+
+export interface CoachUserClassificationEvent {
+  kind: string;
+  previousValue: string | null;
+  newValue: string;
+  occurredAt: string;
+}
+
+export interface CoachUserSessionRow {
+  sessionId: string;
+  role: string;
+  templateId: string | null;
+  intensityTier: number | null;
+  durationMinutes: number;
+  state: string;
+  finalScore: number | null;
+  createdAt: string;
+  joinedAt: string;
+}
+
+export interface CoachUserSummary {
+  sessionsAsHost: number;
+  sessionsAsJoiner: number;
+  totalSessions: number;
+  practiceSessionsStarted: number;
+  firstSeenAt: string | null;
+  lastActiveAt: string | null;
+}
+
+export interface CoachUserDetail {
+  profile: CoachUserProfile;
+  classificationHistory: CoachUserClassificationEvent[];
+  sessions: CoachUserSessionRow[];
+  summary: CoachUserSummary;
+}
+
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
 }
@@ -254,6 +313,158 @@ function parseEventRow(row: Record<string, unknown>): CoachEventRow | null {
   };
 }
 
+function parseUserListRow(row: Record<string, unknown>): CoachUserListRow | null {
+  const userId = strOrNull(row, 'user_id');
+  const username = strOrNull(row, 'username');
+  const email = strOrNull(row, 'email');
+  if (!userId || !username || !email) {
+    return null;
+  }
+  return {
+    userId,
+    username,
+    nickname: str(row, 'nickname'),
+    email,
+    perceivedClassification: str(row, 'perceived_classification'),
+    accountCreatedAt: str(row, 'account_created_at'),
+    lastActiveAt: strOrNull(row, 'last_active_at'),
+    totalSessions: num(row, 'total_sessions'),
+  };
+}
+
+function parseUserProfile(row: Record<string, unknown>): CoachUserProfile | null {
+  const userId = strOrNull(row, 'userId');
+  const username = strOrNull(row, 'username');
+  const email = strOrNull(row, 'email');
+  const accountCreatedAt = strOrNull(row, 'accountCreatedAt');
+  if (!userId || !username || !email || !accountCreatedAt) {
+    return null;
+  }
+  return {
+    userId,
+    username,
+    nickname: str(row, 'nickname'),
+    email,
+    heightCm: numOrNull(row, 'heightCm'),
+    weightKg: numOrNull(row, 'weightKg'),
+    birthYear: numOrNull(row, 'birthYear'),
+    biologicalSex: strOrNull(row, 'biologicalSex'),
+    perceivedClassification: str(row, 'perceivedClassification'),
+    accountCreatedAt,
+  };
+}
+
+function parseClassificationEvent(
+  row: Record<string, unknown>
+): CoachUserClassificationEvent | null {
+  const newValue = strOrNull(row, 'new_value');
+  const occurredAt = strOrNull(row, 'occurred_at');
+  if (!newValue || !occurredAt) {
+    return null;
+  }
+  return {
+    kind: str(row, 'kind'),
+    previousValue: strOrNull(row, 'previous_value'),
+    newValue,
+    occurredAt,
+  };
+}
+
+function parseUserSessionRow(row: Record<string, unknown>): CoachUserSessionRow | null {
+  const sessionId = strOrNull(row, 'session_id');
+  const joinedAt = strOrNull(row, 'joined_at');
+  const createdAt = strOrNull(row, 'created_at');
+  if (!sessionId || !joinedAt || !createdAt) {
+    return null;
+  }
+  return {
+    sessionId,
+    role: str(row, 'role'),
+    templateId: strOrNull(row, 'template_id'),
+    intensityTier: numOrNull(row, 'intensity_tier'),
+    durationMinutes: num(row, 'duration_minutes'),
+    state: str(row, 'state'),
+    finalScore: numOrNull(row, 'final_score'),
+    createdAt,
+    joinedAt,
+  };
+}
+
+function parseUserSummary(row: Record<string, unknown>): CoachUserSummary {
+  return {
+    sessionsAsHost: num(row, 'sessionsAsHost'),
+    sessionsAsJoiner: num(row, 'sessionsAsJoiner'),
+    totalSessions: num(row, 'totalSessions'),
+    practiceSessionsStarted: num(row, 'practiceSessionsStarted'),
+    firstSeenAt: strOrNull(row, 'firstSeenAt'),
+    lastActiveAt: strOrNull(row, 'lastActiveAt'),
+  };
+}
+
+export async function fetchCoachUsersList(input: {
+  search?: string | null;
+  limit?: number;
+}): Promise<{ data: CoachUserListRow[] | null; error: CoachApiError | null }> {
+  const { data, error } = await callRpc('coach_users_list', {
+    p_search: input.search ?? null,
+    p_limit: input.limit ?? 50,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const users = asArray(raw.users)
+    .map(parseUserListRow)
+    .filter((row): row is CoachUserListRow => row !== null);
+
+  return { data: users, error: null };
+}
+
+export async function fetchCoachUserDetail(userId: string): Promise<{
+  data: CoachUserDetail | null;
+  error: CoachApiError | null;
+}> {
+  const { data, error } = await callRpc('coach_user_detail', { p_user_id: userId });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const profile = parseUserProfile(asRecord(raw.profile));
+  if (!profile) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const classificationHistory = asArray(raw.classificationHistory)
+    .map(parseClassificationEvent)
+    .filter((row): row is CoachUserClassificationEvent => row !== null);
+
+  const sessions = asArray(raw.sessions)
+    .map(parseUserSessionRow)
+    .filter((row): row is CoachUserSessionRow => row !== null);
+
+  return {
+    data: {
+      profile,
+      classificationHistory,
+      sessions,
+      summary: parseUserSummary(asRecord(raw.summary)),
+    },
+    error: null,
+  };
+}
+
 export async function fetchCoachDashboard(): Promise<{
   data: CoachDashboard | null;
   error: CoachApiError | null;
@@ -289,10 +500,12 @@ export async function fetchCoachDashboard(): Promise<{
 export async function fetchCoachRecentEvents(input: {
   eventName?: string | null;
   limit?: number;
+  userId?: string | null;
 }): Promise<{ data: CoachEventRow[] | null; error: CoachApiError | null }> {
   const { data, error } = await callRpc('coach_events_recent', {
     p_event_name: input.eventName ?? null,
     p_limit: input.limit ?? 100,
+    p_user_id: input.userId ?? null,
   });
 
   if (error) {
