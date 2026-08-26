@@ -31,7 +31,12 @@ const KNOWN_EVENT_NAMES = [
 
 const RECENT_EVENTS_LIMIT = 100;
 
-export function CoachEventsExplorer() {
+interface CoachEventsExplorerProps {
+  /** Scopes results to one user (via user_id or their participant rows) instead of every event. */
+  userId?: string;
+}
+
+export function CoachEventsExplorer({ userId }: CoachEventsExplorerProps) {
   const [eventName, setEventName] = useState('');
   const [rows, setRows] = useState<CoachEventRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,24 +44,26 @@ export function CoachEventsExplorer() {
 
   useEffect(() => {
     let cancelled = false;
-    fetchCoachRecentEvents({ eventName: eventName || null, limit: RECENT_EVENTS_LIMIT }).then(
-      (result) => {
-        if (cancelled) {
-          return;
-        }
-        setLoading(false);
-        if (result.error) {
-          setError(result.error.message);
-          return;
-        }
-        setError(null);
-        setRows(result.data ?? []);
+    fetchCoachRecentEvents({
+      eventName: eventName || null,
+      limit: RECENT_EVENTS_LIMIT,
+      userId: userId ?? null,
+    }).then((result) => {
+      if (cancelled) {
+        return;
       }
-    );
+      setLoading(false);
+      if (result.error) {
+        setError(result.error.message);
+        return;
+      }
+      setError(null);
+      setRows(result.data ?? []);
+    });
     return () => {
       cancelled = true;
     };
-  }, [eventName]);
+  }, [eventName, userId]);
 
   function handleEventNameChange(next: string) {
     setEventName(next);

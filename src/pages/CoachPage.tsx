@@ -4,7 +4,13 @@ import { CoachDataTable } from '@/components/coach/CoachDataTable';
 import { CoachEventsExplorer } from '@/components/coach/CoachEventsExplorer';
 import { CoachFunnelCard } from '@/components/coach/CoachFunnelCard';
 import { CoachStatGrid } from '@/components/coach/CoachStatGrid';
-import { fetchCoachDashboard, type CoachDashboard } from '@/lib/api/coach';
+import { CoachUserDetailPanel } from '@/components/coach/CoachUserDetailPanel';
+import { CoachUserPicker } from '@/components/coach/CoachUserPicker';
+import {
+  fetchCoachDashboard,
+  type CoachDashboard,
+  type CoachUserListRow,
+} from '@/lib/api/coach';
 import { formatCoachLabel } from '@/lib/coach/formatCoachLabel';
 
 function pct(value: number | null): string {
@@ -15,6 +21,7 @@ export default function CoachPage() {
   const [dashboard, setDashboard] = useState<CoachDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<CoachUserListRow | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -39,10 +46,16 @@ export default function CoachPage() {
       <AppHeader title="Coach" subtitle="Product analytics" />
 
       <div className="mx-auto max-w-6xl space-y-8 px-6 pb-10 pt-0 lg:px-8 lg:py-10">
-        {loading ? <p className="text-sm text-secondary">Loading…</p> : null}
-        {error ? <p className="text-error text-sm">{error}</p> : null}
+        <CoachUserPicker selectedUser={selectedUser} onSelect={setSelectedUser} />
 
-        {dashboard ? (
+        {selectedUser ? <CoachUserDetailPanel userId={selectedUser.userId} /> : null}
+
+        {!selectedUser && loading ? (
+          <p className="text-sm text-secondary">Loading…</p>
+        ) : null}
+        {!selectedUser && error ? <p className="text-error text-sm">{error}</p> : null}
+
+        {!selectedUser && dashboard ? (
           <>
             <section className="space-y-3">
               <h2 className="text-lg font-semibold text-ink">Overview</h2>
