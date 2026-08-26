@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { callRpc } from '@/lib/api/callRpc';
 import { computeBaseScore } from '@/lib/scoring/computeBaseScore';
 import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
 
@@ -102,7 +102,7 @@ export async function fetchAvailableGhosts(
   templateId: string,
   durationMinutes: number
 ): Promise<{ data: AvailableGhosts | null; error: GhostApiError | null }> {
-  const { data, error } = await supabase.rpc('available_ghosts', {
+  const { data, error } = await callRpc('available_ghosts', {
     p_template_id: templateId,
     p_duration_minutes: durationMinutes,
   });
@@ -142,7 +142,7 @@ export async function fetchGhostCurveData(
   sessionId: string,
   participantId: string
 ): Promise<{ data: GhostCurveData | null; error: GhostApiError | null }> {
-  const { data, error } = await supabase.rpc('ghost_curve_data', {
+  const { data, error } = await callRpc('ghost_curve_data', {
     p_session_id: sessionId,
     p_participant_id: participantId,
   });

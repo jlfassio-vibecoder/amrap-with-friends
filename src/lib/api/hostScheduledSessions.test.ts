@@ -71,7 +71,7 @@ describe('fetchHostScheduledSessions', () => {
 
     const result = await fetchHostScheduledSessions();
 
-    expect(rpcMock).toHaveBeenCalledWith('host_scheduled_sessions');
+    expect(rpcMock).toHaveBeenCalledWith('host_scheduled_sessions', {});
     expect(result.error).toBeNull();
     expect(result.data).toEqual([
       {

@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { callRpc } from '@/lib/api/callRpc';
 import type { WorkoutExercise } from '@/lib/api/sessionTypes';
 
 export interface HostScheduledSessionEntry {
@@ -114,7 +114,7 @@ export async function fetchHostScheduledSessions(): Promise<{
   data: HostScheduledSessionEntry[] | null;
   error: HostScheduledSessionsApiError | null;
 }> {
-  const { data, error } = await supabase.rpc('host_scheduled_sessions');
+  const { data, error } = await callRpc('host_scheduled_sessions');
 
   if (error) {
     return { data: null, error: { message: error.message } };

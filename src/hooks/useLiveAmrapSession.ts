@@ -144,8 +144,25 @@ export function useLiveAmrapSession(
         },
         nowMs
       );
+      const nextDisplay = snapshotToDisplay(snapshot, nowMs);
+
+      if (
+        joinerDisplay &&
+        joinerDisplay.phase === nextDisplay.phase &&
+        (nextDisplay.phase === 'setup' || nextDisplay.phase === 'work')
+      ) {
+        const driftSec = joinerDisplay.timeLeftSec - nextDisplay.timeLeftSec;
+        if (driftSec !== 0) {
+          track(
+            'realtime_correction',
+            { phase: nextDisplay.phase, drift_sec: driftSec },
+            { sessionId, participantId }
+          );
+        }
+      }
+
       setJoinerSnapshot(snapshot);
-      setJoinerDisplay(snapshotToDisplay(snapshot, nowMs));
+      setJoinerDisplay(nextDisplay);
       setLastAuthoritativeSyncAtMs(nowMs);
     }
     // Intentionally keyed on session fields, not session object identity (updates every realtime push).

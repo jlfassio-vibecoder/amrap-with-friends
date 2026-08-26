@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { callRpc } from '@/lib/api/callRpc';
 
 export const MESSAGE_MAX_LENGTH = 500;
 
@@ -96,7 +96,7 @@ export function mapSendMessageReason(reason: string): string {
 export async function sendMessage(
   input: SendMessageInput
 ): Promise<{ data: SendMessageResult | null; error: SendMessageApiError | null }> {
-  const { data, error } = await supabase.rpc('send_message', {
+  const { data, error } = await callRpc('send_message', {
     p_session_id: input.sessionId,
     p_participant_id: input.participantId,
     p_claim_token: input.claimToken,

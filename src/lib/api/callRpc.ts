@@ -4,7 +4,7 @@ import { track } from '@/lib/analytics/track';
 /** Wraps supabase.rpc with reliability telemetry (name, ok/fail, latency) — a drop-in replacement so call sites don't change shape. */
 export async function callRpc<T = unknown>(
   name: string,
-  params: Record<string, unknown>
+  params: Record<string, unknown> = {}
 ): Promise<{ data: T | null; error: { message: string } | null }> {
   const startedAt = performance.now();
   const { data, error } = await supabase.rpc(name, params);

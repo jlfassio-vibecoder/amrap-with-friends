@@ -229,7 +229,7 @@ export async function fetchHostActiveSessionCount(): Promise<{
   data: number | null;
   error: SessionApiError | null;
 }> {
-  const { data, error } = await supabase.rpc('host_active_session_count');
+  const { data, error } = await callRpc('host_active_session_count');
 
   if (error) {
     return { data: null, error: { message: mapRpcError(error.message) } };
@@ -262,7 +262,7 @@ export async function updateSessionScheduledAt(input: {
   }
 
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const { data, error } = await supabase.rpc('update_session_scheduled_at', {
+  const { data, error } = await callRpc('update_session_scheduled_at', {
     p_session_id: sessionId,
     p_scheduled_at: input.scheduledAt,
     p_timezone: timeZone,
