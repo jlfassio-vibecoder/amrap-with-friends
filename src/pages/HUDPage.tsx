@@ -89,8 +89,8 @@ export default function HUDPage() {
                 submitting={activityLog.submitting}
                 onSubmit={activityLog.logEntry}
               />
-              {activityLog.error ? (
-                <p className="text-error text-sm">{activityLog.error}</p>
+              {activityLog.loading ? (
+                <p className="text-sm text-secondary">Loading activity…</p>
               ) : (
                 <PhysicalActivityList
                   entries={activityLog.entries}
@@ -99,6 +99,9 @@ export default function HUDPage() {
                   }}
                 />
               )}
+              {activityLog.error ? (
+                <p className="text-error text-sm">{activityLog.error}</p>
+              ) : null}
             </div>
           </section>
         ) : null}

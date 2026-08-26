@@ -24,18 +24,30 @@ export function usePhysicalActivityLog() {
     }
 
     let cancelled = false;
-    fetchPhysicalActivityList(LIST_LIMIT).then((result) => {
-      if (cancelled) {
-        return;
-      }
-      setHasLoaded(true);
-      if (result.error) {
-        setError(result.error.message);
-        return;
-      }
-      setError(null);
-      setEntries(result.data ?? []);
-    });
+    fetchPhysicalActivityList(LIST_LIMIT)
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+        if (result.error) {
+          setError(result.error.message);
+          setEntries([]);
+          return;
+        }
+        setError(null);
+        setEntries(result.data ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setError('Something went wrong. Please try again.');
+          setEntries([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setHasLoaded(true);
+        }
+      });
     return () => {
       cancelled = true;
     };
@@ -47,9 +59,11 @@ export function usePhysicalActivityLog() {
     setSubmitting(false);
 
     if (result.error) {
+      setError(result.error.message);
       return { error: result.error.message };
     }
 
+    setError(null);
     setEntries((current) => [result.data!, ...current]);
     track('physical_activity_logged', {
       activity_type: input.activityType,
@@ -66,8 +80,10 @@ export function usePhysicalActivityLog() {
     const result = await deletePhysicalActivity(id);
     if (result.error) {
       setEntries(previous);
+      setError(result.error.message);
       return { error: result.error.message };
     }
+    setError(null);
     return { error: null };
   }, [entries]);
 
