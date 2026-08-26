@@ -5,6 +5,7 @@ import { CoachEventsExplorer } from '@/components/coach/CoachEventsExplorer';
 import { CoachFunnelCard } from '@/components/coach/CoachFunnelCard';
 import { CoachStatGrid } from '@/components/coach/CoachStatGrid';
 import { fetchCoachDashboard, type CoachDashboard } from '@/lib/api/coach';
+import { formatCoachLabel } from '@/lib/coach/formatCoachLabel';
 
 function pct(value: number | null): string {
   return value === null ? '—' : `${value}%`;
@@ -103,7 +104,7 @@ export default function CoachPage() {
                   rowKey={(row) => `${row.templateId}-${row.durationMinutes}-${row.intensityTier}`}
                   emptyLabel="No sessions with a template yet."
                   columns={[
-                    { header: 'Template', render: (row) => row.templateId },
+                    { header: 'Template', render: (row) => formatCoachLabel(row.templateId) },
                     { header: 'Intensity', render: (row) => row.intensityTier ?? '—', align: 'right' },
                     { header: 'Duration', render: (row) => `${row.durationMinutes}m`, align: 'right' },
                     { header: 'Created', render: (row) => row.sessionsCreated, align: 'right' },
@@ -134,7 +135,7 @@ export default function CoachPage() {
                   rowKey={(row) => row.firstRole}
                   emptyLabel="No registered users with session history yet."
                   columns={[
-                    { header: 'First role', render: (row) => row.firstRole },
+                    { header: 'First role', render: (row) => formatCoachLabel(row.firstRole) },
                     { header: 'Users', render: (row) => row.userCount, align: 'right' },
                     {
                       header: 'Avg. sessions / user',
@@ -161,7 +162,7 @@ export default function CoachPage() {
                   rowKey={(row) => row.audioContextState}
                   emptyLabel="No audio unlock attempts logged yet."
                   columns={[
-                    { header: 'AudioContext state', render: (row) => row.audioContextState },
+                    { header: 'AudioContext state', render: (row) => formatCoachLabel(row.audioContextState) },
                     { header: 'Count', render: (row) => row.unlockCount, align: 'right' },
                     { header: '% of unlocks', render: (row) => pct(row.pctOfUnlocks), align: 'right' },
                   ]}
@@ -181,7 +182,7 @@ export default function CoachPage() {
                     rowKey={(row) => row.rpcName}
                     emptyLabel="No RPC calls logged yet."
                     columns={[
-                      { header: 'RPC', render: (row) => row.rpcName },
+                      { header: 'RPC', render: (row) => formatCoachLabel(row.rpcName) },
                       { header: 'Calls', render: (row) => row.callCount, align: 'right' },
                       { header: 'Errors', render: (row) => row.errorCount, align: 'right' },
                       { header: 'Error %', render: (row) => pct(row.errorRatePct), align: 'right' },
@@ -199,7 +200,7 @@ export default function CoachPage() {
                     rowKey={(row) => row.status}
                     emptyLabel="No realtime status events logged yet."
                     columns={[
-                      { header: 'Status', render: (row) => row.status },
+                      { header: 'Status', render: (row) => formatCoachLabel(row.status) },
                       { header: 'Count', render: (row) => row.eventCount, align: 'right' },
                       {
                         header: 'p50 subscribe ms',

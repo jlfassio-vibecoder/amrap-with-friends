@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { CoachDataTable } from '@/components/coach/CoachDataTable';
 import { fetchCoachRecentEvents, type CoachEventRow } from '@/lib/api/coach';
+import {
+  formatCoachEventLabel,
+  formatCoachLabel,
+  formatCoachProps,
+} from '@/lib/coach/formatCoachLabel';
 
 const KNOWN_EVENT_NAMES = [
   'session_created',
@@ -18,6 +23,7 @@ const KNOWN_EVENT_NAMES = [
   'practice_finished',
   'intake_submitted',
   'intake_abandoned',
+  'intake_save_failed',
   'rpc_call',
   'realtime_status',
   'realtime_correction',
@@ -72,7 +78,7 @@ export function CoachEventsExplorer() {
           <option value="">All events</option>
           {KNOWN_EVENT_NAMES.map((name) => (
             <option key={name} value={name}>
-              {name}
+              {formatCoachLabel(name)}
             </option>
           ))}
         </select>
@@ -91,7 +97,7 @@ export function CoachEventsExplorer() {
               header: 'When',
               render: (row) => new Date(row.occurredAt).toLocaleString(),
             },
-            { header: 'Event', render: (row) => row.eventName },
+            { header: 'Event', render: (row) => formatCoachEventLabel(row.eventName, row.props) },
             {
               header: 'Session',
               render: (row) => (row.sessionId ? row.sessionId.slice(0, 8) : '—'),
@@ -104,7 +110,7 @@ export function CoachEventsExplorer() {
               header: 'Props',
               render: (row) => (
                 <code className="text-xs text-secondary">
-                  {JSON.stringify(row.props)}
+                  {formatCoachProps(row.props)}
                 </code>
               ),
             },

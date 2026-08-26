@@ -87,22 +87,30 @@ function convertWeightField(
   return String(kgToLb(n));
 }
 
+type IntakeNavigationState = {
+  intakeNotices?: string[];
+};
+
 interface IntakeFormProps {
   initial: AthleteProfile | null;
   initialEmail: string;
   nowYear: number;
+  userId: string | null;
   onSaveProfile: (input: AthleteProfile) => Promise<{ error: string | null }>;
   onUpdateEmail: (
     email: string
   ) => Promise<{ error: string | null; needsEmailConfirmation: boolean }>;
   onUpdatePassword: (password: string) => Promise<{ error: string | null }>;
-  onSaved: () => void;
+  onSaved: (notices: string[]) => void;
 }
+
+const DOSSIER_SAVED_PREFIX = 'Your dossier was saved.';
 
 function IntakeForm({
   initial,
   initialEmail,
   nowYear,
+  userId,
   onSaveProfile,
   onUpdateEmail,
   onUpdatePassword,
@@ -154,7 +162,6 @@ function IntakeForm({
     initial?.biologicalSex ?? null
   );
   const [error, setError] = useState<string | null>(null);
-  const [emailConfirmNotice, setEmailConfirmNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const dirtyRef = useRef(false);
@@ -222,7 +229,6 @@ function IntakeForm({
     }
     setSubmitting(true);
     setError(null);
-    setEmailConfirmNotice(null);
     try {
       const heightValue = Number(height);
       const weightValue = Number(weight);
@@ -240,60 +246,64 @@ function IntakeForm({
         nickname: nickname.trim(),
       });
       if (profileResult.error) {
+        track(
+          'intake_save_failed',
+          { stage: 'profile', error_message: profileResult.error },
+          { userId }
+        );
         setError(profileResult.error);
         return;
       }
 
       submittedRef.current = true;
-      track('intake_submitted', {
-        is_first_time: initial === null,
-        perceived_classification: rank,
-        biological_sex: biologicalSex,
-        unit_system: unitSystem,
-      });
+      const notices: string[] = [];
 
       const trimmedEmail = email.trim();
-      let needsEmailConfirmation = false;
       if (trimmedEmail.toLowerCase() !== initialEmail.trim().toLowerCase()) {
         const emailResult = await onUpdateEmail(trimmedEmail);
         if (emailResult.error) {
-          setError(emailResult.error);
-          return;
+          track(
+            'intake_save_failed',
+            { stage: 'email', error_message: emailResult.error },
+            { userId }
+          );
+          notices.push(`${DOSSIER_SAVED_PREFIX} Email update failed: ${emailResult.error}`);
+        } else if (emailResult.needsEmailConfirmation) {
+          notices.push(
+            `${DOSSIER_SAVED_PREFIX} Check your inbox to confirm your new email address.`
+          );
         }
-        needsEmailConfirmation = emailResult.needsEmailConfirmation;
       }
 
       if (password.length > 0) {
         const passwordResult = await onUpdatePassword(password);
         if (passwordResult.error) {
-          setError(passwordResult.error);
-          return;
+          track(
+            'intake_save_failed',
+            { stage: 'password', error_message: passwordResult.error },
+            { userId }
+          );
+          notices.push(`${DOSSIER_SAVED_PREFIX} Password update failed: ${passwordResult.error}`);
         }
       }
 
-      if (needsEmailConfirmation) {
-        setEmailConfirmNotice(
-          'Dossier filed. Check your inbox to confirm the new email address.'
-        );
-        return;
-      }
-      onSaved();
+      track(
+        'intake_submitted',
+        {
+          is_first_time: initial === null,
+          perceived_classification: rank,
+          biological_sex: biologicalSex,
+          unit_system: unitSystem,
+          account_notice_count: notices.length,
+        },
+        { userId }
+      );
+      onSaved(notices);
     } catch {
       setError('Something went wrong. Please try again.');
     } finally {
       setSubmitting(false);
     }
-  }
-
-  if (emailConfirmNotice) {
-    return (
-      <div className="card space-y-4 p-6">
-        <p className="text-sm text-secondary">{emailConfirmNotice}</p>
-        <button type="button" className="btn-primary w-full" onClick={onSaved}>
-          Continue
-        </button>
-      </div>
-    );
   }
 
   return (
@@ -546,10 +556,15 @@ export default function IntakePage() {
         initial={profile}
         initialEmail={user?.email ?? ''}
         nowYear={nowYear}
+        userId={user?.id ?? null}
         onSaveProfile={save}
         onUpdateEmail={updateEmail}
         onUpdatePassword={updatePassword}
-        onSaved={() => navigate(safeNext(params.get('next')))}
+        onSaved={(notices) =>
+          navigate(safeNext(params.get('next')), {
+            state: { intakeNotices: notices } satisfies IntakeNavigationState,
+          })
+        }
       />
     </NarrowPageLayout>
   );

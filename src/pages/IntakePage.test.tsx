@@ -7,6 +7,15 @@ import IntakePage from './IntakePage';
 const saveMock = vi.fn();
 const updateEmailMock = vi.fn();
 const updatePasswordMock = vi.fn();
+const navigateMock = vi.fn();
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+  };
+});
 
 vi.mock('@/hooks/useAmrapAuth', () => ({
   useAmrapAuth: () => ({
@@ -33,11 +42,12 @@ afterEach(() => {
   saveMock.mockReset();
   updateEmailMock.mockReset();
   updatePasswordMock.mockReset();
+  navigateMock.mockReset();
 });
 
-function renderIntake() {
+function renderIntake(initialEntries = ['/intake?next=/create']) {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={initialEntries}>
       <ThemeProvider>
         <IntakePage />
       </ThemeProvider>
@@ -131,6 +141,7 @@ describe('IntakePage', () => {
     });
     expect(updateEmailMock).not.toHaveBeenCalled();
     expect(updatePasswordMock).not.toHaveBeenCalled();
+    expect(navigateMock).toHaveBeenCalledWith('/create', { state: { intakeNotices: [] } });
   });
 
   it('updates email and password when changed', async () => {
@@ -155,9 +166,10 @@ describe('IntakePage', () => {
       expect(updateEmailMock).toHaveBeenCalledWith('new@example.com');
     });
     expect(updatePasswordMock).toHaveBeenCalledWith('newpass1');
+    expect(navigateMock).toHaveBeenCalledWith('/create', { state: { intakeNotices: [] } });
   });
 
-  it('shows a confirmation notice when email re-confirm is required', async () => {
+  it('navigates with a confirmation notice when email re-confirm is required', async () => {
     saveMock.mockResolvedValue({ error: null });
     updateEmailMock.mockResolvedValue({
       error: null,
@@ -172,11 +184,77 @@ describe('IntakePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'File the dossier' }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/Check your inbox to confirm the new email address/)
-      ).toBeTruthy();
+      expect(navigateMock).toHaveBeenCalledWith('/create', {
+        state: {
+          intakeNotices: [
+            'Your dossier was saved. Check your inbox to confirm your new email address.',
+          ],
+        },
+      });
     });
-    expect(screen.getByRole('button', { name: 'Continue' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Continue' })).toBeNull();
+  });
+
+  it('navigates with a notice when email update fails after profile save', async () => {
+    saveMock.mockResolvedValue({ error: null });
+    updateEmailMock.mockResolvedValue({
+      error: 'Email already registered',
+      needsEmailConfirmation: false,
+    });
+    renderIntake();
+
+    fillRequiredFields();
+    fireEvent.change(screen.getByLabelText(/^Email$/), {
+      target: { value: 'new@example.com' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'File the dossier' }));
+
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith('/create', {
+        state: {
+          intakeNotices: [
+            'Your dossier was saved. Email update failed: Email already registered',
+          ],
+        },
+      });
+    });
+    expect(screen.queryByText(/^Error:/)).toBeNull();
+  });
+
+  it('navigates with a notice when password update fails after profile save', async () => {
+    saveMock.mockResolvedValue({ error: null });
+    updatePasswordMock.mockResolvedValue({ error: 'Password is too weak' });
+    renderIntake();
+
+    fillRequiredFields();
+    fireEvent.change(screen.getByLabelText(/^Password$/), {
+      target: { value: 'weak' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'File the dossier' }));
+
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith('/create', {
+        state: {
+          intakeNotices: [
+            'Your dossier was saved. Password update failed: Password is too weak',
+          ],
+        },
+      });
+    });
+    expect(screen.queryByText(/^Error:/)).toBeNull();
+  });
+
+  it('stays on the form when profile save fails', async () => {
+    saveMock.mockResolvedValue({ error: 'That username is already taken' });
+    renderIntake();
+
+    fillRequiredFields();
+    fireEvent.click(screen.getByRole('button', { name: 'File the dossier' }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Error: That username is already taken/)).toBeTruthy();
+    });
+    expect(navigateMock).not.toHaveBeenCalled();
   });
 
   it('converts fields in place when toggling unit systems', () => {

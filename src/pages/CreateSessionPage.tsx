@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
 import {
   CreateSessionSummaryPanel,
@@ -36,6 +36,10 @@ import {
   type RallyDay,
 } from '@/lib/session/rallySchedule';
 
+type IntakeNavigationState = {
+  intakeNotices?: string[];
+};
+
 function isWorkoutCategory(value: string): value is WorkoutCategory {
   return WORKOUT_CATEGORIES.some((category) => category.id === value);
 }
@@ -46,10 +50,12 @@ function isTimeDomain(value: number): value is TimeDomain {
 
 export default function CreateSessionPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { telemetry } = useHudTelemetry();
   const { profile, loading: profileLoading } = useAthleteProfile();
   const quotas = quotasFromProfile(profile);
+  const [intakeNotices, setIntakeNotices] = useState<string[]>([]);
   const [workoutSource, setWorkoutSource] = useState<WorkoutSource>('library');
   const [nickname, setNickname] = useState('');
   const [durationMinutes, setDurationMinutes] = useState<number>(5);
@@ -67,6 +73,18 @@ export default function CreateSessionPage() {
     )
   );
   const [activeCount, setActiveCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const state = location.state as IntakeNavigationState | null;
+    if (!state?.intakeNotices?.length) {
+      return;
+    }
+    setIntakeNotices(state.intakeNotices);
+    navigate(
+      { pathname: location.pathname, search: location.search },
+      { replace: true, state: null }
+    );
+  }, [location.pathname, location.search, location.state, navigate]);
 
   useEffect(() => {
     if (!profile?.nickname) {
@@ -273,6 +291,23 @@ export default function CreateSessionPage() {
               Start an AMRAP session and invite friends to join.
             </p>
           </div>
+
+          {intakeNotices.length > 0 ? (
+            <div className="card space-y-2 p-4" role="status">
+              {intakeNotices.map((notice) => (
+                <p key={notice} className="text-sm text-secondary">
+                  {notice}
+                </p>
+              ))}
+              <button
+                type="button"
+                className="text-xs font-semibold uppercase tracking-wide text-accent"
+                onClick={() => setIntakeNotices([])}
+              >
+                Dismiss
+              </button>
+            </div>
+          ) : null}
 
           {profileLoading ? (
             <p className="text-sm text-secondary">Loading athlete profile…</p>
