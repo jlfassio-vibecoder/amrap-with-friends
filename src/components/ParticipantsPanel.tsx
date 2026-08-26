@@ -221,23 +221,23 @@ export function ParticipantsPanel({
         </p>
       ) : (
         <>
-          <div
-            role="list"
-            className="min-h-0 max-h-48 flex-1 space-y-1 overflow-y-auto lg:max-h-none"
-          >
-            {displayEntries.length === 0 ? (
-              <p className="px-2 text-sm text-secondary">No participants yet.</p>
-            ) : (
-              displayEntries.map((entry) => (
+          {displayEntries.length === 0 ? (
+            <p className="px-2 text-sm text-secondary">No participants yet.</p>
+          ) : (
+            <div
+              role="list"
+              className="min-h-0 max-h-48 flex-1 space-y-1 overflow-y-auto lg:max-h-none"
+            >
+              {displayEntries.map((entry) => (
                 <RosterRow
                   key={entry.participantId}
                   entry={entry}
                   phase={phase}
                   sortMode={effectiveSortMode}
                 />
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
 
           {hiddenCount > 0 ? (
             <p className="shrink-0 px-2 text-sm text-secondary">and {hiddenCount} more</p>
