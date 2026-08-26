@@ -162,6 +162,7 @@ describe('fetchCoachRecentEvents', () => {
     expect(callRpcMock).toHaveBeenCalledWith('coach_events_recent', {
       p_event_name: 'session_joined',
       p_limit: 50,
+      p_user_id: null,
     });
     expect(result.error).toBeNull();
     expect(result.data).toHaveLength(1);

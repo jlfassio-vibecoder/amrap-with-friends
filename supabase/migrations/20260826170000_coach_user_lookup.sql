@@ -205,7 +205,7 @@ BEGIN
   RETURN jsonb_build_object(
     'ok', true,
     'events', (
-      SELECT coalesce(jsonb_agg(e), '[]'::jsonb)
+      SELECT coalesce(jsonb_agg(to_jsonb(e) ORDER BY e.occurred_at DESC), '[]'::jsonb)
       FROM (
         SELECT
           ae.id,
