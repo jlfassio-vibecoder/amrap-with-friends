@@ -1,0 +1,123 @@
+# Analytics back-end roadmap
+
+Source of truth for product analytics work. Grounded in
+`docs/audits/analytics-back-end-audit`. Naming: use `analytics_events` /
+product analytics — do **not** call this pipeline "telemetry" (`hud_telemetry()`
+already means the fitness HUD RPC).
+
+---
+
+## Status summary
+
+| Phase | Scope | Status |
+|-------|--------|--------|
+| **0** | Event pipe + highest-value events | **Done** (`analytics_events` on `main`) |
+| **1** | Funnel completeness | **Done** |
+| **2** | Reliability telemetry (RPC + Realtime) | **Done** |
+| **3** | Classification history | **Done** (merged to `main`) |
+| **4** | Reporting layer | **Done** (this branch: `b7c98d5`) |
+
+---
+
+## Phase 0 — event pipe *(completed)*
+
+Migration: `supabase/migrations/20260826090000_analytics_events.sql` (already on `main`)
+
+- Append-only `analytics_events` + write-only RLS (`INSERT` for `anon`/`authenticated`)
+- Client: `track()` / `trackBeacon()` / `getOrCreateAnonId()` / `callRpc()`
+- Core events: `session_created`, `session_joined`, `session_abandoned`,
+  `audio_unlock_result`, `template_selected`, `claim_*`, `rpc_call`
+
+---
+
+## Phase 1 — funnel completeness *(completed)*
+
+| Event | Where |
+|-------|--------|
+| `rally_link_copied` | `CopyInviteLink.tsx` |
+| `lobby_countdown_started` / `lobby_countdown_canceled` | `sessionSync.ts` |
+| `practice_started` / `practice_finished` | `useLiveAmrapSession.ts` |
+| `intake_submitted` / `intake_abandoned` | `IntakePage.tsx` (`trackBeacon` on abandon) |
+
+---
+
+## Phase 2 — reliability telemetry *(completed)*
+
+- `callRpc()` rolled out across API modules (`sessions`, `sessionSync`, claim,
+  messages, athlete profile, HUD, ghosts, scheduled sessions, etc.)
+- `realtime_status` (+ subscribe latency when `SUBSCRIBED`) in `useSessionChannel.ts`
+- `realtime_correction` from `useLiveAmrapSession.ts` reconcile path
+
+---
+
+## Phase 3 — classification history *(completed)*
+
+Migration: `supabase/migrations/20260826110000_athlete_classification_history.sql`
+
+Schema-only from the client’s perspective — `upsert_athlete_profile` and
+`hud_telemetry` keep the same signatures.
+
+- Table `athlete_classification_history` (`kind` ∈ `perceived`/`verified`,
+  `previous_value`, `new_value`, `occurred_at`)
+- Locked down: `REVOKE ALL … FROM PUBLIC, anon, authenticated`; only the two
+  `SECURITY DEFINER` functions write
+- **Perceived:** `upsert_athlete_profile` inserts when declared rank changes
+  (including first declaration); same-rank save → no row
+- **Verified:** `hud_telemetry` inserts when computed rank differs from last
+  history row — only advances when the user opens `/hud` (only place verified
+  rank is computed); never stored except in this history table
+
+### Ops note (this branch vs `main`)
+
+Apply **`20260826110000_athlete_classification_history.sql`** on each environment
+that does not already have it. Phase 0’s `analytics_events` migration is already
+on `main` — only this Phase 3 file is new relative to `main`.
+
+### Known unrelated migration replay issue
+
+`20260822110000_lobby_schema_review_fixes.sql` can fail on a fresh replay when
+dropping `participants_session_id_id_unique` because
+`rounds_session_participant_consistency` depends on it (needs `CASCADE` or a
+reordered drop). Pre-existing; already applied successfully on the real Supabase
+project. Track separately if cleaning greenfield replay.
+
+---
+
+## Phase 4 — reporting layer *(completed)*
+
+Migration: `supabase/migrations/20260826130000_reporting_views.sql`
+
+Read-only SQL views for internal reporting (Supabase SQL editor or BI with
+service role). No client grants (`REVOKE ALL … FROM PUBLIC, anon, authenticated`).
+
+| View | What it answers |
+|------|-----------------|
+| `v_rpc_reliability` | Call volume, error rate, p50/p95 latency per RPC |
+| `v_realtime_reliability` | Channel status counts + subscribe latency |
+| `v_audio_unlock_rate` | AudioContext state mix |
+| `v_claim_funnel` | Prompt → claim / conflict rates |
+| `v_rally_conversion` | Link copies vs deep-link joins |
+| `v_intake_funnel` | Submit vs abandon |
+| `v_template_performance` | Sessions created/completed by template |
+| `v_session_abandonment` | Finished vs abandon-beacon rate |
+| `v_host_vs_joiner_retention` | First-role cohorts: avg sessions / active days |
+
+### Ops note (this branch vs `main`)
+
+Phases 0–3 migrations are already on `main`. Apply
+**`20260826130000_reporting_views.sql`** on each environment that does not
+already have it.
+
+---
+
+## Full event taxonomy (reference)
+
+| Event | Phase |
+|-------|-------|
+| `session_created`, `template_selected`, `session_joined` | **0 ✓** |
+| `session_abandoned`, `audio_unlock_result`, `claim_*` | **0 ✓** |
+| `rpc_call` | **0 ✓** / **2 ✓** (full rollout) |
+| `rally_link_copied`, lobby countdown, practice, intake | **1 ✓** |
+| `realtime_status`, `realtime_correction` | **2 ✓** |
+| Classification history (server-side, not `analytics_events`) | **3 ✓** |
+| Reporting views (`v_*`) | **4 ✓** |
