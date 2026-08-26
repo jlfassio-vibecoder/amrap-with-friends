@@ -66,6 +66,7 @@ export function CoachEventsExplorer() {
         <select
           className="input-field w-auto text-sm"
           value={eventName}
+          aria-label="Filter events by name"
           onChange={(event) => handleEventNameChange(event.target.value)}
         >
           <option value="">All events</option>

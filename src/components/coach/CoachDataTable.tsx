@@ -28,9 +28,9 @@ export function CoachDataTable<T>({
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-secondary">
-            {columns.map((column) => (
+            {columns.map((column, columnIndex) => (
               <th
-                key={column.header}
+                key={columnIndex}
                 className={column.align === 'right' ? 'py-2 pr-2 text-right' : 'py-2 pr-2'}
               >
                 {column.header}
@@ -41,9 +41,9 @@ export function CoachDataTable<T>({
         <tbody>
           {rows.map((row) => (
             <tr key={rowKey(row)} className="border-b border-border/50">
-              {columns.map((column) => (
+              {columns.map((column, columnIndex) => (
                 <td
-                  key={column.header}
+                  key={columnIndex}
                   className={
                     column.align === 'right'
                       ? 'py-2 pr-2 text-right tabular-nums'
