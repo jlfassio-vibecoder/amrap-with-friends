@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { callRpc } from '@/lib/api/callRpc';
 import type { BiologicalSex } from '@/lib/hud/classificationQuotas';
 import type { PerceivedClassification } from '@/lib/hud/compareClassificationRank';
 
@@ -82,7 +82,7 @@ export async function fetchAthleteProfile(): Promise<{
   missing: boolean;
   error: AthleteProfileApiError | null;
 }> {
-  const { data, error } = await supabase.rpc('get_athlete_profile');
+  const { data, error } = await callRpc('get_athlete_profile');
   if (error) {
     return { data: null, missing: false, error: { message: mapError(error.message) } };
   }
@@ -114,7 +114,7 @@ export async function upsertAthleteProfile(input: AthleteProfile): Promise<{
   data: AthleteProfile | null;
   error: AthleteProfileApiError | null;
 }> {
-  const { data, error } = await supabase.rpc('upsert_athlete_profile', {
+  const { data, error } = await callRpc('upsert_athlete_profile', {
     p_height_cm: input.heightCm,
     p_weight_kg: input.weightKg,
     p_birth_year: input.birthYear,

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { getSupabaseClient } from '@/lib/supabase';
+import { track } from '@/lib/analytics/track';
 import {
   mergePresenceState,
   parseMessageRow,
@@ -189,6 +190,7 @@ export function useSessionChannel(
     const channel = supabase.channel(`session:${sessionId}`, {
       config: { presence: { key: presenceParticipantId } },
     });
+    const subscribeStartedAtMs = Date.now();
 
     channel
       .on(
@@ -310,6 +312,16 @@ export function useSessionChannel(
         setPresenceByParticipantId(mergePresenceState(state));
       })
       .subscribe(async (status) => {
+        track(
+          'realtime_status',
+          {
+            status,
+            latency_ms:
+              status === 'SUBSCRIBED' ? Date.now() - subscribeStartedAtMs : null,
+          },
+          { sessionId }
+        );
+
         if (status === 'SUBSCRIBED') {
           setIsConnected(true);
           await channel.track({

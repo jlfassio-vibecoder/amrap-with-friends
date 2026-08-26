@@ -113,7 +113,7 @@ export async function updateSessionState(
   data: UpdateSessionStateResult | null;
   error: SessionSyncApiError | null;
 }> {
-  const { data, error } = await supabase.rpc('update_session_state', {
+  const { data, error } = await callRpc('update_session_state', {
     p_session_id: input.sessionId,
     p_host_token: input.hostToken,
     p_state: input.state,
@@ -181,7 +181,7 @@ export async function updateSessionState(
 export async function logRound(
   input: LogRoundInput
 ): Promise<{ data: LogRoundResult | null; error: SessionSyncApiError | null }> {
-  const { data, error } = await supabase.rpc('log_round', {
+  const { data, error } = await callRpc('log_round', {
     p_session_id: input.sessionId,
     p_participant_id: input.participantId,
     p_claim_token: input.claimToken,

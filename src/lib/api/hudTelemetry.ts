@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { callRpc } from '@/lib/api/callRpc';
 import type {
   ClassificationProgress,
   ClassificationRank,
@@ -209,7 +209,7 @@ export async function fetchHudTelemetry(): Promise<{
   error: HudTelemetryApiError | null;
 }> {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const { data, error } = await supabase.rpc('hud_telemetry', {
+  const { data, error } = await callRpc('hud_telemetry', {
     p_timezone: timeZone,
   });
 

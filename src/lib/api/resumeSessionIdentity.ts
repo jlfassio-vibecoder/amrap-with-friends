@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { callRpc } from '@/lib/api/callRpc';
 import { persistSessionIdentity } from '@/lib/sessionIdentity';
 
 export type ResumeSessionIdentityResult = {
@@ -35,7 +35,7 @@ export async function resumeSessionIdentity(sessionId: string): Promise<{
   missing: boolean;
   error: ResumeSessionIdentityError | null;
 }> {
-  const { data, error } = await supabase.rpc('resume_session_identity', {
+  const { data, error } = await callRpc('resume_session_identity', {
     p_session_id: sessionId,
   });
 

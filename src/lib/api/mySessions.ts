@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { callRpc } from '@/lib/api/callRpc';
 import type { WorkoutExercise } from '@/lib/api/sessionTypes';
 import type { ScoreBreakdown } from '@/lib/scoring/types';
 import { parseScoreBreakdownJson } from '@/lib/scoring/parseScoreBreakdownJson';
@@ -161,7 +161,7 @@ export async function fetchMySessions(): Promise<{
   data: MySessionEntry[] | null;
   error: MySessionsApiError | null;
 }> {
-  const { data, error } = await supabase.rpc('my_sessions');
+  const { data, error } = await callRpc('my_sessions');
 
   if (error) {
     return { data: null, error: { message: error.message } };
@@ -207,7 +207,7 @@ function mapDeleteError(message: string | undefined): string {
 export async function deleteIncompleteSession(
   sessionId: string
 ): Promise<{ error: MySessionsApiError | null }> {
-  const { data, error } = await supabase.rpc('delete_incomplete_session', {
+  const { data, error } = await callRpc('delete_incomplete_session', {
     p_session_id: sessionId,
   });
 

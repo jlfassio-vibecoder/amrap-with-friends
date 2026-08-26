@@ -1,5 +1,5 @@
 import type { ClaimStatus } from '@/lib/claim/resolveClaimStatus';
-import { supabase } from '@/lib/supabase';
+import { callRpc } from '@/lib/api/callRpc';
 
 export interface ClaimParticipantInput {
   participantId: string;
@@ -61,7 +61,7 @@ export async function claimParticipant(
   data: ClaimParticipantResult | null;
   error: ClaimParticipantApiError | null;
 }> {
-  const { data, error } = await supabase.rpc('claim_participant', {
+  const { data, error } = await callRpc('claim_participant', {
     p_participant_id: input.participantId,
     p_claim_token: input.claimToken,
   });
@@ -123,7 +123,7 @@ export async function fetchParticipantClaimStatus(
     | null;
   error: ClaimParticipantApiError | null;
 }> {
-  const { data, error } = await supabase.rpc('get_participant_claim_status', {
+  const { data, error } = await callRpc('get_participant_claim_status', {
     p_participant_id: participantId,
   });
 

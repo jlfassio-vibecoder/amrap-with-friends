@@ -158,7 +158,7 @@ describe('sessions API', () => {
 
     const result = await fetchHostActiveSessionCount();
 
-    expect(rpcMock).toHaveBeenCalledWith('host_active_session_count');
+    expect(rpcMock).toHaveBeenCalledWith('host_active_session_count', {});
     expect(result.error).toBeNull();
     expect(result.data).toBe(2);
   });
