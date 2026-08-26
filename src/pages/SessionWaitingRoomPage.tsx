@@ -388,7 +388,7 @@ function LiveSessionView({
 
   return (
     <main
-      className="mx-auto max-w-lg space-y-6 bg-page px-6 pb-6 pt-0 lg:max-w-none lg:space-y-0 lg:p-0 lg:min-h-screen lg:flex lg:flex-col"
+      className="mx-auto max-w-lg space-y-6 bg-page px-6 pb-6 pt-0 lg:flex lg:h-dvh lg:max-w-none lg:flex-col lg:space-y-0 lg:overflow-hidden lg:p-0"
       onPointerDown={() => {
         if (audioUnlockedRef.current) {
           return;
@@ -396,14 +396,17 @@ function LiveSessionView({
         handleAudioUnlock();
       }}
     >
-      <div inert={showPartialRepsModal || undefined}>
+      <div
+        className="lg:flex lg:min-h-0 lg:flex-1 lg:flex-col"
+        inert={showPartialRepsModal || undefined}
+      >
         <AppHeader
           title="Staging area"
           subtitle={hostStatusText}
           desktopTitleAsPageHeading
         />
 
-        <div className="space-y-6 px-6 pb-6 pt-0 lg:mx-auto lg:w-full lg:max-w-7xl lg:space-y-4 lg:px-8 lg:pt-6 lg:pb-0">
+        <div className="space-y-6 px-6 pb-6 pt-0 lg:mx-auto lg:w-full lg:max-w-7xl lg:shrink-0 lg:space-y-4 lg:px-8 lg:pt-6 lg:pb-0">
           {live.syncError && (
             <p className="alert-error">{live.syncError}</p>
           )}
@@ -449,184 +452,217 @@ function LiveSessionView({
           )}
         </div>
 
-        <div className="space-y-6 px-6 lg:mx-auto lg:grid lg:w-full lg:max-w-7xl lg:flex-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:grid-rows-[auto_auto_minmax(0,1fr)] lg:items-stretch lg:gap-6 lg:space-y-0 lg:px-8 lg:py-6 lg:min-h-0">
-          <div className="space-y-6 lg:col-start-1 lg:row-start-1 lg:row-span-2 lg:space-y-4 lg:self-start lg:rounded-card lg:border lg:border-border lg:bg-surface lg:p-6 lg:shadow-card">
-            <section className="card space-y-3 p-4 text-center lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
-              <p className="text-display text-sm text-secondary lg:text-base">
-                {phaseLabel(live.phase)}
-              </p>
-              <p
-                className={
-                  live.phase === 'waiting' && (lobbyTicking || lobbyIgnited)
-                    ? 'font-mono text-accent tabular-nums text-4xl tracking-widest lg:text-6xl xl:text-7xl'
-                    : 'text-display text-accent tabular-nums text-5xl lg:text-7xl xl:text-8xl'
-                }
-              >
-                {live.phase === 'waiting'
-                  ? lobbyTicking && lobbyRemaining !== null
-                    ? formatTMinus(lobbyRemaining)
-                    : lobbyIgnited
-                      ? 'IGNITION...'
-                      : '—'
-                  : formatTime(live.timeLeftSec)}
-              </p>
-              {live.phase === 'work' || live.phase === 'finished' ? (
-                <p className="text-sm text-secondary">
-                  Elapsed: {formatTime(live.elapsedSec)}
+        <div className="space-y-6 px-6 lg:mx-auto lg:grid lg:w-full lg:max-w-7xl lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:items-stretch lg:gap-6 lg:space-y-0 lg:overflow-hidden lg:px-8 lg:py-6">
+          <div className="space-y-6 lg:flex lg:min-h-0 lg:flex-col lg:gap-4 lg:overflow-hidden lg:space-y-0">
+            <div className="space-y-6 lg:min-h-0 lg:shrink lg:space-y-4 lg:overflow-y-auto lg:rounded-card lg:border lg:border-border lg:bg-surface lg:p-6 lg:shadow-card">
+              <section className="card space-y-3 p-4 text-center lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
+                <p className="text-display text-sm text-secondary lg:text-base">
+                  {phaseLabel(live.phase)}
                 </p>
+                <p
+                  className={
+                    live.phase === 'waiting' && (lobbyTicking || lobbyIgnited)
+                      ? 'font-mono text-accent tabular-nums text-4xl tracking-widest lg:text-6xl xl:text-7xl'
+                      : 'text-display text-accent tabular-nums text-5xl lg:text-7xl xl:text-8xl'
+                  }
+                >
+                  {live.phase === 'waiting'
+                    ? lobbyTicking && lobbyRemaining !== null
+                      ? formatTMinus(lobbyRemaining)
+                      : lobbyIgnited
+                        ? 'IGNITION...'
+                        : '—'
+                    : formatTime(live.timeLeftSec)}
+                </p>
+                {live.phase === 'work' || live.phase === 'finished' ? (
+                  <p className="text-sm text-secondary">
+                    Elapsed: {formatTime(live.elapsedSec)}
+                  </p>
+                ) : null}
+                <p className="text-xs text-muted">
+                  Realtime: {live.isRealtimeConnected ? 'connected' : 'connecting…'}
+                </p>
+              </section>
+
+              {live.phase === 'waiting' && live.scheduledAt ? (
+                isHost ? (
+                  <EditRallyScheduleForm
+                    key={live.scheduledAt}
+                    sessionId={sessionId}
+                    scheduledAt={live.scheduledAt}
+                  />
+                ) : (
+                  <p className="text-sm text-secondary">
+                    Rally time:{' '}
+                    {new Date(live.scheduledAt).toLocaleString(undefined, {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                )
               ) : null}
-              <p className="text-xs text-muted">
-                Realtime: {live.isRealtimeConnected ? 'connected' : 'connecting…'}
-              </p>
-            </section>
 
-            {live.phase === 'waiting' && live.scheduledAt ? (
-              isHost ? (
-                <EditRallyScheduleForm
-                  key={live.scheduledAt}
-                  sessionId={sessionId}
-                  scheduledAt={live.scheduledAt}
-                />
-              ) : (
-                <p className="text-sm text-secondary">
-                  Rally time:{' '}
-                  {new Date(live.scheduledAt).toLocaleString(undefined, {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })}
-                </p>
-              )
-            ) : null}
-
-            <LobbyCountdownPanel
-              sessionId={sessionId}
-              isHost={isHost}
-              phase={livePhase}
-              countdownArmed={lobbyCountdownArmed}
-              ticking={lobbyTicking}
-              onAudioUnlock={handleAudioUnlock}
-              onStart={() => {
-                handleAudioUnlock();
-                void startSession();
-              }}
-            />
-
-            {live.phase === 'waiting' ? (
-              <CopyInviteLink sessionId={sessionId} />
-            ) : null}
-
-            {showGhostPicker && live.templateId ? (
-              <GhostPicker
+              <LobbyCountdownPanel
                 sessionId={sessionId}
-                templateId={live.templateId}
-                durationMinutes={live.workDurationSec / 60}
-                value={ghostSelection}
-                onChange={setGhostSelection}
+                isHost={isHost}
+                phase={livePhase}
+                countdownArmed={lobbyCountdownArmed}
+                ticking={lobbyTicking}
+                onAudioUnlock={handleAudioUnlock}
+                onStart={() => {
+                  handleAudioUnlock();
+                  void startSession();
+                }}
               />
-            ) : null}
 
-            {showGhostPacerError && activeGhostSelection ? (
-              <p className="alert-error text-sm">{ghostPacer.error}</p>
-            ) : null}
+              {live.phase === 'waiting' ? (
+                <CopyInviteLink sessionId={sessionId} />
+              ) : null}
 
-            {showGhostPacerStrip && activeGhostSelection ? (
-              <GhostPacerStrip
-                ghostLabel={activeGhostSelection.label}
-                ghostReps={ghostPacer.ghostReps}
-                selfReps={ghostPacer.selfReps}
-                deltaReps={ghostPacer.deltaReps}
-              />
-            ) : null}
+              {showGhostPicker && live.templateId ? (
+                <GhostPicker
+                  sessionId={sessionId}
+                  templateId={live.templateId}
+                  durationMinutes={live.workDurationSec / 60}
+                  value={ghostSelection}
+                  onChange={setGhostSelection}
+                />
+              ) : null}
 
-            <section className="flex flex-wrap gap-2 lg:justify-center">
-              {showStart && (
-                <button
-                  type="button"
-                  className="btn-primary lg:px-6 lg:py-3 lg:text-base"
-                  onClick={() => {
-                    handleAudioUnlock();
-                    void startSession();
-                  }}
-                >
-                  Start
-                </button>
-              )}
-              {showPractice && (
-                <button
-                  type="button"
-                  className="btn-outline lg:px-6 lg:py-3 lg:text-base"
-                  onClick={() => {
-                    handleAudioUnlock();
-                    live.startPractice();
-                  }}
-                >
-                  Practice
-                </button>
-              )}
-              {showPause && (
-                <button
-                  type="button"
-                  className="btn-outline lg:px-6 lg:py-3 lg:text-base"
-                  onClick={() => {
-                    handleAudioUnlock();
-                    void live.pause();
-                  }}
-                >
-                  Pause
-                </button>
-              )}
-              {showResume && (
-                <button
-                  type="button"
-                  className="btn-primary lg:px-6 lg:py-3 lg:text-base"
-                  onClick={() => {
-                    handleAudioUnlock();
-                    void live.resume();
-                  }}
-                >
-                  Resume
-                </button>
-              )}
-              {showLogRound && (
-                <button
-                  type="button"
-                  className="btn-success lg:px-6 lg:py-3 lg:text-base"
-                  onClick={() => {
-                    playRoundLogged();
-                    void live.logRound();
-                  }}
-                >
-                  Log round
-                </button>
-              )}
-              {showEndPractice && (
-                <button
-                  type="button"
-                  className="btn-primary lg:px-6 lg:py-3 lg:text-base"
-                  onClick={() => live.endPractice()}
-                >
-                  Back to staging
-                </button>
-              )}
-            </section>
+              {showGhostPacerError && activeGhostSelection ? (
+                <p className="alert-error text-sm">{ghostPacer.error}</p>
+              ) : null}
 
-            {live.isPractice && live.practiceRounds.length > 0 ? (
-              <section className="rounded-card border border-border bg-page p-4 text-left">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted">
-                  Practice splits
-                </p>
-                <ul className="mt-2 space-y-1 text-sm text-ink">
-                  {live.practiceRounds.map((round) => (
-                    <li key={round.roundIndex}>
-                      Round {round.roundIndex + 1}: {round.elapsedSecAtRound}s
+              {showGhostPacerStrip && activeGhostSelection ? (
+                <GhostPacerStrip
+                  ghostLabel={activeGhostSelection.label}
+                  ghostReps={ghostPacer.ghostReps}
+                  selfReps={ghostPacer.selfReps}
+                  deltaReps={ghostPacer.deltaReps}
+                />
+              ) : null}
+
+              <section className="flex flex-wrap gap-2 lg:justify-center">
+                {showStart && (
+                  <button
+                    type="button"
+                    className="btn-primary lg:px-6 lg:py-3 lg:text-base"
+                    onClick={() => {
+                      handleAudioUnlock();
+                      void startSession();
+                    }}
+                  >
+                    Start
+                  </button>
+                )}
+                {showPractice && (
+                  <button
+                    type="button"
+                    className="btn-outline lg:px-6 lg:py-3 lg:text-base"
+                    onClick={() => {
+                      handleAudioUnlock();
+                      live.startPractice();
+                    }}
+                  >
+                    Practice
+                  </button>
+                )}
+                {showPause && (
+                  <button
+                    type="button"
+                    className="btn-outline lg:px-6 lg:py-3 lg:text-base"
+                    onClick={() => {
+                      handleAudioUnlock();
+                      void live.pause();
+                    }}
+                  >
+                    Pause
+                  </button>
+                )}
+                {showResume && (
+                  <button
+                    type="button"
+                    className="btn-primary lg:px-6 lg:py-3 lg:text-base"
+                    onClick={() => {
+                      handleAudioUnlock();
+                      void live.resume();
+                    }}
+                  >
+                    Resume
+                  </button>
+                )}
+                {showLogRound && (
+                  <button
+                    type="button"
+                    className="btn-success lg:px-6 lg:py-3 lg:text-base"
+                    onClick={() => {
+                      playRoundLogged();
+                      void live.logRound();
+                    }}
+                  >
+                    Log round
+                  </button>
+                )}
+                {showEndPractice && (
+                  <button
+                    type="button"
+                    className="btn-primary lg:px-6 lg:py-3 lg:text-base"
+                    onClick={() => live.endPractice()}
+                  >
+                    Back to staging
+                  </button>
+                )}
+              </section>
+
+              {live.isPractice && live.practiceRounds.length > 0 ? (
+                <section className="rounded-card border border-border bg-page p-4 text-left">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted">
+                    Practice splits
+                  </p>
+                  <ul className="mt-2 space-y-1 text-sm text-ink">
+                    {live.practiceRounds.map((round) => (
+                      <li key={round.roundIndex}>
+                        Round {round.roundIndex + 1}: {round.elapsedSecAtRound}s
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+            </div>
+
+            {live.workout.length > 0 && (
+              <section className="card shrink-0 space-y-2 p-4">
+                <h2 className="text-display text-sm text-ink lg:text-lg">Workout</h2>
+                <ul className="space-y-1 text-sm lg:space-y-4">
+                  {live.workout.map((exercise, index) => (
+                    <li
+                      key={`${exercise.name}-${index}`}
+                      className="flex items-center gap-2 lg:gap-4"
+                    >
+                      <span className="hidden lg:flex lg:h-12 lg:w-12 lg:shrink-0 lg:items-center lg:justify-center lg:rounded-full lg:bg-accent lg:text-xl lg:font-semibold lg:text-on-accent">
+                        {index + 1}
+                      </span>
+                      <span className="min-w-0 flex-1 lg:text-2xl lg:leading-snug xl:text-3xl">
+                        {formatExerciseLabel(exercise)}
+                      </span>
+                      <ExerciseInfoTrigger name={exercise.name} size="lg" />
                     </li>
                   ))}
                 </ul>
               </section>
-            ) : null}
+            )}
+
+            <SessionChat
+              sessionId={sessionId}
+              participantId={participantId}
+              claimToken={claimToken}
+              isAuthenticated={isAuthenticated}
+              messages={channel.messages}
+              className="min-h-[12rem] flex-1 overflow-hidden"
+            />
           </div>
 
           <ParticipantsPanel
@@ -634,39 +670,8 @@ function LiveSessionView({
             presence={live.presence}
             selfParticipantId={live.participantId}
             phase={live.phase}
-            className="lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:self-start"
+            className="lg:min-h-0 lg:overflow-hidden"
           />
-
-          <SessionChat
-            sessionId={sessionId}
-            participantId={participantId}
-            claimToken={claimToken}
-            isAuthenticated={isAuthenticated}
-            messages={channel.messages}
-            className="lg:col-start-2 lg:row-start-3 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:self-stretch"
-          />
-
-          {live.workout.length > 0 && (
-            <section className="card space-y-2 p-4 lg:col-start-1 lg:row-start-3 lg:self-start">
-              <h2 className="text-display text-sm text-ink lg:text-lg">Workout</h2>
-              <ul className="space-y-1 text-sm lg:space-y-4">
-                {live.workout.map((exercise, index) => (
-                  <li
-                    key={`${exercise.name}-${index}`}
-                    className="flex items-center gap-2 lg:gap-4"
-                  >
-                    <span className="hidden lg:flex lg:h-12 lg:w-12 lg:shrink-0 lg:items-center lg:justify-center lg:rounded-full lg:bg-accent lg:text-xl lg:font-semibold lg:text-on-accent">
-                      {index + 1}
-                    </span>
-                    <span className="min-w-0 flex-1 lg:text-2xl lg:leading-snug xl:text-3xl">
-                      {formatExerciseLabel(exercise)}
-                    </span>
-                    <ExerciseInfoTrigger name={exercise.name} size="lg" />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
         </div>
 
         <section className="space-y-2 px-6 pb-6 text-sm text-secondary lg:hidden">
@@ -679,7 +684,7 @@ function LiveSessionView({
           <Link className="link-accent" to="/">Back home</Link>
         </section>
 
-        <footer className="hidden border-t border-divider bg-surface text-sm text-secondary lg:flex lg:items-center lg:justify-between lg:px-8 lg:py-3">
+        <footer className="hidden border-t border-divider bg-surface text-sm text-secondary lg:flex lg:shrink-0 lg:items-center lg:justify-between lg:px-8 lg:py-3">
           <span>
             <span className="font-semibold text-ink">Session ID:</span> {live.sessionId}
           </span>

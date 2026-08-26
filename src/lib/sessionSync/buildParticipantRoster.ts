@@ -1,7 +1,10 @@
 import type {
   LeaderboardEntry,
+  LiveSessionPhase,
   SessionPresenceEntry,
 } from '@/lib/sessionSync/types';
+
+export const ROSTER_DISPLAY_LIMIT = 15;
 
 export type LeaderboardSortMode = 'absolute' | 'discipline';
 
@@ -66,7 +69,19 @@ export function getParticipantAvatarColor(participantId: string): string {
   return AVATAR_PALETTE[index];
 }
 
-export function compareAbsoluteRoster(a: RosterMergeEntry, b: RosterMergeEntry): number {
+export function compareAbsoluteRoster(
+  a: RosterMergeEntry,
+  b: RosterMergeEntry,
+  phase: LiveSessionPhase = 'finished'
+): number {
+  if (phase !== 'finished') {
+    if (b.baseScore !== a.baseScore) {
+      return b.baseScore - a.baseScore;
+    }
+
+    return a.nickname.localeCompare(b.nickname);
+  }
+
   if (b.finalScore !== a.finalScore) {
     return b.finalScore - a.finalScore;
   }
@@ -97,7 +112,8 @@ export function buildParticipantRoster(
   leaderboard: LeaderboardEntry[],
   presence: SessionPresenceEntry[],
   selfParticipantId: string,
-  sortMode: LeaderboardSortMode = 'absolute'
+  sortMode: LeaderboardSortMode = 'absolute',
+  phase: LiveSessionPhase = 'finished'
 ): ParticipantRosterEntry[] {
   const byId = new Map<string, RosterMergeEntry>();
 
@@ -148,8 +164,10 @@ export function buildParticipantRoster(
       ? entries.filter((entry) => entry.pvi !== null)
       : entries;
 
-  const sorted = [...filtered].sort(
-    sortMode === 'discipline' ? compareDisciplineRoster : compareAbsoluteRoster
+  const sorted = [...filtered].sort((a, b) =>
+    sortMode === 'discipline'
+      ? compareDisciplineRoster(a, b)
+      : compareAbsoluteRoster(a, b, phase)
   );
 
   return sorted.map((entry, index) => ({
@@ -169,8 +187,11 @@ export function buildParticipantRoster(
   }));
 }
 
-export function rosterEntriesForScrollList(
-  roster: ParticipantRosterEntry[]
-): ParticipantRosterEntry[] {
-  return roster.filter((entry) => !entry.isSelf);
+export function rosterEntriesForDisplay(
+  roster: ParticipantRosterEntry[],
+  limit = ROSTER_DISPLAY_LIMIT
+): { visible: ParticipantRosterEntry[]; hiddenCount: number } {
+  const visible = roster.slice(0, limit);
+  const hiddenCount = Math.max(0, roster.length - limit);
+  return { visible, hiddenCount };
 }
