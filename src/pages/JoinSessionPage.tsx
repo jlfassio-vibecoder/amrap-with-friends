@@ -12,6 +12,7 @@ import {
 import { callsignFromEmail } from '@/lib/sessionIdentity';
 import { getSupabaseConfigError } from '@/lib/supabase';
 import { unlockTacticalAudio } from '@/lib/audio/tacticalSynthesis';
+import { track } from '@/lib/analytics/track';
 
 export default function JoinSessionPage() {
   const navigate = useNavigate();
@@ -57,6 +58,15 @@ export default function JoinSessionPage() {
       }
 
       if (result.data) {
+        track(
+          'session_joined',
+          { deep_link: deep, auth: isAuthenticated },
+          {
+            userId: user?.id ?? null,
+            sessionId: targetSessionId.trim(),
+            participantId: result.data.participantId,
+          }
+        );
         navigate(`/session/${targetSessionId.trim()}`);
       }
     } catch (e) {

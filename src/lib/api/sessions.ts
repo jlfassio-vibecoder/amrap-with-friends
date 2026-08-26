@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { persistSessionIdentity } from '@/lib/sessionIdentity';
+import { callRpc } from '@/lib/api/callRpc';
+import { track } from '@/lib/analytics/track';
 import type {
   CreateSessionInput,
   CreateSessionResult,
@@ -115,7 +117,7 @@ export async function createSession(
   }
 
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const { data, error } = await supabase.rpc('create_session', {
+  const { data, error } = await callRpc('create_session', {
     p_duration_minutes: input.durationMinutes,
     p_nickname: nickname,
     p_workout: input.workout,
@@ -146,6 +148,25 @@ export async function createSession(
     claimToken,
   });
 
+  let userId: string | null = null;
+  try {
+    const { data: authData } = await supabase.auth.getSession();
+    userId = authData.session?.user.id ?? null;
+  } catch {
+    /* analytics enrichment only — never block session creation on it */
+  }
+
+  track(
+    'session_created',
+    {
+      duration_minutes: input.durationMinutes,
+      template_id: input.templateId ?? null,
+      intensity_tier: input.intensityTier ?? null,
+      scheduled: Boolean(input.scheduledAt),
+    },
+    { userId, sessionId, participantId }
+  );
+
   return {
     data: { sessionId, hostToken, participantId, claimToken },
     error: null,
@@ -171,7 +192,7 @@ export async function joinSession(
     return { data: null, error: { message: 'Enter your name or a nickname.' } };
   }
 
-  const { data, error } = await supabase.rpc('join_session', {
+  const { data, error } = await callRpc('join_session', {
     p_session_id: sessionId,
     p_nickname: nickname,
   });

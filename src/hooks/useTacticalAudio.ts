@@ -7,6 +7,7 @@ import {
   unlockTacticalAudio,
 } from '@/lib/audio/tacticalSynthesis';
 import type { LiveSessionPhase } from '@/lib/sessionSync/types';
+import { track } from '@/lib/analytics/track';
 
 interface UseTacticalAudioInput {
   phase: LiveSessionPhase;
@@ -27,9 +28,18 @@ export function useTacticalAudio({
   workDurationSec,
 }: UseTacticalAudioInput): UseTacticalAudioReturn {
   const prevRef = useRef<TacticalClockSnapshot | null>(null);
+  const hasTrackedUnlockRef = useRef(false);
 
   const unlock = useCallback(() => {
-    unlockTacticalAudio();
+    const context = unlockTacticalAudio();
+    if (hasTrackedUnlockRef.current || !context) {
+      return;
+    }
+    hasTrackedUnlockRef.current = true;
+    void context.resume().then(
+      () => track('audio_unlock_result', { state: context.state }),
+      () => track('audio_unlock_result', { state: context.state, error: true })
+    );
   }, []);
 
   const playRoundLogged = useCallback(() => {

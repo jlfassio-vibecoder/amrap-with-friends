@@ -31,6 +31,7 @@ import {
   getStoredNickname,
   getStoredParticipantId,
 } from '@/lib/sessionIdentity';
+import { trackBeacon } from '@/lib/analytics/track';
 
 const PUSH_INTERVAL_MS = 3000;
 
@@ -385,6 +386,43 @@ export function useLiveAmrapSession(
       buildPresenceList(channel.participants, channel.presenceByParticipantId),
     [channel.participants, channel.presenceByParticipantId]
   );
+
+  const abandonedFiredRef = useRef(false);
+
+  useEffect(() => {
+    abandonedFiredRef.current = false;
+  }, [displayPhase]);
+
+  useEffect(() => {
+    if (isPractice) {
+      return;
+    }
+
+    function fireAbandonedIfInWork() {
+      if (displayPhase !== 'work' || abandonedFiredRef.current) {
+        return;
+      }
+      abandonedFiredRef.current = true;
+      trackBeacon(
+        'session_abandoned',
+        { time_left_sec: displayTimeLeftSec, round_count: myRoundCount },
+        { sessionId, participantId }
+      );
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'hidden') {
+        fireAbandonedIfInWork();
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', fireAbandonedIfInWork);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', fireAbandonedIfInWork);
+    };
+  }, [isPractice, displayPhase, displayTimeLeftSec, myRoundCount, sessionId, participantId]);
 
   const start = useCallback(async () => {
     if (isPractice || !isHost || displayPhase !== 'waiting' || !session) {

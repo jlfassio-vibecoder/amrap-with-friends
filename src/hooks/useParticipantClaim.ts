@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   claimParticipant,
   fetchParticipantClaimStatus,
@@ -11,6 +11,7 @@ import {
   getStoredClaimToken,
   getStoredParticipantId,
 } from '@/lib/sessionIdentity';
+import { track } from '@/lib/analytics/track';
 
 export function useParticipantClaim(sessionId: string) {
   const { user, isAuthenticated, isAuthLoading } = useAmrapAuth();
@@ -59,6 +60,18 @@ export function useParticipantClaim(sessionId: string) {
     claimStatus,
   });
 
+  const promptShownRef = useRef(false);
+  useEffect(() => {
+    if (showClaimPrompt && !promptShownRef.current) {
+      promptShownRef.current = true;
+      track(
+        'claim_prompt_shown',
+        {},
+        { userId: user?.id ?? null, sessionId, participantId }
+      );
+    }
+  }, [showClaimPrompt, user?.id, sessionId, participantId]);
+
   async function saveToAccount() {
     if (!participantId || !claimToken) {
       return;
@@ -82,6 +95,11 @@ export function useParticipantClaim(sessionId: string) {
 
     if (result.data?.ok === false) {
       if (result.data.reason === 'already_claimed') {
+        track(
+          'claim_conflict',
+          { reason: result.data.reason },
+          { userId: user?.id ?? null, sessionId, participantId }
+        );
         setClaimError('This session was already saved to another account.');
       } else if (result.data.reason === 'invalid_claim_token') {
         setClaimError('Save link expired. Rejoin from this device if you still have access.');
@@ -94,6 +112,11 @@ export function useParticipantClaim(sessionId: string) {
     if (result.data?.ok === true) {
       clearStoredClaimToken(sessionId);
       setClaimStatusFromServer('claimed');
+      track(
+        'claim_completed',
+        { already_claimed: result.data.alreadyClaimed ?? false },
+        { userId: user?.id ?? null, sessionId, participantId }
+      );
       setClaimMessage(
         result.data.alreadyClaimed
           ? 'This session is already on your account.'

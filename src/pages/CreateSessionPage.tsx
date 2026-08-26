@@ -20,6 +20,7 @@ import {
 } from '@/data/workoutTemplates';
 import { createSession, fetchHostActiveSessionCount } from '@/lib/api/sessions';
 import { getSupabaseConfigError } from '@/lib/supabase';
+import { track } from '@/lib/analytics/track';
 import { quotasFromProfile } from '@/lib/hud/classificationQuotas';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { useHudTelemetry } from '@/hooks/useHudTelemetry';
@@ -170,6 +171,12 @@ export default function CreateSessionPage() {
     if (template.category) {
       setSelectedCategory(template.category);
     }
+    track('template_selected', {
+      template_id: template.id,
+      category: template.category ?? null,
+      intensity_tier: template.intensityTier,
+      duration_minutes: applied.durationMinutes,
+    });
   }
 
   function handleWorkoutTextChange(value: string) {
