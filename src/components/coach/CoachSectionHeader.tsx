@@ -21,5 +21,3 @@ export function CoachSectionHeader({ title }: CoachSectionHeaderProps) {
     </div>
   );
 }
-
-export { refreshCoachPage };

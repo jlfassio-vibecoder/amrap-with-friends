@@ -36,6 +36,7 @@ import {
   type RallyDay,
 } from '@/lib/session/rallySchedule';
 
+// Copilot suggestion ignored: keep a local type to avoid coupling CreateSessionPage to IntakePage routing internals.
 type IntakeNavigationState = {
   intakeNotices?: string[];
 };
@@ -294,8 +295,8 @@ export default function CreateSessionPage() {
 
           {intakeNotices.length > 0 ? (
             <div className="card space-y-2 p-4" role="status">
-              {intakeNotices.map((notice) => (
-                <p key={notice} className="text-sm text-secondary">
+              {intakeNotices.map((notice, index) => (
+                <p key={index} className="text-sm text-secondary">
                   {notice}
                 </p>
               ))}

@@ -58,6 +58,7 @@ BEGIN
           OR ap.username ILIKE '%' || v_search || '%'
           OR ap.nickname ILIKE '%' || v_search || '%'
           OR au.email ILIKE '%' || v_search || '%'
+        ORDER BY last_session.last_active_at DESC NULLS LAST, ap.created_at DESC
         LIMIT v_limit
       ) u
     )

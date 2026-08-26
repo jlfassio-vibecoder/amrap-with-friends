@@ -15,9 +15,11 @@ export function CoachUserPicker({ selectedUser, onSelect }: CoachUserPickerProps
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<number | null>(null);
+  const searchSeqRef = useRef(0);
 
   useEffect(() => {
     return () => {
+      searchSeqRef.current += 1;
       if (debounceRef.current !== null) {
         window.clearTimeout(debounceRef.current);
       }
@@ -25,8 +27,12 @@ export function CoachUserPicker({ selectedUser, onSelect }: CoachUserPickerProps
   }, []);
 
   function runSearch(search: string) {
+    const seq = ++searchSeqRef.current;
     setLoading(true);
     fetchCoachUsersList({ search: search || null, limit: RESULTS_LIMIT }).then((result) => {
+      if (seq !== searchSeqRef.current) {
+        return;
+      }
       setLoading(false);
       setResults(result.data ?? []);
     });

@@ -49,7 +49,9 @@ export default function CoachPage() {
       <div className="mx-auto max-w-6xl space-y-8 px-6 pb-10 pt-0 lg:px-8 lg:py-10">
         <CoachUserPicker selectedUser={selectedUser} onSelect={setSelectedUser} />
 
-        {selectedUser ? <CoachUserDetailPanel userId={selectedUser.userId} /> : null}
+        {selectedUser ? (
+          <CoachUserDetailPanel key={selectedUser.userId} userId={selectedUser.userId} />
+        ) : null}
 
         {!selectedUser && loading ? (
           <p className="text-sm text-secondary">Loading…</p>
