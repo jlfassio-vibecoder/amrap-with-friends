@@ -4,7 +4,7 @@ import {
   buildParticipantRoster,
   getParticipantAvatarColor,
   getParticipantInitial,
-  rosterEntriesForScrollList,
+  rosterEntriesForDisplay,
   type LeaderboardSortMode,
   type ParticipantRosterEntry,
 } from '@/lib/sessionSync/buildParticipantRoster';
@@ -86,21 +86,7 @@ function LeaderboardSortToggle({
   );
 }
 
-function RankBadge({
-  rank,
-  variant = 'default',
-}: {
-  rank: number;
-  variant?: 'default' | 'pinned';
-}) {
-  if (variant === 'pinned') {
-    return (
-      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-semibold text-on-accent tabular-nums">
-        {rank}
-      </span>
-    );
-  }
-
+function RankBadge({ rank }: { rank: number }) {
   if (rank === 1) {
     return (
       <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center text-sm font-semibold text-accent tabular-nums">
@@ -120,26 +106,17 @@ function RosterRow({
   entry,
   phase,
   sortMode,
-  variant = 'default',
 }: {
   entry: ParticipantRosterEntry;
   phase: LiveSessionPhase;
   sortMode: LeaderboardSortMode;
-  variant?: 'default' | 'pinned';
 }) {
   const showPacingBadge = phase === 'finished' && entry.pviVerdict.length > 0;
   const scoreDisplay = formatRosterScore(entry, phase, sortMode);
 
   return (
-    <div
-      role="listitem"
-      className={
-        variant === 'pinned'
-          ? 'flex items-center gap-2 rounded-md border border-border bg-accent-tint px-2 py-2'
-          : 'flex items-center gap-2 px-2 py-1.5'
-      }
-    >
-      <RankBadge rank={entry.rank} variant={variant === 'pinned' ? 'pinned' : 'default'} />
+    <div role="listitem" className="flex items-center gap-2 px-2 py-1.5">
+      <RankBadge rank={entry.rank} />
       <span
         className={`inline-block h-2 w-2 shrink-0 rounded-full ${
           entry.isOnline ? 'bg-success' : 'bg-muted'
@@ -174,15 +151,15 @@ export function ParticipantsPanel({
     leaderboard,
     presence,
     selfParticipantId,
-    effectiveSortMode
+    effectiveSortMode,
+    phase
   );
 
   const onlineCount = roster.filter((entry) => entry.isOnline).length;
   const onlineEntries = roster.filter((entry) => entry.isOnline);
   const visibleAvatars = onlineEntries.slice(0, AVATAR_STACK_LIMIT);
-  const overflowCount = Math.max(0, onlineEntries.length - AVATAR_STACK_LIMIT);
-  const scrollEntries = rosterEntriesForScrollList(roster);
-  const selfEntry = roster.find((entry) => entry.isSelf) ?? null;
+  const avatarOverflowCount = Math.max(0, onlineEntries.length - AVATAR_STACK_LIMIT);
+  const { visible: displayEntries, hiddenCount } = rosterEntriesForDisplay(roster);
   const hasAnyParticipants = leaderboard.length > 0 || presence.length > 0;
   const showDisciplineEmptyState =
     phase === 'finished' &&
@@ -191,8 +168,10 @@ export function ParticipantsPanel({
     roster.length === 0;
 
   return (
-    <section className={`card space-y-3 p-4 ${className ?? ''}`}>
-      <div className="flex items-center justify-between gap-3">
+    <section
+      className={`card flex h-full min-h-0 flex-col gap-3 overflow-hidden p-4 ${className ?? ''}`}
+    >
+      <div className="flex shrink-0 items-center justify-between gap-3">
         <h2 className="text-display text-sm text-ink lg:text-base">Participants</h2>
         <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-page px-2.5 py-1 text-xs font-medium text-success-text">
           <span className="inline-block h-2 w-2 rounded-full bg-success" aria-hidden />
@@ -201,18 +180,20 @@ export function ParticipantsPanel({
       </div>
 
       {phase === 'finished' ? (
-        <LeaderboardSortToggle
-          value={sortMode}
-          onChange={(value) => {
-            if (phase === 'finished') {
-              setSortMode(value);
-            }
-          }}
-        />
+        <div className="shrink-0">
+          <LeaderboardSortToggle
+            value={sortMode}
+            onChange={(value) => {
+              if (phase === 'finished') {
+                setSortMode(value);
+              }
+            }}
+          />
+        </div>
       ) : null}
 
       {visibleAvatars.length > 0 ? (
-        <div className="flex items-center" aria-hidden="true">
+        <div className="flex shrink-0 items-center" aria-hidden="true">
           {visibleAvatars.map((entry, index) => (
             <span
               key={entry.participantId}
@@ -224,9 +205,9 @@ export function ParticipantsPanel({
               {getParticipantInitial(entry.nickname)}
             </span>
           ))}
-          {overflowCount > 0 ? (
+          {avatarOverflowCount > 0 ? (
             <span className="-ml-2 inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-page bg-neutral text-xs font-semibold text-neutral-foreground">
-              +{overflowCount}
+              +{avatarOverflowCount}
             </span>
           ) : null}
         </div>
@@ -242,12 +223,12 @@ export function ParticipantsPanel({
         <>
           <div
             role="list"
-            className="max-h-48 space-y-1 overflow-y-auto lg:max-h-52"
+            className="min-h-0 max-h-48 flex-1 space-y-1 overflow-y-auto lg:max-h-none"
           >
-            {scrollEntries.length === 0 ? (
-              <p className="px-2 text-sm text-secondary">No other participants yet.</p>
+            {displayEntries.length === 0 ? (
+              <p className="px-2 text-sm text-secondary">No participants yet.</p>
             ) : (
-              scrollEntries.map((entry) => (
+              displayEntries.map((entry) => (
                 <RosterRow
                   key={entry.participantId}
                   entry={entry}
@@ -258,15 +239,8 @@ export function ParticipantsPanel({
             )}
           </div>
 
-          {selfEntry ? (
-            <div role="list" aria-label="Your rank">
-              <RosterRow
-                entry={selfEntry}
-                phase={phase}
-                sortMode={effectiveSortMode}
-                variant="pinned"
-              />
-            </div>
+          {hiddenCount > 0 ? (
+            <p className="shrink-0 px-2 text-sm text-secondary">and {hiddenCount} more</p>
           ) : null}
         </>
       )}

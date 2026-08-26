@@ -5,7 +5,8 @@ import {
   compareDisciplineRoster,
   getParticipantAvatarColor,
   getParticipantInitial,
-  rosterEntriesForScrollList,
+  rosterEntriesForDisplay,
+  ROSTER_DISPLAY_LIMIT,
 } from './buildParticipantRoster';
 import type {
   LeaderboardEntry,
@@ -250,10 +251,68 @@ describe('buildParticipantRoster', () => {
     expect(roster).toHaveLength(1);
     expect(roster[0].participantId).toBe(BOB_ID);
   });
+
+  it('ranks by base score during work when final scores differ', () => {
+    const roster = buildParticipantRoster(
+      [
+        leaderboardEntry(ALICE_ID, 'Alice', 5, 120, 50),
+        leaderboardEntry(BOB_ID, 'Bob', 4, 80, 90),
+      ],
+      [],
+      SELF_ID,
+      'absolute',
+      'work'
+    );
+
+    expect(roster.map((entry) => entry.participantId)).toEqual([ALICE_ID, BOB_ID]);
+    expect(roster[0].baseScore).toBe(120);
+  });
+
+  it('ranks by final score when finished even if base score differs', () => {
+    const roster = buildParticipantRoster(
+      [
+        leaderboardEntry(ALICE_ID, 'Alice', 5, 120, 50),
+        leaderboardEntry(BOB_ID, 'Bob', 4, 80, 90),
+      ],
+      [],
+      SELF_ID,
+      'absolute',
+      'finished'
+    );
+
+    expect(roster.map((entry) => entry.participantId)).toEqual([BOB_ID, ALICE_ID]);
+    expect(roster[0].finalScore).toBe(90);
+  });
 });
 
 describe('roster comparators', () => {
-  it('compareAbsoluteRoster prefers higher base score on final-score ties', () => {
+  it('compareAbsoluteRoster prefers higher base score during work', () => {
+    const higherBase = {
+      participantId: ALICE_ID,
+      nickname: 'Alice',
+      roundCount: 3,
+      repsPerRound: 20,
+      baseScore: 120,
+      finalScore: 50,
+      pvi: 0,
+      pviMultiplier: 1,
+      pviClassification: 'Standard',
+      pviVerdict: '',
+      isOnline: false,
+    };
+    const lowerBase = {
+      ...higherBase,
+      participantId: BOB_ID,
+      nickname: 'Bob',
+      baseScore: 80,
+      finalScore: 90,
+    };
+
+    expect(compareAbsoluteRoster(higherBase, lowerBase, 'work')).toBeLessThan(0);
+    expect(compareAbsoluteRoster(higherBase, lowerBase, 'finished')).toBeGreaterThan(0);
+  });
+
+  it('compareAbsoluteRoster prefers higher base score on final-score ties when finished', () => {
     const higherBase = {
       participantId: ALICE_ID,
       nickname: 'Alice',
@@ -269,7 +328,7 @@ describe('roster comparators', () => {
     };
     const lowerBase = { ...higherBase, participantId: BOB_ID, nickname: 'Bob', baseScore: 55 };
 
-    expect(compareAbsoluteRoster(higherBase, lowerBase)).toBeLessThan(0);
+    expect(compareAbsoluteRoster(higherBase, lowerBase, 'finished')).toBeLessThan(0);
   });
 
   it('compareDisciplineRoster prefers lower P.V.I.', () => {
@@ -292,8 +351,26 @@ describe('roster comparators', () => {
   });
 });
 
-describe('rosterEntriesForScrollList', () => {
-  it('excludes the self row while preserving ranks for others', () => {
+describe('rosterEntriesForDisplay', () => {
+  it('returns the first 15 entries and hidden count', () => {
+    const leaderboard = Array.from({ length: 16 }, (_, index) =>
+      leaderboardEntry(
+        `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+        `Athlete ${index + 1}`,
+        16 - index
+      )
+    );
+
+    const roster = buildParticipantRoster(leaderboard, [], SELF_ID);
+    const { visible, hiddenCount } = rosterEntriesForDisplay(roster);
+
+    expect(visible).toHaveLength(ROSTER_DISPLAY_LIMIT);
+    expect(hiddenCount).toBe(1);
+    expect(visible[0].rank).toBe(1);
+    expect(visible[visible.length - 1].rank).toBe(ROSTER_DISPLAY_LIMIT);
+  });
+
+  it('includes self in the visible list at true rank', () => {
     const roster = buildParticipantRoster(
       [
         leaderboardEntry(ALICE_ID, 'Alice', 9, 180, 180),
@@ -303,12 +380,10 @@ describe('rosterEntriesForScrollList', () => {
       SELF_ID
     );
 
-    const scrollEntries = rosterEntriesForScrollList(roster);
+    const { visible } = rosterEntriesForDisplay(roster);
 
-    expect(scrollEntries).toHaveLength(1);
-    expect(scrollEntries[0].participantId).toBe(ALICE_ID);
-    expect(scrollEntries[0].rank).toBe(1);
-    expect(roster.find((entry) => entry.isSelf)?.rank).toBe(2);
+    expect(visible).toHaveLength(2);
+    expect(visible.find((entry) => entry.isSelf)?.rank).toBe(2);
   });
 });
 
