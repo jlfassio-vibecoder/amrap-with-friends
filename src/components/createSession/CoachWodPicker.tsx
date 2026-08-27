@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { CoachExerciseInfoModal } from '@/components/coachWod/CoachExerciseInfoModal';
 import { fetchPublishedCoachWorkouts, type PublishedCoachWorkout } from '@/lib/api/coachWod';
-import { getCoachExerciseMediaUrl } from '@/lib/media/coachExerciseMedia';
 
 const INTENSITY_LABEL: Record<number, string> = {
   1: 'Active Recovery',
@@ -17,7 +17,9 @@ interface CoachWodCardProps {
 }
 
 function CoachWodCard({ workout, selected, onSelect }: CoachWodCardProps) {
-  const [expandedMovement, setExpandedMovement] = useState<number | null>(null);
+  const [howtoExercise, setHowtoExercise] = useState<
+    NonNullable<(typeof workout.movements)[number]['exercise']> | null
+  >(null);
 
   return (
     <div
@@ -50,51 +52,22 @@ function CoachWodCard({ workout, selected, onSelect }: CoachWodCardProps) {
                 <button
                   type="button"
                   className="shrink-0 text-accent hover:underline"
-                  onClick={() =>
-                    setExpandedMovement((current) => (current === index ? null : index))
-                  }
+                  onClick={() => setHowtoExercise(movement.exercise)}
                 >
-                  {expandedMovement === index ? 'Hide' : 'How to'}
+                  How to
                 </button>
               ) : null}
             </div>
-            {expandedMovement === index && movement.exercise ? (
-              <div className="mt-1 space-y-1 rounded-card border border-border bg-page p-2">
-                {movement.exercise.photos.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {movement.exercise.photos.map((photo, i) => (
-                      <img
-                        key={i}
-                        src={getCoachExerciseMediaUrl(photo.path)}
-                        alt={photo.caption ?? movement.exercise?.name ?? ''}
-                        title={photo.caption}
-                        className="h-24 w-24 rounded-card border border-border object-cover"
-                      />
-                    ))}
-                  </div>
-                ) : null}
-                {movement.exercise.instructions.length > 0 ? (
-                  <ol className="list-decimal space-y-0.5 pl-4 text-ink">
-                    {movement.exercise.instructions.map((step, i) => (
-                      <li key={i}>{step}</li>
-                    ))}
-                  </ol>
-                ) : null}
-                {movement.exercise.cues.length > 0 ? (
-                  <ul className="list-disc space-y-0.5 pl-4">
-                    {movement.exercise.cues.map((cue, i) => (
-                      <li key={i}>{cue}</li>
-                    ))}
-                  </ul>
-                ) : null}
-                {movement.exercise.tips ? (
-                  <p className="italic">{movement.exercise.tips}</p>
-                ) : null}
-              </div>
-            ) : null}
           </li>
         ))}
       </ul>
+
+      {howtoExercise ? (
+        <CoachExerciseInfoModal
+          exercise={howtoExercise}
+          onClose={() => setHowtoExercise(null)}
+        />
+      ) : null}
     </div>
   );
 }

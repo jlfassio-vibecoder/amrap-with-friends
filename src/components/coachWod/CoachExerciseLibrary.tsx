@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CoachExerciseForm } from '@/components/coachWod/CoachExerciseForm';
+import { CoachExerciseInfoModal } from '@/components/coachWod/CoachExerciseInfoModal';
 import {
   cloneCoachExercise,
   deleteCoachExercise,
@@ -12,6 +13,7 @@ export function CoachExerciseLibrary() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<CoachExercise | 'new' | null>(null);
+  const [viewing, setViewing] = useState<CoachExercise | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -49,6 +51,7 @@ export function CoachExerciseLibrary() {
     }
     setError(null);
     setExercises((current) => current.filter((entry) => entry.id !== exercise.id));
+    setViewing((current) => (current?.id === exercise.id ? null : current));
   }
 
   async function handleDuplicate(exercise: CoachExercise) {
@@ -110,6 +113,13 @@ export function CoachExerciseLibrary() {
                 ) : null}
               </span>
               <span className="flex shrink-0 gap-3 text-xs uppercase tracking-wide">
+                <button
+                  type="button"
+                  className="text-secondary hover:text-ink hover:underline"
+                  onClick={() => setViewing(exercise)}
+                >
+                  View
+                </button>
                 {exercise.isOwner ? (
                   <button
                     type="button"
@@ -144,6 +154,10 @@ export function CoachExerciseLibrary() {
             </li>
           ))}
         </ul>
+      ) : null}
+
+      {viewing ? (
+        <CoachExerciseInfoModal exercise={viewing} onClose={() => setViewing(null)} />
       ) : null}
     </section>
   );

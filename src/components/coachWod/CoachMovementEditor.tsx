@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
+import { CoachExerciseInfoModal } from '@/components/coachWod/CoachExerciseInfoModal';
 import type { CoachExercise, CoachWorkoutMovement } from '@/lib/api/coachWod';
-import { getCoachExerciseMediaUrl } from '@/lib/media/coachExerciseMedia';
 import { EXERCISE_LIBRARY } from '@/data/exerciseLibrary';
 
 const NO_EXERCISE_VALUE = '';
@@ -15,49 +15,18 @@ function newRowKey(): string {
 }
 
 function LinkedExerciseInfo({ exercise }: { exercise: CoachExercise }) {
-  const [expanded, setExpanded] = useState(false);
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="col-span-2 sm:col-span-5">
       <button
         type="button"
         className="text-xs uppercase tracking-wide text-accent hover:underline"
-        onClick={() => setExpanded((v) => !v)}
+        onClick={() => setOpen(true)}
       >
-        {expanded ? 'Hide how-to' : 'How to'}
+        How to
       </button>
-      {expanded ? (
-        <div className="mt-2 space-y-2 rounded-card border border-border bg-page p-3 text-sm">
-          {exercise.photos.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {exercise.photos.map((photo, i) => (
-                <img
-                  key={i}
-                  src={getCoachExerciseMediaUrl(photo.path)}
-                  alt={photo.caption ?? exercise.name}
-                  title={photo.caption}
-                  className="h-32 w-32 rounded-card border border-border object-cover"
-                />
-              ))}
-            </div>
-          ) : null}
-          {exercise.instructions.length > 0 ? (
-            <ol className="list-decimal space-y-1 pl-4 text-ink">
-              {exercise.instructions.map((step, i) => (
-                <li key={i}>{step}</li>
-              ))}
-            </ol>
-          ) : null}
-          {exercise.cues.length > 0 ? (
-            <ul className="list-disc space-y-1 pl-4 text-secondary">
-              {exercise.cues.map((cue, i) => (
-                <li key={i}>{cue}</li>
-              ))}
-            </ul>
-          ) : null}
-          {exercise.tips ? <p className="text-xs italic text-secondary">{exercise.tips}</p> : null}
-        </div>
-      ) : null}
+      {open ? <CoachExerciseInfoModal exercise={exercise} onClose={() => setOpen(false)} /> : null}
     </div>
   );
 }
