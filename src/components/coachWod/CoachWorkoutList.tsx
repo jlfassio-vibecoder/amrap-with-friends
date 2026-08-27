@@ -138,6 +138,11 @@ export function CoachWorkoutList({
               <button type="button" className="min-w-0 text-left" onClick={() => onSelect(workout)}>
                 <p className="truncate text-sm font-semibold text-ink hover:text-accent hover:underline">
                   {workout.name}
+                  {workout.status === 'published' ? (
+                    <span className="ml-2 rounded-card bg-success-tint px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success-text">
+                      Published
+                    </span>
+                  ) : null}
                   {workout.isLocked ? (
                     <span
                       className="ml-2 rounded-card border border-border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary"

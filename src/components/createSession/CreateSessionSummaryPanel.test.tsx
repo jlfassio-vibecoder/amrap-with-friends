@@ -11,6 +11,7 @@ const baseProps = {
   durationMinutes: 10,
   workoutSource: 'custom' as const,
   selectedTemplate: null,
+  selectedCoachWorkout: null,
   rallyDay: 'today' as const,
   rallyTime: '18:00',
   error: null,

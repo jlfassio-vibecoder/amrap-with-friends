@@ -6,7 +6,10 @@ import {
   deleteCoachWorkout,
   fetchCoachExercises,
   fetchCoachWorkout,
+  fetchCoachWorkoutHistory,
   fetchCoachWorkouts,
+  fetchPublishedCoachWorkouts,
+  setCoachWorkoutStatus,
   upsertCoachExercise,
   upsertCoachWorkout,
 } from './coachWod';
@@ -303,5 +306,112 @@ describe('cloneCoachExercise', () => {
     expect(callRpcMock).toHaveBeenCalledWith('coach_clone_exercise', { p_id: VALID_EXERCISE.id });
     expect(result.error).toBeNull();
     expect(result.data?.name).toBe('Toe Hook Traverse (Copy)');
+  });
+});
+
+describe('setCoachWorkoutStatus', () => {
+  it('wires id/status and parses the updated workout', async () => {
+    callRpcMock.mockResolvedValue({
+      data: { ok: true, workout: { ...VALID_WORKOUT, status: 'published' } },
+      error: null,
+    });
+
+    const result = await setCoachWorkoutStatus(VALID_WORKOUT.id, 'published');
+
+    expect(callRpcMock).toHaveBeenCalledWith('coach_set_workout_status', {
+      p_id: VALID_WORKOUT.id,
+      p_status: 'published',
+    });
+    expect(result.error).toBeNull();
+    expect(result.data?.status).toBe('published');
+  });
+});
+
+describe('fetchPublishedCoachWorkouts', () => {
+  it('wires params and inlines linked exercise detail on movements', async () => {
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        workouts: [
+          {
+            id: VALID_WORKOUT.id,
+            name: VALID_WORKOUT.name,
+            focus: VALID_WORKOUT.focus,
+            durationMinutes: 15,
+            intensityTier: 4,
+            tags: VALID_WORKOUT.tags,
+            notes: VALID_WORKOUT.notes,
+            updated_at: VALID_WORKOUT.updatedAt,
+            movements: [
+              {
+                name: 'Toe Hook Traverse',
+                target: 10,
+                unit: 'reps',
+                coachExerciseId: VALID_EXERCISE.id,
+                exercise: {
+                  id: VALID_EXERCISE.id,
+                  name: VALID_EXERCISE.name,
+                  instructions: VALID_EXERCISE.instructions,
+                  cues: VALID_EXERCISE.cues,
+                  tips: VALID_EXERCISE.tips,
+                  imagePath: VALID_EXERCISE.imagePath,
+                },
+              },
+              { name: 'Dead Hang', target: 30, unit: 'seconds', exercise: null },
+            ],
+          },
+        ],
+      },
+      error: null,
+    });
+
+    const result = await fetchPublishedCoachWorkouts({ search: 'crimp', tag: 'rock climbing' });
+
+    expect(callRpcMock).toHaveBeenCalledWith('list_published_coach_workouts', {
+      p_search: 'crimp',
+      p_tag: 'rock climbing',
+      p_limit: 50,
+    });
+    expect(result.error).toBeNull();
+    expect(result.data).toHaveLength(1);
+    expect(result.data?.[0].movements[0].exercise?.name).toBe('Toe Hook Traverse');
+    expect(result.data?.[0].movements[1].exercise).toBeNull();
+  });
+
+  it('maps authentication errors', async () => {
+    callRpcMock.mockResolvedValue({ data: null, error: { message: 'Authentication required' } });
+
+    const result = await fetchPublishedCoachWorkouts({});
+
+    expect(result.data).toBeNull();
+    expect(result.error?.message).toBe('Sign in to manage coach workouts.');
+  });
+});
+
+describe('fetchCoachWorkoutHistory', () => {
+  it('wires the id and parses session rows', async () => {
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        sessions: [
+          {
+            session_id: '33333333-3333-4333-8333-333333333333',
+            nickname: 'Athlete',
+            role: 'host',
+            state: 'finished',
+            final_score: 42,
+            created_at: '2026-08-30T10:00:00.000Z',
+          },
+        ],
+      },
+      error: null,
+    });
+
+    const result = await fetchCoachWorkoutHistory(VALID_WORKOUT.id);
+
+    expect(callRpcMock).toHaveBeenCalledWith('coach_workout_history', { p_id: VALID_WORKOUT.id });
+    expect(result.error).toBeNull();
+    expect(result.data).toHaveLength(1);
+    expect(result.data?.[0].finalScore).toBe(42);
   });
 });

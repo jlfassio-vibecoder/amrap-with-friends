@@ -20,6 +20,7 @@ export interface MySessionEntry {
   partialReps: number;
   finalScore: number | null;
   scoreBreakdown: ScoreBreakdown | null;
+  coachWorkoutName: string | null;
 }
 
 export type MySessionsApiError = {
@@ -154,6 +155,7 @@ function parseMySessionEntry(raw: unknown): MySessionEntry | null {
     partialReps,
     finalScore,
     scoreBreakdown,
+    coachWorkoutName: readString(row.coach_workout_name),
   };
 }
 

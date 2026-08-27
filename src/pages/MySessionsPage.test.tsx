@@ -45,6 +45,7 @@ function entry(overrides: Partial<MySessionEntry> = {}): MySessionEntry {
     partialReps: 0,
     finalScore: null,
     scoreBreakdown: null,
+    coachWorkoutName: null,
     ...overrides,
   };
 }

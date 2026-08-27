@@ -1,8 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { CoachMovementEditor } from '@/components/coachWod/CoachMovementEditor';
+import { CoachWorkoutHistory } from '@/components/coachWod/CoachWorkoutHistory';
 import {
   cloneCoachWorkout,
   fetchCoachExercises,
+  setCoachWorkoutStatus,
   upsertCoachWorkout,
   type CoachExercise,
   type CoachWorkout,
@@ -42,6 +44,9 @@ export function CoachWorkoutForm({ workout, onSaved, onCloned, onCancel }: Coach
   const isLocked = workout?.isLocked ?? false;
   const [cloning, setCloning] = useState(false);
   const [cloneError, setCloneError] = useState<string | null>(null);
+  const [status, setStatus] = useState(workout?.status ?? 'draft');
+  const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
   const [name, setName] = useState(workout?.name ?? '');
   const [focus, setFocus] = useState(workout?.focus ?? '');
   const [durationMinutes, setDurationMinutes] = useState(String(workout?.durationMinutes ?? 15));
@@ -134,11 +139,63 @@ export function CoachWorkoutForm({ workout, onSaved, onCloned, onCancel }: Coach
     onCloned(result.data);
   }
 
+  async function handleTogglePublish() {
+    if (!workout) {
+      return;
+    }
+    setPublishError(null);
+    setPublishing(true);
+    const nextStatus = status === 'published' ? 'draft' : 'published';
+    const result = await setCoachWorkoutStatus(workout.id, nextStatus);
+    setPublishing(false);
+
+    if (result.error || !result.data) {
+      setPublishError(result.error?.message ?? 'Something went wrong. Please try again.');
+      return;
+    }
+
+    setStatus(result.data.status);
+  }
+
   return (
+    <div className="space-y-4">
     <form className="card space-y-4 p-4" onSubmit={handleSubmit}>
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-secondary">
-        {workout ? 'Edit workout' : 'New workout'}
-      </h3>
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-secondary">
+          {workout ? 'Edit workout' : 'New workout'}
+        </h3>
+        {workout ? (
+          <div className="flex items-center gap-2">
+            <span
+              className={
+                status === 'published'
+                  ? 'rounded-card bg-success-tint px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success-text'
+                  : 'rounded-card border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary'
+              }
+            >
+              {status === 'published' ? 'Published' : 'Draft'}
+            </span>
+            <button
+              type="button"
+              className="btn-outline text-xs"
+              onClick={handleTogglePublish}
+              disabled={publishing}
+            >
+              {publishing
+                ? 'Saving…'
+                : status === 'published'
+                  ? 'Unpublish'
+                  : 'Publish'}
+            </button>
+          </div>
+        ) : null}
+      </div>
+      {publishError ? <p className="text-error text-sm">{publishError}</p> : null}
+      {status === 'published' ? (
+        <p className="text-xs text-secondary">
+          Visible to every signed-in user in Create Session → Coach WODs.
+        </p>
+      ) : null}
 
       {isLocked ? (
         <div className="space-y-2 rounded-card border border-border bg-accent-tint/60 p-3 text-sm">
@@ -285,5 +342,7 @@ export function CoachWorkoutForm({ workout, onSaved, onCloned, onCancel }: Coach
         </button>
       </div>
     </form>
+    {workout ? <CoachWorkoutHistory workoutId={workout.id} /> : null}
+    </div>
   );
 }
