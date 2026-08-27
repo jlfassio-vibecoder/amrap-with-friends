@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  cloneCoachExercise,
+  cloneCoachWorkout,
   deleteCoachExercise,
   deleteCoachWorkout,
   fetchCoachExercises,
@@ -178,6 +180,18 @@ describe('fetchCoachWorkout', () => {
     expect(result.error).toBeNull();
     expect(result.data?.movements[0].coachExerciseId).toBe(VALID_EXERCISE.id);
     expect(result.data?.movements[1].coachExerciseId).toBeUndefined();
+    expect(result.data?.isLocked).toBe(false);
+  });
+
+  it('parses isLocked: true when the RPC reports a completed session', async () => {
+    callRpcMock.mockResolvedValue({
+      data: { ok: true, workout: { ...VALID_WORKOUT, isLocked: true } },
+      error: null,
+    });
+
+    const result = await fetchCoachWorkout(VALID_WORKOUT.id);
+
+    expect(result.data?.isLocked).toBe(true);
   });
 
   it('returns an error when the workout is not found', async () => {
@@ -217,6 +231,27 @@ describe('upsertCoachWorkout', () => {
     expect(result.error).toBeNull();
     expect(result.data?.name).toBe('Crimp Conditioning');
   });
+
+  it('surfaces the locked-workout rejection message from the RPC', async () => {
+    callRpcMock.mockResolvedValue({
+      data: null,
+      error: {
+        message: 'Workout is locked — it has a completed session. Clone it to make changes.',
+      },
+    });
+
+    const result = await upsertCoachWorkout({
+      id: VALID_WORKOUT.id,
+      name: 'Crimp Conditioning',
+      durationMinutes: 15,
+      intensityTier: 4,
+      movements: [{ name: 'Dead Hang' }],
+      tags: [],
+    });
+
+    expect(result.data).toBeNull();
+    expect(result.error?.message).toContain('locked');
+  });
 });
 
 describe('deleteCoachWorkout', () => {
@@ -228,5 +263,36 @@ describe('deleteCoachWorkout', () => {
     expect(callRpcMock).toHaveBeenCalledWith('coach_delete_workout', { p_id: VALID_WORKOUT.id });
     expect(result.data).toBe(true);
     expect(result.error).toBeNull();
+  });
+});
+
+describe('cloneCoachWorkout', () => {
+  it('wires the id and returns an unlocked draft copy', async () => {
+    callRpcMock.mockResolvedValue({
+      data: { ok: true, workout: { ...VALID_WORKOUT, name: 'Crimp Conditioning (Copy)', isLocked: false } },
+      error: null,
+    });
+
+    const result = await cloneCoachWorkout(VALID_WORKOUT.id);
+
+    expect(callRpcMock).toHaveBeenCalledWith('coach_clone_workout', { p_id: VALID_WORKOUT.id });
+    expect(result.error).toBeNull();
+    expect(result.data?.name).toBe('Crimp Conditioning (Copy)');
+    expect(result.data?.isLocked).toBe(false);
+  });
+});
+
+describe('cloneCoachExercise', () => {
+  it('wires the id and returns the cloned exercise', async () => {
+    callRpcMock.mockResolvedValue({
+      data: { ok: true, exercise: { ...VALID_EXERCISE, name: 'Toe Hook Traverse (Copy)' } },
+      error: null,
+    });
+
+    const result = await cloneCoachExercise(VALID_EXERCISE.id);
+
+    expect(callRpcMock).toHaveBeenCalledWith('coach_clone_exercise', { p_id: VALID_EXERCISE.id });
+    expect(result.error).toBeNull();
+    expect(result.data?.name).toBe('Toe Hook Traverse (Copy)');
   });
 });

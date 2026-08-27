@@ -28,6 +28,7 @@ export interface CoachWorkoutSummary {
   intensityTier: number;
   tags: string[];
   movementCount: number;
+  isLocked: boolean;
   updatedAt: string;
 }
 
@@ -40,6 +41,7 @@ export interface CoachWorkout {
   movements: CoachWorkoutMovement[];
   tags: string[];
   notes: string | null;
+  isLocked: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -167,6 +169,7 @@ function parseWorkoutSummary(row: Record<string, unknown>): CoachWorkoutSummary 
     intensityTier,
     tags: asStringArray(row.tags),
     movementCount,
+    isLocked: row.isLocked === true,
     updatedAt,
   };
 }
@@ -193,6 +196,7 @@ function parseWorkout(row: Record<string, unknown>): CoachWorkout | null {
     movements,
     tags: asStringArray(row.tags),
     notes: readString(row.notes),
+    isLocked: row.isLocked === true,
     createdAt,
     updatedAt,
   };
@@ -361,4 +365,48 @@ export async function deleteCoachWorkout(
   }
 
   return { data: true, error: null };
+}
+
+export async function cloneCoachWorkout(
+  id: string
+): Promise<{ data: CoachWorkout | null; error: CoachWodApiError | null }> {
+  const { data, error } = await callRpc('coach_clone_workout', { p_id: id });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachWodError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const workout = parseWorkout(asRecord(raw.workout));
+  if (!workout) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  return { data: workout, error: null };
+}
+
+export async function cloneCoachExercise(
+  id: string
+): Promise<{ data: CoachExercise | null; error: CoachWodApiError | null }> {
+  const { data, error } = await callRpc('coach_clone_exercise', { p_id: id });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachWodError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const exercise = parseExercise(asRecord(raw.exercise));
+  if (!exercise) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  return { data: exercise, error: null };
 }

@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  cloneCoachWorkout,
   deleteCoachWorkout,
   fetchCoachWorkouts,
+  type CoachWorkout,
   type CoachWorkoutSummary,
 } from '@/lib/api/coachWod';
 
@@ -16,14 +18,21 @@ const INTENSITY_LABEL: Record<number, string> = {
 interface CoachWorkoutListProps {
   onSelect: (workout: CoachWorkoutSummary) => void;
   onCreateNew: () => void;
+  onDuplicated: (workout: CoachWorkout) => void;
   refreshKey: number;
 }
 
-export function CoachWorkoutList({ onSelect, onCreateNew, refreshKey }: CoachWorkoutListProps) {
+export function CoachWorkoutList({
+  onSelect,
+  onCreateNew,
+  onDuplicated,
+  refreshKey,
+}: CoachWorkoutListProps) {
   const [workouts, setWorkouts] = useState<CoachWorkoutSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,6 +75,18 @@ export function CoachWorkoutList({ onSelect, onCreateNew, refreshKey }: CoachWor
     }
     setError(null);
     setWorkouts((current) => current.filter((entry) => entry.id !== workout.id));
+  }
+
+  async function handleDuplicate(workout: CoachWorkoutSummary) {
+    setDuplicatingId(workout.id);
+    const result = await cloneCoachWorkout(workout.id);
+    setDuplicatingId(null);
+    if (result.error || !result.data) {
+      setError(result.error?.message ?? 'Something went wrong. Please try again.');
+      return;
+    }
+    setError(null);
+    onDuplicated(result.data);
   }
 
   return (
@@ -117,6 +138,14 @@ export function CoachWorkoutList({ onSelect, onCreateNew, refreshKey }: CoachWor
               <button type="button" className="min-w-0 text-left" onClick={() => onSelect(workout)}>
                 <p className="truncate text-sm font-semibold text-ink hover:text-accent hover:underline">
                   {workout.name}
+                  {workout.isLocked ? (
+                    <span
+                      className="ml-2 rounded-card border border-border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary"
+                      title="Locked — has a completed session"
+                    >
+                      Locked
+                    </span>
+                  ) : null}
                 </p>
                 <p className="text-xs text-secondary">
                   {workout.durationMinutes}m · {INTENSITY_LABEL[workout.intensityTier] ?? workout.intensityTier}{' '}
@@ -124,15 +153,27 @@ export function CoachWorkoutList({ onSelect, onCreateNew, refreshKey }: CoachWor
                   {workout.tags.length > 0 ? ` · ${workout.tags.join(', ')}` : ''}
                 </p>
               </button>
-              <button
-                type="button"
-                className="shrink-0 text-xs uppercase tracking-wide text-error hover:underline"
-                onClick={() => {
-                  void handleDelete(workout);
-                }}
-              >
-                Delete
-              </button>
+              <span className="flex shrink-0 items-center gap-3 text-xs uppercase tracking-wide">
+                <button
+                  type="button"
+                  className="text-secondary hover:text-ink hover:underline"
+                  disabled={duplicatingId === workout.id}
+                  onClick={() => {
+                    void handleDuplicate(workout);
+                  }}
+                >
+                  {duplicatingId === workout.id ? 'Duplicating…' : 'Duplicate'}
+                </button>
+                <button
+                  type="button"
+                  className="text-error hover:underline"
+                  onClick={() => {
+                    void handleDelete(workout);
+                  }}
+                >
+                  Delete
+                </button>
+              </span>
             </li>
           ))}
         </ul>

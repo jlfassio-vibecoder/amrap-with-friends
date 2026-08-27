@@ -28,6 +28,11 @@ export default function CoachWodsPage() {
     setView({ mode: 'list' });
   }
 
+  function handleCloned(workout: CoachWorkout) {
+    setRefreshKey((k) => k + 1);
+    setView({ mode: 'edit', workout });
+  }
+
   return (
     <main className="min-h-screen bg-page">
       <AppHeader title="WOD Builder" subtitle="Coach workouts" />
@@ -43,13 +48,16 @@ export default function CoachWodsPage() {
                 void handleSelect(summary);
               }}
               onCreateNew={() => setView({ mode: 'new' })}
+              onDuplicated={handleCloned}
             />
             <CoachExerciseLibrary />
           </>
         ) : (
           <CoachWorkoutForm
+            key={view.mode === 'edit' ? view.workout.id : 'new'}
             workout={view.mode === 'edit' ? view.workout : null}
             onSaved={handleSaved}
+            onCloned={handleCloned}
             onCancel={() => setView({ mode: 'list' })}
           />
         )}

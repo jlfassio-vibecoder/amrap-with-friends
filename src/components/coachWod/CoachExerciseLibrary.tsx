@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CoachExerciseForm } from '@/components/coachWod/CoachExerciseForm';
 import {
+  cloneCoachExercise,
   deleteCoachExercise,
   fetchCoachExercises,
   type CoachExercise,
@@ -11,6 +12,7 @@ export function CoachExerciseLibrary() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<CoachExercise | 'new' | null>(null);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,6 +49,18 @@ export function CoachExerciseLibrary() {
     }
     setError(null);
     setExercises((current) => current.filter((entry) => entry.id !== exercise.id));
+  }
+
+  async function handleDuplicate(exercise: CoachExercise) {
+    setDuplicatingId(exercise.id);
+    const result = await cloneCoachExercise(exercise.id);
+    setDuplicatingId(null);
+    if (result.error || !result.data) {
+      setError(result.error?.message ?? 'Something went wrong. Please try again.');
+      return;
+    }
+    setError(null);
+    handleSaved(result.data);
   }
 
   if (editing) {
@@ -90,6 +104,16 @@ export function CoachExerciseLibrary() {
                   onClick={() => setEditing(exercise)}
                 >
                   Edit
+                </button>
+                <button
+                  type="button"
+                  className="text-secondary hover:text-ink hover:underline"
+                  disabled={duplicatingId === exercise.id}
+                  onClick={() => {
+                    void handleDuplicate(exercise);
+                  }}
+                >
+                  {duplicatingId === exercise.id ? 'Duplicating…' : 'Duplicate'}
                 </button>
                 <button
                   type="button"

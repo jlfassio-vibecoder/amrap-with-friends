@@ -54,9 +54,15 @@ interface CoachMovementEditorProps {
   movements: CoachWorkoutMovement[];
   exercises: CoachExercise[];
   onChange: (movements: CoachWorkoutMovement[]) => void;
+  readOnly?: boolean;
 }
 
-export function CoachMovementEditor({ movements, exercises, onChange }: CoachMovementEditorProps) {
+export function CoachMovementEditor({
+  movements,
+  exercises,
+  onChange,
+  readOnly = false,
+}: CoachMovementEditorProps) {
   function updateMovement(index: number, patch: Partial<CoachWorkoutMovement>) {
     const next = movements.slice();
     next[index] = { ...next[index], ...patch };
@@ -113,6 +119,7 @@ export function CoachMovementEditor({ movements, exercises, onChange }: CoachMov
               className="input-field col-span-2 text-sm sm:col-span-2"
               placeholder="Movement name"
               value={movement.name}
+              disabled={readOnly}
               onChange={(event) => updateMovement(index, { name: event.target.value })}
             />
             <input
@@ -122,6 +129,7 @@ export function CoachMovementEditor({ movements, exercises, onChange }: CoachMov
               className="input-field text-sm tabular-nums"
               placeholder="Target"
               value={movement.target ?? ''}
+              disabled={readOnly}
               onChange={(event) => {
                 const value = event.target.value;
                 updateMovement(index, { target: value === '' ? undefined : Number(value) });
@@ -132,11 +140,13 @@ export function CoachMovementEditor({ movements, exercises, onChange }: CoachMov
               className="input-field text-sm"
               placeholder="Unit"
               value={movement.unit ?? ''}
+              disabled={readOnly}
               onChange={(event) => updateMovement(index, { unit: event.target.value || undefined })}
             />
             <select
               className="input-field text-sm"
               value={movement.coachExerciseId ?? NO_EXERCISE_VALUE}
+              disabled={readOnly}
               onChange={(event) => handleLinkChange(index, event.target.value)}
             >
               <option value={NO_EXERCISE_VALUE}>No linked exercise</option>
@@ -146,21 +156,25 @@ export function CoachMovementEditor({ movements, exercises, onChange }: CoachMov
                 </option>
               ))}
             </select>
-            <button
-              type="button"
-              className="text-xs uppercase tracking-wide text-error hover:underline sm:justify-self-end"
-              onClick={() => removeMovement(index)}
-            >
-              Remove movement
-            </button>
+            {!readOnly ? (
+              <button
+                type="button"
+                className="text-xs uppercase tracking-wide text-error hover:underline sm:justify-self-end"
+                onClick={() => removeMovement(index)}
+              >
+                Remove movement
+              </button>
+            ) : null}
             {linkedExercise ? <LinkedExerciseInfo exercise={linkedExercise} /> : null}
           </div>
         );
       })}
 
-      <button type="button" className="btn-outline text-sm" onClick={addMovement}>
-        Add movement
-      </button>
+      {!readOnly ? (
+        <button type="button" className="btn-outline text-sm" onClick={addMovement}>
+          Add movement
+        </button>
+      ) : null}
     </div>
   );
 }

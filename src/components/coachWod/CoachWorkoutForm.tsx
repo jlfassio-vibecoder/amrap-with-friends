@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { CoachMovementEditor } from '@/components/coachWod/CoachMovementEditor';
 import {
+  cloneCoachWorkout,
   fetchCoachExercises,
   upsertCoachWorkout,
   type CoachExercise,
@@ -33,10 +34,14 @@ function textToTags(value: string): string[] {
 interface CoachWorkoutFormProps {
   workout?: CoachWorkout | null;
   onSaved: (workout: CoachWorkout) => void;
+  onCloned: (workout: CoachWorkout) => void;
   onCancel: () => void;
 }
 
-export function CoachWorkoutForm({ workout, onSaved, onCancel }: CoachWorkoutFormProps) {
+export function CoachWorkoutForm({ workout, onSaved, onCloned, onCancel }: CoachWorkoutFormProps) {
+  const isLocked = workout?.isLocked ?? false;
+  const [cloning, setCloning] = useState(false);
+  const [cloneError, setCloneError] = useState<string | null>(null);
   const [name, setName] = useState(workout?.name ?? '');
   const [focus, setFocus] = useState(workout?.focus ?? '');
   const [durationMinutes, setDurationMinutes] = useState(String(workout?.durationMinutes ?? 15));
@@ -112,12 +117,48 @@ export function CoachWorkoutForm({ workout, onSaved, onCancel }: CoachWorkoutFor
     onSaved(result.data);
   }
 
+  async function handleClone() {
+    if (!workout) {
+      return;
+    }
+    setCloneError(null);
+    setCloning(true);
+    const result = await cloneCoachWorkout(workout.id);
+    setCloning(false);
+
+    if (result.error || !result.data) {
+      setCloneError(result.error?.message ?? 'Something went wrong. Please try again.');
+      return;
+    }
+
+    onCloned(result.data);
+  }
+
   return (
     <form className="card space-y-4 p-4" onSubmit={handleSubmit}>
       <h3 className="text-sm font-semibold uppercase tracking-wide text-secondary">
         {workout ? 'Edit workout' : 'New workout'}
       </h3>
 
+      {isLocked ? (
+        <div className="space-y-2 rounded-card border border-border bg-accent-tint/60 p-3 text-sm">
+          <p className="text-ink">
+            This workout is locked — it has a completed session, so its history stays
+            comparable. Clone it to make changes.
+          </p>
+          {cloneError ? <p className="text-error text-sm">{cloneError}</p> : null}
+          <button
+            type="button"
+            className="btn-primary text-sm"
+            onClick={handleClone}
+            disabled={cloning}
+          >
+            {cloning ? 'Cloning…' : 'Clone to edit'}
+          </button>
+        </div>
+      ) : null}
+
+      <fieldset disabled={isLocked} className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block space-y-1">
           <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
@@ -192,7 +233,12 @@ export function CoachWorkoutForm({ workout, onSaved, onCancel }: CoachWorkoutFor
         </div>
       </div>
 
-      <CoachMovementEditor movements={movements} exercises={exercises} onChange={setMovements} />
+      <CoachMovementEditor
+        movements={movements}
+        exercises={exercises}
+        onChange={setMovements}
+        readOnly={isLocked}
+      />
 
       <label className="block space-y-1">
         <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
@@ -219,15 +265,23 @@ export function CoachWorkoutForm({ workout, onSaved, onCancel }: CoachWorkoutFor
           placeholder="Scale hang time to ability."
         />
       </label>
+      </fieldset>
 
       {error ? <p className="text-error text-sm">{error}</p> : null}
 
       <div className="flex gap-2">
-        <button type="submit" className="btn-primary flex-1" disabled={submitting}>
-          {submitting ? 'Saving…' : 'Save workout'}
-        </button>
-        <button type="button" className="btn-outline" onClick={onCancel} disabled={submitting}>
-          Cancel
+        {!isLocked ? (
+          <button type="submit" className="btn-primary flex-1" disabled={submitting}>
+            {submitting ? 'Saving…' : 'Save workout'}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className={isLocked ? 'btn-outline flex-1' : 'btn-outline'}
+          onClick={onCancel}
+          disabled={submitting}
+        >
+          {isLocked ? 'Back' : 'Cancel'}
         </button>
       </div>
     </form>
