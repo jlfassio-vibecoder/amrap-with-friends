@@ -49,11 +49,20 @@ export default function CoachPage() {
       <AppHeader title="Coach" subtitle="Product analytics" />
 
       <div className="mx-auto max-w-6xl space-y-8 px-6 pb-10 pt-0 lg:px-8 lg:py-10">
-        <p className="flex justify-end">
-          <Link className="link-accent text-sm" to="/coach/wods">
-            WOD Builder →
+        <section className="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold text-ink">WOD Builder</h2>
+            <p className="text-sm text-secondary">
+              Create custom exercises and coach-authored workouts.
+            </p>
+          </div>
+          <Link
+            className="btn-primary inline-flex shrink-0 items-center justify-center text-sm"
+            to="/coach/wods"
+          >
+            Open WOD Builder
           </Link>
-        </p>
+        </section>
 
         <CoachActivityCohorts selectedUser={selectedUser} onSelect={setSelectedUser} />
         <CoachUserPicker selectedUser={selectedUser} onSelect={setSelectedUser} />
