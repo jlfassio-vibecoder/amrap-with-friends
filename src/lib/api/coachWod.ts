@@ -631,7 +631,11 @@ export async function fetchPublishedCoachWorkouts(input: {
   });
 
   if (error) {
-    return { data: null, error: { message: mapCoachWodError(error.message) } };
+    const message =
+      error.message && error.message.includes('Authentication required')
+        ? 'Sign in to browse coach workouts.'
+        : mapCoachWodError(error.message);
+    return { data: null, error: { message } };
   }
 
   const raw = asRecord(data);

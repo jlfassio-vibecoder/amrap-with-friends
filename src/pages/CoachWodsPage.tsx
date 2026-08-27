@@ -33,6 +33,10 @@ export default function CoachWodsPage() {
     setView({ mode: 'edit', workout });
   }
 
+  function handleStatusChanged() {
+    setRefreshKey((k) => k + 1);
+  }
+
   return (
     <main className="min-h-screen bg-page">
       <AppHeader title="WOD Builder" subtitle="Coach workouts" />
@@ -58,6 +62,7 @@ export default function CoachWodsPage() {
             workout={view.mode === 'edit' ? view.workout : null}
             onSaved={handleSaved}
             onCloned={handleCloned}
+            onStatusChanged={handleStatusChanged}
             onCancel={() => setView({ mode: 'list' })}
           />
         )}
