@@ -682,8 +682,9 @@ BEGIN
                   WHERE (m ? 'coachExerciseId') AND ce.id = (m ->> 'coachExerciseId')::uuid
                 )
               )
+              ORDER BY ord
             ), '[]'::jsonb)
-            FROM jsonb_array_elements(cw.movements) m
+            FROM jsonb_array_elements(cw.movements) WITH ORDINALITY AS t(m, ord)
           ) AS movements
         FROM public.coach_workouts cw
         WHERE cw.status = 'published'
