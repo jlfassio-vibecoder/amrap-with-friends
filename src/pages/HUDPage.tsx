@@ -4,9 +4,12 @@ import { AttritionGrid } from '@/components/hud/AttritionGrid';
 import { ClassificationBadge } from '@/components/hud/ClassificationBadge';
 import { DailyTelemetry } from '@/components/hud/DailyTelemetry';
 import { DomainMatrixChart } from '@/components/hud/DomainMatrixChart';
+import { OutsideActivitySummaryCard } from '@/components/hud/OutsideActivitySummaryCard';
+import { OvertrainingWarningCard } from '@/components/hud/OvertrainingWarningCard';
 import { PhysicalActivityList } from '@/components/hud/PhysicalActivityList';
 import { PhysicalActivityLogForm } from '@/components/hud/PhysicalActivityLogForm';
 import { WeeklyBaselineBar } from '@/components/hud/WeeklyBaselineBar';
+import { evaluateOvertrainingRisk } from '@/lib/hud/evaluateOvertrainingRisk';
 import { quotasFromProfile } from '@/lib/hud/classificationQuotas';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { useHudTelemetry } from '@/hooks/useHudTelemetry';
@@ -21,6 +24,11 @@ export default function HUDPage() {
     !loading && !profileLoading && isAuthenticated && telemetry;
 
   const activityLog = usePhysicalActivityLog();
+  const overtrainingRisk = telemetry
+    ? evaluateOvertrainingRisk(telemetry.overtraining)
+    : null;
+  const showOvertrainingWarning =
+    overtrainingRisk !== null && overtrainingRisk.riskLevel !== 'normal';
 
   return (
     <main className="min-h-screen bg-page">
@@ -58,6 +66,13 @@ export default function HUDPage() {
               perceivedClassification={profile?.perceivedClassification ?? null}
               quotas={quotas}
             />
+
+            <div className={showOvertrainingWarning ? 'grid gap-4 lg:grid-cols-2' : ''}>
+              {showOvertrainingWarning ? (
+                <OvertrainingWarningCard overtraining={telemetry.overtraining} />
+              ) : null}
+              <OutsideActivitySummaryCard entries={activityLog.entries} />
+            </div>
 
             <div className="grid gap-4 lg:grid-cols-2">
               <DailyTelemetry lastLockedAt={telemetry.lastLockedAt} />
