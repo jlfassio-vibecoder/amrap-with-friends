@@ -32,6 +32,12 @@ export type HudClassification = {
   progress: ClassificationProgress;
 };
 
+export type HudOvertraining = {
+  acuteLoad7d: number;
+  chronicWeeklyLoad28d: number;
+  consecutiveHighIntensityDays: number;
+};
+
 export interface HUDTelemetryPayload {
   weekMinutes: number;
   weekPviAverage: number | null;
@@ -40,4 +46,5 @@ export interface HUDTelemetryPayload {
   attrition: boolean[];
   domainMinutes30d: HudDomainMinutes;
   classification: HudClassification;
+  overtraining: HudOvertraining;
 }

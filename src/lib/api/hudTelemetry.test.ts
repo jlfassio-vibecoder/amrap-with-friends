@@ -35,6 +35,12 @@ const classification = {
   },
 };
 
+const overtraining = {
+  acuteLoad7d: 60,
+  chronicWeeklyLoad28d: 60,
+  consecutiveHighIntensityDays: 0,
+};
+
 describe('parseHudTelemetryPayload', () => {
   it('parses a valid Phase 4 payload with classification', () => {
     expect(
@@ -46,6 +52,7 @@ describe('parseHudTelemetryPayload', () => {
         attrition: attrition12,
         domainMinutes30d,
         classification,
+        overtraining,
       })
     ).toEqual({
       weekMinutes: 75,
@@ -55,6 +62,7 @@ describe('parseHudTelemetryPayload', () => {
       attrition: attrition12,
       domainMinutes30d,
       classification,
+      overtraining,
     });
   });
 
@@ -78,6 +86,7 @@ describe('parseHudTelemetryPayload', () => {
         attrition: Array.from({ length: 12 }, () => false),
         domainMinutes30d: { 5: 0, 10: 0, 15: 0, 20: 0, other: 0 },
         classification: emptyClassification,
+        overtraining: { acuteLoad7d: 0, chronicWeeklyLoad28d: 0, consecutiveHighIntensityDays: 0 },
       })
     ).toEqual({
       weekMinutes: 0,
@@ -87,6 +96,7 @@ describe('parseHudTelemetryPayload', () => {
       attrition: Array.from({ length: 12 }, () => false),
       domainMinutes30d: { 5: 0, 10: 0, 15: 0, 20: 0, other: 0 },
       classification: emptyClassification,
+      overtraining: { acuteLoad7d: 0, chronicWeeklyLoad28d: 0, consecutiveHighIntensityDays: 0 },
     });
   });
 
@@ -99,6 +109,7 @@ describe('parseHudTelemetryPayload', () => {
         lastLockedAt: null,
         attrition: Array.from({ length: 12 }, () => false),
         domainMinutes30d,
+        overtraining,
       })
     ).toBeNull();
     expect(

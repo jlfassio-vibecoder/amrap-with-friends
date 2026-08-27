@@ -4,6 +4,7 @@ import type {
   ClassificationRank,
   HudClassification,
   HudDomainMinutes,
+  HudOvertraining,
   HUDTelemetryPayload,
 } from '@/lib/hud/types';
 
@@ -25,6 +26,14 @@ function readNumber(value: unknown): number | null {
 function readNonNegativeInt(value: unknown): number | null {
   const n = readNumber(value);
   if (n === null || n < 0 || !Number.isInteger(n)) {
+    return null;
+  }
+  return n;
+}
+
+function readNonNegativeNumber(value: unknown): number | null {
+  const n = readNumber(value);
+  if (n === null || n < 0) {
     return null;
   }
   return n;
@@ -119,6 +128,29 @@ function readClassificationProgress(
   };
 }
 
+function readOvertraining(value: unknown): HudOvertraining | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const row = value as Record<string, unknown>;
+  const acuteLoad7d = readNonNegativeNumber(row.acuteLoad7d);
+  const chronicWeeklyLoad28d = readNonNegativeNumber(row.chronicWeeklyLoad28d);
+  const consecutiveHighIntensityDays = readNonNegativeInt(
+    row.consecutiveHighIntensityDays
+  );
+
+  if (
+    acuteLoad7d === null ||
+    chronicWeeklyLoad28d === null ||
+    consecutiveHighIntensityDays === null
+  ) {
+    return null;
+  }
+
+  return { acuteLoad7d, chronicWeeklyLoad28d, consecutiveHighIntensityDays };
+}
+
 function readClassification(value: unknown): HudClassification | null {
   if (!value || typeof value !== 'object') {
     return null;
@@ -151,6 +183,7 @@ export function parseHudTelemetryPayload(
   const attrition = readAttrition(row.attrition);
   const domainMinutes30d = readDomainMinutes(row.domainMinutes30d);
   const classification = readClassification(row.classification);
+  const overtraining = readOvertraining(row.overtraining);
 
   if (
     weekMinutes === null ||
@@ -158,7 +191,8 @@ export function parseHudTelemetryPayload(
     !weekEndsAt ||
     attrition === null ||
     domainMinutes30d === null ||
-    classification === null
+    classification === null ||
+    overtraining === null
   ) {
     return null;
   }
@@ -188,6 +222,7 @@ export function parseHudTelemetryPayload(
     attrition,
     domainMinutes30d,
     classification,
+    overtraining,
   };
 }
 
