@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { CoachExerciseInfoModal } from '@/components/coachWod/CoachExerciseInfoModal';
 import type { CoachExercise, CoachWorkoutMovement } from '@/lib/api/coachWod';
-import { getCoachExerciseMediaUrl } from '@/lib/media/coachExerciseMedia';
+import { EXERCISE_LIBRARY } from '@/data/exerciseLibrary';
 
 const NO_EXERCISE_VALUE = '';
+const MOVEMENT_NAME_DATALIST_ID = 'coach-movement-name-options';
 
 function blankMovement(): CoachWorkoutMovement {
   return { name: '' };
@@ -13,43 +15,18 @@ function newRowKey(): string {
 }
 
 function LinkedExerciseInfo({ exercise }: { exercise: CoachExercise }) {
-  const [expanded, setExpanded] = useState(false);
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="col-span-2 sm:col-span-5">
       <button
         type="button"
         className="text-xs uppercase tracking-wide text-accent hover:underline"
-        onClick={() => setExpanded((v) => !v)}
+        onClick={() => setOpen(true)}
       >
-        {expanded ? 'Hide how-to' : 'How to'}
+        How to
       </button>
-      {expanded ? (
-        <div className="mt-2 space-y-2 rounded-card border border-border bg-page p-3 text-sm">
-          {exercise.imagePath ? (
-            <img
-              src={getCoachExerciseMediaUrl(exercise.imagePath)}
-              alt={exercise.name}
-              className="h-32 w-32 rounded-card border border-border object-cover"
-            />
-          ) : null}
-          {exercise.instructions.length > 0 ? (
-            <ol className="list-decimal space-y-1 pl-4 text-ink">
-              {exercise.instructions.map((step, i) => (
-                <li key={i}>{step}</li>
-              ))}
-            </ol>
-          ) : null}
-          {exercise.cues.length > 0 ? (
-            <ul className="list-disc space-y-1 pl-4 text-secondary">
-              {exercise.cues.map((cue, i) => (
-                <li key={i}>{cue}</li>
-              ))}
-            </ul>
-          ) : null}
-          {exercise.tips ? <p className="text-xs italic text-secondary">{exercise.tips}</p> : null}
-        </div>
-      ) : null}
+      {open ? <CoachExerciseInfoModal exercise={exercise} onClose={() => setOpen(false)} /> : null}
     </div>
   );
 }
@@ -69,6 +46,17 @@ export function CoachMovementEditor({
 }: CoachMovementEditorProps) {
   const [rowKeys, setRowKeys] = useState(() => movements.map(() => newRowKey()));
 
+  const nameOptions = useMemo(() => {
+    const names = new Set<string>();
+    for (const exercise of exercises) {
+      names.add(exercise.name);
+    }
+    for (const info of EXERCISE_LIBRARY) {
+      names.add(info.name);
+    }
+    return Array.from(names).sort();
+  }, [exercises]);
+
   function updateMovement(index: number, patch: Partial<CoachWorkoutMovement>) {
     const next = movements.slice();
     next[index] = { ...next[index], ...patch };
@@ -83,6 +71,21 @@ export function CoachMovementEditor({
   function addMovement() {
     setRowKeys((keys) => [...keys, newRowKey()]);
     onChange([...movements, blankMovement()]);
+  }
+
+  function moveMovement(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= movements.length) {
+      return;
+    }
+    setRowKeys((keys) => {
+      const next = keys.slice();
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+    const next = movements.slice();
+    [next[index], next[target]] = [next[target], next[index]];
+    onChange(next);
   }
 
   function findExercise(id: string | undefined): CoachExercise | null {
@@ -115,6 +118,12 @@ export function CoachMovementEditor({
         Movements
       </span>
 
+      <datalist id={MOVEMENT_NAME_DATALIST_ID}>
+        {nameOptions.map((option) => (
+          <option key={option} value={option} />
+        ))}
+      </datalist>
+
       {movements.map((movement, index) => {
         const linkedExercise = findExercise(movement.coachExerciseId);
         return (
@@ -128,6 +137,7 @@ export function CoachMovementEditor({
               placeholder="Movement name"
               value={movement.name}
               disabled={readOnly}
+              list={MOVEMENT_NAME_DATALIST_ID}
               onChange={(event) => updateMovement(index, { name: event.target.value })}
             />
             <input
@@ -174,13 +184,31 @@ export function CoachMovementEditor({
               ))}
             </select>
             {!readOnly ? (
-              <button
-                type="button"
-                className="text-xs uppercase tracking-wide text-error hover:underline sm:justify-self-end"
-                onClick={() => removeMovement(index)}
-              >
-                Remove movement
-              </button>
+              <div className="col-span-2 flex items-center gap-3 sm:col-span-5 sm:justify-end">
+                <button
+                  type="button"
+                  className="text-xs uppercase tracking-wide text-secondary hover:text-ink hover:underline disabled:opacity-40"
+                  disabled={index === 0}
+                  onClick={() => moveMovement(index, -1)}
+                >
+                  Move up
+                </button>
+                <button
+                  type="button"
+                  className="text-xs uppercase tracking-wide text-secondary hover:text-ink hover:underline disabled:opacity-40"
+                  disabled={index === movements.length - 1}
+                  onClick={() => moveMovement(index, 1)}
+                >
+                  Move down
+                </button>
+                <button
+                  type="button"
+                  className="text-xs uppercase tracking-wide text-error hover:underline"
+                  onClick={() => removeMovement(index)}
+                >
+                  Remove movement
+                </button>
+              </div>
             ) : null}
             {linkedExercise ? <LinkedExerciseInfo exercise={linkedExercise} /> : null}
           </div>

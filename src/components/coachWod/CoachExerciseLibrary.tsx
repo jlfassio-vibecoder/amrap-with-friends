@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CoachExerciseForm } from '@/components/coachWod/CoachExerciseForm';
+import { CoachExerciseInfoModal } from '@/components/coachWod/CoachExerciseInfoModal';
 import {
   cloneCoachExercise,
   deleteCoachExercise,
@@ -12,6 +13,7 @@ export function CoachExerciseLibrary() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<CoachExercise | 'new' | null>(null);
+  const [viewing, setViewing] = useState<CoachExercise | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -49,6 +51,7 @@ export function CoachExerciseLibrary() {
     }
     setError(null);
     setExercises((current) => current.filter((entry) => entry.id !== exercise.id));
+    setViewing((current) => (current?.id === exercise.id ? null : current));
   }
 
   async function handleDuplicate(exercise: CoachExercise) {
@@ -96,15 +99,36 @@ export function CoachExerciseLibrary() {
         <ul className="divide-y divide-divider">
           {exercises.map((exercise) => (
             <li key={exercise.id} className="flex items-center justify-between gap-3 py-2">
-              <span className="text-sm font-semibold text-ink">{exercise.name}</span>
+              <span className="text-sm font-semibold text-ink">
+                {exercise.name}
+                {exercise.isShared ? (
+                  <span className="ml-2 rounded-card bg-accent-tint px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
+                    Shared
+                  </span>
+                ) : null}
+                {!exercise.isOwner ? (
+                  <span className="ml-2 rounded-card border border-border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary">
+                    Another coach
+                  </span>
+                ) : null}
+              </span>
               <span className="flex shrink-0 gap-3 text-xs uppercase tracking-wide">
                 <button
                   type="button"
                   className="text-secondary hover:text-ink hover:underline"
-                  onClick={() => setEditing(exercise)}
+                  onClick={() => setViewing(exercise)}
                 >
-                  Edit
+                  View
                 </button>
+                {exercise.isOwner ? (
+                  <button
+                    type="button"
+                    className="text-secondary hover:text-ink hover:underline"
+                    onClick={() => setEditing(exercise)}
+                  >
+                    Edit
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className="text-secondary hover:text-ink hover:underline"
@@ -115,19 +139,25 @@ export function CoachExerciseLibrary() {
                 >
                   {duplicatingId === exercise.id ? 'Duplicating…' : 'Duplicate'}
                 </button>
-                <button
-                  type="button"
-                  className="text-error hover:underline"
-                  onClick={() => {
-                    void handleDelete(exercise);
-                  }}
-                >
-                  Delete
-                </button>
+                {exercise.isOwner ? (
+                  <button
+                    type="button"
+                    className="text-error hover:underline"
+                    onClick={() => {
+                      void handleDelete(exercise);
+                    }}
+                  >
+                    Delete
+                  </button>
+                ) : null}
               </span>
             </li>
           ))}
         </ul>
+      ) : null}
+
+      {viewing ? (
+        <CoachExerciseInfoModal exercise={viewing} onClose={() => setViewing(null)} />
       ) : null}
     </section>
   );
