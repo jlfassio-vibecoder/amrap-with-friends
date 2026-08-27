@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import type { CoachExercise } from '@/lib/api/coachWod';
 import { upsertCoachExercise } from '@/lib/api/coachWod';
 import {
@@ -33,8 +33,22 @@ export function CoachExerciseForm({ exercise, onSaved, onCancel }: CoachExercise
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const previewUrl = imageFile
-    ? URL.createObjectURL(imageFile)
+  const blobPreviewUrl = useMemo(
+    () => (imageFile ? URL.createObjectURL(imageFile) : null),
+    [imageFile]
+  );
+
+  useEffect(() => {
+    if (!blobPreviewUrl) {
+      return;
+    }
+    return () => {
+      URL.revokeObjectURL(blobPreviewUrl);
+    };
+  }, [blobPreviewUrl]);
+
+  const previewUrl = blobPreviewUrl
+    ? blobPreviewUrl
     : imagePath
       ? getCoachExerciseMediaUrl(imagePath)
       : null;

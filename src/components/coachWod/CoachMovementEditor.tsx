@@ -8,6 +8,10 @@ function blankMovement(): CoachWorkoutMovement {
   return { name: '' };
 }
 
+function newRowKey(): string {
+  return crypto.randomUUID();
+}
+
 function LinkedExerciseInfo({ exercise }: { exercise: CoachExercise }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -63,6 +67,8 @@ export function CoachMovementEditor({
   onChange,
   readOnly = false,
 }: CoachMovementEditorProps) {
+  const [rowKeys, setRowKeys] = useState(() => movements.map(() => newRowKey()));
+
   function updateMovement(index: number, patch: Partial<CoachWorkoutMovement>) {
     const next = movements.slice();
     next[index] = { ...next[index], ...patch };
@@ -70,10 +76,12 @@ export function CoachMovementEditor({
   }
 
   function removeMovement(index: number) {
+    setRowKeys((keys) => keys.filter((_, i) => i !== index));
     onChange(movements.filter((_, i) => i !== index));
   }
 
   function addMovement() {
+    setRowKeys((keys) => [...keys, newRowKey()]);
     onChange([...movements, blankMovement()]);
   }
 
@@ -111,7 +119,7 @@ export function CoachMovementEditor({
         const linkedExercise = findExercise(movement.coachExerciseId);
         return (
           <div
-            key={index}
+            key={rowKeys[index] ?? `movement-${index}`}
             className="grid grid-cols-2 gap-2 rounded-card border border-border p-3 sm:grid-cols-5"
           >
             <input
@@ -126,13 +134,22 @@ export function CoachMovementEditor({
               type="number"
               inputMode="numeric"
               min={1}
+              step={1}
               className="input-field text-sm tabular-nums"
               placeholder="Target"
               value={movement.target ?? ''}
               disabled={readOnly}
               onChange={(event) => {
                 const value = event.target.value;
-                updateMovement(index, { target: value === '' ? undefined : Number(value) });
+                if (value === '') {
+                  updateMovement(index, { target: undefined });
+                  return;
+                }
+                const parsed = Number(value);
+                if (!Number.isInteger(parsed) || parsed < 1) {
+                  return;
+                }
+                updateMovement(index, { target: parsed });
               }}
             />
             <input

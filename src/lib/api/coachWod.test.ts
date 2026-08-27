@@ -264,6 +264,15 @@ describe('deleteCoachWorkout', () => {
     expect(result.data).toBe(true);
     expect(result.error).toBeNull();
   });
+
+  it('surfaces the locked-workout rejection from the RPC payload', async () => {
+    callRpcMock.mockResolvedValue({ data: { ok: false, reason: 'locked' }, error: null });
+
+    const result = await deleteCoachWorkout(VALID_WORKOUT.id);
+
+    expect(result.data).toBe(false);
+    expect(result.error?.message).toContain('locked');
+  });
 });
 
 describe('cloneCoachWorkout', () => {

@@ -361,6 +361,15 @@ export async function deleteCoachWorkout(
 
   const raw = asRecord(data);
   if (raw.ok !== true) {
+    if (raw.reason === 'locked') {
+      return {
+        data: false,
+        error: {
+          message:
+            'Workout is locked — it has a completed session. Clone it to make changes.',
+        },
+      };
+    }
     return { data: false, error: { message: 'Workout not found. It may have already been deleted.' } };
   }
 
