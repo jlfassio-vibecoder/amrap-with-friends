@@ -24,6 +24,11 @@ import { GhostPacerStrip } from '@/components/GhostPacerStrip';
 import { CopyInviteLink } from '@/components/session/CopyInviteLink';
 import { EditRallyScheduleForm } from '@/components/session/EditRallyScheduleForm';
 import { LobbyCountdownPanel } from '@/components/session/LobbyCountdownPanel';
+import { SafetyNoticeModal } from '@/components/safety/SafetyNoticeModal';
+import { useSessionSafetyNotices } from '@/components/safety/useSessionSafetyNotices';
+import { CoachWalkthrough } from '@/components/walkthrough/CoachWalkthrough';
+import { WalkthroughCompleteModal } from '@/components/walkthrough/WalkthroughCompleteModal';
+import { useStagingWalkthrough } from '@/components/walkthrough/useStagingWalkthrough';
 import { useGhostPacer } from '@/hooks/useGhostPacer';
 import { useTacticalAudio } from '@/hooks/useTacticalAudio';
 import type { StoredGhostSelection } from '@/lib/sessionIdentity';
@@ -219,10 +224,21 @@ function LiveSessionView({
   const [nowMs, setNowMs] = useState(() => Date.now());
   const ignitionStarted = useRef(false);
   const audioUnlockedRef = useRef(false);
+  const {
+    activeNotice: activeSafetyNotice,
+    safetyNoticesComplete,
+    confirmSafetyNotice,
+  } = useSessionSafetyNotices(sessionId);
 
   const channel = useSessionChannel(sessionId, { participantId, nickname });
   const live = useLiveAmrapSession(sessionId, channel);
   const { isHost, start: startSession, phase: livePhase } = live;
+  const walkthrough = useStagingWalkthrough({
+    sessionId,
+    isHost,
+    enabled: safetyNoticesComplete && livePhase === 'waiting',
+  });
+  const sessionReady = safetyNoticesComplete && walkthrough.complete;
   const { unlock: unlockAudio, playRoundLogged } = useTacticalAudio({
     phase: live.phase,
     timeLeftSec: live.timeLeftSec,
@@ -257,12 +273,17 @@ function LiveSessionView({
   }, [lobbyCountdownEndsAt, sessionId]);
 
   useEffect(() => {
-    if (!isHost || !lobbyIgnited || ignitionStarted.current) {
+    if (
+      !isHost ||
+      !lobbyIgnited ||
+      !sessionReady ||
+      ignitionStarted.current
+    ) {
       return;
     }
     ignitionStarted.current = true;
     void startSession();
-  }, [isHost, lobbyIgnited, startSession]);
+  }, [isHost, lobbyIgnited, sessionReady, startSession]);
 
   const ghostPacer = useGhostPacer({
     sessionId,
@@ -288,9 +309,21 @@ function LiveSessionView({
     !ghostPacer.isLoading;
 
   // Copilot suggestion ignored: ignition Start/Abort is restored in LobbyCountdownPanel when armed; changing showStart would duplicate host Start while ticking.
-  const showStart = isHost && livePhase === 'waiting' && !lobbyCountdownArmed && !live.isPractice;
+  const showStart =
+    isHost &&
+    livePhase === 'waiting' &&
+    !lobbyCountdownArmed &&
+    !live.isPractice &&
+    safetyNoticesComplete;
   const showPractice =
-    livePhase === 'waiting' && !lobbyCountdownArmed && !live.isPractice;
+    livePhase === 'waiting' &&
+    !lobbyCountdownArmed &&
+    !live.isPractice &&
+    safetyNoticesComplete;
+  const showSafetyNotice =
+    livePhase === 'waiting' && activeSafetyNotice !== null;
+  const showWalkthrough = walkthrough.active;
+  const showWalkthroughFinale = walkthrough.showingFinale;
   const showPause =
     livePhase === 'work' &&
     !live.isPaused &&
@@ -398,7 +431,13 @@ function LiveSessionView({
     >
       <div
         className="lg:flex lg:min-h-0 lg:flex-1 lg:flex-col"
-        inert={showPartialRepsModal || undefined}
+        inert={
+          showPartialRepsModal ||
+          showSafetyNotice ||
+          showWalkthrough ||
+          showWalkthroughFinale ||
+          undefined
+        }
       >
         <AppHeader
           title="Staging area"
@@ -455,7 +494,10 @@ function LiveSessionView({
         <div className="space-y-6 px-6 lg:mx-auto lg:grid lg:w-full lg:max-w-7xl lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:items-stretch lg:gap-6 lg:space-y-0 lg:overflow-hidden lg:px-8 lg:py-6">
           <div className="space-y-6 lg:flex lg:min-h-0 lg:flex-col lg:gap-4 lg:overflow-hidden lg:space-y-0">
             <div className="space-y-6 lg:min-h-0 lg:shrink lg:space-y-4 lg:overflow-y-auto lg:rounded-card lg:border lg:border-border lg:bg-surface lg:p-6 lg:shadow-card">
-              <section className="card space-y-3 p-4 text-center lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
+              <section
+                className="card space-y-3 p-4 text-center lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none"
+                data-walkthrough-id="status"
+              >
                 <p className="text-display text-sm text-secondary lg:text-base">
                   {phaseLabel(live.phase)}
                 </p>
@@ -511,6 +553,7 @@ function LiveSessionView({
                 phase={livePhase}
                 countdownArmed={lobbyCountdownArmed}
                 ticking={lobbyTicking}
+                actionsEnabled={sessionReady}
                 onAudioUnlock={handleAudioUnlock}
                 onStart={() => {
                   handleAudioUnlock();
@@ -545,11 +588,15 @@ function LiveSessionView({
                 />
               ) : null}
 
-              <section className="flex flex-wrap gap-2 lg:justify-center">
+              <section
+                className="flex flex-wrap gap-2 lg:justify-center"
+                data-walkthrough-id="actions"
+              >
                 {showStart && (
                   <button
                     type="button"
                     className="btn-primary lg:px-6 lg:py-3 lg:text-base"
+                    disabled={!sessionReady}
                     onClick={() => {
                       handleAudioUnlock();
                       void startSession();
@@ -562,6 +609,7 @@ function LiveSessionView({
                   <button
                     type="button"
                     className="btn-outline lg:px-6 lg:py-3 lg:text-base"
+                    disabled={!sessionReady}
                     onClick={() => {
                       handleAudioUnlock();
                       live.startPractice();
@@ -634,7 +682,10 @@ function LiveSessionView({
             </div>
 
             {live.workout.length > 0 && (
-              <section className="card shrink-0 space-y-2 p-4">
+              <section
+                className="card shrink-0 space-y-2 p-4"
+                data-walkthrough-id="workout"
+              >
                 <h2 className="text-display text-sm text-ink lg:text-lg">Workout</h2>
                 <ul className="space-y-1 text-sm lg:space-y-4">
                   {live.workout.map((exercise, index) => (
@@ -716,6 +767,29 @@ function LiveSessionView({
       ) : null}
 
       {authOpenForSave ? <AuthModal onClose={handleAuthCloseForSave} /> : null}
+
+      {showSafetyNotice && activeSafetyNotice ? (
+        <SafetyNoticeModal
+          title={activeSafetyNotice.title}
+          body={activeSafetyNotice.body}
+          onConfirm={confirmSafetyNotice}
+        />
+      ) : null}
+
+      {showWalkthrough && walkthrough.activeStep ? (
+        <CoachWalkthrough
+          step={walkthrough.activeStep}
+          onNext={walkthrough.next}
+          onSkip={walkthrough.skipVisit}
+        />
+      ) : null}
+
+      {showWalkthroughFinale ? (
+        <WalkthroughCompleteModal
+          onContinue={walkthrough.confirmLetsDoThis}
+          onNeverShowAgain={walkthrough.dismissForever}
+        />
+      ) : null}
     </main>
   );
 }

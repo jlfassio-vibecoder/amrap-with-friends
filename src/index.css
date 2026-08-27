@@ -1,6 +1,15 @@
+/*
+ * PALETTE — edit hex values only here.
+ * Light = :root. Dark = [data-theme='dark'].
+ * Tailwind and components must use var(--color-*) / semantic utilities only.
+ */
+
 :root {
+  color-scheme: light;
+
   --color-page: #f7f2ea;
   --color-surface: #fffdf8;
+  --color-surface-muted: #efe6d6;
   --color-border: #e8ddc9;
   --color-divider: #efe6d6;
   --color-ink: #211d18;
@@ -23,17 +32,27 @@
   --color-on-accent: #fffdf8;
   --color-scrim: rgb(33 29 24 / 0.4);
 
-  --shadow-card: 0 2px 0 0 #e8ddc9;
+  --color-avatar-coral: #e64a2e;
+  --color-avatar-sage: #5a9e52;
+  --color-avatar-ochre: #d98c1f;
+  --color-avatar-slate: #8a8072;
+  --color-avatar-plum: #8b5a6b;
+  --color-avatar-teal: #4a8f8f;
+
+  --shadow-card: 0 2px 0 0 var(--color-border);
 }
 
 [data-theme='dark'] {
-  --color-page: #17130f;
-  --color-surface: #241f19;
-  --color-border: #3a332b;
-  --color-divider: #2c2620;
-  --color-ink: #f7f2ea;
-  --color-secondary: #b9ac95;
-  --color-muted: #8f8573;
+  color-scheme: dark;
+
+  --color-page: #28251e;
+  --color-surface: #1e1c18;
+  --color-surface-muted: #221e1a;
+  --color-border: #4a443c;
+  --color-divider: #3a352e;
+  --color-ink: #e8e2d6;
+  --color-secondary: #a89f8e;
+  --color-muted: #8a8072;
 
   --color-accent: #e64a2e;
   --color-accent-hover: #ff6a45;
@@ -43,13 +62,20 @@
   --color-success-tint: rgb(90 158 82 / 0.18);
   --color-success-text: #8fd485;
 
-  --color-neutral: #f7f2ea;
-  --color-neutral-foreground: #17130f;
+  --color-neutral: #e8e2d6;
+  --color-neutral-foreground: #28251e;
 
   --color-on-accent: #fffdf8;
-  --color-scrim: rgb(0 0 0 / 0.55);
+  --color-scrim: rgb(0 0 0 / 0.5);
 
-  --shadow-card: 0 2px 0 0 #3a332b;
+  --color-avatar-coral: #e64a2e;
+  --color-avatar-sage: #5a9e52;
+  --color-avatar-ochre: #d98c1f;
+  --color-avatar-slate: #8a8072;
+  --color-avatar-plum: #8b5a6b;
+  --color-avatar-teal: #4a8f8f;
+
+  --shadow-card: 0 2px 0 0 var(--color-border);
 }
 
 @tailwind base;
@@ -80,7 +106,8 @@
   }
 
   .input-field {
-    @apply w-full rounded-card border border-border bg-surface px-3 py-2 text-ink focus:outline-none focus:ring-2 focus:ring-accent;
+    @apply w-full rounded-card border border-border px-3 py-2 text-ink focus:outline-none focus:ring-2 focus:ring-accent;
+    background-color: var(--color-surface-muted);
   }
 
   .text-display {

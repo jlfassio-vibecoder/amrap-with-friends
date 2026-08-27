@@ -272,6 +272,11 @@ describe('fetchCoachUserDetail', () => {
             joined_at: '2026-08-26T10:30:00.000Z',
           },
         ],
+        overtraining: {
+          acuteLoad7d: 120,
+          chronicWeeklyLoad28d: 60,
+          consecutiveHighIntensityDays: 2,
+        },
       },
       error: null,
     });
@@ -286,5 +291,10 @@ describe('fetchCoachUserDetail', () => {
     expect(result.data?.summary.totalSessions).toBe(3);
     expect(result.data?.classificationHistory).toHaveLength(1);
     expect(result.data?.sessions[0]?.finalScore).toBe(42);
+    expect(result.data?.overtraining).toEqual({
+      acuteLoad7d: 120,
+      chronicWeeklyLoad28d: 60,
+      consecutiveHighIntensityDays: 2,
+    });
   });
 });

@@ -15,10 +15,10 @@ export function ExerciseInfoTrigger({ name, size = 'sm' }: ExerciseInfoTriggerPr
     return null;
   }
 
-  const glyphClassName =
+  const buttonClassName =
     size === 'lg'
-      ? 'flex h-6 w-6 items-center justify-center rounded-full border border-border text-sm font-semibold text-secondary'
-      : 'flex h-4 w-4 items-center justify-center rounded-full border border-border text-[10px] font-semibold text-secondary';
+      ? 'inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-sm font-semibold text-secondary hover:border-accent hover:bg-accent-tint hover:text-ink'
+      : 'inline-flex shrink-0 items-center gap-1 rounded-full border border-border bg-surface px-2.5 py-1 text-xs font-semibold text-secondary hover:border-accent hover:bg-accent-tint hover:text-ink';
 
   function handleClick(event: MouseEvent<HTMLButtonElement>) {
     event.stopPropagation();
@@ -30,13 +30,18 @@ export function ExerciseInfoTrigger({ name, size = 'sm' }: ExerciseInfoTriggerPr
     <>
       <button
         type="button"
-        className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center text-secondary hover:text-ink"
-        aria-label={`About ${info.name}`}
+        className={buttonClassName}
+        aria-label={`How to do ${info.name}`}
+        title={`Form, cues, and tips for ${info.name}`}
         onClick={handleClick}
       >
-        <span className={glyphClassName} aria-hidden="true">
-          i
+        <span
+          className="flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] font-bold leading-none text-on-accent"
+          aria-hidden="true"
+        >
+          ?
         </span>
+        How to
       </button>
       {open ? <ExerciseInfoModal info={info} onClose={() => setOpen(false)} /> : null}
     </>

@@ -35,6 +35,7 @@ DECLARE
   v_day_offset int;
   v_is_hard_day boolean;
 BEGIN
+  -- Copilot suggestion ignored: callers already validate timezone (hud_telemetry) or pass UTC (coach_user_detail), and reject null user ids before invoke — matches classification_quotas trust-caller pattern.
   v_tz := coalesce(nullif(btrim(coalesce(p_timezone, '')), ''), 'UTC');
   v_local_today := (now() AT TIME ZONE v_tz)::date;
 

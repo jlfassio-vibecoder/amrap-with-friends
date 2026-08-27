@@ -115,7 +115,10 @@ export function GhostPicker({
   }
 
   return (
-    <section className="card space-y-2 p-4 text-left lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
+    <section
+      className="card space-y-2 p-4 text-left lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none"
+      data-walkthrough-id="pacer"
+    >
       <div className="space-y-1">
         <label
           htmlFor="ghost-picker"

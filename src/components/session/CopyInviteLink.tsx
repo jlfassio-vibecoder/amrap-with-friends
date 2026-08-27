@@ -41,7 +41,7 @@ export function CopyInviteLink({ sessionId }: CopyInviteLinkProps) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-walkthrough-id="rally-link">
       <button
         type="button"
         className="btn-primary w-full uppercase tracking-widest"

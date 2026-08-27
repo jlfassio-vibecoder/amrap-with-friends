@@ -14,12 +14,12 @@ describe('ExerciseInfoTrigger', () => {
 
   it('renders an info button for Burpees', () => {
     render(<ExerciseInfoTrigger name="Burpees" />);
-    expect(screen.getByRole('button', { name: 'About Burpees' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'How to do Burpees' })).toBeTruthy();
   });
 
   it('opens the modal showing setup steps, sequence photo, and empty video', () => {
     render(<ExerciseInfoTrigger name="Burpees" />);
-    fireEvent.click(screen.getByRole('button', { name: 'About Burpees' }));
+    fireEvent.click(screen.getByRole('button', { name: 'How to do Burpees' }));
 
     expect(screen.getByRole('dialog')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Burpees' })).toBeTruthy();
@@ -37,7 +37,7 @@ describe('ExerciseInfoTrigger', () => {
 
   it('shows AMRAP tip and hides empty common mistakes for Air Squats', () => {
     render(<ExerciseInfoTrigger name="Air Squats" />);
-    fireEvent.click(screen.getByRole('button', { name: 'About Air Squats' }));
+    fireEvent.click(screen.getByRole('button', { name: 'How to do Air Squats' }));
 
     expect(screen.queryByText('Common mistakes')).toBeNull();
     expect(screen.getByText('AMRAP tip')).toBeTruthy();
@@ -48,26 +48,26 @@ describe('ExerciseInfoTrigger', () => {
 
   it('resolves parenthetical movement names for the trigger', () => {
     render(<ExerciseInfoTrigger name="Commando Planks (Up-Downs)" />);
-    expect(screen.getByRole('button', { name: 'About Commando Planks' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'How to do Commando Planks' })).toBeTruthy();
   });
 
   it('closes the modal via the Close button', () => {
     render(<ExerciseInfoTrigger name="Burpees" />);
-    fireEvent.click(screen.getByRole('button', { name: 'About Burpees' }));
+    fireEvent.click(screen.getByRole('button', { name: 'How to do Burpees' }));
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('closes the modal via Escape', () => {
     render(<ExerciseInfoTrigger name="Burpees" />);
-    fireEvent.click(screen.getByRole('button', { name: 'About Burpees' }));
+    fireEvent.click(screen.getByRole('button', { name: 'How to do Burpees' }));
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('closes the modal via backdrop click', () => {
     render(<ExerciseInfoTrigger name="Burpees" />);
-    fireEvent.click(screen.getByRole('button', { name: 'About Burpees' }));
+    fireEvent.click(screen.getByRole('button', { name: 'How to do Burpees' }));
     fireEvent.click(screen.getByRole('dialog'));
     expect(screen.queryByRole('dialog')).toBeNull();
   });
