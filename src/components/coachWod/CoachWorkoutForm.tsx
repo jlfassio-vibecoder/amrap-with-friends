@@ -37,10 +37,17 @@ interface CoachWorkoutFormProps {
   workout?: CoachWorkout | null;
   onSaved: (workout: CoachWorkout) => void;
   onCloned: (workout: CoachWorkout) => void;
+  onStatusChanged?: (workout: CoachWorkout) => void;
   onCancel: () => void;
 }
 
-export function CoachWorkoutForm({ workout, onSaved, onCloned, onCancel }: CoachWorkoutFormProps) {
+export function CoachWorkoutForm({
+  workout,
+  onSaved,
+  onCloned,
+  onStatusChanged,
+  onCancel,
+}: CoachWorkoutFormProps) {
   const isLocked = workout?.isLocked ?? false;
   const [cloning, setCloning] = useState(false);
   const [cloneError, setCloneError] = useState<string | null>(null);
@@ -155,6 +162,7 @@ export function CoachWorkoutForm({ workout, onSaved, onCloned, onCancel }: Coach
     }
 
     setStatus(result.data.status);
+    onStatusChanged?.(result.data);
   }
 
   return (
@@ -342,7 +350,7 @@ export function CoachWorkoutForm({ workout, onSaved, onCloned, onCancel }: Coach
         </button>
       </div>
     </form>
-    {workout ? <CoachWorkoutHistory workoutId={workout.id} /> : null}
+    {workout ? <CoachWorkoutHistory key={workout.id} workoutId={workout.id} /> : null}
     </div>
   );
 }

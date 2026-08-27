@@ -384,7 +384,7 @@ describe('fetchPublishedCoachWorkouts', () => {
     const result = await fetchPublishedCoachWorkouts({});
 
     expect(result.data).toBeNull();
-    expect(result.error?.message).toBe('Sign in to manage coach workouts.');
+    expect(result.error?.message).toBe('Sign in to browse coach workouts.');
   });
 });
 

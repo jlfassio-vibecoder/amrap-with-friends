@@ -8,8 +8,10 @@ interface CoachWorkoutHistoryProps {
 
 export function CoachWorkoutHistory({ workoutId }: CoachWorkoutHistoryProps) {
   const [entries, setEntries] = useState<CoachWorkoutHistoryEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadedForId, setLoadedForId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const loading = loadedForId !== workoutId;
 
   useEffect(() => {
     let cancelled = false;
@@ -17,13 +19,15 @@ export function CoachWorkoutHistory({ workoutId }: CoachWorkoutHistoryProps) {
       if (cancelled) {
         return;
       }
-      setLoading(false);
       if (result.error) {
         setError(result.error.message);
+        setEntries([]);
+        setLoadedForId(workoutId);
         return;
       }
       setError(null);
       setEntries(result.data ?? []);
+      setLoadedForId(workoutId);
     });
     return () => {
       cancelled = true;
@@ -36,7 +40,7 @@ export function CoachWorkoutHistory({ workoutId }: CoachWorkoutHistoryProps) {
         Who's run this
       </h3>
       {loading ? <p className="text-sm text-secondary">Loading history…</p> : null}
-      {error ? <p className="text-error text-sm">{error}</p> : null}
+      {!loading && error ? <p className="text-error text-sm">{error}</p> : null}
       {!loading && !error ? (
         <CoachDataTable
           rows={entries}
