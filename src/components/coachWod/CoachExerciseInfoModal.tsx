@@ -97,6 +97,7 @@ export function CoachExerciseInfoModal({ exercise, onClose }: CoachExerciseInfoM
             <h3 className="text-sm font-semibold text-ink">Setup &amp; execution</h3>
             <ol className="list-decimal space-y-1 pl-5 text-sm text-ink">
               {exercise.instructions.map((step) => (
+                // Copilot suggestion ignored: key={step} matches ExerciseInfoModal's setupAndExecution list pattern.
                 <li key={step}>{step}</li>
               ))}
             </ol>
