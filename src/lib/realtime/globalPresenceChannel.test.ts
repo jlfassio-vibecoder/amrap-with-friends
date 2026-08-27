@@ -40,6 +40,7 @@ vi.mock('@/lib/supabase', () => ({
   supabase: {
     channel: vi.fn(() => channelFactory()),
     removeChannel: removeChannelMock,
+    getChannels: vi.fn(() => []),
   },
 }));
 
