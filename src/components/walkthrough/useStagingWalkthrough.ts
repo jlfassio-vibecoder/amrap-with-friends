@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   stepsForRole,
   walkthroughTargetSelector,
@@ -11,6 +11,12 @@ import {
 } from './walkthroughPrefs';
 
 export type WalkthroughStatus = 'idle' | 'running' | 'finale' | 'done';
+
+type WalkthroughState = {
+  key: string;
+  status: 'idle' | 'done';
+  stepIndex: number;
+};
 
 function defaultIsTargetPresent(targetId: string): boolean {
   if (typeof document === 'undefined') {
@@ -31,6 +37,14 @@ function resolveStep(
     }
   }
   return { step: null, index: steps.length };
+}
+
+function initialState(key: string, role: WalkthroughRole): WalkthroughState {
+  return {
+    key,
+    status: isWalkthroughDismissed(role) ? 'done' : 'idle',
+    stepIndex: 0,
+  };
 }
 
 export function useStagingWalkthrough({
@@ -55,84 +69,71 @@ export function useStagingWalkthrough({
   confirmLetsDoThis: () => void;
 } {
   const role: WalkthroughRole = isHost ? 'host' : 'joiner';
+  const walkthroughKey = `${sessionId}:${role}`;
   const steps = useMemo(() => stepsForRole(isHost), [isHost]);
-  const [status, setStatus] = useState<WalkthroughStatus>('idle');
-  const [stepIndex, setStepIndex] = useState(0);
-  const [targetEpoch, setTargetEpoch] = useState(0);
-
-  useEffect(() => {
-    setStatus(isWalkthroughDismissed(role) ? 'done' : 'idle');
-    setStepIndex(0);
-  }, [sessionId, role]);
-
-  useEffect(() => {
-    if (!enabled) {
-      return;
-    }
-    if (isWalkthroughDismissed(role)) {
-      setStatus('done');
-      return;
-    }
-    setStatus((current) => (current === 'idle' ? 'running' : current));
-  }, [enabled, role]);
-
-  const resolved = useMemo(
-    () => resolveStep(steps, stepIndex, isTargetPresent),
-    [steps, stepIndex, isTargetPresent, targetEpoch]
+  const [state, setState] = useState<WalkthroughState>(() =>
+    initialState(walkthroughKey, role)
   );
 
-  useEffect(() => {
-    if (status !== 'running') {
-      return;
-    }
-    if (resolved.step === null) {
-      setStatus('finale');
-      return;
-    }
-    if (resolved.index !== stepIndex) {
-      setStepIndex(resolved.index);
-    }
-  }, [status, resolved, stepIndex]);
+  const normalized =
+    state.key === walkthroughKey ? state : initialState(walkthroughKey, role);
+
+  const dismissed = isWalkthroughDismissed(role);
+  const baseStatus = dismissed ? 'done' : normalized.status;
+  const effectiveStatus: WalkthroughStatus =
+    dismissed
+      ? 'done'
+      : enabled && baseStatus === 'idle'
+        ? 'running'
+        : baseStatus;
+
+  const resolved = useMemo(
+    () => resolveStep(steps, normalized.stepIndex, isTargetPresent),
+    [steps, normalized.stepIndex, isTargetPresent]
+  );
+
+  const showingFinale =
+    enabled && effectiveStatus === 'running' && resolved.step === null;
+  const status: WalkthroughStatus = showingFinale ? 'finale' : effectiveStatus;
+  const complete = status === 'done' || dismissed;
+  const active =
+    enabled && status === 'running' && resolved.step !== null;
 
   const next = useCallback(() => {
-    const upcoming = resolveStep(steps, stepIndex + 1, isTargetPresent);
-    if (upcoming.step === null) {
-      setStatus('finale');
-      return;
-    }
-    setStepIndex(upcoming.index);
-  }, [isTargetPresent, stepIndex, steps]);
+    const from =
+      state.key === walkthroughKey ? state.stepIndex : 0;
+    const upcoming = resolveStep(steps, from + 1, isTargetPresent);
+    setState({
+      key: walkthroughKey,
+      status: 'idle',
+      stepIndex: upcoming.step === null ? steps.length : upcoming.index,
+    });
+  }, [state.key, state.stepIndex, walkthroughKey, steps, isTargetPresent]);
 
   const skipVisit = useCallback(() => {
-    setStatus('done');
-  }, []);
+    setState({
+      key: walkthroughKey,
+      status: 'done',
+      stepIndex: state.key === walkthroughKey ? state.stepIndex : 0,
+    });
+  }, [walkthroughKey, state.key, state.stepIndex]);
 
   const confirmLetsDoThis = useCallback(() => {
-    setStatus('done');
-  }, []);
+    setState({
+      key: walkthroughKey,
+      status: 'done',
+      stepIndex: state.key === walkthroughKey ? state.stepIndex : 0,
+    });
+  }, [walkthroughKey, state.key, state.stepIndex]);
 
   const dismissForever = useCallback(() => {
     dismissWalkthroughForever(role);
-    setStatus('done');
-  }, [role]);
-
-  const recheckTargets = useCallback(() => {
-    setTargetEpoch((current) => current + 1);
-  }, []);
-
-  useEffect(() => {
-    if (status !== 'running' || !enabled) {
-      return;
-    }
-    const frame = window.requestAnimationFrame(() => {
-      recheckTargets();
+    setState({
+      key: walkthroughKey,
+      status: 'done',
+      stepIndex: state.key === walkthroughKey ? state.stepIndex : 0,
     });
-    return () => window.cancelAnimationFrame(frame);
-  }, [enabled, status, recheckTargets, sessionId]);
-
-  const complete = status === 'done' || isWalkthroughDismissed(role);
-  const active = enabled && status === 'running' && resolved.step !== null;
-  const showingFinale = enabled && status === 'finale';
+  }, [role, walkthroughKey, state.key, state.stepIndex]);
 
   return {
     status,

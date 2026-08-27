@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { SESSION_SAFETY_NOTICES, type SafetyNotice } from './sessionSafetyNotices';
 
 export function useSessionSafetyNotices(sessionId: string): {
@@ -6,11 +6,12 @@ export function useSessionSafetyNotices(sessionId: string): {
   safetyNoticesComplete: boolean;
   confirmSafetyNotice: () => void;
 } {
-  const [noticeIndex, setNoticeIndex] = useState(0);
+  const [state, setState] = useState<{ sessionId: string; noticeIndex: number }>({
+    sessionId,
+    noticeIndex: 0,
+  });
 
-  useEffect(() => {
-    setNoticeIndex(0);
-  }, [sessionId]);
+  const noticeIndex = state.sessionId === sessionId ? state.noticeIndex : 0;
 
   const safetyNoticesComplete = noticeIndex >= SESSION_SAFETY_NOTICES.length;
   const activeNotice = safetyNoticesComplete
@@ -18,7 +19,12 @@ export function useSessionSafetyNotices(sessionId: string): {
     : (SESSION_SAFETY_NOTICES[noticeIndex] ?? null);
 
   function confirmSafetyNotice() {
-    setNoticeIndex((current) => current + 1);
+    setState((current) => {
+      if (current.sessionId !== sessionId) {
+        return { sessionId, noticeIndex: 1 };
+      }
+      return { sessionId, noticeIndex: current.noticeIndex + 1 };
+    });
   }
 
   return { activeNotice, safetyNoticesComplete, confirmSafetyNotice };
