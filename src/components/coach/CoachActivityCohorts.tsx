@@ -13,6 +13,7 @@ import { useOnlineUserIds } from '@/hooks/useOnlineUserIds';
 
 const COHORT_FETCH_LIMIT = 200;
 
+// Copilot suggestion ignored: Active Now filtering the top-200 last-active list needs a presence-id RPC to be correct at scale; current coach_users_list cannot look up arbitrary online user ids.
 function formatLastActive(value: string | null): string {
   if (!value) {
     return 'Never';
@@ -139,7 +140,7 @@ export function CoachActivityCohorts({ selectedUser, onSelect }: CoachActivityCo
               ),
             },
             {
-              header: '',
+              header: 'Online',
               render: (row) => <OnlineDot online={onlineUserIds.has(row.userId)} />,
             },
             { header: 'Email', render: (row) => row.email },

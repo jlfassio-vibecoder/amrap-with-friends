@@ -1,20 +1,6 @@
--- Coach "resume activity" outreach support: broaden last_active_at to
--- cover any signal of app usage (not just joining an AMRAP session), and
--- add an activity-recency bucket filter so a coach can list users by how
--- long it's been since they were last seen — the standard cohorts used
--- for "come back" reminder outreach (24h / 3d / 7d / lapsed 7d+).
---
--- "Active now" (live/realtime) is intentionally NOT a server-side bucket
--- here: it reflects who currently has the app open via Supabase Realtime
--- Presence, which is ephemeral client state, not something SQL can see.
--- The client filters the 'all' list against the live presence set for
--- that cohort instead.
-
-CREATE INDEX IF NOT EXISTS analytics_events_user_occurred_idx
-  ON public.analytics_events (user_id, occurred_at)
-  WHERE user_id IS NOT NULL;
-
-DROP FUNCTION IF EXISTS public.coach_users_list(text, int);
+-- Fix coach_users_list last_active_at: Postgres GREATEST returns NULL when any
+-- argument is NULL, so users with only one activity signal were treated as never
+-- active. Coalesce missing timestamps to -infinity, then NULLIF back.
 
 CREATE OR REPLACE FUNCTION public.coach_users_list(
   p_search text DEFAULT NULL,
@@ -51,10 +37,6 @@ BEGIN
     'ok', true,
     'users', (
       WITH last_activity AS (
-        -- last_active_at = the most recent of: joining a live AMRAP
-        -- session, logging outside physical activity, or any tracked
-        -- analytics event. A user who only logs outside workouts (no
-        -- AMRAP participation) should not look permanently lapsed.
         SELECT
           ap.user_id,
           NULLIF(
