@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
-import { GLOBAL_PRESENCE_CHANNEL } from '@/lib/realtime/globalPresenceChannel';
-import { supabase } from '@/lib/supabase';
+import { startGlobalPresenceBroadcast } from '@/lib/realtime/globalPresenceChannel';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 
 /** Marks the current user as "online" on the shared presence channel for as
@@ -14,18 +13,6 @@ export function useGlobalPresenceBroadcast() {
       return;
     }
 
-    const channel = supabase.channel(GLOBAL_PRESENCE_CHANNEL, {
-      config: { presence: { key: userId } },
-    });
-
-    channel.subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
-        await channel.track({ online_at: new Date().toISOString() });
-      }
-    });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return startGlobalPresenceBroadcast(userId);
   }, [isAuthenticated, userId]);
 }
