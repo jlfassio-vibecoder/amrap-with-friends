@@ -1,3 +1,5 @@
+import { useId } from 'react';
+
 interface SafetyNoticeModalProps {
   title: string;
   body: string;
@@ -11,7 +13,7 @@ export function SafetyNoticeModal({
   confirmLabel = 'I understand',
   onConfirm,
 }: SafetyNoticeModalProps) {
-  const titleId = 'safety-notice-modal-title';
+  const titleId = useId();
 
   return (
     <div

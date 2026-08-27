@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from 'react';
+import { useId, useLayoutEffect, useState } from 'react';
 import {
   walkthroughTargetSelector,
   type StagingWalkthroughStep,
@@ -26,13 +26,15 @@ interface BubblePos {
   left: number;
 }
 
-function measureTarget(targetId: string): HighlightRect | null {
+function getTargetElement(targetId: string): HTMLElement | null {
   const element = document.querySelector(walkthroughTargetSelector(targetId));
-  if (!(element instanceof HTMLElement)) {
+  return element instanceof HTMLElement ? element : null;
+}
+
+function measureTarget(targetId: string): HighlightRect | null {
+  const element = getTargetElement(targetId);
+  if (!element) {
     return null;
-  }
-  if (typeof element.scrollIntoView === 'function') {
-    element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
   const rect = element.getBoundingClientRect();
   return {
@@ -79,10 +81,16 @@ function CoachChip() {
 }
 
 export function CoachWalkthrough({ step, onNext, onSkip }: CoachWalkthroughProps) {
+  const titleId = useId();
   const [highlight, setHighlight] = useState<HighlightRect | null>(null);
   const [bubble, setBubble] = useState<BubblePos>({ top: 24, left: 16 });
 
   useLayoutEffect(() => {
+    const element = getTargetElement(step.targetId);
+    if (element && typeof element.scrollIntoView === 'function') {
+      element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+
     function update() {
       const nextHighlight = measureTarget(step.targetId);
       setHighlight(nextHighlight);
@@ -99,8 +107,6 @@ export function CoachWalkthrough({ step, onNext, onSkip }: CoachWalkthroughProps
       window.removeEventListener('scroll', update, true);
     };
   }, [step.id, step.targetId]);
-
-  const titleId = 'coach-walkthrough-title';
 
   return (
     <div

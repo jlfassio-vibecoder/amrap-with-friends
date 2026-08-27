@@ -1,3 +1,5 @@
+import { useId } from 'react';
+
 interface WalkthroughCompleteModalProps {
   onContinue: () => void;
   onNeverShowAgain: () => void;
@@ -7,7 +9,7 @@ export function WalkthroughCompleteModal({
   onContinue,
   onNeverShowAgain,
 }: WalkthroughCompleteModalProps) {
-  const titleId = 'walkthrough-complete-title';
+  const titleId = useId();
 
   return (
     <div
