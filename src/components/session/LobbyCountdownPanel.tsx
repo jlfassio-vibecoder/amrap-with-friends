@@ -19,6 +19,8 @@ interface LobbyCountdownPanelProps {
   phase: LiveSessionPhase;
   countdownArmed: boolean;
   ticking: boolean;
+  /** When false, Engage Clock / Start now stay disabled (e.g. safety notices pending). */
+  actionsEnabled?: boolean;
   onStart: () => void;
   onAudioUnlock?: () => void;
 }
@@ -29,6 +31,7 @@ export function LobbyCountdownPanel({
   phase,
   countdownArmed,
   ticking,
+  actionsEnabled = true,
   onStart,
   onAudioUnlock,
 }: LobbyCountdownPanelProps) {
@@ -101,7 +104,7 @@ export function LobbyCountdownPanel({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-walkthrough-id="t-minus">
       {!countdownArmed ? (
         <section className="card space-y-3 p-4">
           <p className="text-sm font-semibold uppercase tracking-widest">
@@ -139,6 +142,7 @@ export function LobbyCountdownPanel({
             className="btn-primary w-full uppercase tracking-widest"
             disabled={
               busy ||
+              !actionsEnabled ||
               !Number.isInteger(selectedSeconds) ||
               selectedSeconds <= 0 ||
               selectedSeconds > LOBBY_COUNTDOWN_MAX_SECONDS
@@ -163,7 +167,7 @@ export function LobbyCountdownPanel({
           <button
             type="button"
             className="btn-primary uppercase tracking-widest"
-            disabled={busy}
+            disabled={busy || !actionsEnabled}
             onClick={() => {
               onAudioUnlock?.();
               onStart();

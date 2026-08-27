@@ -49,6 +49,7 @@ export function CoachUserDetailPanel({ userId }: { userId: string }) {
   }
 
   const { profile, summary, sessions, classificationHistory, overtraining } = detail;
+  // Copilot suggestion ignored: mirrors HUDPage pre-check so elevated/high gating stays consistent at the call site.
   const overtrainingRisk = evaluateOvertrainingRisk(overtraining);
 
   return (

@@ -125,11 +125,18 @@ export function WorkoutTemplatePicker({
                 </button>
                 <button
                   type="button"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-surface text-xs font-semibold text-secondary hover:border-accent/40 hover:text-ink"
-                  aria-label={`About ${category.label}`}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1.5 text-xs font-semibold text-secondary hover:border-accent hover:bg-accent-tint hover:text-ink"
+                  aria-label={`What's ${category.label}?`}
+                  title={`Learn what the ${category.label} style is for`}
                   onClick={() => setInfoCategory(category.id)}
                 >
-                  i
+                  <span
+                    className="flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] font-bold leading-none text-on-accent"
+                    aria-hidden="true"
+                  >
+                    ?
+                  </span>
+                  Guide
                 </button>
               </div>
             );

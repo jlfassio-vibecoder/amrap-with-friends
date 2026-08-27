@@ -5,7 +5,10 @@ export default {
     extend: {
       colors: {
         page: 'var(--color-page)',
-        surface: 'var(--color-surface)',
+        surface: {
+          DEFAULT: 'var(--color-surface)',
+          muted: 'var(--color-surface-muted)',
+        },
         border: 'var(--color-border)',
         divider: 'var(--color-divider)',
         ink: 'var(--color-ink)',
@@ -28,12 +31,12 @@ export default {
         },
         'on-accent': 'var(--color-on-accent)',
         avatar: {
-          coral: '#e64a2e',
-          sage: '#5a9e52',
-          ochre: '#c4922a',
-          slate: '#6b6560',
-          plum: '#8b5a6b',
-          teal: '#4a8f8f',
+          coral: 'var(--color-avatar-coral)',
+          sage: 'var(--color-avatar-sage)',
+          ochre: 'var(--color-avatar-ochre)',
+          slate: 'var(--color-avatar-slate)',
+          plum: 'var(--color-avatar-plum)',
+          teal: 'var(--color-avatar-teal)',
         },
       },
       fontFamily: {

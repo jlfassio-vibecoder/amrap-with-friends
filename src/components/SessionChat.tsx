@@ -80,6 +80,7 @@ export function SessionChat({
   return (
     <section
       className={`card flex min-h-0 flex-col gap-3 overflow-hidden p-4 ${className ?? ''}`}
+      data-walkthrough-id="chat"
     >
       <h2 className="shrink-0 text-display text-sm text-ink lg:text-base">Chat</h2>
 

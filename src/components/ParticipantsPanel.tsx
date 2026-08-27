@@ -170,6 +170,7 @@ export function ParticipantsPanel({
   return (
     <section
       className={`card flex h-full min-h-0 flex-col gap-3 overflow-hidden p-4 ${className ?? ''}`}
+      data-walkthrough-id="participants"
     >
       <div className="flex shrink-0 items-center justify-between gap-3">
         <h2 className="text-display text-sm text-ink lg:text-base">Participants</h2>
