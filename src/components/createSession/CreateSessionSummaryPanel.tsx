@@ -12,8 +12,9 @@ export type CreateScheduleMode = 'now' | 'rally';
 interface CreateSessionSummaryPanelProps {
   nickname: string;
   durationMinutes: number;
-  workoutSource: 'custom' | 'library';
+  workoutSource: 'custom' | 'library' | 'coach';
   selectedTemplate: WorkoutTemplate | null;
+  selectedCoachWorkout: { name: string; movements: { name: string; target?: number; unit?: string }[] } | null;
   scheduleMode: CreateScheduleMode;
   rallyDay: RallyDay;
   rallyTime: string;
@@ -48,6 +49,7 @@ export function CreateSessionSummaryPanel({
   durationMinutes,
   workoutSource,
   selectedTemplate,
+  selectedCoachWorkout,
   scheduleMode,
   rallyDay,
   rallyTime,
@@ -62,7 +64,8 @@ export function CreateSessionSummaryPanel({
   onSubmit,
 }: CreateSessionSummaryPanelProps) {
   const durationLockedByTemplate =
-    workoutSource === 'library' && selectedTemplate !== null;
+    (workoutSource === 'library' && selectedTemplate !== null) ||
+    (workoutSource === 'coach' && selectedCoachWorkout !== null);
   const submitDisabled = loading || capReached;
   const submitLabel = loading
     ? 'Creating…'
@@ -112,6 +115,24 @@ export function CreateSessionSummaryPanel({
               {selectedTemplate.movements.map((movement) => (
                 <li key={`${selectedTemplate.id}-${movement.name}`}>
                   {formatTemplateMovementLine(movement)}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ) : null}
+
+      {workoutSource === 'coach' && selectedCoachWorkout ? (
+        <div className="space-y-2">
+          <p className="text-sm font-semibold">Selected workout</p>
+          <div className="rounded-card border border-border bg-page p-4 space-y-2">
+            <p className="text-display text-base text-ink">{selectedCoachWorkout.name}</p>
+            <ul className="space-y-1 text-sm text-ink">
+              {selectedCoachWorkout.movements.map((movement, index) => (
+                <li key={index}>
+                  {movement.target ? `${movement.target} ` : ''}
+                  {movement.name}
+                  {movement.unit && movement.unit !== 'reps' ? ` ${movement.unit}` : ''}
                 </li>
               ))}
             </ul>

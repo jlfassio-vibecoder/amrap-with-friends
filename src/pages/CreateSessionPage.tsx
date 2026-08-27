@@ -10,6 +10,9 @@ import {
   type WorkoutSource,
 } from '@/components/createSession/WorkoutSourceToggle';
 import { WorkoutTemplatePicker } from '@/components/createSession/WorkoutTemplatePicker';
+import { CoachWodPicker } from '@/components/createSession/CoachWodPicker';
+import { exercisesToWorkoutText } from '@/lib/workout/templateToExercises';
+import type { PublishedCoachWorkout } from '@/lib/api/coachWod';
 import {
   TIME_DOMAINS,
   WORKOUT_CATEGORIES,
@@ -62,6 +65,9 @@ export default function CreateSessionPage() {
   const [durationMinutes, setDurationMinutes] = useState<number>(5);
   const [selectedCategory, setSelectedCategory] = useState<WorkoutCategory>('blood-shunt');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [selectedCoachWorkout, setSelectedCoachWorkout] = useState<PublishedCoachWorkout | null>(
+    null
+  );
   const [workoutText, setWorkoutText] = useState('10 Burpees\n15 Push-ups');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -208,6 +214,20 @@ export default function CreateSessionPage() {
     if (source === 'custom') {
       setSelectedTemplateId(null);
     }
+    if (source !== 'coach') {
+      setSelectedCoachWorkout(null);
+    }
+  }
+
+  function handleCoachWorkoutSelect(workout: PublishedCoachWorkout) {
+    setSelectedCoachWorkout(workout);
+    setDurationMinutes(workout.durationMinutes);
+    setWorkoutText(exercisesToWorkoutText(workout.movements));
+    track('coach_workout_selected', {
+      coach_workout_id: workout.id,
+      duration_minutes: workout.durationMinutes,
+      intensity_tier: workout.intensityTier,
+    });
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -216,6 +236,11 @@ export default function CreateSessionPage() {
 
     if (workoutSource === 'library' && !selectedTemplate) {
       setError('Select a workout from the library before creating a session.');
+      return;
+    }
+
+    if (workoutSource === 'coach' && !selectedCoachWorkout) {
+      setError('Select a coach workout before creating a session.');
       return;
     }
 
@@ -248,15 +273,20 @@ export default function CreateSessionPage() {
       const intensityTier =
         workoutSource === 'library' && selectedTemplate
           ? selectedTemplate.intensityTier
-          : CUSTOM_WORKOUT_INTENSITY_TIER;
+          : workoutSource === 'coach' && selectedCoachWorkout
+            ? selectedCoachWorkout.intensityTier
+            : CUSTOM_WORKOUT_INTENSITY_TIER;
+      const templateId =
+        workoutSource === 'library' && selectedTemplateId
+          ? selectedTemplateId
+          : workoutSource === 'coach' && selectedCoachWorkout
+            ? `coach:${selectedCoachWorkout.id}`
+            : undefined;
       const result = await createSession({
         nickname,
         durationMinutes,
         workout,
-        templateId:
-          workoutSource === 'library' && selectedTemplateId
-            ? selectedTemplateId
-            : undefined,
+        templateId,
         intensityTier,
         scheduledAt,
       });
@@ -328,7 +358,7 @@ export default function CreateSessionPage() {
                     required
                   />
                 </label>
-              ) : (
+              ) : workoutSource === 'library' ? (
                 <WorkoutTemplatePicker
                   durationMinutes={durationMinutes as TimeDomain}
                   selectedCategory={selectedCategory}
@@ -340,6 +370,11 @@ export default function CreateSessionPage() {
                   onCategoryChange={setSelectedCategory}
                   onTemplateSelect={handleTemplateSelect}
                 />
+              ) : (
+                <CoachWodPicker
+                  selectedWorkoutId={selectedCoachWorkout?.id ?? null}
+                  onSelect={handleCoachWorkoutSelect}
+                />
               )}
             </div>
 
@@ -348,6 +383,7 @@ export default function CreateSessionPage() {
               durationMinutes={durationMinutes}
               workoutSource={workoutSource}
               selectedTemplate={selectedTemplate}
+              selectedCoachWorkout={selectedCoachWorkout}
               scheduleMode={scheduleMode}
               rallyDay={rallyDay}
               rallyTime={rallyTime}

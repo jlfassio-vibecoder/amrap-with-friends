@@ -45,6 +45,7 @@ function entry(overrides: Partial<MySessionEntry> = {}): MySessionEntry {
     partialReps: 0,
     finalScore: null,
     scoreBreakdown: null,
+    coachWorkoutName: null,
     ...overrides,
   };
 }
@@ -65,6 +66,29 @@ function renderPage() {
     </MemoryRouter>
   );
 }
+
+describe('MySessionsPage workout summary', () => {
+  it('renders coachWorkoutName when present instead of the exercise summary', async () => {
+    fetchMySessionsMock.mockResolvedValue({
+      data: [
+        entry({
+          coachWorkoutName: 'Crimp Conditioning',
+          workout: [{ name: 'Dead Hang', target: 30, unit: 'seconds' }],
+          state: 'finished',
+          finalScore: 42,
+        }),
+      ],
+      error: null,
+    });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('Crimp Conditioning')).toBeTruthy();
+    });
+    expect(screen.queryByText('Dead Hang')).toBeNull();
+  });
+});
 
 describe('MySessionsPage delete', () => {
   it('shows Delete only for incomplete host rows', async () => {

@@ -11,7 +11,11 @@ import {
 } from '@/lib/api/mySessions';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 
-function formatWorkoutSummary(workout: MySessionEntry['workout']): string {
+function formatWorkoutSummary(entry: MySessionEntry): string {
+  if (entry.coachWorkoutName) {
+    return entry.coachWorkoutName;
+  }
+  const workout = entry.workout;
   if (workout.length === 0) {
     return 'Workout';
   }
@@ -118,7 +122,7 @@ export default function MySessionsPage() {
         <ul className="space-y-3">
           {entries.map((entry) => (
             <li key={entry.participantId} className="card space-y-2 p-4 text-sm">
-              <p className="font-semibold">{formatWorkoutSummary(entry.workout)}</p>
+              <p className="font-semibold">{formatWorkoutSummary(entry)}</p>
               <p className="text-secondary">
                 {new Date(entry.createdAt).toLocaleString()} · {entry.durationMinutes} min ·{' '}
                 {formatMySessionScoreDisplay(entry)} · {entry.state}

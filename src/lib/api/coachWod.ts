@@ -20,6 +20,8 @@ export interface CoachWorkoutMovement {
   coachExerciseId?: string;
 }
 
+export type CoachWorkoutStatus = 'draft' | 'published';
+
 export interface CoachWorkoutSummary {
   id: string;
   name: string;
@@ -29,6 +31,7 @@ export interface CoachWorkoutSummary {
   tags: string[];
   movementCount: number;
   isLocked: boolean;
+  status: CoachWorkoutStatus;
   updatedAt: string;
 }
 
@@ -42,8 +45,46 @@ export interface CoachWorkout {
   tags: string[];
   notes: string | null;
   isLocked: boolean;
+  status: CoachWorkoutStatus;
   createdAt: string;
   updatedAt: string;
+}
+
+/** A movement from a published workout, with any linked exercise's detail
+ * inlined so a non-coach user can render "How to" without a coach-only call. */
+export interface PublishedCoachWorkoutMovement {
+  name: string;
+  target?: number;
+  unit?: string;
+  exercise: {
+    id: string;
+    name: string;
+    instructions: string[];
+    cues: string[];
+    tips: string | null;
+    imagePath: string | null;
+  } | null;
+}
+
+export interface PublishedCoachWorkout {
+  id: string;
+  name: string;
+  focus: string | null;
+  durationMinutes: number;
+  intensityTier: number;
+  tags: string[];
+  notes: string | null;
+  movements: PublishedCoachWorkoutMovement[];
+  updatedAt: string;
+}
+
+export interface CoachWorkoutHistoryEntry {
+  sessionId: string;
+  nickname: string;
+  role: string;
+  state: string;
+  finalScore: number | null;
+  createdAt: string;
 }
 
 export interface UpsertCoachExerciseInput {
@@ -88,6 +129,10 @@ function readString(value: unknown): string | null {
 
 function readNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function readStatus(value: unknown): CoachWorkoutStatus {
+  return value === 'published' ? 'published' : 'draft';
 }
 
 function mapCoachWodError(message: string | undefined): string {
@@ -170,6 +215,7 @@ function parseWorkoutSummary(row: Record<string, unknown>): CoachWorkoutSummary 
     tags: asStringArray(row.tags),
     movementCount,
     isLocked: row.isLocked === true,
+    status: readStatus(row.status),
     updatedAt,
   };
 }
@@ -197,8 +243,97 @@ function parseWorkout(row: Record<string, unknown>): CoachWorkout | null {
     tags: asStringArray(row.tags),
     notes: readString(row.notes),
     isLocked: row.isLocked === true,
+    status: readStatus(row.status),
     createdAt,
     updatedAt,
+  };
+}
+
+function parsePublishedMovementExercise(
+  value: unknown
+): PublishedCoachWorkoutMovement['exercise'] {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+  const row = value as Record<string, unknown>;
+  const id = readString(row.id);
+  const name = readString(row.name);
+  if (!id || !name) {
+    return null;
+  }
+  return {
+    id,
+    name,
+    instructions: asStringArray(row.instructions),
+    cues: asStringArray(row.cues),
+    tips: readString(row.tips),
+    imagePath: readString(row.imagePath),
+  };
+}
+
+function parsePublishedMovement(
+  row: Record<string, unknown>
+): PublishedCoachWorkoutMovement | null {
+  const name = readString(row.name);
+  if (!name) {
+    return null;
+  }
+  const movement: PublishedCoachWorkoutMovement = {
+    name,
+    exercise: parsePublishedMovementExercise(row.exercise),
+  };
+  const target = readNumber(row.target);
+  if (target !== null) {
+    movement.target = target;
+  }
+  const unit = readString(row.unit);
+  if (unit !== null) {
+    movement.unit = unit;
+  }
+  return movement;
+}
+
+function parsePublishedWorkout(row: Record<string, unknown>): PublishedCoachWorkout | null {
+  const id = readString(row.id);
+  const name = readString(row.name);
+  const durationMinutes = readNumber(row.durationMinutes);
+  const intensityTier = readNumber(row.intensityTier);
+  const updatedAt = readString(row.updated_at ?? row.updatedAt);
+  if (!id || !name || durationMinutes === null || intensityTier === null || !updatedAt) {
+    return null;
+  }
+  const movements = asArray(row.movements)
+    .map(parsePublishedMovement)
+    .filter((m): m is PublishedCoachWorkoutMovement => m !== null);
+  return {
+    id,
+    name,
+    focus: readString(row.focus),
+    durationMinutes,
+    intensityTier,
+    tags: asStringArray(row.tags),
+    notes: readString(row.notes),
+    movements,
+    updatedAt,
+  };
+}
+
+function parseWorkoutHistoryEntry(row: Record<string, unknown>): CoachWorkoutHistoryEntry | null {
+  const sessionId = readString(row.session_id);
+  const nickname = readString(row.nickname);
+  const role = readString(row.role);
+  const state = readString(row.state);
+  const createdAt = readString(row.created_at);
+  if (!sessionId || !nickname || !role || !state || !createdAt) {
+    return null;
+  }
+  return {
+    sessionId,
+    nickname,
+    role,
+    state,
+    finalScore: readNumber(row.final_score),
+    createdAt,
   };
 }
 
@@ -418,4 +553,82 @@ export async function cloneCoachExercise(
   }
 
   return { data: exercise, error: null };
+}
+
+export async function setCoachWorkoutStatus(
+  id: string,
+  status: CoachWorkoutStatus
+): Promise<{ data: CoachWorkout | null; error: CoachWodApiError | null }> {
+  const { data, error } = await callRpc('coach_set_workout_status', {
+    p_id: id,
+    p_status: status,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachWodError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const workout = parseWorkout(asRecord(raw.workout));
+  if (!workout) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  return { data: workout, error: null };
+}
+
+export async function fetchPublishedCoachWorkouts(input: {
+  search?: string | null;
+  tag?: string | null;
+  limit?: number;
+}): Promise<{ data: PublishedCoachWorkout[] | null; error: CoachWodApiError | null }> {
+  const { data, error } = await callRpc('list_published_coach_workouts', {
+    p_search: input.search ?? null,
+    p_tag: input.tag ?? null,
+    p_limit: input.limit ?? 50,
+  });
+
+  if (error) {
+    const message =
+      error.message && error.message.includes('Authentication required')
+        ? 'Sign in to browse coach workouts.'
+        : mapCoachWodError(error.message);
+    return { data: null, error: { message } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const workouts = asArray(raw.workouts)
+    .map(parsePublishedWorkout)
+    .filter((w): w is PublishedCoachWorkout => w !== null);
+
+  return { data: workouts, error: null };
+}
+
+export async function fetchCoachWorkoutHistory(
+  id: string
+): Promise<{ data: CoachWorkoutHistoryEntry[] | null; error: CoachWodApiError | null }> {
+  const { data, error } = await callRpc('coach_workout_history', { p_id: id });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachWodError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const sessions = asArray(raw.sessions)
+    .map(parseWorkoutHistoryEntry)
+    .filter((s): s is CoachWorkoutHistoryEntry => s !== null);
+
+  return { data: sessions, error: null };
 }
