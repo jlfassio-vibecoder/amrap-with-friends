@@ -419,10 +419,12 @@ function parseUserSummary(row: Record<string, unknown>): CoachUserSummary {
 export async function fetchCoachUsersList(input: {
   search?: string | null;
   limit?: number;
+  activityBucket?: string | null;
 }): Promise<{ data: CoachUserListRow[] | null; error: CoachApiError | null }> {
   const { data, error } = await callRpc('coach_users_list', {
     p_search: input.search ?? null,
     p_limit: input.limit ?? 50,
+    p_activity_bucket: input.activityBucket ?? null,
   });
 
   if (error) {
