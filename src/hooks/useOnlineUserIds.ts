@@ -7,7 +7,14 @@ import { subscribeOnlineUserIds } from '@/lib/realtime/globalPresenceChannel';
 export function useOnlineUserIds(): Set<string> {
   const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
 
-  useEffect(() => subscribeOnlineUserIds(setOnlineUserIds), []);
+  useEffect(() => {
+    try {
+      return subscribeOnlineUserIds(setOnlineUserIds);
+    } catch (error) {
+      console.error('Failed to subscribe to global presence', error);
+      return undefined;
+    }
+  }, []);
 
   return onlineUserIds;
 }

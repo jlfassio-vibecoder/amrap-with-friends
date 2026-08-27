@@ -81,7 +81,9 @@ export function CoachActivityCohorts({ selectedUser, onSelect }: CoachActivityCo
       : users;
 
   return (
-    <div className="card space-y-3 p-4">
+    <section className="space-y-3" data-testid="coach-activity-cohorts">
+      <h2 className="text-lg font-semibold text-ink">Users by activity</h2>
+      <div className="card space-y-3 p-4">
       <div className="flex flex-wrap gap-2">
         {ACTIVITY_COHORTS.map((definition) => (
           <button
@@ -146,6 +148,7 @@ export function CoachActivityCohorts({ selectedUser, onSelect }: CoachActivityCo
           ]}
         />
       ) : null}
-    </div>
+      </div>
+    </section>
   );
 }

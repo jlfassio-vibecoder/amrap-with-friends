@@ -44,6 +44,15 @@ function ensureChannel(presenceKey?: string): RealtimeChannel {
     return channel;
   }
 
+  // HMR / prior mounts can leave a subscribed channel in the Supabase client
+  // while this module's `channel` ref is null. Reusing it and calling `.on()`
+  // throws and can break the Coach cohorts mount.
+  for (const existing of supabase.getChannels()) {
+    if (existing.topic.includes(GLOBAL_PRESENCE_CHANNEL)) {
+      supabase.removeChannel(existing);
+    }
+  }
+
   channelPresenceKey = presenceKey ?? null;
   channelJoined = false;
   channel = supabase.channel(

@@ -13,6 +13,11 @@ export function useGlobalPresenceBroadcast() {
       return;
     }
 
-    return startGlobalPresenceBroadcast(userId);
+    try {
+      return startGlobalPresenceBroadcast(userId);
+    } catch (error) {
+      console.error('Failed to start global presence broadcast', error);
+      return undefined;
+    }
   }, [isAuthenticated, userId]);
 }
