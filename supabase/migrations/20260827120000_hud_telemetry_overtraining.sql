@@ -389,14 +389,18 @@ BEGIN
         )
       ),
       'overtraining', jsonb_build_object(
-        'acuteLoad7d', round(v_acute_load_7d, 1),
-        'chronicWeeklyLoad28d', round(v_chronic_weekly_load_28d, 1),
+        'acuteLoad7d', v_acute_load_7d,
+        'chronicWeeklyLoad28d', v_chronic_weekly_load_28d,
         'consecutiveHighIntensityDays', v_consecutive_hard_days
       )
     )
   );
 END;
 $$;
+
+CREATE INDEX IF NOT EXISTS idx_participant_segment_results_locked_updated_at
+  ON public.participant_segment_results (participant_id, updated_at DESC)
+  WHERE score_breakdown IS NOT NULL;
 
 REVOKE EXECUTE ON FUNCTION public.hud_telemetry(text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.hud_telemetry(text) TO authenticated;
