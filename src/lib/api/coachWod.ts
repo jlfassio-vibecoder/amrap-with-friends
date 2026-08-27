@@ -1,0 +1,364 @@
+import { callRpc } from '@/lib/api/callRpc';
+
+export type CoachWodApiError = { message: string };
+
+export interface CoachExercise {
+  id: string;
+  name: string;
+  instructions: string[];
+  cues: string[];
+  tips: string | null;
+  imagePath: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CoachWorkoutMovement {
+  name: string;
+  target?: number;
+  unit?: string;
+  coachExerciseId?: string;
+}
+
+export interface CoachWorkoutSummary {
+  id: string;
+  name: string;
+  focus: string | null;
+  durationMinutes: number;
+  intensityTier: number;
+  tags: string[];
+  movementCount: number;
+  updatedAt: string;
+}
+
+export interface CoachWorkout {
+  id: string;
+  name: string;
+  focus: string | null;
+  durationMinutes: number;
+  intensityTier: number;
+  movements: CoachWorkoutMovement[];
+  tags: string[];
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpsertCoachExerciseInput {
+  id?: string;
+  name: string;
+  instructions: string[];
+  cues: string[];
+  tips?: string | null;
+  imagePath?: string | null;
+}
+
+export interface UpsertCoachWorkoutInput {
+  id?: string;
+  name: string;
+  focus?: string | null;
+  durationMinutes: number;
+  intensityTier: number;
+  movements: CoachWorkoutMovement[];
+  tags: string[];
+  notes?: string | null;
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function asArray(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value) ? value.map(asRecord) : [];
+}
+
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+}
+
+function readString(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function readNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function mapCoachWodError(message: string | undefined): string {
+  if (!message) {
+    return 'Something went wrong. Please try again.';
+  }
+  if (message.includes('Authentication required')) {
+    return 'Sign in to manage coach workouts.';
+  }
+  if (message.includes('Not authorized')) {
+    return 'Not authorized.';
+  }
+  return message;
+}
+
+function parseExercise(row: Record<string, unknown>): CoachExercise | null {
+  const id = readString(row.id);
+  const name = readString(row.name);
+  const createdAt = readString(row.createdAt);
+  const updatedAt = readString(row.updatedAt);
+  if (!id || !name || !createdAt || !updatedAt) {
+    return null;
+  }
+  return {
+    id,
+    name,
+    instructions: asStringArray(row.instructions),
+    cues: asStringArray(row.cues),
+    tips: readString(row.tips),
+    imagePath: readString(row.imagePath),
+    createdAt,
+    updatedAt,
+  };
+}
+
+function parseMovement(row: Record<string, unknown>): CoachWorkoutMovement | null {
+  const name = readString(row.name);
+  if (!name) {
+    return null;
+  }
+  const movement: CoachWorkoutMovement = { name };
+  const target = readNumber(row.target);
+  if (target !== null) {
+    movement.target = target;
+  }
+  const unit = readString(row.unit);
+  if (unit !== null) {
+    movement.unit = unit;
+  }
+  const coachExerciseId = readString(row.coachExerciseId);
+  if (coachExerciseId !== null) {
+    movement.coachExerciseId = coachExerciseId;
+  }
+  return movement;
+}
+
+function parseWorkoutSummary(row: Record<string, unknown>): CoachWorkoutSummary | null {
+  const id = readString(row.id);
+  const name = readString(row.name);
+  const durationMinutes = readNumber(row.durationMinutes);
+  const intensityTier = readNumber(row.intensityTier);
+  const movementCount = readNumber(row.movementCount);
+  const updatedAt = readString(row.updatedAt);
+  if (
+    !id ||
+    !name ||
+    durationMinutes === null ||
+    intensityTier === null ||
+    movementCount === null ||
+    !updatedAt
+  ) {
+    return null;
+  }
+  return {
+    id,
+    name,
+    focus: readString(row.focus),
+    durationMinutes,
+    intensityTier,
+    tags: asStringArray(row.tags),
+    movementCount,
+    updatedAt,
+  };
+}
+
+function parseWorkout(row: Record<string, unknown>): CoachWorkout | null {
+  const id = readString(row.id);
+  const name = readString(row.name);
+  const durationMinutes = readNumber(row.durationMinutes);
+  const intensityTier = readNumber(row.intensityTier);
+  const createdAt = readString(row.createdAt);
+  const updatedAt = readString(row.updatedAt);
+  if (!id || !name || durationMinutes === null || intensityTier === null || !createdAt || !updatedAt) {
+    return null;
+  }
+  const movements = asArray(row.movements)
+    .map(parseMovement)
+    .filter((m): m is CoachWorkoutMovement => m !== null);
+  return {
+    id,
+    name,
+    focus: readString(row.focus),
+    durationMinutes,
+    intensityTier,
+    movements,
+    tags: asStringArray(row.tags),
+    notes: readString(row.notes),
+    createdAt,
+    updatedAt,
+  };
+}
+
+export async function fetchCoachExercises(search?: string | null): Promise<{
+  data: CoachExercise[] | null;
+  error: CoachWodApiError | null;
+}> {
+  const { data, error } = await callRpc('coach_list_exercises', { p_search: search ?? null });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachWodError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const exercises = asArray(raw.exercises)
+    .map(parseExercise)
+    .filter((e): e is CoachExercise => e !== null);
+
+  return { data: exercises, error: null };
+}
+
+export async function upsertCoachExercise(input: UpsertCoachExerciseInput): Promise<{
+  data: CoachExercise | null;
+  error: CoachWodApiError | null;
+}> {
+  const { data, error } = await callRpc('coach_upsert_exercise', {
+    p_id: input.id ?? null,
+    p_name: input.name,
+    p_instructions: input.instructions,
+    p_cues: input.cues,
+    p_tips: input.tips ?? null,
+    p_image_path: input.imagePath ?? null,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachWodError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const exercise = parseExercise(asRecord(raw.exercise));
+  if (!exercise) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  return { data: exercise, error: null };
+}
+
+export async function deleteCoachExercise(
+  id: string
+): Promise<{ data: boolean; error: CoachWodApiError | null }> {
+  const { data, error } = await callRpc('coach_delete_exercise', { p_id: id });
+
+  if (error) {
+    return { data: false, error: { message: mapCoachWodError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: false, error: { message: 'Exercise not found. It may have already been deleted.' } };
+  }
+
+  return { data: true, error: null };
+}
+
+export async function fetchCoachWorkouts(input: {
+  search?: string | null;
+  tag?: string | null;
+}): Promise<{ data: CoachWorkoutSummary[] | null; error: CoachWodApiError | null }> {
+  const { data, error } = await callRpc('coach_list_workouts', {
+    p_search: input.search ?? null,
+    p_tag: input.tag ?? null,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachWodError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const workouts = asArray(raw.workouts)
+    .map(parseWorkoutSummary)
+    .filter((w): w is CoachWorkoutSummary => w !== null);
+
+  return { data: workouts, error: null };
+}
+
+export async function fetchCoachWorkout(
+  id: string
+): Promise<{ data: CoachWorkout | null; error: CoachWodApiError | null }> {
+  const { data, error } = await callRpc('coach_get_workout', { p_id: id });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachWodError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true || !raw.workout) {
+    return { data: null, error: { message: 'Workout not found.' } };
+  }
+
+  const workout = parseWorkout(asRecord(raw.workout));
+  if (!workout) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  return { data: workout, error: null };
+}
+
+export async function upsertCoachWorkout(input: UpsertCoachWorkoutInput): Promise<{
+  data: CoachWorkout | null;
+  error: CoachWodApiError | null;
+}> {
+  const { data, error } = await callRpc('coach_upsert_workout', {
+    p_id: input.id ?? null,
+    p_name: input.name,
+    p_focus: input.focus ?? null,
+    p_duration_minutes: input.durationMinutes,
+    p_intensity_tier: input.intensityTier,
+    p_movements: input.movements,
+    p_tags: input.tags,
+    p_notes: input.notes ?? null,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachWodError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const workout = parseWorkout(asRecord(raw.workout));
+  if (!workout) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  return { data: workout, error: null };
+}
+
+export async function deleteCoachWorkout(
+  id: string
+): Promise<{ data: boolean; error: CoachWodApiError | null }> {
+  const { data, error } = await callRpc('coach_delete_workout', { p_id: id });
+
+  if (error) {
+    return { data: false, error: { message: mapCoachWodError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: false, error: { message: 'Workout not found. It may have already been deleted.' } };
+  }
+
+  return { data: true, error: null };
+}

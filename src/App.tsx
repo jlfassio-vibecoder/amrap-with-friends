@@ -12,6 +12,7 @@ const MySessionsPage = lazy(() => import('./pages/MySessionsPage'));
 const HUDPage = lazy(() => import('./pages/HUDPage'));
 const IntakePage = lazy(() => import('./pages/IntakePage'));
 const CoachPage = lazy(() => import('./pages/CoachPage'));
+const CoachWodsPage = lazy(() => import('./pages/CoachWodsPage'));
 const TimerDevPage = lazy(() => import('./pages/dev/TimerDevPage'));
 
 function RouteFallback() {
@@ -55,6 +56,14 @@ function App() {
             element={
               <RequireCoach>
                 <CoachPage />
+              </RequireCoach>
+            }
+          />
+          <Route
+            path="/coach/wods"
+            element={
+              <RequireCoach>
+                <CoachWodsPage />
               </RequireCoach>
             }
           />
