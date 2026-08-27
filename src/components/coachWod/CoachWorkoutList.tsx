@@ -151,6 +151,16 @@ export function CoachWorkoutList({
                       Locked
                     </span>
                   ) : null}
+                  {workout.isShared ? (
+                    <span className="ml-2 rounded-card bg-accent-tint px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
+                      Shared
+                    </span>
+                  ) : null}
+                  {!workout.isOwner ? (
+                    <span className="ml-2 rounded-card border border-border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary">
+                      Another coach
+                    </span>
+                  ) : null}
                 </p>
                 <p className="text-xs text-secondary">
                   {workout.durationMinutes}m · {INTENSITY_LABEL[workout.intensityTier] ?? workout.intensityTier}{' '}
@@ -169,15 +179,17 @@ export function CoachWorkoutList({
                 >
                   {duplicatingId === workout.id ? 'Duplicating…' : 'Duplicate'}
                 </button>
-                <button
-                  type="button"
-                  className="text-error hover:underline"
-                  onClick={() => {
-                    void handleDelete(workout);
-                  }}
-                >
-                  Delete
-                </button>
+                {workout.isOwner ? (
+                  <button
+                    type="button"
+                    className="text-error hover:underline"
+                    onClick={() => {
+                      void handleDelete(workout);
+                    }}
+                  >
+                    Delete
+                  </button>
+                ) : null}
               </span>
             </li>
           ))}

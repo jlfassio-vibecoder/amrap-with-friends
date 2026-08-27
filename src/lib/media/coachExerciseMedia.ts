@@ -31,11 +31,13 @@ function fileExtension(file: File): string {
   return file.type === 'image/png' ? '.png' : file.type === 'image/webp' ? '.webp' : '.jpg';
 }
 
-/** Uploads an exercise image under the coach's own folder and returns the
- * relative storage path to store on the coach_exercises row. */
-export async function uploadCoachExerciseImage(
+/** Uploads one exercise photo under the coach's own folder and returns the
+ * relative storage path to store on the coach_exercises row. Each photo
+ * gets its own id so an exercise can hold multiple photos side by side. */
+export async function uploadCoachExercisePhoto(
   ownerId: string,
   exerciseId: string,
+  photoId: string,
   file: File
 ): Promise<UploadCoachExerciseImageResult> {
   if (!ALLOWED_MIME_TYPES.has(file.type)) {
@@ -45,7 +47,7 @@ export async function uploadCoachExerciseImage(
     return { path: null, error: 'Image must be 5MB or smaller.' };
   }
 
-  const path = `${ownerId}/${exerciseId}${fileExtension(file)}`;
+  const path = `${ownerId}/${exerciseId}/${photoId}${fileExtension(file)}`;
 
   const { error } = await getSupabaseClient()
     .storage.from(COACH_EXERCISE_MEDIA_BUCKET)

@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import type { CoachExercise } from '@/lib/api/coachWod';
+import type { CoachExercise, CoachExercisePhoto } from '@/lib/api/coachWod';
 import { upsertCoachExercise } from '@/lib/api/coachWod';
 import {
   getCoachExerciseMediaUrl,
-  uploadCoachExerciseImage,
+  uploadCoachExercisePhoto,
 } from '@/lib/media/coachExerciseMedia';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 
 const TIPS_MAX_LENGTH = 280;
+const MAX_PHOTOS = 6;
 
 function linesToList(value: string): string[] {
   return value
@@ -15,6 +16,9 @@ function linesToList(value: string): string[] {
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
 }
+
+type PendingPhoto = { key: string; file: File; caption: string };
+type ExistingPhoto = { key: string; path: string; caption: string };
 
 interface CoachExerciseFormProps {
   exercise?: CoachExercise | null;
@@ -28,30 +32,44 @@ export function CoachExerciseForm({ exercise, onSaved, onCancel }: CoachExercise
   const [instructions, setInstructions] = useState(exercise?.instructions.join('\n') ?? '');
   const [cues, setCues] = useState(exercise?.cues.join('\n') ?? '');
   const [tips, setTips] = useState(exercise?.tips ?? '');
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePath, setImagePath] = useState<string | null>(exercise?.imagePath ?? null);
+  const [isShared, setIsShared] = useState(exercise?.isShared ?? false);
+  const [existingPhotos, setExistingPhotos] = useState<ExistingPhoto[]>(() =>
+    (exercise?.photos ?? []).map((photo, index) => ({
+      key: `existing-${index}`,
+      path: photo.path,
+      caption: photo.caption ?? '',
+    }))
+  );
+  const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const blobPreviewUrl = useMemo(
-    () => (imageFile ? URL.createObjectURL(imageFile) : null),
-    [imageFile]
+  const pendingPreviewUrls = useMemo(
+    () => new Map(pendingPhotos.map((p) => [p.key, URL.createObjectURL(p.file)])),
+    [pendingPhotos]
   );
 
   useEffect(() => {
-    if (!blobPreviewUrl) {
+    return () => {
+      for (const url of pendingPreviewUrls.values()) {
+        URL.revokeObjectURL(url);
+      }
+    };
+  }, [pendingPreviewUrls]);
+
+  const totalPhotoCount = existingPhotos.length + pendingPhotos.length;
+
+  function handleFilesSelected(files: FileList | null) {
+    if (!files || files.length === 0) {
       return;
     }
-    return () => {
-      URL.revokeObjectURL(blobPreviewUrl);
-    };
-  }, [blobPreviewUrl]);
-
-  const previewUrl = blobPreviewUrl
-    ? blobPreviewUrl
-    : imagePath
-      ? getCoachExerciseMediaUrl(imagePath)
-      : null;
+    const remaining = MAX_PHOTOS - totalPhotoCount;
+    const toAdd = Array.from(files).slice(0, Math.max(remaining, 0));
+    setPendingPhotos((current) => [
+      ...current,
+      ...toAdd.map((file) => ({ key: crypto.randomUUID(), file, caption: '' })),
+    ]);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -65,47 +83,65 @@ export function CoachExerciseForm({ exercise, onSaved, onCancel }: CoachExercise
 
     setSubmitting(true);
 
-    const result = await upsertCoachExercise({
+    const keptPhotos: CoachExercisePhoto[] = existingPhotos.map((p) =>
+      p.caption.trim() ? { path: p.path, caption: p.caption.trim() } : { path: p.path }
+    );
+
+    const firstSave = await upsertCoachExercise({
       id: exercise?.id,
       name: trimmedName,
       instructions: linesToList(instructions),
       cues: linesToList(cues),
       tips: tips.trim() || null,
-      imagePath,
+      photos: keptPhotos,
+      isShared,
     });
 
-    if (result.error || !result.data) {
+    if (firstSave.error || !firstSave.data) {
       setSubmitting(false);
-      setError(result.error?.message ?? 'Something went wrong. Please try again.');
+      setError(firstSave.error?.message ?? 'Something went wrong. Please try again.');
       return;
     }
 
-    let saved = result.data;
+    let saved = firstSave.data;
 
-    if (imageFile && user) {
-      const uploadResult = await uploadCoachExerciseImage(user.id, saved.id, imageFile);
-      if (uploadResult.error) {
-        setSubmitting(false);
-        setError(uploadResult.error);
-        return;
+    if (pendingPhotos.length > 0 && user) {
+      const uploadedPhotos: CoachExercisePhoto[] = [];
+      for (const pending of pendingPhotos) {
+        const uploadResult = await uploadCoachExercisePhoto(
+          user.id,
+          saved.id,
+          crypto.randomUUID(),
+          pending.file
+        );
+        if (uploadResult.error || !uploadResult.path) {
+          setSubmitting(false);
+          setError(uploadResult.error ?? 'Something went wrong. Please try again.');
+          return;
+        }
+        const path = uploadResult.path;
+        uploadedPhotos.push(
+          pending.caption.trim() ? { path, caption: pending.caption.trim() } : { path }
+        );
       }
 
-      const withImage = await upsertCoachExercise({
+      const withPhotos = await upsertCoachExercise({
         id: saved.id,
         name: saved.name,
         instructions: saved.instructions,
         cues: saved.cues,
         tips: saved.tips,
-        imagePath: uploadResult.path,
+        photos: [...saved.photos, ...uploadedPhotos],
+        isShared: saved.isShared,
       });
 
-      if (withImage.error || !withImage.data) {
+      if (withPhotos.error || !withPhotos.data) {
         setSubmitting(false);
-        setError(withImage.error?.message ?? 'Something went wrong. Please try again.');
+        setError(withPhotos.error?.message ?? 'Something went wrong. Please try again.');
         return;
       }
 
-      saved = withImage.data;
+      saved = withPhotos.data;
     }
 
     setSubmitting(false);
@@ -168,35 +204,101 @@ export function CoachExerciseForm({ exercise, onSaved, onCancel }: CoachExercise
         />
       </label>
 
-      <label className="block space-y-2">
+      <div className="space-y-2">
         <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
-          Image (optional)
+          Photos (optional, up to {MAX_PHOTOS})
         </span>
-        {previewUrl ? (
-          <div className="flex items-center gap-3">
-            <img
-              src={previewUrl}
-              alt=""
-              className="h-32 w-32 rounded-card border border-border object-cover"
-            />
-            <button
-              type="button"
-              className="text-xs uppercase tracking-wide text-error hover:underline"
-              onClick={() => {
-                setImageFile(null);
-                setImagePath(null);
-              }}
-            >
-              Remove image
-            </button>
+
+        {existingPhotos.length > 0 || pendingPhotos.length > 0 ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {existingPhotos.map((photo) => (
+              <div key={photo.key} className="space-y-1">
+                <img
+                  src={getCoachExerciseMediaUrl(photo.path)}
+                  alt=""
+                  className="h-24 w-full rounded-card border border-border object-cover"
+                />
+                <input
+                  type="text"
+                  className="input-field text-xs"
+                  value={photo.caption}
+                  placeholder="Caption (optional)"
+                  onChange={(event) =>
+                    setExistingPhotos((current) =>
+                      current.map((p) =>
+                        p.key === photo.key ? { ...p, caption: event.target.value } : p
+                      )
+                    )
+                  }
+                />
+                <button
+                  type="button"
+                  className="text-xs uppercase tracking-wide text-error hover:underline"
+                  onClick={() =>
+                    setExistingPhotos((current) => current.filter((p) => p.key !== photo.key))
+                  }
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            {pendingPhotos.map((photo) => (
+              <div key={photo.key} className="space-y-1">
+                <img
+                  src={pendingPreviewUrls.get(photo.key)}
+                  alt=""
+                  className="h-24 w-full rounded-card border border-border object-cover"
+                />
+                <input
+                  type="text"
+                  className="input-field text-xs"
+                  value={photo.caption}
+                  placeholder="Caption (optional)"
+                  onChange={(event) =>
+                    setPendingPhotos((current) =>
+                      current.map((p) =>
+                        p.key === photo.key ? { ...p, caption: event.target.value } : p
+                      )
+                    )
+                  }
+                />
+                <button
+                  type="button"
+                  className="text-xs uppercase tracking-wide text-error hover:underline"
+                  onClick={() =>
+                    setPendingPhotos((current) => current.filter((p) => p.key !== photo.key))
+                  }
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
           </div>
         ) : null}
+
+        {totalPhotoCount < MAX_PHOTOS ? (
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            className="block text-sm text-secondary"
+            onChange={(event) => {
+              handleFilesSelected(event.target.files);
+              event.target.value = '';
+            }}
+          />
+        ) : (
+          <p className="text-xs text-secondary">Maximum of {MAX_PHOTOS} photos reached.</p>
+        )}
+      </div>
+
+      <label className="flex items-center gap-2">
         <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="block text-sm text-secondary"
-          onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
+          type="checkbox"
+          checked={isShared}
+          onChange={(event) => setIsShared(event.target.checked)}
         />
+        <span className="text-sm text-ink">Share with other coaches</span>
       </label>
 
       {error ? <p className="text-error text-sm">{error}</p> : null}

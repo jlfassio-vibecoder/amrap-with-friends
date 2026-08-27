@@ -60,12 +60,18 @@ function CoachWodCard({ workout, selected, onSelect }: CoachWodCardProps) {
             </div>
             {expandedMovement === index && movement.exercise ? (
               <div className="mt-1 space-y-1 rounded-card border border-border bg-page p-2">
-                {movement.exercise.imagePath ? (
-                  <img
-                    src={getCoachExerciseMediaUrl(movement.exercise.imagePath)}
-                    alt={movement.exercise.name}
-                    className="h-24 w-24 rounded-card border border-border object-cover"
-                  />
+                {movement.exercise.photos.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {movement.exercise.photos.map((photo, i) => (
+                      <img
+                        key={i}
+                        src={getCoachExerciseMediaUrl(photo.path)}
+                        alt={photo.caption ?? movement.exercise?.name ?? ''}
+                        title={photo.caption}
+                        className="h-24 w-24 rounded-card border border-border object-cover"
+                      />
+                    ))}
+                  </div>
                 ) : null}
                 {movement.exercise.instructions.length > 0 ? (
                   <ol className="list-decimal space-y-0.5 pl-4 text-ink">

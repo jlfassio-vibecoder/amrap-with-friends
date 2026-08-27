@@ -30,7 +30,9 @@ const VALID_EXERCISE = {
   instructions: ['Set up on wall', 'Hook toe over hold'],
   cues: ['Keep hips close'],
   tips: 'Great for grip endurance.',
-  imagePath: 'coach-id/exercise-id.jpg',
+  photos: [{ path: 'coach-id/exercise-id/photo-1.jpg', caption: 'Setup' }],
+  isShared: false,
+  isOwner: true,
   createdAt: '2026-08-28T10:00:00.000Z',
   updatedAt: '2026-08-28T10:00:00.000Z',
 };
@@ -47,6 +49,8 @@ const VALID_WORKOUT = {
   ],
   tags: ['rock climbing', 'grip'],
   notes: 'Scale hang time to ability.',
+  isShared: false,
+  isOwner: true,
   createdAt: '2026-08-28T10:00:00.000Z',
   updatedAt: '2026-08-28T10:00:00.000Z',
 };
@@ -86,7 +90,8 @@ describe('upsertCoachExercise', () => {
       instructions: ['Set up on wall', 'Hook toe over hold'],
       cues: ['Keep hips close'],
       tips: 'Great for grip endurance.',
-      imagePath: 'coach-id/exercise-id.jpg',
+      photos: [{ path: 'coach-id/exercise-id/photo-1.jpg', caption: 'Setup' }],
+      isShared: true,
     });
 
     expect(callRpcMock).toHaveBeenCalledWith('coach_upsert_exercise', {
@@ -95,7 +100,8 @@ describe('upsertCoachExercise', () => {
       p_instructions: ['Set up on wall', 'Hook toe over hold'],
       p_cues: ['Keep hips close'],
       p_tips: 'Great for grip endurance.',
-      p_image_path: 'coach-id/exercise-id.jpg',
+      p_photos: [{ path: 'coach-id/exercise-id/photo-1.jpg', caption: 'Setup' }],
+      p_is_shared: true,
     });
     expect(result.error).toBeNull();
     expect(result.data?.id).toBe(VALID_EXERCISE.id);
@@ -230,6 +236,7 @@ describe('upsertCoachWorkout', () => {
       p_movements: [{ name: 'Dead Hang', target: 30, unit: 'seconds' }],
       p_tags: ['rock climbing'],
       p_notes: 'Scale hang time to ability.',
+      p_is_shared: false,
     });
     expect(result.error).toBeNull();
     expect(result.data?.name).toBe('Crimp Conditioning');
@@ -354,7 +361,7 @@ describe('fetchPublishedCoachWorkouts', () => {
                   instructions: VALID_EXERCISE.instructions,
                   cues: VALID_EXERCISE.cues,
                   tips: VALID_EXERCISE.tips,
-                  imagePath: VALID_EXERCISE.imagePath,
+                  photos: VALID_EXERCISE.photos,
                 },
               },
               { name: 'Dead Hang', target: 30, unit: 'seconds', exercise: null },

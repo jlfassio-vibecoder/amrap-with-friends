@@ -2,13 +2,20 @@ import { callRpc } from '@/lib/api/callRpc';
 
 export type CoachWodApiError = { message: string };
 
+export interface CoachExercisePhoto {
+  path: string;
+  caption?: string;
+}
+
 export interface CoachExercise {
   id: string;
   name: string;
   instructions: string[];
   cues: string[];
   tips: string | null;
-  imagePath: string | null;
+  photos: CoachExercisePhoto[];
+  isShared: boolean;
+  isOwner: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -32,6 +39,8 @@ export interface CoachWorkoutSummary {
   movementCount: number;
   isLocked: boolean;
   status: CoachWorkoutStatus;
+  isShared: boolean;
+  isOwner: boolean;
   updatedAt: string;
 }
 
@@ -46,6 +55,8 @@ export interface CoachWorkout {
   notes: string | null;
   isLocked: boolean;
   status: CoachWorkoutStatus;
+  isShared: boolean;
+  isOwner: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -62,7 +73,7 @@ export interface PublishedCoachWorkoutMovement {
     instructions: string[];
     cues: string[];
     tips: string | null;
-    imagePath: string | null;
+    photos: CoachExercisePhoto[];
   } | null;
 }
 
@@ -93,7 +104,8 @@ export interface UpsertCoachExerciseInput {
   instructions: string[];
   cues: string[];
   tips?: string | null;
-  imagePath?: string | null;
+  photos?: CoachExercisePhoto[];
+  isShared?: boolean;
 }
 
 export interface UpsertCoachWorkoutInput {
@@ -105,6 +117,7 @@ export interface UpsertCoachWorkoutInput {
   movements: CoachWorkoutMovement[];
   tags: string[];
   notes?: string | null;
+  isShared?: boolean;
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -135,6 +148,23 @@ function readStatus(value: unknown): CoachWorkoutStatus {
   return value === 'published' ? 'published' : 'draft';
 }
 
+function readPhotos(value: unknown): CoachExercisePhoto[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const photos: CoachExercisePhoto[] = [];
+  for (const item of value) {
+    const row = asRecord(item);
+    const path = readString(row.path);
+    if (!path) {
+      continue;
+    }
+    const caption = readString(row.caption);
+    photos.push(caption ? { path, caption } : { path });
+  }
+  return photos;
+}
+
 function mapCoachWodError(message: string | undefined): string {
   if (!message) {
     return 'Something went wrong. Please try again.';
@@ -162,7 +192,9 @@ function parseExercise(row: Record<string, unknown>): CoachExercise | null {
     instructions: asStringArray(row.instructions),
     cues: asStringArray(row.cues),
     tips: readString(row.tips),
-    imagePath: readString(row.imagePath),
+    photos: readPhotos(row.photos),
+    isShared: row.isShared === true,
+    isOwner: row.isOwner !== false,
     createdAt,
     updatedAt,
   };
@@ -216,6 +248,8 @@ function parseWorkoutSummary(row: Record<string, unknown>): CoachWorkoutSummary 
     movementCount,
     isLocked: row.isLocked === true,
     status: readStatus(row.status),
+    isShared: row.isShared === true,
+    isOwner: row.isOwner !== false,
     updatedAt,
   };
 }
@@ -244,6 +278,8 @@ function parseWorkout(row: Record<string, unknown>): CoachWorkout | null {
     notes: readString(row.notes),
     isLocked: row.isLocked === true,
     status: readStatus(row.status),
+    isShared: row.isShared === true,
+    isOwner: row.isOwner !== false,
     createdAt,
     updatedAt,
   };
@@ -267,7 +303,7 @@ function parsePublishedMovementExercise(
     instructions: asStringArray(row.instructions),
     cues: asStringArray(row.cues),
     tips: readString(row.tips),
-    imagePath: readString(row.imagePath),
+    photos: readPhotos(row.photos),
   };
 }
 
@@ -369,7 +405,8 @@ export async function upsertCoachExercise(input: UpsertCoachExerciseInput): Prom
     p_instructions: input.instructions,
     p_cues: input.cues,
     p_tips: input.tips ?? null,
-    p_image_path: input.imagePath ?? null,
+    p_photos: input.photos ?? [],
+    p_is_shared: input.isShared ?? false,
   });
 
   if (error) {
@@ -466,6 +503,7 @@ export async function upsertCoachWorkout(input: UpsertCoachWorkoutInput): Promis
     p_movements: input.movements,
     p_tags: input.tags,
     p_notes: input.notes ?? null,
+    p_is_shared: input.isShared ?? false,
   });
 
   if (error) {

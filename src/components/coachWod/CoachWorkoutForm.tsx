@@ -41,7 +41,8 @@ interface CoachWorkoutFormProps {
 }
 
 export function CoachWorkoutForm({ workout, onSaved, onCloned, onCancel }: CoachWorkoutFormProps) {
-  const isLocked = workout?.isLocked ?? false;
+  const isOwner = workout?.isOwner ?? true;
+  const isLocked = (workout?.isLocked ?? false) || !isOwner;
   const [cloning, setCloning] = useState(false);
   const [cloneError, setCloneError] = useState<string | null>(null);
   const [status, setStatus] = useState(workout?.status ?? 'draft');
@@ -58,6 +59,7 @@ export function CoachWorkoutForm({ workout, onSaved, onCloned, onCancel }: Coach
   );
   const [tagsText, setTagsText] = useState(tagsToText(workout?.tags ?? []));
   const [notes, setNotes] = useState(workout?.notes ?? '');
+  const [isShared, setIsShared] = useState(workout?.isShared ?? false);
   const [exercises, setExercises] = useState<CoachExercise[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,6 +112,7 @@ export function CoachWorkoutForm({ workout, onSaved, onCloned, onCancel }: Coach
       movements: cleanedMovements,
       tags: textToTags(tagsText),
       notes: notes.trim() || null,
+      isShared,
     });
 
     setSubmitting(false);
@@ -175,18 +178,20 @@ export function CoachWorkoutForm({ workout, onSaved, onCloned, onCancel }: Coach
             >
               {status === 'published' ? 'Published' : 'Draft'}
             </span>
-            <button
-              type="button"
-              className="btn-outline text-xs"
-              onClick={handleTogglePublish}
-              disabled={publishing}
-            >
-              {publishing
-                ? 'Saving…'
-                : status === 'published'
-                  ? 'Unpublish'
-                  : 'Publish'}
-            </button>
+            {isOwner ? (
+              <button
+                type="button"
+                className="btn-outline text-xs"
+                onClick={handleTogglePublish}
+                disabled={publishing}
+              >
+                {publishing
+                  ? 'Saving…'
+                  : status === 'published'
+                    ? 'Unpublish'
+                    : 'Publish'}
+              </button>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -200,8 +205,9 @@ export function CoachWorkoutForm({ workout, onSaved, onCloned, onCancel }: Coach
       {isLocked ? (
         <div className="space-y-2 rounded-card border border-border bg-accent-tint/60 p-3 text-sm">
           <p className="text-ink">
-            This workout is locked — it has a completed session, so its history stays
-            comparable. Clone it to make changes.
+            {!isOwner
+              ? "This workout was shared by another coach — you can view and clone it, but only its owner can edit it."
+              : 'This workout is locked — it has a completed session, so its history stays comparable. Clone it to make changes.'}
           </p>
           {cloneError ? <p className="text-error text-sm">{cloneError}</p> : null}
           <button
@@ -322,6 +328,15 @@ export function CoachWorkoutForm({ workout, onSaved, onCloned, onCancel }: Coach
           placeholder="Scale hang time to ability."
         />
       </label>
+
+      <label className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={isShared}
+          onChange={(event) => setIsShared(event.target.checked)}
+        />
+        <span className="text-sm text-ink">Share with other coaches</span>
+      </label>
       </fieldset>
 
       {error ? <p className="text-error text-sm">{error}</p> : null}
@@ -342,7 +357,7 @@ export function CoachWorkoutForm({ workout, onSaved, onCloned, onCancel }: Coach
         </button>
       </div>
     </form>
-    {workout ? <CoachWorkoutHistory workoutId={workout.id} /> : null}
+    {workout && isOwner ? <CoachWorkoutHistory workoutId={workout.id} /> : null}
     </div>
   );
 }
