@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AppHeader } from '@/components/AppHeader';
+import { CoachActivityCohorts } from '@/components/coach/CoachActivityCohorts';
 import { CoachDataTable } from '@/components/coach/CoachDataTable';
 import { CoachEventsExplorer } from '@/components/coach/CoachEventsExplorer';
 import { CoachFunnelCard } from '@/components/coach/CoachFunnelCard';
@@ -47,6 +48,7 @@ export default function CoachPage() {
       <AppHeader title="Coach" subtitle="Product analytics" />
 
       <div className="mx-auto max-w-6xl space-y-8 px-6 pb-10 pt-0 lg:px-8 lg:py-10">
+        <CoachActivityCohorts selectedUser={selectedUser} onSelect={setSelectedUser} />
         <CoachUserPicker selectedUser={selectedUser} onSelect={setSelectedUser} />
 
         {selectedUser ? (

@@ -219,6 +219,7 @@ describe('fetchCoachUsersList', () => {
     expect(callRpcMock).toHaveBeenCalledWith('coach_users_list', {
       p_search: 'ghost',
       p_limit: 20,
+      p_activity_bucket: null,
     });
     expect(result.error).toBeNull();
     expect(result.data).toHaveLength(1);
