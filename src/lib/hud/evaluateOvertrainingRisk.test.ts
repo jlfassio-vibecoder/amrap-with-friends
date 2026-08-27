@@ -22,6 +22,30 @@ describe('evaluateOvertrainingRisk', () => {
     ).toEqual({ acwr: null, riskLevel: 'normal', warnings: [] });
   });
 
+  it('returns null acwr when all logged load falls inside the acute window (no real baseline yet)', () => {
+    // A single 30-minute moderate (tier 2) session, just logged, with
+    // nothing before it: acuteLoad7d and the 28-day total are identical,
+    // so there is no prior period to compare against.
+    expect(
+      evaluateOvertrainingRisk({
+        acuteLoad7d: 60,
+        chronicWeeklyLoad28d: 15,
+        consecutiveHighIntensityDays: 0,
+      })
+    ).toEqual({ acwr: null, riskLevel: 'normal', warnings: [] });
+  });
+
+  it('flags a real spike even when the prior baseline is small', () => {
+    // Prior 21 days had a small amount of load (5), then a big acute week (500).
+    const result = evaluateOvertrainingRisk({
+      acuteLoad7d: 500,
+      chronicWeeklyLoad28d: (5 + 500) / 4,
+      consecutiveHighIntensityDays: 0,
+    });
+    expect(result.acwr).not.toBeNull();
+    expect(result.riskLevel).toBe('high');
+  });
+
   it('is normal for a balanced acute:chronic load', () => {
     expect(
       evaluateOvertrainingRisk({
