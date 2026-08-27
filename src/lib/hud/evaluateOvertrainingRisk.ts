@@ -26,10 +26,18 @@ const REST_DAY_WARNING =
 export function evaluateOvertrainingRisk(
   input: OvertrainingInput
 ): OvertrainingResult {
-  const acwr =
-    input.chronicWeeklyLoad28d > 0
-      ? Math.round((input.acuteLoad7d / input.chronicWeeklyLoad28d) * 100) / 100
-      : null;
+  // chronicWeeklyLoad28d is a 4-week average that already includes the
+  // trailing 7 days, so on its own it can't tell a real baseline apart
+  // from "all of this athlete's history is this week." Require some load
+  // to exist outside the acute window too — otherwise a single session
+  // with no training before it can look like a huge acute:chronic spike.
+  const totalLoad28d = input.chronicWeeklyLoad28d * 4;
+  const priorPeriodLoad = totalLoad28d - input.acuteLoad7d;
+  const hasBaseline = input.chronicWeeklyLoad28d > 0 && priorPeriodLoad > 0;
+
+  const acwr = hasBaseline
+    ? Math.round((input.acuteLoad7d / input.chronicWeeklyLoad28d) * 100) / 100
+    : null;
 
   const warnings: string[] = [];
 
