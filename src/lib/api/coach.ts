@@ -1,4 +1,5 @@
 import { callRpc } from '@/lib/api/callRpc';
+import type { HudOvertraining } from '@/lib/hud/types';
 
 export type CoachApiError = { message: string };
 
@@ -157,6 +158,7 @@ export interface CoachUserDetail {
   classificationHistory: CoachUserClassificationEvent[];
   sessions: CoachUserSessionRow[];
   summary: CoachUserSummary;
+  overtraining: HudOvertraining;
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -175,6 +177,11 @@ function num(row: Record<string, unknown>, key: string): number {
 function numOrNull(row: Record<string, unknown>, key: string): number | null {
   const value = row[key];
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function nonNegativeNum(row: Record<string, unknown>, key: string): number {
+  const value = row[key];
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 0;
 }
 
 function str(row: Record<string, unknown>, key: string): string {
@@ -390,6 +397,14 @@ function parseUserSessionRow(row: Record<string, unknown>): CoachUserSessionRow 
   };
 }
 
+function parseOvertraining(row: Record<string, unknown>): HudOvertraining {
+  return {
+    acuteLoad7d: nonNegativeNum(row, 'acuteLoad7d'),
+    chronicWeeklyLoad28d: nonNegativeNum(row, 'chronicWeeklyLoad28d'),
+    consecutiveHighIntensityDays: nonNegativeNum(row, 'consecutiveHighIntensityDays'),
+  };
+}
+
 function parseUserSummary(row: Record<string, unknown>): CoachUserSummary {
   return {
     sessionsAsHost: num(row, 'sessionsAsHost'),
@@ -460,6 +475,7 @@ export async function fetchCoachUserDetail(userId: string): Promise<{
       classificationHistory,
       sessions,
       summary: parseUserSummary(asRecord(raw.summary)),
+      overtraining: parseOvertraining(asRecord(raw.overtraining)),
     },
     error: null,
   };

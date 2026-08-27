@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { CoachDataTable } from '@/components/coach/CoachDataTable';
 import { CoachEventsExplorer } from '@/components/coach/CoachEventsExplorer';
 import { CoachStatGrid } from '@/components/coach/CoachStatGrid';
+import { OvertrainingWarningCard } from '@/components/hud/OvertrainingWarningCard';
 import { fetchCoachUserDetail, type CoachUserDetail } from '@/lib/api/coach';
+import { evaluateOvertrainingRisk } from '@/lib/hud/evaluateOvertrainingRisk';
 
 function formatDate(value: string | null): string {
   return value ? new Date(value).toLocaleDateString() : '—';
@@ -46,7 +48,8 @@ export function CoachUserDetailPanel({ userId }: { userId: string }) {
     return null;
   }
 
-  const { profile, summary, sessions, classificationHistory } = detail;
+  const { profile, summary, sessions, classificationHistory, overtraining } = detail;
+  const overtrainingRisk = evaluateOvertrainingRisk(overtraining);
 
   return (
     <div className="space-y-8">
@@ -66,6 +69,10 @@ export function CoachUserDetailPanel({ userId }: { userId: string }) {
           <span>Account created: {formatDate(profile.accountCreatedAt)}</span>
         </div>
       </section>
+
+      {overtrainingRisk.riskLevel !== 'normal' ? (
+        <OvertrainingWarningCard overtraining={overtraining} />
+      ) : null}
 
       <section className="space-y-3">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-secondary">
