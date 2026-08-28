@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
+import { isMagicLinkAuthEnabled } from '@/lib/auth/authFeatures';
 import { AUTH_MIN_PASSWORD_LENGTH } from '@/lib/auth/passwordPolicy';
 
 type AuthMethod = 'magic-link' | 'password';
@@ -17,6 +18,7 @@ function authMethodButtonClass(isActive: boolean): string {
 }
 
 export function AuthModal({ onClose }: AuthModalProps) {
+  const magicLinkEnabled = isMagicLinkAuthEnabled();
   const {
     signInWithMagicLink,
     signUpWithPassword,
@@ -24,7 +26,9 @@ export function AuthModal({ onClose }: AuthModalProps) {
     isAuthenticated,
   } = useAmrapAuth();
 
-  const [authMethod, setAuthMethod] = useState<AuthMethod>('magic-link');
+  const [authMethod, setAuthMethod] = useState<AuthMethod>(
+    magicLinkEnabled ? 'magic-link' : 'password',
+  );
   const [passwordMode, setPasswordMode] = useState<PasswordMode>('sign-in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -139,32 +143,40 @@ export function AuthModal({ onClose }: AuthModalProps) {
           Optional — play as a guest without signing in. Use an account to save sessions to your profile.
         </p>
 
-        <div
-          className="inline-flex rounded-full border border-border bg-page p-1"
-          role="tablist"
-          aria-label="Sign-in method"
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={authMethod === 'magic-link'}
-            className={authMethodButtonClass(authMethod === 'magic-link')}
-            onClick={() => switchAuthMethod('magic-link')}
+        {magicLinkEnabled ? (
+          <div
+            className="inline-flex rounded-full border border-border bg-page p-1"
+            role="tablist"
+            aria-label="Sign-in method"
           >
-            Magic link
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={authMethod === 'password'}
-            className={authMethodButtonClass(authMethod === 'password')}
-            onClick={() => switchAuthMethod('password')}
-          >
-            Password
-          </button>
-        </div>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={authMethod === 'magic-link'}
+              className={authMethodButtonClass(authMethod === 'magic-link')}
+              onClick={() => switchAuthMethod('magic-link')}
+            >
+              Magic link
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={authMethod === 'password'}
+              className={authMethodButtonClass(authMethod === 'password')}
+              onClick={() => switchAuthMethod('password')}
+            >
+              Password
+            </button>
+          </div>
+        ) : (
+          <div className="inline-flex rounded-full border border-border bg-page p-1">
+            <span className="rounded-full px-4 py-2 text-sm font-semibold text-ink">
+              Email and password
+            </span>
+          </div>
+        )}
 
-        {authMethod === 'magic-link' ? (
+        {magicLinkEnabled && authMethod === 'magic-link' ? (
           <form className="space-y-3" onSubmit={handleMagicLinkSubmit}>
             <label className="block space-y-1 text-sm">
               <span className="font-semibold">Email</span>

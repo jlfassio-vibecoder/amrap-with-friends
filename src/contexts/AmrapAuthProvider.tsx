@@ -7,6 +7,7 @@ import {
 } from 'react';
 import type { AuthChangeEvent } from '@supabase/supabase-js';
 import { validatePasswordLength } from '@/lib/auth/passwordPolicy';
+import { isMagicLinkAuthEnabled } from '@/lib/auth/authFeatures';
 import { getSupabaseClient } from '@/lib/supabase';
 import {
   AmrapAuthContext,
@@ -44,6 +45,10 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInWithMagicLink = useCallback(async (email: string) => {
+    if (!isMagicLinkAuthEnabled()) {
+      return { error: 'Magic link sign-in is not available. Use email and password.' };
+    }
+
     const trimmed = trimEmail(email);
     if (!trimmed) {
       return { error: 'Enter your email address.' };
