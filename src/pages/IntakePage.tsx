@@ -46,9 +46,35 @@ function isValidUsername(value: string): boolean {
   return USERNAME_PATTERN.test(value.trim());
 }
 
+function usernameValidationMessage(value: string): string | null {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return 'Enter a username.';
+  }
+  if (/\s/.test(value)) {
+    return 'No spaces — use letters, numbers, or underscore (e.g. Justin_Fassio).';
+  }
+  if (!isValidUsername(value)) {
+    return 'Username must be 3–30 characters: letters, numbers, underscore.';
+  }
+  return null;
+}
+
+function sanitizeUsernameInput(value: string): string {
+  // Spaces are the common first/last-name mistake; map them to underscore.
+  return value.replace(/\s+/g, '_').slice(0, 30);
+}
+
 function isValidNickname(value: string): boolean {
   const trimmed = value.trim();
   return trimmed.length >= 1 && trimmed.length <= 50;
+}
+
+/** Derive a legal username from an email local-part for first-time intake. */
+function suggestUsernameFromEmail(email: string): string {
+  const local = email.split('@')[0]?.trim() ?? '';
+  const cleaned = local.replace(/[^A-Za-z0-9_]/g, '').slice(0, 30);
+  return cleaned.length >= 3 ? cleaned : '';
 }
 
 function convertHeightField(
@@ -118,7 +144,12 @@ function IntakeForm({
 }: IntakeFormProps) {
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
-  const [username, setUsername] = useState(initial?.username ?? '');
+  const [username, setUsername] = useState(() => {
+    if (initial?.username) {
+      return initial.username;
+    }
+    return suggestUsernameFromEmail(initialEmail);
+  });
   const [nickname, setNickname] = useState(initial?.nickname ?? '');
   const [unitSystem, setUnitSystem] = useState<BodyMetricUnitSystem>(() => {
     if (!initial) {
@@ -195,23 +226,49 @@ function IntakeForm({
   const heightLabel = unitSystem === 'imperial' ? 'Height (in)' : 'Height (cm)';
   const weightLabel = unitSystem === 'imperial' ? 'Weight (lb)' : 'Weight (kg)';
 
-  const canSubmit = useMemo(() => {
+  const submitBlockers = useMemo(() => {
+    const blockers: string[] = [];
+    if (email.trim().length === 0) {
+      blockers.push('Enter your email.');
+    }
+    const usernameError = usernameValidationMessage(username);
+    if (usernameError) {
+      blockers.push(usernameError);
+    }
+    if (!isValidNickname(nickname)) {
+      blockers.push('Enter a nickname (1–50 characters).');
+    }
     const h = Number(height);
     const w = Number(weight);
     const a = Number(age);
-    return (
-      email.trim().length > 0 &&
-      isValidUsername(username) &&
-      isValidNickname(nickname) &&
-      rank !== null &&
-      biologicalSex !== null &&
-      isValidHeight(h, unitSystem) &&
-      isValidWeight(w, unitSystem) &&
-      Number.isInteger(a) &&
-      a >= 13 &&
-      a <= 120
-    );
+    if (!isValidHeight(h, unitSystem)) {
+      blockers.push(
+        unitSystem === 'imperial'
+          ? 'Enter a valid height in inches.'
+          : 'Enter a valid height in centimeters.'
+      );
+    }
+    if (!isValidWeight(w, unitSystem)) {
+      blockers.push(
+        unitSystem === 'imperial'
+          ? 'Enter a valid weight in pounds.'
+          : 'Enter a valid weight in kilograms.'
+      );
+    }
+    if (!Number.isInteger(a) || a < 13 || a > 120) {
+      blockers.push('Enter an age between 13 and 120.');
+    }
+    if (biologicalSex === null) {
+      blockers.push('Select biological sex.');
+    }
+    if (rank === null) {
+      blockers.push('Select a declaration.');
+    }
+    return blockers;
   }, [email, username, nickname, height, weight, age, rank, biologicalSex, unitSystem]);
+
+  const canSubmit = submitBlockers.length === 0;
+  const usernameError = usernameValidationMessage(username);
 
   function switchUnitSystem(next: BodyMetricUnitSystem) {
     if (next === unitSystem) {
@@ -344,13 +401,24 @@ function IntakeForm({
           <input
             className="input-field"
             autoComplete="username"
+            required
+            aria-invalid={Boolean(usernameError)}
             value={username}
-            onChange={(event) => { setUsername(event.target.value); markDirty(); }}
+            onChange={(event) => {
+              setUsername(sanitizeUsernameInput(event.target.value));
+              markDirty();
+            }}
           />
         </label>
-        <p className="text-xs text-muted">
-          3–30 characters: letters, numbers, underscore
-        </p>
+        {usernameError ? (
+          <p className="text-xs text-error" role="alert">
+            {usernameError}
+          </p>
+        ) : (
+          <p className="text-xs text-muted">
+            Required handle · 3–30 characters · letters, numbers, underscore (no spaces)
+          </p>
+        )}
         <label className="block space-y-1">
           <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
             Nickname
@@ -502,6 +570,14 @@ function IntakeForm({
       </div>
 
       {error ? <p className="text-error">Error: {error}</p> : null}
+
+      {!canSubmit && submitBlockers.length > 0 ? (
+        <ul className="space-y-1 text-sm text-secondary" aria-live="polite">
+          {submitBlockers.map((blocker) => (
+            <li key={blocker}>{blocker}</li>
+          ))}
+        </ul>
+      ) : null}
 
       <button
         type="submit"

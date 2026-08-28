@@ -91,9 +91,12 @@ describe('IntakePage', () => {
       'value',
       'athlete@example.com'
     );
+    // New users get a username suggestion from the email local-part.
+    expect(screen.getByLabelText(/^Username$/)).toHaveProperty('value', 'athlete');
 
     const submit = screen.getByRole('button', { name: 'File the dossier' });
     expect(submit).toHaveProperty('disabled', true);
+    expect(screen.queryByText('Enter a nickname (1–50 characters).')).toBeTruthy();
 
     fireEvent.change(screen.getByLabelText(/Height \(in\)/), {
       target: { value: '71' },
@@ -107,6 +110,7 @@ describe('IntakePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Male' }));
     expect(submit).toHaveProperty('disabled', true);
+    expect(screen.getByText('Enter a nickname (1–50 characters).')).toBeTruthy();
 
     fireEvent.change(screen.getByLabelText(/^Username$/), {
       target: { value: 'ghost_ops' },
@@ -115,6 +119,36 @@ describe('IntakePage', () => {
       target: { value: 'Ghost' },
     });
     expect(submit).toHaveProperty('disabled', false);
+    expect(screen.queryByText('Enter a nickname (1–50 characters).')).toBeNull();
+  });
+
+  it('keeps File the dossier disabled and lists blockers when username is cleared', () => {
+    renderIntake();
+    fillRequiredFields();
+    const submit = screen.getByRole('button', { name: 'File the dossier' });
+    expect(submit).toHaveProperty('disabled', false);
+
+    fireEvent.change(screen.getByLabelText(/^Username$/), {
+      target: { value: '' },
+    });
+
+    expect(submit).toHaveProperty('disabled', true);
+    expect(screen.getAllByText('Enter a username.').length).toBeGreaterThan(0);
+  });
+
+  it('turns spaces in username into underscores so first-and-last names can submit', () => {
+    renderIntake();
+    fillRequiredFields();
+
+    fireEvent.change(screen.getByLabelText(/^Username$/), {
+      target: { value: 'Justin Fassio' },
+    });
+
+    expect(screen.getByLabelText(/^Username$/)).toHaveProperty('value', 'Justin_Fassio');
+    expect(screen.getByRole('button', { name: 'File the dossier' })).toHaveProperty(
+      'disabled',
+      false
+    );
   });
 
   it('converts imperial input to metric on save and includes identity fields', async () => {
