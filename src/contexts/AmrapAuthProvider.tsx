@@ -5,7 +5,6 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { AuthChangeEvent } from '@supabase/supabase-js';
 import { validatePasswordLength } from '@/lib/auth/passwordPolicy';
 import { isMagicLinkAuthEnabled } from '@/lib/auth/authFeatures';
 import { getSupabaseClient } from '@/lib/supabase';
@@ -29,11 +28,13 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, nextSession) => {
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
 
-      if (!initialResolved && (event === 'INITIAL_SESSION' || event === 'SIGNED_OUT')) {
+      // Resolve loading on the first auth event so UI is never stuck waiting for
+      // INITIAL_SESSION alone (SIGNED_IN / TOKEN_REFRESHED can arrive first).
+      if (!initialResolved) {
         initialResolved = true;
         setIsAuthLoading(false);
       }

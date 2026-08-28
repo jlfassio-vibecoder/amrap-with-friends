@@ -5,18 +5,30 @@ import {
   formatHostScheduledSessionState,
   formatHostScheduledSessionWorkout,
 } from './hostScheduledSessions';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient, supabase } from '@/lib/supabase';
+
+const getSessionMock = vi.fn();
 
 vi.mock('@/lib/supabase', () => ({
   supabase: {
     rpc: vi.fn(),
   },
+  getSupabaseClient: vi.fn(() => ({
+    auth: {
+      getSession: (...args: unknown[]) => getSessionMock(...args),
+    },
+  })),
 }));
 
 const rpcMock = vi.mocked(supabase.rpc);
 
 beforeEach(() => {
   rpcMock.mockReset();
+  getSessionMock.mockReset();
+  getSessionMock.mockResolvedValue({
+    data: { session: { access_token: 'test-access-token' } },
+  });
+  vi.mocked(getSupabaseClient).mockClear();
 });
 
 describe('hostScheduledSessions formatters', () => {
@@ -113,7 +125,17 @@ describe('fetchHostScheduledSessions', () => {
     const result = await fetchHostScheduledSessions();
 
     expect(result.data).toBeNull();
-    expect(result.error?.message).toBe('Authentication required');
+    expect(result.error?.message).toBe('Sign in again to see your scheduled rallies.');
+  });
+
+  it('skips the RPC when there is no access token', async () => {
+    getSessionMock.mockResolvedValue({ data: { session: null } });
+
+    const result = await fetchHostScheduledSessions();
+
+    expect(rpcMock).not.toHaveBeenCalled();
+    expect(result.data).toBeNull();
+    expect(result.error?.message).toBe('Sign in to see your scheduled rallies.');
   });
 
   it('returns generic error when ok is false', async () => {

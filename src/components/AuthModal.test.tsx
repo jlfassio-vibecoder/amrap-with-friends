@@ -46,10 +46,21 @@ describe('AuthModal', () => {
 
     expect(screen.queryByRole('tab', { name: 'Magic link' })).toBeNull();
     expect(screen.getByText('Email and password')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Create account' })).toBeTruthy();
     const signInButtons = screen.getAllByRole('button', { name: 'Sign in' });
     expect(signInButtons).toHaveLength(2);
     expect(signInButtons.some((button) => button.getAttribute('type') === 'submit')).toBe(true);
     expect(screen.queryByRole('button', { name: 'Send magic link' })).toBeNull();
+  });
+
+  it('opens on create-account password mode when requested', () => {
+    isMagicLinkAuthEnabledMock.mockReturnValue(false);
+
+    render(<AuthModal onClose={() => {}} initialPasswordMode="sign-up" />);
+
+    expect(screen.getByRole('heading', { name: 'Create account' })).toBeTruthy();
+    const createButtons = screen.getAllByRole('button', { name: 'Create account' });
+    expect(createButtons.some((button) => button.getAttribute('type') === 'submit')).toBe(true);
   });
 });

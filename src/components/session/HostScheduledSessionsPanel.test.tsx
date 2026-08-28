@@ -9,6 +9,7 @@ const authState = vi.hoisted(() => ({
   isAuthenticated: false,
   isAuthLoading: false,
   user: null as { id: string; email?: string } | null,
+  session: null as { access_token: string } | null,
 }));
 
 vi.mock('@/lib/api/hostScheduledSessions', async () => {
@@ -27,6 +28,7 @@ vi.mock('@/hooks/useAmrapAuth', () => ({
     isAuthenticated: authState.isAuthenticated,
     isAuthLoading: authState.isAuthLoading,
     user: authState.user,
+    session: authState.session,
   }),
 }));
 
@@ -69,6 +71,7 @@ afterEach(() => {
   authState.isAuthenticated = false;
   authState.isAuthLoading = false;
   authState.user = null;
+  authState.session = null;
 });
 
 function renderPanel() {
@@ -92,6 +95,7 @@ describe('HostScheduledSessionsPanel', () => {
   it('lists scheduled sessions for authenticated hosts', async () => {
     authState.isAuthenticated = true;
     authState.user = { id: 'user-1', email: 'host@example.com' };
+    authState.session = { access_token: 'test-access-token' };
     fetchHostScheduledSessionsMock.mockResolvedValue({
       data: [
         {
@@ -122,6 +126,7 @@ describe('HostScheduledSessionsPanel', () => {
   it('opens edit form when Edit time is clicked', async () => {
     authState.isAuthenticated = true;
     authState.user = { id: 'user-1', email: 'host@example.com' };
+    authState.session = { access_token: 'test-access-token' };
     fetchHostScheduledSessionsMock.mockResolvedValue({
       data: [
         {
@@ -147,6 +152,7 @@ describe('HostScheduledSessionsPanel', () => {
   it('shows empty state when there are no scheduled sessions', async () => {
     authState.isAuthenticated = true;
     authState.user = { id: 'user-1', email: 'host@example.com' };
+    authState.session = { access_token: 'test-access-token' };
     fetchHostScheduledSessionsMock.mockResolvedValue({
       data: [],
       error: null,

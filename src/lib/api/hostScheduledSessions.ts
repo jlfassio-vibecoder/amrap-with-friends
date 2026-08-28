@@ -1,5 +1,6 @@
 import { callRpc } from '@/lib/api/callRpc';
 import type { WorkoutExercise } from '@/lib/api/sessionTypes';
+import { getSupabaseClient } from '@/lib/supabase';
 
 export interface HostScheduledSessionEntry {
   sessionId: string;
@@ -114,9 +115,33 @@ export async function fetchHostScheduledSessions(): Promise<{
   data: HostScheduledSessionEntry[] | null;
   error: HostScheduledSessionsApiError | null;
 }> {
+  // This RPC is granted to `authenticated` only. Calling it with the anon key
+  // (no user JWT) returns HTTP 401 — avoid the request when the session is gone.
+  const {
+    data: { session },
+  } = await getSupabaseClient().auth.getSession();
+  if (!session?.access_token) {
+    return {
+      data: null,
+      error: { message: 'Sign in to see your scheduled rallies.' },
+    };
+  }
+
   const { data, error } = await callRpc('host_scheduled_sessions');
 
   if (error) {
+    const message = error.message.toLowerCase();
+    if (
+      message.includes('jwt') ||
+      message.includes('permission denied') ||
+      message.includes('not authenticated') ||
+      message.includes('authentication required')
+    ) {
+      return {
+        data: null,
+        error: { message: 'Sign in again to see your scheduled rallies.' },
+      };
+    }
     return { data: null, error: { message: error.message } };
   }
 
