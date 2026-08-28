@@ -5,7 +5,6 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { AuthChangeEvent } from '@supabase/supabase-js';
 import { validatePasswordLength } from '@/lib/auth/passwordPolicy';
 import { isMagicLinkAuthEnabled } from '@/lib/auth/authFeatures';
 import { getSupabaseClient } from '@/lib/supabase';
@@ -29,7 +28,7 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, nextSession) => {
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
 
