@@ -24,6 +24,10 @@ vi.mock('@/lib/supabase', () => ({
         data: { subscription: { unsubscribe: vi.fn() } },
       })),
     },
+    // HomePage renders FeaturedWodCard, which fetches unconditionally
+    // (even signed-out) — mock rpc so that call resolves instead of
+    // throwing "supabase.rpc is not a function".
+    rpc: vi.fn(() => Promise.resolve({ data: { ok: true, featured: null }, error: null })),
   },
 }));
 

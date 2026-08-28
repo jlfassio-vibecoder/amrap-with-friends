@@ -7,9 +7,13 @@ import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 interface RequireIntakeProps {
   children: ReactNode;
   guestMode: 'sign-in' | 'passthrough';
+  /** Rendered above the sign-in prompt when guestMode is 'sign-in' and the
+   * visitor isn't authenticated — for content that should stay visible even
+   * behind the gate (e.g. a public Featured WOD preview). */
+  signedOutPreview?: ReactNode;
 }
 
-export function RequireIntake({ children, guestMode }: RequireIntakeProps) {
+export function RequireIntake({ children, guestMode, signedOutPreview }: RequireIntakeProps) {
   const location = useLocation();
   const { profile, missing, loading, isAuthenticated, isAuthLoading, error } =
     useAthleteProfile();
@@ -30,6 +34,7 @@ export function RequireIntake({ children, guestMode }: RequireIntakeProps) {
 
     return (
       <NarrowPageLayout title="Create session" subtitle="Sign in required">
+        {signedOutPreview}
         <p className="text-sm text-secondary">
           Sign in and complete intake before creating a session. You can still join
           as a guest.

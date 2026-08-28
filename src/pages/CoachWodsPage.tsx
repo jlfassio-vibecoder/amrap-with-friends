@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
 import { CoachExerciseLibrary } from '@/components/coachWod/CoachExerciseLibrary';
+import { CoachFeaturedWodPanel } from '@/components/coachWod/CoachFeaturedWodPanel';
 import { CoachWorkoutForm } from '@/components/coachWod/CoachWorkoutForm';
 import { CoachWorkoutList } from '@/components/coachWod/CoachWorkoutList';
 import { fetchCoachWorkout, type CoachWorkout, type CoachWorkoutSummary } from '@/lib/api/coachWod';
@@ -46,6 +47,7 @@ export default function CoachWodsPage() {
 
         {view.mode === 'list' ? (
           <>
+            <CoachFeaturedWodPanel key={refreshKey} />
             <CoachWorkoutList
               refreshKey={refreshKey}
               onSelect={(summary) => {

@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage';
+import { FeaturedWodCard } from '@/components/home/FeaturedWodCard';
 import { GlobalPresenceBroadcaster } from '@/components/GlobalPresenceBroadcaster';
 import { RequireIntake } from '@/components/RequireIntake';
 import { RequireCoach } from '@/components/RequireCoach';
@@ -33,7 +34,7 @@ function App() {
           <Route
             path="/create"
             element={
-              <RequireIntake guestMode="sign-in">
+              <RequireIntake guestMode="sign-in" signedOutPreview={<FeaturedWodCard />}>
                 <CreateSessionPage />
               </RequireIntake>
             }
