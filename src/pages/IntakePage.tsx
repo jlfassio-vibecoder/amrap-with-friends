@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type RefObject,
+} from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { track, trackBeacon } from '@/lib/analytics/track';
@@ -60,15 +67,40 @@ function usernameValidationMessage(value: string): string | null {
   return null;
 }
 
-function sanitizeUsernameInput(value: string): string {
-  // Spaces are the common first/last-name mistake; map them to underscore.
-  return value.replace(/\s+/g, '_').slice(0, 30);
-}
-
 function isValidNickname(value: string): boolean {
   const trimmed = value.trim();
   return trimmed.length >= 1 && trimmed.length <= 50;
 }
+
+function nicknameValidationMessage(value: string): string | null {
+  if (!isValidNickname(value)) {
+    return 'Enter a nickname (1–50 characters).';
+  }
+  return null;
+}
+
+type IntakeFieldKey =
+  | 'email'
+  | 'username'
+  | 'nickname'
+  | 'height'
+  | 'weight'
+  | 'age'
+  | 'biologicalSex'
+  | 'declaration';
+
+type IntakeFieldError = { key: IntakeFieldKey; message: string };
+
+const FIELD_ORDER: IntakeFieldKey[] = [
+  'email',
+  'username',
+  'nickname',
+  'height',
+  'weight',
+  'age',
+  'biologicalSex',
+  'declaration',
+];
 
 /** Derive a legal username from an email local-part for first-time intake. */
 function suggestUsernameFromEmail(email: string): string {
@@ -194,6 +226,27 @@ function IntakeForm({
   );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+
+  const emailRef = useRef<HTMLInputElement>(null);
+  const usernameRef = useRef<HTMLInputElement>(null);
+  const nicknameRef = useRef<HTMLInputElement>(null);
+  const heightRef = useRef<HTMLInputElement>(null);
+  const weightRef = useRef<HTMLInputElement>(null);
+  const ageRef = useRef<HTMLInputElement>(null);
+  const biologicalSexRef = useRef<HTMLDivElement>(null);
+  const declarationRef = useRef<HTMLDivElement>(null);
+
+  const fieldRefs: Record<IntakeFieldKey, RefObject<HTMLElement | null>> = {
+    email: emailRef,
+    username: usernameRef,
+    nickname: nicknameRef,
+    height: heightRef,
+    weight: weightRef,
+    age: ageRef,
+    biologicalSex: biologicalSexRef,
+    declaration: declarationRef,
+  };
 
   const dirtyRef = useRef(false);
   const submittedRef = useRef(false);
@@ -226,49 +279,89 @@ function IntakeForm({
   const heightLabel = unitSystem === 'imperial' ? 'Height (in)' : 'Height (cm)';
   const weightLabel = unitSystem === 'imperial' ? 'Weight (lb)' : 'Weight (kg)';
 
-  const submitBlockers = useMemo(() => {
-    const blockers: string[] = [];
+  const fieldErrors = useMemo((): IntakeFieldError[] => {
+    const errors: IntakeFieldError[] = [];
     if (email.trim().length === 0) {
-      blockers.push('Enter your email.');
+      errors.push({ key: 'email', message: 'Enter your email.' });
     }
-    const usernameError = usernameValidationMessage(username);
-    if (usernameError) {
-      blockers.push(usernameError);
+    const usernameMsg = usernameValidationMessage(username);
+    if (usernameMsg) {
+      errors.push({ key: 'username', message: usernameMsg });
     }
-    if (!isValidNickname(nickname)) {
-      blockers.push('Enter a nickname (1–50 characters).');
+    const nicknameMsg = nicknameValidationMessage(nickname);
+    if (nicknameMsg) {
+      errors.push({ key: 'nickname', message: nicknameMsg });
     }
     const h = Number(height);
     const w = Number(weight);
     const a = Number(age);
     if (!isValidHeight(h, unitSystem)) {
-      blockers.push(
-        unitSystem === 'imperial'
-          ? 'Enter a valid height in inches.'
-          : 'Enter a valid height in centimeters.'
-      );
+      errors.push({
+        key: 'height',
+        message:
+          unitSystem === 'imperial'
+            ? 'Enter a valid height in inches.'
+            : 'Enter a valid height in centimeters.',
+      });
     }
     if (!isValidWeight(w, unitSystem)) {
-      blockers.push(
-        unitSystem === 'imperial'
-          ? 'Enter a valid weight in pounds.'
-          : 'Enter a valid weight in kilograms.'
-      );
+      errors.push({
+        key: 'weight',
+        message:
+          unitSystem === 'imperial'
+            ? 'Enter a valid weight in pounds.'
+            : 'Enter a valid weight in kilograms.',
+      });
     }
     if (!Number.isInteger(a) || a < 13 || a > 120) {
-      blockers.push('Enter an age between 13 and 120.');
+      errors.push({ key: 'age', message: 'Enter an age between 13 and 120.' });
     }
     if (biologicalSex === null) {
-      blockers.push('Select biological sex.');
+      errors.push({ key: 'biologicalSex', message: 'Select biological sex.' });
     }
     if (rank === null) {
-      blockers.push('Select a declaration.');
+      errors.push({ key: 'declaration', message: 'Select a declaration.' });
     }
-    return blockers;
+    return FIELD_ORDER.flatMap((key) => errors.filter((e) => e.key === key));
   }, [email, username, nickname, height, weight, age, rank, biologicalSex, unitSystem]);
 
-  const canSubmit = submitBlockers.length === 0;
-  const usernameError = usernameValidationMessage(username);
+  const errorByField = useMemo(() => {
+    const map: Partial<Record<IntakeFieldKey, string>> = {};
+    for (const entry of fieldErrors) {
+      map[entry.key] = entry.message;
+    }
+    return map;
+  }, [fieldErrors]);
+
+  const canSubmit = fieldErrors.length === 0;
+
+  function shouldShowFieldError(key: IntakeFieldKey, rawValue: string): boolean {
+    if (!errorByField[key]) {
+      return false;
+    }
+    if (attemptedSubmit) {
+      return true;
+    }
+    return rawValue.trim().length > 0;
+  }
+
+  function focusField(key: IntakeFieldKey) {
+    const el = fieldRefs[key].current;
+    if (!el) {
+      return;
+    }
+    if (typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    if (el instanceof HTMLElement && typeof el.focus === 'function' && 'value' in el) {
+      el.focus();
+      return;
+    }
+    const focusable = el.querySelector<HTMLElement>(
+      'button:not([disabled]), input, select, textarea'
+    );
+    focusable?.focus();
+  }
 
   function switchUnitSystem(next: BodyMetricUnitSystem) {
     if (next === unitSystem) {
@@ -282,6 +375,11 @@ function IntakeForm({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!canSubmit || !rank || !biologicalSex) {
+      setAttemptedSubmit(true);
+      const first = fieldErrors[0];
+      if (first) {
+        requestAnimationFrame(() => focusField(first.key));
+      }
       return;
     }
     setSubmitting(true);
@@ -363,8 +461,23 @@ function IntakeForm({
     }
   }
 
+  const emailError = shouldShowFieldError('email', email) ? errorByField.email : null;
+  const usernameError = shouldShowFieldError('username', username)
+    ? errorByField.username
+    : null;
+  const nicknameError = shouldShowFieldError('nickname', nickname)
+    ? errorByField.nickname
+    : null;
+  const heightError = shouldShowFieldError('height', height) ? errorByField.height : null;
+  const weightError = shouldShowFieldError('weight', weight) ? errorByField.weight : null;
+  const ageError = shouldShowFieldError('age', age) ? errorByField.age : null;
+  const biologicalSexError =
+    attemptedSubmit && errorByField.biologicalSex ? errorByField.biologicalSex : null;
+  const declarationError =
+    attemptedSubmit && errorByField.declaration ? errorByField.declaration : null;
+
   return (
-    <form className="card space-y-6 p-6" onSubmit={handleSubmit}>
+    <form className="card space-y-6 p-6" onSubmit={handleSubmit} noValidate>
       <div className="space-y-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-secondary">
           Account
@@ -374,13 +487,20 @@ function IntakeForm({
             Email
           </span>
           <input
+            ref={emailRef}
             className="input-field"
             type="email"
             autoComplete="email"
+            aria-invalid={Boolean(emailError)}
             value={email}
             onChange={(event) => { setEmail(event.target.value); markDirty(); }}
           />
         </label>
+        {emailError ? (
+          <p className="text-xs text-error" role="alert">
+            {emailError}
+          </p>
+        ) : null}
         <label className="block space-y-1">
           <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
             Password
@@ -399,13 +519,13 @@ function IntakeForm({
             Username
           </span>
           <input
+            ref={usernameRef}
             className="input-field"
             autoComplete="username"
-            required
             aria-invalid={Boolean(usernameError)}
             value={username}
             onChange={(event) => {
-              setUsername(sanitizeUsernameInput(event.target.value));
+              setUsername(event.target.value);
               markDirty();
             }}
           />
@@ -424,14 +544,22 @@ function IntakeForm({
             Nickname
           </span>
           <input
+            ref={nicknameRef}
             className="input-field"
+            aria-invalid={Boolean(nicknameError)}
             value={nickname}
             onChange={(event) => { setNickname(event.target.value); markDirty(); }}
           />
         </label>
-        <p className="text-xs text-muted">
-          Default workout callsign (max 50 characters)
-        </p>
+        {nicknameError ? (
+          <p className="text-xs text-error" role="alert">
+            {nicknameError}
+          </p>
+        ) : (
+          <p className="text-xs text-muted">
+            Default workout callsign (max 50 characters)
+          </p>
+        )}
       </div>
 
       <div
@@ -466,42 +594,69 @@ function IntakeForm({
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <label className="block space-y-1">
-          <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
-            {heightLabel}
-          </span>
-          <input
-            className="input-field tabular-nums"
-            inputMode="numeric"
-            value={height}
-            onChange={(event) => { setHeight(event.target.value); markDirty(); }}
-          />
-        </label>
-        <label className="block space-y-1">
-          <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
-            {weightLabel}
-          </span>
-          <input
-            className="input-field tabular-nums"
-            inputMode="decimal"
-            value={weight}
-            onChange={(event) => { setWeight(event.target.value); markDirty(); }}
-          />
-        </label>
-        <label className="block space-y-1">
-          <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
-            Age
-          </span>
-          <input
-            className="input-field tabular-nums"
-            inputMode="numeric"
-            value={age}
-            onChange={(event) => { setAge(event.target.value); markDirty(); }}
-          />
-        </label>
+        <div className="space-y-1">
+          <label className="block space-y-1">
+            <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
+              {heightLabel}
+            </span>
+            <input
+              ref={heightRef}
+              className="input-field tabular-nums"
+              inputMode="numeric"
+              aria-invalid={Boolean(heightError)}
+              value={height}
+              onChange={(event) => { setHeight(event.target.value); markDirty(); }}
+            />
+          </label>
+          {heightError ? (
+            <p className="text-xs text-error" role="alert">
+              {heightError}
+            </p>
+          ) : null}
+        </div>
+        <div className="space-y-1">
+          <label className="block space-y-1">
+            <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
+              {weightLabel}
+            </span>
+            <input
+              ref={weightRef}
+              className="input-field tabular-nums"
+              inputMode="decimal"
+              aria-invalid={Boolean(weightError)}
+              value={weight}
+              onChange={(event) => { setWeight(event.target.value); markDirty(); }}
+            />
+          </label>
+          {weightError ? (
+            <p className="text-xs text-error" role="alert">
+              {weightError}
+            </p>
+          ) : null}
+        </div>
+        <div className="space-y-1">
+          <label className="block space-y-1">
+            <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
+              Age
+            </span>
+            <input
+              ref={ageRef}
+              className="input-field tabular-nums"
+              inputMode="numeric"
+              aria-invalid={Boolean(ageError)}
+              value={age}
+              onChange={(event) => { setAge(event.target.value); markDirty(); }}
+            />
+          </label>
+          {ageError ? (
+            <p className="text-xs text-error" role="alert">
+              {ageError}
+            </p>
+          ) : null}
+        </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-3" ref={biologicalSexRef}>
         <p className="text-xs font-semibold uppercase tracking-wide text-secondary">
           Biological sex
         </p>
@@ -530,9 +685,14 @@ function IntakeForm({
             );
           })}
         </div>
+        {biologicalSexError ? (
+          <p className="text-xs text-error" role="alert">
+            {biologicalSexError}
+          </p>
+        ) : null}
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-3" ref={declarationRef}>
         <p className="text-xs font-semibold uppercase tracking-wide text-secondary">
           Declaration
         </p>
@@ -567,23 +727,35 @@ function IntakeForm({
             );
           })}
         </div>
+        {declarationError ? (
+          <p className="text-xs text-error" role="alert">
+            {declarationError}
+          </p>
+        ) : null}
       </div>
 
       {error ? <p className="text-error">Error: {error}</p> : null}
 
-      {!canSubmit && submitBlockers.length > 0 ? (
+      {!canSubmit && fieldErrors.length > 0 ? (
         <ul className="space-y-1 text-sm text-secondary" aria-live="polite">
-          {submitBlockers.map((blocker) => (
-            <li key={blocker}>{blocker}</li>
+          {fieldErrors.map((entry) => (
+            <li key={entry.key}>
+              <button
+                type="button"
+                className="text-left underline-offset-2 hover:text-accent hover:underline"
+                onClick={() => {
+                  setAttemptedSubmit(true);
+                  focusField(entry.key);
+                }}
+              >
+                {entry.message}
+              </button>
+            </li>
           ))}
         </ul>
       ) : null}
 
-      <button
-        type="submit"
-        className="btn-primary w-full"
-        disabled={!canSubmit || submitting}
-      >
+      <button type="submit" className="btn-primary w-full" disabled={submitting}>
         {submitting ? 'Saving…' : 'File the dossier'}
       </button>
     </form>
