@@ -85,7 +85,15 @@ export async function fetchCoachFeaturedSchedule(): Promise<{
     return { data: null, error: null };
   }
 
-  return { data: parseSchedule(asRecord(raw.schedule)), error: null };
+  const schedule = parseSchedule(asRecord(raw.schedule));
+  if (!schedule) {
+    return {
+      data: null,
+      error: { message: 'Something went wrong. Please try again.' },
+    };
+  }
+
+  return { data: schedule, error: null };
 }
 
 export async function setCoachFeaturedSchedule(input: {

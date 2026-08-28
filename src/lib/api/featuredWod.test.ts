@@ -80,6 +80,18 @@ describe('fetchCurrentFeaturedWod', () => {
     expect(result.data).toBeNull();
     expect(result.error?.message).toBe('boom');
   });
+
+  it('surfaces an error when featured payload fails validation', async () => {
+    callRpcMock.mockResolvedValue({
+      data: { ok: true, featured: { workoutName: 'Broken' } },
+      error: null,
+    });
+
+    const result = await fetchCurrentFeaturedWod();
+
+    expect(result.data).toBeNull();
+    expect(result.error?.message).toBe('Something went wrong. Please try again.');
+  });
 });
 
 describe('formatFeaturedWodTime', () => {

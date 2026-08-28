@@ -75,7 +75,15 @@ export async function fetchCurrentFeaturedWod(): Promise<{
     return { data: null, error: null };
   }
 
-  return { data: parseFeaturedWod(asRecord(raw.featured)), error: null };
+  const featured = parseFeaturedWod(asRecord(raw.featured));
+  if (!featured) {
+    return {
+      data: null,
+      error: { message: 'Something went wrong. Please try again.' },
+    };
+  }
+
+  return { data: featured, error: null };
 }
 
 export function formatFeaturedWodTime(scheduledAt: string): string {

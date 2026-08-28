@@ -231,8 +231,12 @@ export function CoachFeaturedWodPanel() {
         if (scheduleResult.error) {
           setError(scheduleResult.error.message);
         } else {
-          setError(null);
           setSchedule(scheduleResult.data);
+          if (workoutsResult.error) {
+            setError(workoutsResult.error.message);
+          } else {
+            setError(null);
+          }
         }
         setWorkouts(workoutsResult.data ?? []);
       }

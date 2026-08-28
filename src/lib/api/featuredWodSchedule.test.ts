@@ -57,6 +57,18 @@ describe('fetchCoachFeaturedSchedule', () => {
     expect(result.data).toBeNull();
     expect(result.error?.message).toBe('Sign in to manage the featured WOD.');
   });
+
+  it('surfaces an error when schedule payload fails validation', async () => {
+    callRpcMock.mockResolvedValue({
+      data: { ok: true, schedule: { id: '11111111-1111-4111-8111-111111111111' } },
+      error: null,
+    });
+
+    const result = await fetchCoachFeaturedSchedule();
+
+    expect(result.data).toBeNull();
+    expect(result.error?.message).toBe('Something went wrong. Please try again.');
+  });
 });
 
 describe('setCoachFeaturedSchedule', () => {
