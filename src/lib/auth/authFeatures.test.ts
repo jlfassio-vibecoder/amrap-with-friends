@@ -1,0 +1,27 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+describe('isMagicLinkAuthEnabled', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('defaults to true when unset', async () => {
+    vi.stubEnv('VITE_AUTH_MAGIC_LINK_ENABLED', '');
+    const { isMagicLinkAuthEnabled } = await import('./authFeatures');
+    expect(isMagicLinkAuthEnabled()).toBe(true);
+  });
+
+  it('returns false when explicitly disabled', async () => {
+    vi.stubEnv('VITE_AUTH_MAGIC_LINK_ENABLED', 'false');
+    vi.resetModules();
+    const { isMagicLinkAuthEnabled } = await import('./authFeatures');
+    expect(isMagicLinkAuthEnabled()).toBe(false);
+  });
+
+  it('returns true when explicitly enabled', async () => {
+    vi.stubEnv('VITE_AUTH_MAGIC_LINK_ENABLED', 'true');
+    vi.resetModules();
+    const { isMagicLinkAuthEnabled } = await import('./authFeatures');
+    expect(isMagicLinkAuthEnabled()).toBe(true);
+  });
+});
