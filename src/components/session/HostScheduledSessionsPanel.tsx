@@ -12,7 +12,7 @@ import {
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 
 export function HostScheduledSessionsPanel() {
-  const { isAuthenticated, isAuthLoading, user } = useAmrapAuth();
+  const { isAuthenticated, isAuthLoading, user, session } = useAmrapAuth();
   const [entries, setEntries] = useState<HostScheduledSessionEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoadingEntries, setIsLoadingEntries] = useState(false);
@@ -40,7 +40,7 @@ export function HostScheduledSessionsPanel() {
   }, []);
 
   useEffect(() => {
-    if (isAuthLoading || !isAuthenticated || !user) {
+    if (isAuthLoading || !isAuthenticated || !user || !session?.access_token) {
       setEntries([]);
       setError(null);
       setEditingSessionId(null);
@@ -55,7 +55,7 @@ export function HostScheduledSessionsPanel() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthLoading, isAuthenticated, user, loadEntries]);
+  }, [isAuthLoading, isAuthenticated, user, session?.access_token, loadEntries]);
 
   const loading = isAuthLoading || (isAuthenticated && user !== null && isLoadingEntries);
 

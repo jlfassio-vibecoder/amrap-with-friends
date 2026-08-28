@@ -9,6 +9,8 @@ type FormStatus = 'idle' | 'submitting' | 'success' | 'error';
 
 interface AuthModalProps {
   onClose: () => void;
+  /** Open on password Sign in or Create account. Defaults to sign-in. */
+  initialPasswordMode?: PasswordMode;
 }
 
 function authMethodButtonClass(isActive: boolean): string {
@@ -17,7 +19,10 @@ function authMethodButtonClass(isActive: boolean): string {
     : 'rounded-full px-4 py-2 text-sm font-semibold text-secondary hover:text-ink';
 }
 
-export function AuthModal({ onClose }: AuthModalProps) {
+export function AuthModal({
+  onClose,
+  initialPasswordMode = 'sign-in',
+}: AuthModalProps) {
   const magicLinkEnabled = isMagicLinkAuthEnabled();
   const {
     signInWithMagicLink,
@@ -26,10 +31,13 @@ export function AuthModal({ onClose }: AuthModalProps) {
     isAuthenticated,
   } = useAmrapAuth();
 
-  const [authMethod, setAuthMethod] = useState<AuthMethod>(
-    magicLinkEnabled ? 'magic-link' : 'password',
-  );
-  const [passwordMode, setPasswordMode] = useState<PasswordMode>('sign-in');
+  const [authMethod, setAuthMethod] = useState<AuthMethod>(() => {
+    if (initialPasswordMode === 'sign-up') {
+      return 'password';
+    }
+    return magicLinkEnabled ? 'magic-link' : 'password';
+  });
+  const [passwordMode, setPasswordMode] = useState<PasswordMode>(initialPasswordMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -112,6 +120,9 @@ export function AuthModal({ onClose }: AuthModalProps) {
 
   const isBusy = status === 'submitting';
   const isSuccessLocked = status === 'success' && authMethod === 'magic-link';
+  const showingPasswordForm = !(magicLinkEnabled && authMethod === 'magic-link');
+  const title =
+    showingPasswordForm && passwordMode === 'sign-up' ? 'Create account' : 'Sign in';
 
   return (
     <div
@@ -127,7 +138,7 @@ export function AuthModal({ onClose }: AuthModalProps) {
       >
         <div className="flex items-start justify-between gap-4">
           <h2 id="auth-modal-title" className="text-display text-xl text-ink">
-            Sign in
+            {title}
           </h2>
           <button
             type="button"

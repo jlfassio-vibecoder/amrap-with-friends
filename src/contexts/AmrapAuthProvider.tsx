@@ -33,7 +33,9 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
 
-      if (!initialResolved && (event === 'INITIAL_SESSION' || event === 'SIGNED_OUT')) {
+      // Resolve loading on the first auth event so UI is never stuck waiting for
+      // INITIAL_SESSION alone (SIGNED_IN / TOKEN_REFRESHED can arrive first).
+      if (!initialResolved) {
         initialResolved = true;
         setIsAuthLoading(false);
       }

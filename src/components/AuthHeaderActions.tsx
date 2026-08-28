@@ -5,10 +5,12 @@ import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { AuthModal } from '@/components/AuthModal';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
+type AuthOpenMode = 'sign-in' | 'sign-up';
+
 export function AuthHeaderActions() {
   const { isAuthenticated, isAuthLoading, user, signOut } = useAmrapAuth();
   const { profile } = useAthleteProfile();
-  const [authOpen, setAuthOpen] = useState(false);
+  const [authOpenMode, setAuthOpenMode] = useState<AuthOpenMode | null>(null);
 
   const accountLabel =
     profile?.username?.trim() || user?.email || null;
@@ -37,16 +39,30 @@ export function AuthHeaderActions() {
             </button>
           </div>
         ) : (
-          <button
-            type="button"
-            className="link-accent text-sm"
-            onClick={() => setAuthOpen(true)}
-          >
-            Sign in
-          </button>
+          <div className="flex items-center gap-3 text-sm">
+            <button
+              type="button"
+              className="link-accent"
+              onClick={() => setAuthOpenMode('sign-in')}
+            >
+              Sign in
+            </button>
+            <button
+              type="button"
+              className="link-accent"
+              onClick={() => setAuthOpenMode('sign-up')}
+            >
+              Create account
+            </button>
+          </div>
         )}
       </div>
-      {authOpen ? <AuthModal onClose={() => setAuthOpen(false)} /> : null}
+      {authOpenMode ? (
+        <AuthModal
+          onClose={() => setAuthOpenMode(null)}
+          initialPasswordMode={authOpenMode}
+        />
+      ) : null}
     </>
   );
 }
