@@ -173,9 +173,9 @@ export function FeaturedWodCard() {
         >
           Join lobby
         </Link>
-      ) : featured.sessionId ? null : (
+      ) : presentation.showLobbyOpensSoon ? (
         <p className="text-xs text-secondary">Lobby opens shortly before start.</p>
-      )}
+      ) : null}
     </div>
   );
 }

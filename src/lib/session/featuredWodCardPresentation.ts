@@ -2,6 +2,9 @@ import { computeFeaturedSessionClock } from '@/lib/session/featuredWodSessionClo
 import type { FeaturedWod } from '@/lib/api/featuredWod';
 import { formatFeaturedWodTime } from '@/lib/api/featuredWod';
 
+/** Matches the historic scheduler lead window: lobby join opens 15 minutes before start. */
+export const FEATURED_WOD_LOBBY_LEAD_MS = 15 * 60 * 1000;
+
 export type FeaturedWodCardPhase = 'preview' | 'lobby' | 'work' | 'finished';
 
 export interface FeaturedWodCardPresentation {
@@ -9,6 +12,8 @@ export interface FeaturedWodCardPresentation {
   /** Primary status line under the schedule metadata. */
   statusLine: string;
   showJoinLobby: boolean;
+  /** True when the CTA should be the "Lobby opens shortly before start." hint. */
+  showLobbyOpensSoon: boolean;
 }
 
 /**
@@ -28,6 +33,7 @@ export function getFeaturedWodCardPresentation(
       phase: 'preview',
       statusLine: scheduledLabel,
       showJoinLobby: false,
+      showLobbyOpensSoon: true,
     };
   }
 
@@ -38,6 +44,7 @@ export function getFeaturedWodCardPresentation(
       phase,
       statusLine: 'Session locked, amrap in progress.',
       showJoinLobby: false,
+      showLobbyOpensSoon: false,
     };
   }
 
@@ -46,13 +53,20 @@ export function getFeaturedWodCardPresentation(
       phase,
       statusLine: 'Session locked, AMRAP ended.',
       showJoinLobby: false,
+      showLobbyOpensSoon: false,
     };
   }
+
+  const scheduledAtMs = Date.parse(featured.scheduledAt);
+  const withinLobbyLead =
+    Number.isFinite(scheduledAtMs) &&
+    nowMs >= scheduledAtMs - FEATURED_WOD_LOBBY_LEAD_MS;
 
   return {
     phase: 'lobby',
     statusLine: `${scheduledLabel}${attendeeSuffix}`,
-    showJoinLobby: true,
+    showJoinLobby: withinLobbyLead,
+    showLobbyOpensSoon: !withinLobbyLead,
   };
 }
 

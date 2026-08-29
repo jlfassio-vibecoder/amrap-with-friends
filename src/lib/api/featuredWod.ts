@@ -9,8 +9,8 @@ export interface FeaturedWod {
   intensityTier: number;
   tags: string[];
   scheduledAt: string;
-  /** Null until the scheduler has generated the actual session (within its
-   * lead window) — the card shows a time but no join CTA until then. */
+  /** Null until the scheduler has generated the actual session — the card
+   * still withholds the join CTA until the 15-minute lead window. */
   sessionId: string | null;
   state: FeaturedWodState;
   /** Wall-clock work start when state is work; null otherwise. */
