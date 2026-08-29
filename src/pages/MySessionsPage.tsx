@@ -26,6 +26,18 @@ function formatWorkoutSummary(entry: MySessionEntry): string {
   return `${first} + ${workout.length - 1} more`;
 }
 
+function formatSessionWhen(entry: MySessionEntry): string {
+  const when = entry.scheduledAt ?? entry.createdAt;
+  return new Date(when).toLocaleString();
+}
+
+function confirmDeleteMessage(entry: MySessionEntry): string {
+  if (entry.isFeatured) {
+    return 'Cancel this Featured WOD for this date and time only? Other scheduled days stay on the calendar.';
+  }
+  return 'Permanently delete this incomplete session?';
+}
+
 export default function MySessionsPage() {
   const { user, isAuthenticated, isAuthLoading } = useAmrapAuth();
   const [entries, setEntries] = useState<MySessionEntry[]>([]);
@@ -64,9 +76,7 @@ export default function MySessionsPage() {
     if (!canDeleteMySession(entry) || deletingSessionId) {
       return;
     }
-    const confirmed = window.confirm(
-      'Permanently delete this incomplete session?'
-    );
+    const confirmed = window.confirm(confirmDeleteMessage(entry));
     if (!confirmed) {
       return;
     }
@@ -124,8 +134,9 @@ export default function MySessionsPage() {
             <li key={entry.participantId} className="card space-y-2 p-4 text-sm">
               <p className="font-semibold">{formatWorkoutSummary(entry)}</p>
               <p className="text-secondary">
-                {new Date(entry.createdAt).toLocaleString()} · {entry.durationMinutes} min ·{' '}
+                {formatSessionWhen(entry)} · {entry.durationMinutes} min ·{' '}
                 {formatMySessionScoreDisplay(entry)} · {entry.state}
+                {entry.isFeatured ? ' · Featured' : ''}
               </p>
               <div className="flex flex-wrap items-center gap-3">
                 <Link

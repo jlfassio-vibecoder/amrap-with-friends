@@ -29,6 +29,15 @@ export type AmrapTimerAction =
       setupDurationSec: number;
       workDurationSec: number;
     }
+  | {
+      type: 'hydrate';
+      phase: 'setup' | 'work';
+      setupDurationSec: number;
+      workDurationSec: number;
+      timeLeftSec: number;
+      workStartedAtMs: number | null;
+      isPaused: boolean;
+    }
   | { type: 'tick'; nowMs: number }
   | { type: 'pause' }
   | { type: 'resume' }

@@ -141,6 +141,8 @@ export function useLiveAmrapSession(
           duration_minutes: session.duration_minutes,
           started_at: session.started_at,
           segment_index: session.segment_index,
+          is_featured: session.is_featured,
+          scheduled_at: session.scheduled_at,
         },
         nowMs
       );
@@ -175,6 +177,8 @@ export function useLiveAmrapSession(
     session?.duration_minutes,
     session?.started_at,
     session?.segment_index,
+    session?.is_featured,
+    session?.scheduled_at,
   ]);
 
   useEffect(() => {
@@ -192,6 +196,61 @@ export function useLiveAmrapSession(
     return () => clearInterval(interval);
   }, [isHost, joinerSnapshot]);
 
+  // Featured reclaim: coach opens an already-running hostless session with
+  // host_token — seed the local timer so they can pause/finish and push ticks.
+  useEffect(() => {
+    if (isPractice || !isHost || !session || timer.phase !== 'idle') {
+      return;
+    }
+    if (!session.is_featured) {
+      return;
+    }
+    if (session.state !== 'setup' && session.state !== 'work') {
+      return;
+    }
+
+    const nowMs = Date.now();
+    const snapshot = createAuthoritativeSnapshot(
+      {
+        state: session.state,
+        time_left_sec: session.time_left_sec,
+        is_paused: session.is_paused,
+        duration_minutes: session.duration_minutes,
+        started_at: session.started_at,
+        segment_index: session.segment_index,
+        is_featured: session.is_featured,
+        scheduled_at: session.scheduled_at,
+      },
+      nowMs
+    );
+    const display = snapshotToDisplay(snapshot, nowMs);
+    if (display.phase !== 'setup' && display.phase !== 'work') {
+      return;
+    }
+
+    timer.hydrate({
+      phase: display.phase,
+      setupDurationSec: setupDurationSec,
+      workDurationSec: session.duration_minutes * 60,
+      timeLeftSec: display.timeLeftSec,
+      workStartedAtMs: display.workStartedAtMs,
+      isPaused: display.isPaused,
+    });
+  }, [
+    isPractice,
+    isHost,
+    session,
+    session?.state,
+    session?.time_left_sec,
+    session?.is_paused,
+    session?.duration_minutes,
+    session?.started_at,
+    session?.is_featured,
+    session?.scheduled_at,
+    timer.phase,
+    timer,
+    setupDurationSec,
+  ]);
   const pushHostState = useCallback(
     async (immediate: boolean) => {
       if (!isHost || !hostToken || !sessionId || isPractice) {

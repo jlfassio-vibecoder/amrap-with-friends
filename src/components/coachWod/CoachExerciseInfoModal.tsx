@@ -5,6 +5,7 @@ import { getPhotoGridColumnCount } from '@/components/exerciseInfo/getPhotoGridC
 
 export interface CoachExerciseInfoModalContent {
   name: string;
+  subtitle?: string | null;
   photos: CoachExercisePhoto[];
   instructions: string[];
   cues: string[];
@@ -47,9 +48,14 @@ export function CoachExerciseInfoModal({ exercise, onClose }: CoachExerciseInfoM
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
-          <h2 id={titleId} className="text-display text-2xl text-ink">
-            {exercise.name}
-          </h2>
+          <div className="min-w-0 space-y-1">
+            <h2 id={titleId} className="text-display text-2xl text-ink">
+              {exercise.name}
+            </h2>
+            {exercise.subtitle ? (
+              <p className="text-sm text-secondary">{exercise.subtitle}</p>
+            ) : null}
+          </div>
           <button
             type="button"
             className="text-sm text-secondary hover:text-ink"

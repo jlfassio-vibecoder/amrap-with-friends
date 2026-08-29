@@ -44,6 +44,20 @@ export function amrapTimerReducer(
         rounds: [],
       };
 
+    case 'hydrate':
+      if (state.phase !== 'idle') {
+        return state;
+      }
+      return {
+        phase: action.phase,
+        setupDurationSec: action.setupDurationSec,
+        workDurationSec: action.workDurationSec,
+        timeLeftSec: action.timeLeftSec,
+        isPaused: action.phase === 'work' ? action.isPaused : false,
+        workStartedAtMs: action.phase === 'work' ? action.workStartedAtMs : null,
+        rounds: [],
+      };
+
     case 'pause':
       if (state.phase !== 'work' || state.isPaused) {
         return state;

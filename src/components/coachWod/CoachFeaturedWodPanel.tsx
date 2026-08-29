@@ -1,21 +1,54 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchCoachWorkouts, type CoachWorkoutSummary } from '@/lib/api/coachWod';
+import { formatFeaturedWodTime } from '@/lib/api/featuredWod';
 import {
   deleteCoachFeaturedSchedule,
   fetchCoachFeaturedSchedule,
+  fetchCoachFeaturedWodAttendees,
   pauseCoachFeaturedSchedule,
   setCoachFeaturedSchedule,
   type CoachFeaturedSchedule,
+  type FeaturedWodAttendee,
 } from '@/lib/api/featuredWodSchedule';
+import { computeNextFeaturedOccurrences } from '@/lib/session/featuredWodOccurrencePreview';
+
+const PREVIEW_COUNT = 3;
+
+/** Re-poll while the "who's coming" list is visible, same rationale as
+ * FeaturedWodCard's landing-page poll: no realtime channel for this, and a
+ * plain interval is proportionate for a coach glancing at attendance. */
+const ATTENDEES_POLL_INTERVAL_MS = 20_000;
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MAX_TIMES = 4;
+const TIMEZONE_DATALIST_ID = 'featured-wod-timezone-options';
 
 function defaultTimezone(): string {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
   } catch {
     return 'UTC';
+  }
+}
+
+/** Every IANA zone name the browser knows, so the timezone field is a
+ * searchable dropdown instead of a free-text field a typo can silently
+ * break (validated server-side against pg_timezone_names, but the coach
+ * never finds that out until save fails). Intl.supportedValuesOf isn't in
+ * every browser yet, so this degrades to just the browser's own zone.
+ *
+ * "UTC" is deliberately unioned in: Intl.supportedValuesOf('timeZone')
+ * excludes it even though it's what Intl.DateTimeFormat().resolvedOptions()
+ * actually returns for a system clock set to UTC (common on servers), and
+ * it's a perfectly valid zone pg_timezone_names accepts server-side —
+ * without this, that default value would show as "not recognized" and
+ * silently block submit for anyone whose system is on UTC. */
+function timezoneOptions(): string[] {
+  try {
+    const supported = Intl.supportedValuesOf('timeZone');
+    return supported.includes('UTC') ? supported : [...supported, 'UTC'];
+  } catch {
+    return [defaultTimezone()];
   }
 }
 
@@ -44,6 +77,14 @@ function ScheduleForm({ workouts, schedule, onSaved, onCancel }: ScheduleFormPro
   const [timezone, setTimezone] = useState(schedule?.timezone ?? defaultTimezone());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const timezoneChoices = useMemo(() => timezoneOptions(), []);
+  const timezoneRecognized = timezoneChoices.includes(timezone.trim());
+  const previewOccurrences = useMemo(() => {
+    if (!timezoneRecognized) {
+      return [];
+    }
+    return computeNextFeaturedOccurrences(days, times, timezone.trim(), new Date(), PREVIEW_COUNT);
+  }, [days, times, timezone, timezoneRecognized]);
 
   function toggleDay(day: number) {
     setDays((current) =>
@@ -78,6 +119,10 @@ function ScheduleForm({ workouts, schedule, onSaved, onCancel }: ScheduleFormPro
     }
     if (times.length === 0) {
       setError('Choose at least one time.');
+      return;
+    }
+    if (!timezoneRecognized) {
+      setError('Choose a recognized timezone from the list.');
       return;
     }
 
@@ -184,14 +229,48 @@ function ScheduleForm({ workouts, schedule, onSaved, onCancel }: ScheduleFormPro
         <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
           Timezone
         </span>
+        <datalist id={TIMEZONE_DATALIST_ID}>
+          {timezoneChoices.map((tz) => (
+            <option key={tz} value={tz} />
+          ))}
+        </datalist>
         <input
           type="text"
           className="input-field"
           value={timezone}
+          list={TIMEZONE_DATALIST_ID}
           onChange={(event) => setTimezone(event.target.value)}
           placeholder="America/Los_Angeles"
         />
+        {timezone.trim() && !timezoneRecognized ? (
+          <p className="text-xs text-secondary">
+            Not a recognized timezone — pick one from the list.
+          </p>
+        ) : null}
       </label>
+
+      {days.length > 0 && times.length > 0 ? (
+        <div className="space-y-1 rounded-card border border-border bg-page p-3">
+          <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
+            Next occurrences
+          </span>
+          {previewOccurrences.length > 0 ? (
+            <ul className="space-y-0.5 text-sm text-ink">
+              {previewOccurrences.map((occurrence) => (
+                <li key={occurrence.toISOString()}>
+                  {formatFeaturedWodTime(occurrence.toISOString())}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-secondary">
+              {timezoneRecognized
+                ? 'Add at least one day and time to preview.'
+                : 'Pick a recognized timezone to preview.'}
+            </p>
+          )}
+        </div>
+      ) : null}
 
       {error ? <p className="text-error text-sm">{error}</p> : null}
 
@@ -208,6 +287,63 @@ function ScheduleForm({ workouts, schedule, onSaved, onCancel }: ScheduleFormPro
           Cancel
         </button>
       </div>
+    </div>
+  );
+}
+
+/** "Who's coming" — the specific athletes who've joined the coach's own
+ * live Featured WOD session, not just the bare count already shown on the
+ * public card. Only renders once a live session exists (sessionId !=
+ * null); polls while mounted so new joiners show up without a refresh. */
+function AttendeeList() {
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [attendees, setAttendees] = useState<FeaturedWodAttendee[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    function poll() {
+      fetchCoachFeaturedWodAttendees().then((result) => {
+        if (cancelled || result.error || !result.data) {
+          return;
+        }
+        setSessionId(result.data.sessionId);
+        setAttendees(result.data.attendees);
+        setLoaded(true);
+      });
+    }
+
+    poll();
+    const intervalId = window.setInterval(poll, ATTENDEES_POLL_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
+  if (!loaded || !sessionId) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-1 rounded-card border border-border bg-page p-3">
+      <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
+        Who&apos;s coming ({attendees.length})
+      </span>
+      {attendees.length > 0 ? (
+        <ul className="space-y-0.5 text-sm text-ink">
+          {attendees.map((attendee, index) => (
+            <li key={`${attendee.nickname}-${index}`}>
+              {attendee.nickname}
+              {attendee.role === 'host' ? ' (host)' : ''}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-secondary">No one has joined yet.</p>
+      )}
     </div>
   );
 }
@@ -382,6 +518,7 @@ export function CoachFeaturedWodPanel() {
               Delete
             </button>
           </div>
+          <AttendeeList />
         </div>
       ) : (
         <div className="space-y-2">

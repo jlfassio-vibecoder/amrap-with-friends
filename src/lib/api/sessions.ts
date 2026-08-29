@@ -204,23 +204,35 @@ export async function joinSession(
   const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
   const participantId = readString(raw.participant_id);
   const claimToken = readString(raw.claim_token);
+  const hostToken = readString(raw.host_token);
+  const returnedNickname = readString(raw.nickname) ?? nickname;
+  const role = readString(raw.role) ?? (hostToken ? 'host' : 'joiner');
 
-  if (!participantId || !claimToken) {
+  if (!participantId) {
     return { data: null, error: { message: 'Something went wrong. Please try again.' } };
   }
 
-  if ('host_token' in raw && readString(raw.host_token)) {
+  // New joiners need a claim token; host reclaim may only return host_token
+  // (Featured WOD host rows are created without a claim_token_hash).
+  if (!claimToken && !hostToken) {
     return { data: null, error: { message: 'Something went wrong. Please try again.' } };
   }
 
   persistSessionIdentity(sessionId, {
-    nickname,
+    nickname: returnedNickname,
     participantId,
-    claimToken,
+    ...(hostToken ? { hostToken } : {}),
+    ...(claimToken ? { claimToken } : {}),
   });
 
   return {
-    data: { participantId, claimToken },
+    data: {
+      participantId,
+      claimToken,
+      hostToken,
+      nickname: returnedNickname,
+      role,
+    },
     error: null,
   };
 }

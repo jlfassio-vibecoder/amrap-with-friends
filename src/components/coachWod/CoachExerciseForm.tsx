@@ -8,6 +8,7 @@ import {
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 
 const TIPS_MAX_LENGTH = 280;
+const SUBTITLE_MAX_LENGTH = 120;
 const MAX_PHOTOS = 6;
 
 function linesToList(value: string): string[] {
@@ -29,6 +30,7 @@ interface CoachExerciseFormProps {
 export function CoachExerciseForm({ exercise, onSaved, onCancel }: CoachExerciseFormProps) {
   const { user } = useAmrapAuth();
   const [name, setName] = useState(exercise?.name ?? '');
+  const [subtitle, setSubtitle] = useState(exercise?.subtitle ?? '');
   const [instructions, setInstructions] = useState(exercise?.instructions.join('\n') ?? '');
   const [cues, setCues] = useState(exercise?.cues.join('\n') ?? '');
   const [tips, setTips] = useState(exercise?.tips ?? '');
@@ -90,6 +92,7 @@ export function CoachExerciseForm({ exercise, onSaved, onCancel }: CoachExercise
     const firstSave = await upsertCoachExercise({
       id: exercise?.id,
       name: trimmedName,
+      subtitle: subtitle.trim() || null,
       instructions: linesToList(instructions),
       cues: linesToList(cues),
       tips: tips.trim() || null,
@@ -128,6 +131,7 @@ export function CoachExerciseForm({ exercise, onSaved, onCancel }: CoachExercise
       const withPhotos = await upsertCoachExercise({
         id: saved.id,
         name: saved.name,
+        subtitle: saved.subtitle,
         instructions: saved.instructions,
         cues: saved.cues,
         tips: saved.tips,
@@ -163,6 +167,20 @@ export function CoachExerciseForm({ exercise, onSaved, onCancel }: CoachExercise
           maxLength={120}
           onChange={(event) => setName(event.target.value)}
           placeholder="e.g. Toe Hook Traverse"
+        />
+      </label>
+
+      <label className="block space-y-1">
+        <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
+          Sub-heading (optional)
+        </span>
+        <input
+          type="text"
+          className="input-field"
+          value={subtitle}
+          maxLength={SUBTITLE_MAX_LENGTH}
+          onChange={(event) => setSubtitle(event.target.value)}
+          placeholder="Alternate name or aka"
         />
       </label>
 

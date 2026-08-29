@@ -63,6 +63,7 @@ describe('fetchCurrentFeaturedWod', () => {
           scheduledAt: '2026-09-01T13:00:00.000Z',
           sessionId: '22222222-2222-4222-8222-222222222222',
           state: 'waiting',
+          startedAt: null,
           attendeeCount: 4,
         },
       },
@@ -73,7 +74,55 @@ describe('fetchCurrentFeaturedWod', () => {
 
     expect(result.data?.sessionId).toBe('22222222-2222-4222-8222-222222222222');
     expect(result.data?.state).toBe('waiting');
+    expect(result.data?.startedAt).toBeNull();
     expect(result.data?.attendeeCount).toBe(4);
+  });
+
+  it('parses setup/finished/startedAt on a generated session', async () => {
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        featured: {
+          workoutName: 'Sunrise AMRAP',
+          focus: null,
+          durationMinutes: 20,
+          intensityTier: 3,
+          tags: [],
+          scheduledAt: '2026-09-01T13:00:00.000Z',
+          sessionId: '22222222-2222-4222-8222-222222222222',
+          state: 'setup',
+          startedAt: null,
+          attendeeCount: 2,
+        },
+      },
+      error: null,
+    });
+
+    const setup = await fetchCurrentFeaturedWod();
+    expect(setup.data?.state).toBe('setup');
+    expect(setup.data?.startedAt).toBeNull();
+
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        featured: {
+          workoutName: 'Sunrise AMRAP',
+          focus: null,
+          durationMinutes: 20,
+          intensityTier: 3,
+          tags: [],
+          scheduledAt: '2026-09-01T13:00:00.000Z',
+          sessionId: '22222222-2222-4222-8222-222222222222',
+          state: 'finished',
+          startedAt: null,
+          attendeeCount: 2,
+        },
+      },
+      error: null,
+    });
+
+    const finished = await fetchCurrentFeaturedWod();
+    expect(finished.data?.state).toBe('finished');
   });
 
   it('maps RPC errors', async () => {

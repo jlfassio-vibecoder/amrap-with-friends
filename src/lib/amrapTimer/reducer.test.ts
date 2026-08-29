@@ -32,6 +32,34 @@ describe('amrapTimerReducer', () => {
       expect(state.workStartedAtMs).toBeNull();
     });
 
+    it('hydrate seeds setup or work from idle only', () => {
+      const hydrated = amrapTimerReducer(started, {
+        type: 'hydrate',
+        phase: 'work',
+        setupDurationSec: setupSec,
+        workDurationSec: workSec,
+        timeLeftSec: 850,
+        workStartedAtMs: 1_000_000,
+        isPaused: false,
+      });
+
+      expect(hydrated.phase).toBe('work');
+      expect(hydrated.timeLeftSec).toBe(850);
+      expect(hydrated.workStartedAtMs).toBe(1_000_000);
+
+      const ignored = amrapTimerReducer(hydrated, {
+        type: 'hydrate',
+        phase: 'setup',
+        setupDurationSec: setupSec,
+        workDurationSec: workSec,
+        timeLeftSec: 5,
+        workStartedAtMs: null,
+        isPaused: false,
+      });
+      expect(ignored.phase).toBe('work');
+      expect(ignored.timeLeftSec).toBe(850);
+    });
+
     it('ticks through setup into work and sets workStartedAtMs', () => {
       const workStartMs = 1_000_000;
       const state = reduce(

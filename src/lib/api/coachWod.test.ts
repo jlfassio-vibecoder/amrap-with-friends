@@ -27,6 +27,7 @@ beforeEach(() => {
 const VALID_EXERCISE = {
   id: '11111111-1111-4111-8111-111111111111',
   name: 'Toe Hook Traverse',
+  subtitle: 'Also: Heel Hook Traverse',
   instructions: ['Set up on wall', 'Hook toe over hold'],
   cues: ['Keep hips close'],
   tips: 'Great for grip endurance.',
@@ -68,6 +69,7 @@ describe('fetchCoachExercises', () => {
     expect(result.error).toBeNull();
     expect(result.data).toHaveLength(1);
     expect(result.data?.[0].name).toBe('Toe Hook Traverse');
+    expect(result.data?.[0].subtitle).toBe('Also: Heel Hook Traverse');
     expect(result.data?.[0].instructions).toEqual(['Set up on wall', 'Hook toe over hold']);
   });
 
@@ -87,6 +89,7 @@ describe('upsertCoachExercise', () => {
 
     const result = await upsertCoachExercise({
       name: 'Toe Hook Traverse',
+      subtitle: 'Also: Heel Hook Traverse',
       instructions: ['Set up on wall', 'Hook toe over hold'],
       cues: ['Keep hips close'],
       tips: 'Great for grip endurance.',
@@ -97,6 +100,7 @@ describe('upsertCoachExercise', () => {
     expect(callRpcMock).toHaveBeenCalledWith('coach_upsert_exercise', {
       p_id: null,
       p_name: 'Toe Hook Traverse',
+      p_subtitle: 'Also: Heel Hook Traverse',
       p_instructions: ['Set up on wall', 'Hook toe over hold'],
       p_cues: ['Keep hips close'],
       p_tips: 'Great for grip endurance.',
@@ -158,7 +162,9 @@ describe('fetchCoachWorkouts', () => {
             intensityTier: 4,
             tags: VALID_WORKOUT.tags,
             movementCount: 2,
-            updatedAt: VALID_WORKOUT.updatedAt,
+            // Matches pre-alias RPC shape (snake_case) so the client
+            // fallback keeps working until the migration is applied.
+            updated_at: VALID_WORKOUT.updatedAt,
           },
         ],
       },
@@ -174,6 +180,32 @@ describe('fetchCoachWorkouts', () => {
     expect(result.error).toBeNull();
     expect(result.data).toHaveLength(1);
     expect(result.data?.[0].movementCount).toBe(2);
+    expect(result.data?.[0].updatedAt).toBe(VALID_WORKOUT.updatedAt);
+  });
+
+  it('also accepts camelCase updatedAt from the aliased RPC', async () => {
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        workouts: [
+          {
+            id: VALID_WORKOUT.id,
+            name: VALID_WORKOUT.name,
+            durationMinutes: 15,
+            intensityTier: 4,
+            movementCount: 2,
+            updatedAt: VALID_WORKOUT.updatedAt,
+          },
+        ],
+      },
+      error: null,
+    });
+
+    const result = await fetchCoachWorkouts({});
+
+    expect(result.error).toBeNull();
+    expect(result.data).toHaveLength(1);
+    expect(result.data?.[0].updatedAt).toBe(VALID_WORKOUT.updatedAt);
   });
 });
 
@@ -358,6 +390,7 @@ describe('fetchPublishedCoachWorkouts', () => {
                 exercise: {
                   id: VALID_EXERCISE.id,
                   name: VALID_EXERCISE.name,
+                  subtitle: VALID_EXERCISE.subtitle,
                   instructions: VALID_EXERCISE.instructions,
                   cues: VALID_EXERCISE.cues,
                   tips: VALID_EXERCISE.tips,
@@ -382,6 +415,7 @@ describe('fetchPublishedCoachWorkouts', () => {
     expect(result.error).toBeNull();
     expect(result.data).toHaveLength(1);
     expect(result.data?.[0].movements[0].exercise?.name).toBe('Toe Hook Traverse');
+    expect(result.data?.[0].movements[0].exercise?.subtitle).toBe('Also: Heel Hook Traverse');
     expect(result.data?.[0].movements[1].exercise).toBeNull();
   });
 

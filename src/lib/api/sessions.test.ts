@@ -243,12 +243,48 @@ describe('sessions API', () => {
     expect(result.error?.message).toBe('This session is full.');
   });
 
-  it('joinSession calls RPC and never accepts host_token in response', async () => {
+  it('joinSession persists host reclaim with host_token and no claim_token', async () => {
     rpcMock.mockResolvedValue({
       data: {
         participant_id: '33333333-3333-4333-8333-333333333333',
-        claim_token: 'claim-2',
-        host_token: 'should-not-be-here',
+        nickname: 'Coach',
+        role: 'host',
+        claim_token: null,
+        host_token: 'host-secret',
+      },
+      error: null,
+      success: true,
+      count: null,
+      status: 200,
+      statusText: 'OK',
+    });
+
+    const result = await joinSession({
+      sessionId: SESSION_ID,
+      nickname: 'coach',
+    });
+
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual({
+      participantId: '33333333-3333-4333-8333-333333333333',
+      claimToken: null,
+      hostToken: 'host-secret',
+      nickname: 'Coach',
+      role: 'host',
+    });
+    expect(persistMock).toHaveBeenCalledWith(SESSION_ID, {
+      nickname: 'Coach',
+      participantId: '33333333-3333-4333-8333-333333333333',
+      hostToken: 'host-secret',
+    });
+  });
+
+  it('joinSession rejects responses with neither claim_token nor host_token', async () => {
+    rpcMock.mockResolvedValue({
+      data: {
+        participant_id: '33333333-3333-4333-8333-333333333333',
+        claim_token: null,
+        host_token: null,
       },
       error: null,
       success: true,
@@ -333,6 +369,9 @@ describe('sessions API', () => {
     expect(result.data).toEqual({
       participantId: '33333333-3333-4333-8333-333333333333',
       claimToken: 'claim-2',
+      hostToken: null,
+      nickname: 'Guest',
+      role: 'joiner',
     });
   });
 });

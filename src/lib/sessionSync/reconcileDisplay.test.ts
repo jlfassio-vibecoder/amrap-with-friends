@@ -8,6 +8,8 @@ import {
 } from './reconcileDisplay';
 
 const BASE_MS = 1_700_000_000_000;
+const SCHEDULED_ISO = '2026-08-22T12:00:00.000Z';
+const SCHEDULED_MS = Date.parse(SCHEDULED_ISO);
 
 function makeInput(
   overrides: Partial<{
@@ -17,6 +19,8 @@ function makeInput(
     duration_minutes: number;
     started_at: string | null;
     segment_index: number;
+    is_featured: boolean;
+    scheduled_at: string | null;
   }> = {}
 ) {
   return {
@@ -26,6 +30,8 @@ function makeInput(
     duration_minutes: overrides.duration_minutes ?? 15,
     started_at: overrides.started_at ?? null,
     segment_index: overrides.segment_index ?? 0,
+    is_featured: overrides.is_featured ?? false,
+    scheduled_at: overrides.scheduled_at ?? null,
   };
 }
 
@@ -68,7 +74,7 @@ describe('reconcileDisplay', () => {
     expect(display.timeLeftSec).toBe(500);
   });
 
-  it('freezes display after stale threshold when host stops pushing', () => {
+  it('freezes non-featured display after stale threshold when host stops pushing', () => {
     const snapshot = createAuthoritativeSnapshot(
       makeInput({ state: 'work', time_left_sec: 400 }),
       BASE_MS
@@ -76,6 +82,56 @@ describe('reconcileDisplay', () => {
     const display = snapshotToDisplay(snapshot, BASE_MS + PUSH_STALE_MS + 1000);
     expect(display.timeLeftSec).toBe(400);
     expect(display.phase).toBe('work');
+  });
+
+  it('derives featured work remaining from wall clock when stale', () => {
+    const snapshot = createAuthoritativeSnapshot(
+      makeInput({
+        state: 'work',
+        // Broken create-time placeholder — wall clock must ignore this.
+        time_left_sec: 10,
+        started_at: new Date(SCHEDULED_MS + 10_000).toISOString(),
+        is_featured: true,
+        scheduled_at: SCHEDULED_ISO,
+      }),
+      SCHEDULED_MS
+    );
+    const display = snapshotToDisplay(snapshot, SCHEDULED_MS + 10_000 + 50_000);
+    expect(display.phase).toBe('work');
+    expect(display.timeLeftSec).toBe(850);
+    expect(display.workStartedAtMs).toBe(SCHEDULED_MS + 10_000);
+  });
+
+  it('derives featured setup remaining from scheduled_at when stale', () => {
+    const snapshot = createAuthoritativeSnapshot(
+      makeInput({
+        state: 'setup',
+        time_left_sec: 10,
+        is_featured: true,
+        scheduled_at: SCHEDULED_ISO,
+      }),
+      SCHEDULED_MS - 10_000
+    );
+    const display = snapshotToDisplay(snapshot, SCHEDULED_MS + 3000);
+    expect(display.phase).toBe('setup');
+    expect(display.timeLeftSec).toBe(7);
+    expect(display.workStartedAtMs).toBeNull();
+  });
+
+  it('transitions featured setup to full work duration via wall clock', () => {
+    const snapshot = createAuthoritativeSnapshot(
+      makeInput({
+        state: 'setup',
+        time_left_sec: 2,
+        is_featured: true,
+        scheduled_at: SCHEDULED_ISO,
+      }),
+      SCHEDULED_MS
+    );
+    const display = snapshotToDisplay(snapshot, SCHEDULED_MS + 10_000);
+    expect(display.phase).toBe('work');
+    expect(display.timeLeftSec).toBe(900);
+    expect(display.workStartedAtMs).toBe(SCHEDULED_MS + 10_000);
   });
 
   it('transitions setup to work locally when countdown hits zero', () => {

@@ -26,6 +26,8 @@ function baseEntry(overrides: Partial<MySessionEntry> = {}): MySessionEntry {
     role: 'host',
     sessionId: '22222222-2222-4222-8222-222222222222',
     createdAt: '2026-08-22T12:00:00.000Z',
+    scheduledAt: null,
+    isFeatured: false,
     durationMinutes: 5,
     workout: [
       { name: 'Burpees', target: 20, unit: 'reps' },
@@ -153,6 +155,23 @@ describe('deleteIncompleteSession', () => {
     expect(rpcMock).toHaveBeenCalledWith('delete_incomplete_session', {
       p_session_id: '22222222-2222-4222-8222-222222222222',
     });
+    expect(result.error).toBeNull();
+  });
+
+  it('accepts featured cancel responses that finish instead of deleting', async () => {
+    rpcMock.mockResolvedValue({
+      data: { ok: true, cancelledFeatured: true },
+      error: null,
+      count: null,
+      status: 200,
+      statusText: 'OK',
+      success: true,
+    });
+
+    const result = await deleteIncompleteSession(
+      '22222222-2222-4222-8222-222222222222'
+    );
+
     expect(result.error).toBeNull();
   });
 

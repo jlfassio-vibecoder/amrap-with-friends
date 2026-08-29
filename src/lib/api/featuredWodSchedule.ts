@@ -13,6 +13,12 @@ export interface CoachFeaturedSchedule {
 
 export type FeaturedWodScheduleApiError = { message: string };
 
+export interface FeaturedWodAttendee {
+  nickname: string;
+  role: 'host' | 'joiner';
+  joinedAt: string;
+}
+
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
 }
@@ -42,6 +48,9 @@ function mapScheduleError(message: string | undefined): string {
   }
   if (message.includes('Not authorized')) {
     return 'Not authorized.';
+  }
+  if (message.includes('invalid_timezone')) {
+    return 'Choose a recognized timezone from the list.';
   }
   return message;
 }
@@ -139,6 +148,43 @@ export async function pauseCoachFeaturedSchedule(): Promise<{
   }
 
   return { data: true, error: null };
+}
+
+function parseAttendee(row: Record<string, unknown>): FeaturedWodAttendee | null {
+  const nickname = readString(row.nickname);
+  const joinedAt = readString(row.joined_at);
+  const role = row.role === 'host' ? 'host' : row.role === 'joiner' ? 'joiner' : null;
+  if (!nickname || !joinedAt || !role) {
+    return null;
+  }
+  return { nickname, role, joinedAt };
+}
+
+export async function fetchCoachFeaturedWodAttendees(): Promise<{
+  data: { sessionId: string | null; attendees: FeaturedWodAttendee[] } | null;
+  error: FeaturedWodScheduleApiError | null;
+}> {
+  const { data, error } = await callRpc('coach_featured_wod_attendees', {});
+
+  if (error) {
+    return { data: null, error: { message: mapScheduleError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const attendees = Array.isArray(raw.attendees)
+    ? raw.attendees
+        .map((row) => parseAttendee(asRecord(row)))
+        .filter((a): a is FeaturedWodAttendee => a !== null)
+    : [];
+
+  return {
+    data: { sessionId: readString(raw.sessionId), attendees },
+    error: null,
+  };
 }
 
 export async function deleteCoachFeaturedSchedule(): Promise<{

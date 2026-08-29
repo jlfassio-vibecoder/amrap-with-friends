@@ -42,6 +42,7 @@ describe('sessionChannelUtils', () => {
     expect(row?.duration_minutes).toBe(15);
     expect(row?.scheduled_at).toBeNull();
     expect(row?.lobby_countdown_ends_at).toBeNull();
+    expect(row?.is_featured).toBe(false);
   });
 
   it('parseSessionRow keeps scheduled_at when present', () => {
@@ -60,6 +61,24 @@ describe('sessionChannelUtils', () => {
 
     expect(row?.scheduled_at).toBe('2026-08-25T16:30:00.000Z');
     expect(row?.lobby_countdown_ends_at).toBeNull();
+  });
+
+  it('parseSessionRow keeps is_featured when present', () => {
+    const row = parseSessionRow({
+      id: SESSION_ID,
+      duration_minutes: 15,
+      workout: [{ name: 'Burpees' }],
+      state: 'setup',
+      time_left_sec: 8,
+      is_paused: false,
+      started_at: null,
+      scheduled_at: '2026-08-25T16:30:00.000Z',
+      segment_index: 0,
+      created_at: '2026-08-22T12:00:00.000Z',
+      is_featured: true,
+    });
+
+    expect(row?.is_featured).toBe(true);
   });
 
   it('parseSessionRow keeps lobby_countdown_ends_at when present', () => {
