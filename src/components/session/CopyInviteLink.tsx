@@ -23,7 +23,7 @@ export function CopyInviteLink({
       }
       onClick={() => void copyInvite()}
     >
-      {secured ? 'LINK SECURED' : 'COPY SESSION LINK'}
+      {secured ? 'LINK COPIED' : 'COPY RALLY LINK'}
     </button>
   );
 

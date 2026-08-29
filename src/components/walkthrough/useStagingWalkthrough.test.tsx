@@ -48,7 +48,7 @@ describe('useStagingWalkthrough', () => {
     expect(result.current.complete).toBe(false);
   });
 
-  it('uses host steps including T-Minus and Start', () => {
+  it('uses host steps including the countdown and Start', () => {
     const { result } = renderHook(() =>
       useStagingWalkthrough({
         sessionId: 'session-a',

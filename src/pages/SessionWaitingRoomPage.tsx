@@ -53,7 +53,7 @@ function phaseLabel(phase: string): string {
     case 'setup':
       return 'Get ready';
     case 'work':
-      return 'Work';
+      return 'Live';
     case 'finished':
       return 'Finished';
     default:

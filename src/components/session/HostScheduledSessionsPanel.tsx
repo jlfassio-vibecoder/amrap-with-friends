@@ -73,16 +73,16 @@ export function HostScheduledSessionsPanel() {
     <section className="w-full space-y-3 text-left">
       <div className="space-y-1">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-ink">
-          Scheduled rallies
+          Scheduled sessions
         </h2>
         <p className="text-sm text-secondary">
-          Return to a lobby you scheduled for later.
+          Return to a session you scheduled for later.
         </p>
       </div>
 
       {!isAuthLoading && !isAuthenticated ? (
         <div className="card space-y-3 p-4 text-sm">
-          <p className="text-secondary">Sign in to see your scheduled rallies.</p>
+          <p className="text-secondary">Sign in to see your scheduled sessions.</p>
           <button
             type="button"
             className="btn-outline"

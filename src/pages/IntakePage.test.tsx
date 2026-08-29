@@ -94,7 +94,7 @@ describe('IntakePage', () => {
     // New users get a username suggestion from the email local-part.
     expect(screen.getByLabelText(/^Username$/)).toHaveProperty('value', 'athlete');
 
-    const submit = screen.getByRole('button', { name: 'File the dossier' });
+    const submit = screen.getByRole('button', { name: 'Save profile' });
     expect(submit).toHaveProperty('disabled', false);
     expect(screen.queryByText('Enter a nickname (1–50 characters).')).toBeTruthy();
 
@@ -121,10 +121,10 @@ describe('IntakePage', () => {
     expect(submit).toHaveProperty('disabled', false);
   });
 
-  it('keeps File the dossier clickable and lists blockers when username is cleared', () => {
+  it('keeps Save profile clickable and lists blockers when username is cleared', () => {
     renderIntake();
     fillRequiredFields();
-    const submit = screen.getByRole('button', { name: 'File the dossier' });
+    const submit = screen.getByRole('button', { name: 'Save profile' });
     expect(submit).toHaveProperty('disabled', false);
 
     fireEvent.change(screen.getByLabelText(/^Username$/), {
@@ -151,7 +151,7 @@ describe('IntakePage', () => {
       ).length
     ).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByRole('button', { name: 'File the dossier' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
 
     await waitFor(() => {
       expect(document.activeElement).toBe(screen.getByLabelText(/^Username$/));
@@ -159,7 +159,7 @@ describe('IntakePage', () => {
     expect(saveMock).not.toHaveBeenCalled();
   });
 
-  it('scrolls and focuses the first invalid field when File the dossier is clicked', async () => {
+  it('scrolls and focuses the first invalid field when Save profile is clicked', async () => {
     renderIntake();
     fillRequiredFields();
     fireEvent.change(screen.getByLabelText(/^Nickname$/), {
@@ -170,7 +170,7 @@ describe('IntakePage', () => {
     const scrollIntoView = vi.fn();
     nicknameInput.scrollIntoView = scrollIntoView;
 
-    fireEvent.click(screen.getByRole('button', { name: 'File the dossier' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
 
     await waitFor(() => {
       expect(document.activeElement).toBe(nicknameInput);
@@ -190,7 +190,7 @@ describe('IntakePage', () => {
     fireEvent.change(screen.getByLabelText(/Weight \(lb\)/), {
       target: { value: '176.4' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'File the dossier' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
 
     await waitFor(() => {
       expect(saveMock).toHaveBeenCalledWith(
@@ -225,7 +225,7 @@ describe('IntakePage', () => {
     fireEvent.change(screen.getByLabelText(/^Password$/), {
       target: { value: 'newpass1' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'File the dossier' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
 
     await waitFor(() => {
       expect(updateEmailMock).toHaveBeenCalledWith('new@example.com');
@@ -246,13 +246,13 @@ describe('IntakePage', () => {
     fireEvent.change(screen.getByLabelText(/^Email$/), {
       target: { value: 'new@example.com' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'File the dossier' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
 
     await waitFor(() => {
       expect(navigateMock).toHaveBeenCalledWith('/create', {
         state: {
           intakeNotices: [
-            'Your dossier was saved. Check your inbox to confirm your new email address.',
+            'Your profile was saved. Check your inbox to confirm your new email address.',
           ],
         },
       });
@@ -272,13 +272,13 @@ describe('IntakePage', () => {
     fireEvent.change(screen.getByLabelText(/^Email$/), {
       target: { value: 'new@example.com' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'File the dossier' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
 
     await waitFor(() => {
       expect(navigateMock).toHaveBeenCalledWith('/create', {
         state: {
           intakeNotices: [
-            'Your dossier was saved. Email update failed: Email already registered',
+            'Your profile was saved. Email update failed: Email already registered',
           ],
         },
       });
@@ -295,13 +295,13 @@ describe('IntakePage', () => {
     fireEvent.change(screen.getByLabelText(/^Password$/), {
       target: { value: 'weak' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'File the dossier' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
 
     await waitFor(() => {
       expect(navigateMock).toHaveBeenCalledWith('/create', {
         state: {
           intakeNotices: [
-            'Your dossier was saved. Password update failed: Password is too weak',
+            'Your profile was saved. Password update failed: Password is too weak',
           ],
         },
       });
@@ -314,7 +314,7 @@ describe('IntakePage', () => {
     renderIntake();
 
     fillRequiredFields();
-    fireEvent.click(screen.getByRole('button', { name: 'File the dossier' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
 
     await waitFor(() => {
       expect(screen.getByText(/Error: That username is already taken/)).toBeTruthy();

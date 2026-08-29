@@ -25,7 +25,7 @@ function calendarEventInputFor(featured: FeaturedWod) {
     // to the session id — a distinct occurrence either way, so this isn't a
     // duplicate-vs-original conflict, just a different calendar entry.
     uid: featured.sessionId ?? `${featured.workoutName}-${featured.scheduledAt}`,
-    title: `Featured WOD: ${featured.workoutName}`,
+    title: `Mission: ${featured.workoutName}`,
     description: [featured.focus, joinLine].filter(Boolean).join('\n'),
     startsAt: new Date(featured.scheduledAt),
     durationMinutes: featured.durationMinutes,
@@ -119,7 +119,7 @@ export function FeaturedWodCard() {
 
   return (
     <div className="card space-y-2 border-2 border-accent bg-accent-tint/40 p-4 text-left">
-      <p className="text-xs font-semibold uppercase tracking-widest text-accent">Featured WOD</p>
+      <p className="text-xs font-semibold uppercase tracking-widest text-accent">Today’s mission</p>
       <p className="text-display text-lg text-ink">{featured.workoutName}</p>
       {featured.focus ? <p className="text-sm text-secondary">{featured.focus}</p> : null}
       <p className="text-sm text-secondary">
@@ -171,10 +171,10 @@ export function FeaturedWodCard() {
             )
           }
         >
-          Join lobby
+          Join session
         </Link>
       ) : presentation.showLobbyOpensSoon ? (
-        <p className="text-xs text-secondary">Lobby opens shortly before start.</p>
+        <p className="text-xs text-secondary">Staging area opens shortly before start.</p>
       ) : null}
     </div>
   );

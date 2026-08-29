@@ -11,7 +11,7 @@ export interface FeaturedWodCardPresentation {
   /** Primary status line under the schedule metadata. */
   statusLine: string;
   showJoinLobby: boolean;
-  /** True when the CTA should be the "Lobby opens shortly before start." hint. */
+  /** True when the CTA should be the "Staging area opens shortly before start." hint. */
   showLobbyOpensSoon: boolean;
 }
 

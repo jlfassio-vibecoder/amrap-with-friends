@@ -293,7 +293,7 @@ function ScheduleForm({ workouts, schedule, onSaved, onCancel }: ScheduleFormPro
   );
 }
 
-/** Join staging appears in the same lead window as the public Join lobby CTA. */
+/** Join staging appears in the same lead window as the public Join session CTA. */
 function JoinStagingLink({ scheduleActive }: { scheduleActive: boolean }) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [scheduledAt, setScheduledAt] = useState<string | null>(null);

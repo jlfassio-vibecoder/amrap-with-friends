@@ -27,7 +27,7 @@ describe('CopyInviteLink', () => {
     });
   });
 
-  it('copies the rally URL and flashes LINK SECURED', async () => {
+  it('copies the rally URL and flashes LINK COPIED', async () => {
     vi.useFakeTimers();
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', {
@@ -36,7 +36,7 @@ describe('CopyInviteLink', () => {
     });
 
     render(<CopyInviteLink sessionId={SESSION_ID} />);
-    const button = screen.getByRole('button', { name: 'COPY SESSION LINK' });
+    const button = screen.getByRole('button', { name: 'COPY RALLY LINK' });
     await act(async () => {
       fireEvent.click(button);
     });
@@ -44,12 +44,12 @@ describe('CopyInviteLink', () => {
     expect(writeText).toHaveBeenCalledWith(
       `https://amrap.example/join?s=${SESSION_ID}`
     );
-    expect(screen.getByRole('button', { name: 'LINK SECURED' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'LINK COPIED' })).toBeTruthy();
 
     await act(async () => {
       vi.advanceTimersByTime(2000);
     });
-    expect(screen.getByRole('button', { name: 'COPY SESSION LINK' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'COPY RALLY LINK' })).toBeTruthy();
   });
 
   it('shows an error when clipboard write fails', async () => {
@@ -62,7 +62,7 @@ describe('CopyInviteLink', () => {
 
     render(<CopyInviteLink sessionId={SESSION_ID} />);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'COPY SESSION LINK' }));
+      fireEvent.click(screen.getByRole('button', { name: 'COPY RALLY LINK' }));
     });
 
     expect(screen.getByText(/Could not copy link/i)).toBeTruthy();

@@ -75,24 +75,24 @@ function renderJoin(path: string) {
 }
 
 describe('JoinSessionPage deep link', () => {
-  it('hides Session ID and shows temporary callsign for guests', () => {
+  it('hides Session ID and shows the name field for guests', () => {
     renderJoin(`/join?s=${SESSION_ID}`);
     expect(screen.queryByLabelText(/Session ID/i)).toBeNull();
-    expect(screen.getByLabelText(/Enter temporary callsign/i)).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Breach lobby/i })).toBeTruthy();
+    expect(screen.getByLabelText(/Your name/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Join session/i })).toBeTruthy();
   });
 
-  it('joins as guest with callsign from the breach form', async () => {
+  it('joins as guest with a name from the join form', async () => {
     joinSessionMock.mockResolvedValue({
       data: { participantId: 'p1', claimToken: 'c1' },
       error: null,
     });
     renderJoin(`/join?s=${SESSION_ID}`);
 
-    fireEvent.change(screen.getByLabelText(/Enter temporary callsign/i), {
+    fireEvent.change(screen.getByLabelText(/Your name/i), {
       target: { value: 'Ghost' },
     });
-    fireEvent.click(screen.getByRole('button', { name: /Breach lobby/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Join session/i }));
 
     await waitFor(() => {
       expect(joinSessionMock).toHaveBeenCalledWith({
@@ -161,7 +161,7 @@ describe('JoinSessionPage deep link', () => {
   it('shows LOCKED OR INVALID for a bad s param', () => {
     renderJoin('/join?s=not-a-uuid');
     expect(screen.getByText(SESSION_LOCKED_OR_INVALID)).toBeTruthy();
-    expect(screen.queryByLabelText(/Enter temporary callsign/i)).toBeNull();
+    expect(screen.queryByLabelText(/Your name/i)).toBeNull();
   });
 
   it('surfaces departed copy when joinSession reports Session locked', async () => {
@@ -171,10 +171,10 @@ describe('JoinSessionPage deep link', () => {
     });
     renderJoin(`/join?s=${SESSION_ID}`);
 
-    fireEvent.change(screen.getByLabelText(/Enter temporary callsign/i), {
+    fireEvent.change(screen.getByLabelText(/Your name/i), {
       target: { value: 'Late' },
     });
-    fireEvent.click(screen.getByRole('button', { name: /Breach lobby/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Join session/i }));
 
     expect(await screen.findByText(SESSION_RALLY_DEPARTED)).toBeTruthy();
   });
