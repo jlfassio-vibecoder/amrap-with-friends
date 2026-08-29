@@ -301,8 +301,6 @@ function JoinStagingLink({ scheduleActive }: { scheduleActive: boolean }) {
 
   useEffect(() => {
     if (!scheduleActive) {
-      setSessionId(null);
-      setScheduledAt(null);
       return;
     }
 
@@ -319,22 +317,28 @@ function JoinStagingLink({ scheduleActive }: { scheduleActive: boolean }) {
       });
     }
 
-    poll();
+    // Avoid synchronous update path from effect body
+    const kickoffId = window.setTimeout(poll, 0);
+
     const pollId = window.setInterval(poll, ATTENDEES_POLL_INTERVAL_MS);
     const tickId = window.setInterval(() => setNowMs(Date.now()), 15_000);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(kickoffId);
       window.clearInterval(pollId);
       window.clearInterval(tickId);
     };
   }, [scheduleActive]);
 
-  if (!sessionId || !scheduledAt) {
+  const activeSessionId = scheduleActive ? sessionId : null;
+  const activeScheduledAt = scheduleActive ? scheduledAt : null;
+
+  if (!activeSessionId || !activeScheduledAt) {
     return null;
   }
 
-  const scheduledAtMs = Date.parse(scheduledAt);
+  const scheduledAtMs = Date.parse(activeScheduledAt);
   if (
     !Number.isFinite(scheduledAtMs) ||
     nowMs < scheduledAtMs - FEATURED_WOD_LOBBY_LEAD_MS
@@ -345,7 +349,7 @@ function JoinStagingLink({ scheduleActive }: { scheduleActive: boolean }) {
   return (
     <Link
       className="text-xs uppercase tracking-wide text-accent hover:underline"
-      to={`/session/${sessionId}`}
+      to={`/session/${activeSessionId}`}
     >
       Join staging
     </Link>
@@ -375,11 +379,13 @@ function AttendeeList() {
       });
     }
 
-    poll();
+    // Avoid synchronous update path from effect body
+    const kickoffId = window.setTimeout(poll, 0);
     const intervalId = window.setInterval(poll, ATTENDEES_POLL_INTERVAL_MS);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(kickoffId);
       window.clearInterval(intervalId);
     };
   }, []);
