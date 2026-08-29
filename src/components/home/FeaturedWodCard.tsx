@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   fetchCurrentFeaturedWod,
@@ -15,29 +15,54 @@ const INTENSITY_LABEL: Record<number, string> = {
   5: 'Tier 1',
 };
 
+/** How often to re-poll while mounted, so the waiting -> live transition and
+ * attendee count actually update without a page reload. There's no
+ * real-time channel for this (unlike an active AMRAP session), so a plain
+ * interval is the proportionate choice for a landing-page preview card. */
+const POLL_INTERVAL_MS = 20_000;
+
 export function FeaturedWodCard() {
   const [featured, setFeatured] = useState<FeaturedWod | null>(null);
   const [loading, setLoading] = useState(true);
+  // undefined = "haven't tracked a view yet", distinct from a legitimate
+  // null sessionId (a not-yet-generated next occurrence).
+  const trackedSessionRef = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
     let cancelled = false;
-    fetchCurrentFeaturedWod().then((result) => {
-      if (cancelled) {
-        return;
-      }
-      setLoading(false);
-      if (!result.error) {
+
+    function poll() {
+      fetchCurrentFeaturedWod().then((result) => {
+        if (cancelled) {
+          return;
+        }
+        setLoading(false);
+        if (result.error) {
+          return;
+        }
         setFeatured(result.data);
-        if (result.data) {
+
+        // Track a view once per distinct joinable session, not on every
+        // poll tick — a session going from "next occurrence" to an actual
+        // joinable one counts as a new view, a plain attendee-count refresh
+        // does not.
+        const trackingKey = result.data?.sessionId ?? null;
+        if (result.data && trackingKey !== trackedSessionRef.current) {
+          trackedSessionRef.current = trackingKey;
           track('featured_wod_viewed', {
             joinable: result.data.sessionId !== null,
             state: result.data.state,
           });
         }
-      }
-    });
+      });
+    }
+
+    poll();
+    const intervalId = window.setInterval(poll, POLL_INTERVAL_MS);
+
     return () => {
       cancelled = true;
+      window.clearInterval(intervalId);
     };
   }, []);
 

@@ -25,6 +25,7 @@ afterEach(() => {
   cleanup();
   fetchCurrentFeaturedWodMock.mockReset();
   trackMock.mockReset();
+  vi.useRealTimers();
 });
 
 function featured(overrides: Partial<FeaturedWod> = {}): FeaturedWod {
@@ -143,5 +144,92 @@ describe('FeaturedWodCard', () => {
       { state: 'waiting' },
       { sessionId: '22222222-2222-4222-8222-222222222222' }
     );
+  });
+
+  it('re-polls every 20s and reflects an updated attendee count', async () => {
+    vi.useFakeTimers();
+    fetchCurrentFeaturedWodMock
+      .mockResolvedValueOnce({ data: featured({ attendeeCount: 3 }), error: null })
+      .mockResolvedValueOnce({ data: featured({ attendeeCount: 5 }), error: null });
+
+    renderCard();
+
+    await vi.waitFor(() => {
+      expect(screen.getByText(/3 joining/)).toBeTruthy();
+    });
+
+    await vi.advanceTimersByTimeAsync(20_000);
+
+    await vi.waitFor(() => {
+      expect(screen.getByText(/5 joining/)).toBeTruthy();
+    });
+    expect(fetchCurrentFeaturedWodMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not re-track a view on a poll tick that only refreshes attendee count', async () => {
+    vi.useFakeTimers();
+    fetchCurrentFeaturedWodMock
+      .mockResolvedValueOnce({ data: featured({ attendeeCount: 3 }), error: null })
+      .mockResolvedValueOnce({ data: featured({ attendeeCount: 5 }), error: null });
+
+    renderCard();
+
+    await vi.waitFor(() => {
+      expect(screen.getByText(/3 joining/)).toBeTruthy();
+    });
+    expect(trackMock).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(20_000);
+
+    await vi.waitFor(() => {
+      expect(screen.getByText(/5 joining/)).toBeTruthy();
+    });
+    expect(trackMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('tracks a new view when a session gets generated between poll ticks', async () => {
+    vi.useFakeTimers();
+    fetchCurrentFeaturedWodMock
+      .mockResolvedValueOnce({
+        data: featured({ sessionId: null, state: null, attendeeCount: null }),
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: featured({ sessionId: 'new-session-id' }), error: null });
+
+    renderCard();
+
+    await vi.waitFor(() => {
+      expect(screen.getByText('Lobby opens shortly before start.')).toBeTruthy();
+    });
+    expect(trackMock).toHaveBeenCalledWith('featured_wod_viewed', {
+      joinable: false,
+      state: null,
+    });
+
+    await vi.advanceTimersByTimeAsync(20_000);
+
+    await vi.waitFor(() => {
+      expect(screen.getByRole('link', { name: 'Join lobby' })).toBeTruthy();
+    });
+    expect(trackMock).toHaveBeenCalledWith('featured_wod_viewed', {
+      joinable: true,
+      state: 'waiting',
+    });
+  });
+
+  it('stops polling after unmount', async () => {
+    vi.useFakeTimers();
+    fetchCurrentFeaturedWodMock.mockResolvedValue({ data: featured(), error: null });
+
+    const { unmount } = renderCard();
+
+    await vi.waitFor(() => {
+      expect(fetchCurrentFeaturedWodMock).toHaveBeenCalledTimes(1);
+    });
+
+    unmount();
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    expect(fetchCurrentFeaturedWodMock).toHaveBeenCalledTimes(1);
   });
 });
