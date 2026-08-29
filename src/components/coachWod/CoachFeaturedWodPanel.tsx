@@ -4,13 +4,20 @@ import { formatFeaturedWodTime } from '@/lib/api/featuredWod';
 import {
   deleteCoachFeaturedSchedule,
   fetchCoachFeaturedSchedule,
+  fetchCoachFeaturedWodAttendees,
   pauseCoachFeaturedSchedule,
   setCoachFeaturedSchedule,
   type CoachFeaturedSchedule,
+  type FeaturedWodAttendee,
 } from '@/lib/api/featuredWodSchedule';
 import { computeNextFeaturedOccurrences } from '@/lib/session/featuredWodOccurrencePreview';
 
 const PREVIEW_COUNT = 3;
+
+/** Re-poll while the "who's coming" list is visible, same rationale as
+ * FeaturedWodCard's landing-page poll: no realtime channel for this, and a
+ * plain interval is proportionate for a coach glancing at attendance. */
+const ATTENDEES_POLL_INTERVAL_MS = 20_000;
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MAX_TIMES = 4;
@@ -284,6 +291,63 @@ function ScheduleForm({ workouts, schedule, onSaved, onCancel }: ScheduleFormPro
   );
 }
 
+/** "Who's coming" — the specific athletes who've joined the coach's own
+ * live Featured WOD session, not just the bare count already shown on the
+ * public card. Only renders once a live session exists (sessionId !=
+ * null); polls while mounted so new joiners show up without a refresh. */
+function AttendeeList() {
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [attendees, setAttendees] = useState<FeaturedWodAttendee[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    function poll() {
+      fetchCoachFeaturedWodAttendees().then((result) => {
+        if (cancelled || result.error || !result.data) {
+          return;
+        }
+        setSessionId(result.data.sessionId);
+        setAttendees(result.data.attendees);
+        setLoaded(true);
+      });
+    }
+
+    poll();
+    const intervalId = window.setInterval(poll, ATTENDEES_POLL_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
+  if (!loaded || !sessionId) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-1 rounded-card border border-border bg-page p-3">
+      <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
+        Who&apos;s coming ({attendees.length})
+      </span>
+      {attendees.length > 0 ? (
+        <ul className="space-y-0.5 text-sm text-ink">
+          {attendees.map((attendee, index) => (
+            <li key={`${attendee.nickname}-${index}`}>
+              {attendee.nickname}
+              {attendee.role === 'host' ? ' (host)' : ''}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-secondary">No one has joined yet.</p>
+      )}
+    </div>
+  );
+}
+
 export function CoachFeaturedWodPanel() {
   const [schedule, setSchedule] = useState<CoachFeaturedSchedule | null>(null);
   const [workouts, setWorkouts] = useState<CoachWorkoutSummary[]>([]);
@@ -454,6 +518,7 @@ export function CoachFeaturedWodPanel() {
               Delete
             </button>
           </div>
+          <AttendeeList />
         </div>
       ) : (
         <div className="space-y-2">

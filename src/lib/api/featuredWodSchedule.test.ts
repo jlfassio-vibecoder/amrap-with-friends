@@ -2,6 +2,7 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 import {
   deleteCoachFeaturedSchedule,
   fetchCoachFeaturedSchedule,
+  fetchCoachFeaturedWodAttendees,
   pauseCoachFeaturedSchedule,
   setCoachFeaturedSchedule,
 } from './featuredWodSchedule';
@@ -150,6 +151,68 @@ describe('pauseCoachFeaturedSchedule', () => {
 
     expect(result.data).toBe(false);
     expect(result.error?.message).toContain('No featured schedule');
+  });
+});
+
+describe('fetchCoachFeaturedWodAttendees', () => {
+  it('returns an empty list and null sessionId when nothing is live', async () => {
+    callRpcMock.mockResolvedValue({
+      data: { ok: true, sessionId: null, attendees: [] },
+      error: null,
+    });
+
+    const result = await fetchCoachFeaturedWodAttendees();
+
+    expect(callRpcMock).toHaveBeenCalledWith('coach_featured_wod_attendees', {});
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual({ sessionId: null, attendees: [] });
+  });
+
+  it('parses attendee rows for a live session', async () => {
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        sessionId: '33333333-3333-4333-8333-333333333333',
+        attendees: [
+          { nickname: 'Coach', role: 'host', joined_at: '2026-08-31T10:00:00.000Z' },
+          { nickname: 'Alice', role: 'joiner', joined_at: '2026-08-31T10:01:00.000Z' },
+        ],
+      },
+      error: null,
+    });
+
+    const result = await fetchCoachFeaturedWodAttendees();
+
+    expect(result.error).toBeNull();
+    expect(result.data?.sessionId).toBe('33333333-3333-4333-8333-333333333333');
+    expect(result.data?.attendees).toEqual([
+      { nickname: 'Coach', role: 'host', joinedAt: '2026-08-31T10:00:00.000Z' },
+      { nickname: 'Alice', role: 'joiner', joinedAt: '2026-08-31T10:01:00.000Z' },
+    ]);
+  });
+
+  it('drops malformed attendee rows rather than throwing', async () => {
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        sessionId: '33333333-3333-4333-8333-333333333333',
+        attendees: [{ nickname: '', role: 'joiner', joined_at: '2026-08-31T10:01:00.000Z' }],
+      },
+      error: null,
+    });
+
+    const result = await fetchCoachFeaturedWodAttendees();
+
+    expect(result.data?.attendees).toEqual([]);
+  });
+
+  it('maps an authentication error', async () => {
+    callRpcMock.mockResolvedValue({ data: null, error: { message: 'Authentication required' } });
+
+    const result = await fetchCoachFeaturedWodAttendees();
+
+    expect(result.data).toBeNull();
+    expect(result.error?.message).toBe('Sign in to manage the featured WOD.');
   });
 });
 
