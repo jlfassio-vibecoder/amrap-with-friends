@@ -37,7 +37,7 @@ describe('CreateSessionSummaryPanel', () => {
     );
 
     expect(screen.getByRole('button', { name: 'Open staging area' })).toBeTruthy();
-    expect(screen.queryByLabelText('Time')).toBeNull();
+    expect(screen.queryByLabelText('Scheduled time')).toBeNull();
 
     rerender(
       <CreateSessionSummaryPanel
@@ -48,7 +48,7 @@ describe('CreateSessionSummaryPanel', () => {
     );
 
     expect(screen.getByRole('button', { name: 'Schedule staging' })).toBeTruthy();
-    expect(screen.getByLabelText('Time')).toBeTruthy();
+    expect(screen.getByLabelText('Scheduled time')).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Today' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Tomorrow' })).toBeTruthy();
   });
