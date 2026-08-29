@@ -43,6 +43,9 @@ function mapScheduleError(message: string | undefined): string {
   if (message.includes('Not authorized')) {
     return 'Not authorized.';
   }
+  if (message.includes('invalid_timezone')) {
+    return 'Choose a recognized timezone from the list.';
+  }
   return message;
 }
 

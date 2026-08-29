@@ -10,12 +10,34 @@ import {
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MAX_TIMES = 4;
+const TIMEZONE_DATALIST_ID = 'featured-wod-timezone-options';
 
 function defaultTimezone(): string {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
   } catch {
     return 'UTC';
+  }
+}
+
+/** Every IANA zone name the browser knows, so the timezone field is a
+ * searchable dropdown instead of a free-text field a typo can silently
+ * break (validated server-side against pg_timezone_names, but the coach
+ * never finds that out until save fails). Intl.supportedValuesOf isn't in
+ * every browser yet, so this degrades to just the browser's own zone.
+ *
+ * "UTC" is deliberately unioned in: Intl.supportedValuesOf('timeZone')
+ * excludes it even though it's what Intl.DateTimeFormat().resolvedOptions()
+ * actually returns for a system clock set to UTC (common on servers), and
+ * it's a perfectly valid zone pg_timezone_names accepts server-side —
+ * without this, that default value would show as "not recognized" and
+ * silently block submit for anyone whose system is on UTC. */
+function timezoneOptions(): string[] {
+  try {
+    const supported = Intl.supportedValuesOf('timeZone');
+    return supported.includes('UTC') ? supported : [...supported, 'UTC'];
+  } catch {
+    return [defaultTimezone()];
   }
 }
 
@@ -44,6 +66,8 @@ function ScheduleForm({ workouts, schedule, onSaved, onCancel }: ScheduleFormPro
   const [timezone, setTimezone] = useState(schedule?.timezone ?? defaultTimezone());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const timezoneChoices = useMemo(() => timezoneOptions(), []);
+  const timezoneRecognized = timezoneChoices.includes(timezone.trim());
 
   function toggleDay(day: number) {
     setDays((current) =>
@@ -78,6 +102,10 @@ function ScheduleForm({ workouts, schedule, onSaved, onCancel }: ScheduleFormPro
     }
     if (times.length === 0) {
       setError('Choose at least one time.');
+      return;
+    }
+    if (!timezoneRecognized) {
+      setError('Choose a recognized timezone from the list.');
       return;
     }
 
@@ -184,13 +212,24 @@ function ScheduleForm({ workouts, schedule, onSaved, onCancel }: ScheduleFormPro
         <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
           Timezone
         </span>
+        <datalist id={TIMEZONE_DATALIST_ID}>
+          {timezoneChoices.map((tz) => (
+            <option key={tz} value={tz} />
+          ))}
+        </datalist>
         <input
           type="text"
           className="input-field"
           value={timezone}
+          list={TIMEZONE_DATALIST_ID}
           onChange={(event) => setTimezone(event.target.value)}
           placeholder="America/Los_Angeles"
         />
+        {timezone.trim() && !timezoneRecognized ? (
+          <p className="text-xs text-secondary">
+            Not a recognized timezone — pick one from the list.
+          </p>
+        ) : null}
       </label>
 
       {error ? <p className="text-error text-sm">{error}</p> : null}

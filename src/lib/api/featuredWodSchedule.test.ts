@@ -113,6 +113,23 @@ describe('setCoachFeaturedSchedule', () => {
     expect(result.data).toBeNull();
     expect(result.error?.message).toContain('already scheduled by another coach');
   });
+
+  it('maps an invalid_timezone error to a friendly message', async () => {
+    callRpcMock.mockResolvedValue({
+      data: null,
+      error: { message: 'invalid_timezone' },
+    });
+
+    const result = await setCoachFeaturedSchedule({
+      coachWorkoutId: '22222222-2222-4222-8222-222222222222',
+      daysOfWeek: [1],
+      timesLocal: ['06:00'],
+      timezone: 'Not/AZone',
+    });
+
+    expect(result.data).toBeNull();
+    expect(result.error?.message).toBe('Choose a recognized timezone from the list.');
+  });
 });
 
 describe('pauseCoachFeaturedSchedule', () => {
