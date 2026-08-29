@@ -6,6 +6,7 @@ import {
   getStoredNickname,
   getStoredGhostSelection,
   getStoredHostToken,
+  persistSessionIdentity,
 } from '@/lib/sessionIdentity';
 import { useLiveAmrapSession } from '@/hooks/useLiveAmrapSession';
 import { useParticipantClaim } from '@/hooks/useParticipantClaim';
@@ -218,6 +219,15 @@ export default function SessionWaitingRoomPage() {
         setIdentityBootstrapDone(true);
         return;
       }
+      // Actually persist the resumed identity — without this, useLiveAmrapSession
+      // (which reads getStoredHostToken() directly for real host RPC calls)
+      // never sees the token this resume just fetched, even though the UI
+      // above already re-keys itself into the host view.
+      persistSessionIdentity(sessionId, {
+        participantId: result.data.participantId,
+        nickname: result.data.nickname,
+        hostToken: result.data.hostToken ?? undefined,
+      });
       setRestoredIdentity({
         sessionId,
         participantId: result.data.participantId,
