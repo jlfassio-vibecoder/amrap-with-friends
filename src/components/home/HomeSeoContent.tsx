@@ -71,19 +71,19 @@ const FEATURES = [
   {
     title: 'Synced live countdown',
     description:
-      "Everyone in the session watches the exact same clock, reconciled in real time — no one's phone runs ahead or behind.",
+      'Solo or with a crew, everyone watches the same clock — reconciled in real time so no phone runs ahead or behind.',
     Icon: ClockIcon,
   },
   {
     title: 'Live leaderboard',
     description:
-      'Log rounds with a single tap and watch the leaderboard update as everyone competes for the same AMRAP.',
+      'Log rounds with a single tap. Chase your own score solo, or watch the board update as the whole crew competes on the same AMRAP.',
     Icon: BarChartIcon,
   },
   {
     title: 'A real AMRAP workout library',
     description:
-      'Choose from programmed AMRAP workouts across 5, 10, 15, and 20-minute formats, each with coaching cues and form instructions.',
+      'Pick programmed AMRAPs across 5, 10, 15, and 20-minute formats — with coaching cues and form instructions whether you train alone or invite friends.',
     Icon: DocumentIcon,
   },
 ] as const;
@@ -114,10 +114,12 @@ export function HomeSeoContent() {
             AMRAP stands for{' '}
             <strong className="font-semibold text-ink">As Many Rounds (or Reps) As Possible</strong>{' '}
             — a timed workout format where you cycle through a short list of exercises for a fixed
-            duration, completing as many full rounds as you can before the clock runs out. It&apos;s
-            one of the most popular workout styles in functional fitness because it&apos;s simple to
-            set up, scales to any fitness level, and turns a workout into a measurable score you can
-            compare against friends.
+            duration, completing as many full rounds as you can before the clock runs out.
+          </p>
+          <p className="text-base leading-[1.7] text-secondary">
+            It&apos;s one of the most popular workout styles in functional fitness because it&apos;s
+            simple to set up, scales to any fitness level, and turns a workout into a measurable
+            score you can compare against friends.
           </p>
           <p className="text-base leading-[1.7] text-secondary">
             <strong className="font-semibold text-ink">AMRAP With Friends</strong> takes that format
@@ -136,7 +138,7 @@ export function HomeSeoContent() {
         <div className="space-y-3">
           <p className="eyebrow text-accent">The kit</p>
           <h2 className="text-display text-[clamp(2.25rem,5vw,3.25rem)] leading-[0.9] text-ink">
-            Built for training together
+            Built for training together or solo
           </h2>
         </div>
         <div className="grid gap-4 md:grid-cols-3">

@@ -14,26 +14,37 @@ const WAYPOINTS = [
   { cx: 640, cy: 175 },
 ] as const;
 
+/** Route begins at the squad convergence so leader lines and the mission path
+ * share one origin instead of floating apart. */
 const ROUTE_PATH =
-  'M 40 645 C 120 625, 165 585, 215 520 C 265 455, 290 445, 355 400 ' +
+  'M 108 628 C 145 595, 175 560, 215 520 C 265 455, 290 445, 355 400 ' +
   'C 420 355, 450 355, 515 300 C 580 245, 585 215, 640 175 ' +
   'C 695 135, 715 120, 760 80';
 
-/** A plausible-but-not-taken alternate course, kept faint behind the real one. */
-const GHOST_PATH =
+/** Plausible-but-not-taken bearings that float beside the live route —
+ * dotted, unanchored, never touching the squad merge or North Star. */
+const FLOATING_ROUTES = [
+  // Existing faint alternate, kept below the live path.
   'M 90 660 C 210 610, 300 590, 380 520 C 460 450, 470 370, 560 320 ' +
-  'C 650 270, 700 200, 770 100';
-
-/** The squad markers clustered at the head of the route. Only the outer two
- * carry a leader line into the course — running one from every marker turns
- * the cluster into a wedge and reads as noise at hero scale. */
-const SQUAD = [
-  { cx: 22, cy: 664, lead: true },
-  { cx: 58, cy: 646, lead: false },
-  { cx: 36, cy: 700, lead: true },
-  { cx: 74, cy: 684, lead: false },
+    'C 650 270, 700 200, 770 100',
+  // Upper float — shorter arc sitting above the mission path.
+  'M 250 480 C 330 420, 410 360, 490 290 C 560 235, 620 175, 690 120',
+  // Lower float — wider, lazier curve beneath the climb.
+  'M 160 700 C 280 655, 390 600, 500 520 C 590 455, 680 360, 800 250',
 ] as const;
-const SQUAD_CONVERGENCE = { x: 104, y: 636 } as const;
+
+/**
+ * Squad markers at the head of the route. Every marker draws a leader line
+ * into the shared path start so the squad visibly converges onto the mission
+ * route rather than floating beside it.
+ */
+const SQUAD = [
+  { cx: 28, cy: 656 },
+  { cx: 58, cy: 642 },
+  { cx: 40, cy: 692 },
+  { cx: 70, cy: 678 },
+] as const;
+const SQUAD_CONVERGENCE = { x: 108, y: 628 } as const;
 
 /** Small survey crosshairs scattered over the grid. */
 const CROSSHAIRS = [
@@ -95,14 +106,18 @@ export function HeroRouteGraphic() {
         />
       ))}
 
-      <path
-        d={GHOST_PATH}
-        fill="none"
-        stroke="var(--color-night-secondary)"
-        strokeOpacity="0.22"
-        strokeWidth="1.5"
-        strokeDasharray="6 9"
-      />
+      {FLOATING_ROUTES.map((d) => (
+        <path
+          key={d}
+          d={d}
+          fill="none"
+          stroke="var(--color-night-secondary)"
+          strokeOpacity="0.22"
+          strokeWidth="1.5"
+          strokeDasharray="5 9"
+          strokeLinecap="round"
+        />
+      ))}
 
       <path
         d={ROUTE_PATH}
@@ -114,23 +129,29 @@ export function HeroRouteGraphic() {
 
       {/* Squad markers converging into the head of the route. */}
       <g>
-        {SQUAD.map(({ cx, cy, lead }) => (
+        {SQUAD.map(({ cx, cy }) => (
           <g key={`${cx}-${cy}`}>
-            {lead ? (
-              <line
-                x1={cx}
-                y1={cy}
-                x2={SQUAD_CONVERGENCE.x}
-                y2={SQUAD_CONVERGENCE.y}
-                stroke="var(--color-gold)"
-                strokeOpacity="0.35"
-                strokeWidth="1.5"
-              />
-            ) : null}
+            <line
+              x1={cx}
+              y1={cy}
+              x2={SQUAD_CONVERGENCE.x}
+              y2={SQUAD_CONVERGENCE.y}
+              stroke="var(--color-gold)"
+              strokeOpacity="0.55"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+            />
             <circle cx={cx} cy={cy} r="12" fill="var(--color-gold)" fillOpacity="0.14" />
             <circle cx={cx} cy={cy} r="6" fill="var(--color-gold)" />
           </g>
         ))}
+        {/* Anchor where the squad strands meet the mission path. */}
+        <circle
+          cx={SQUAD_CONVERGENCE.x}
+          cy={SQUAD_CONVERGENCE.y}
+          r="3.5"
+          fill="var(--color-gold)"
+        />
       </g>
 
       {WAYPOINTS.map(({ cx, cy }) => (

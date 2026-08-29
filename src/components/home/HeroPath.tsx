@@ -75,7 +75,7 @@ const STEPS = [
   {
     num: '03 / Earn the title',
     Icon: LaunchIcon,
-    title: 'Launch the rally',
+    title: 'Launch the session',
     body: 'Train live. Log rounds with a tap. Watch the crew advance together and finish with a score that counted for more than yourself.',
     footnote: 'Live effort · real belonging',
   },
@@ -84,17 +84,11 @@ const STEPS = [
 export function HeroPath() {
   return (
     <section className="space-y-8">
-      <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-        <div className="space-y-3">
-          <p className="eyebrow text-accent">The path</p>
-          <h2 className="text-display text-[clamp(2.25rem,5vw,3.25rem)] leading-[0.9] text-ink">
-            From “someday” to send it.
-          </h2>
-        </div>
-        <p className="max-w-[22rem] text-sm leading-[1.6] text-secondary">
-          A short, deliberate funnel built around the one thing that matters: getting your people
-          moving together — fast.
-        </p>
+      <div className="space-y-3">
+        <p className="eyebrow text-accent">The path</p>
+        <h2 className="text-display text-[clamp(2.25rem,5vw,3.25rem)] leading-[0.9] text-ink">
+          From “someday” to send it.
+        </h2>
       </div>
 
       <div className="grid gap-px overflow-hidden rounded-card border border-border bg-divider md:grid-cols-3">
