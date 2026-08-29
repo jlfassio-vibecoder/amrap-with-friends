@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { WorkoutStyleInfoModal } from '@/components/workoutStyle/WorkoutStyleInfoModal';
 import {
@@ -90,6 +90,50 @@ const FEATURES = [
   },
 ] as const;
 
+const PREVIEW_CHARS = 50;
+
+function previewText(text: string, maxChars = PREVIEW_CHARS): string {
+  if (text.length <= maxChars) {
+    return text;
+  }
+  return `${text.slice(0, maxChars).trimEnd()}…`;
+}
+
+function CollapsibleSeoParagraph({
+  plainText,
+  children,
+}: {
+  plainText: string;
+  children: ReactNode;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const needsCollapse = plainText.length > PREVIEW_CHARS;
+
+  return (
+    <div className="space-y-1">
+      <p className="text-base leading-[1.7] text-secondary">
+        {expanded || !needsCollapse ? children : previewText(plainText)}
+      </p>
+      {needsCollapse ? (
+        <button
+          type="button"
+          className="text-sm font-semibold text-accent hover:underline"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((value) => !value)}
+        >
+          {expanded ? 'Show less' : 'Read more'}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+const AMRAP_DEFINITION_TEXT =
+  "AMRAP stands for As Many Rounds (or Reps) As Possible — a timed workout format where you cycle through a short list of exercises for a fixed duration, completing as many full rounds as you can before the clock runs out. It's one of the most popular workout styles in functional fitness because it's simple to set up, scales to any fitness level, and turns a workout into a measurable score you can compare against friends.";
+
+const PRODUCT_PITCH_TEXT =
+  "AMRAP With Friends takes that format and makes it social: host a live AMRAP session, share a code, and everyone's countdown, round count, and leaderboard position update in real time — whether you're all in the same gym or scattered across different time zones.";
+
 export function HomeSeoContent() {
   const navigate = useNavigate();
   const [infoCategory, setInfoCategory] = useState<WorkoutCategory | null>(null);
@@ -108,7 +152,7 @@ export function HomeSeoContent() {
         <h1 className="text-display text-4xl text-ink">
           What Is an AMRAP Workout?
         </h1>
-        <p className="text-base leading-[1.7] text-secondary">
+        <CollapsibleSeoParagraph plainText={AMRAP_DEFINITION_TEXT}>
           AMRAP stands for{' '}
           <strong className="font-semibold text-ink">
             As Many Rounds (or Reps) As Possible
@@ -119,14 +163,14 @@ export function HomeSeoContent() {
           workout styles in functional fitness because it&apos;s simple to set
           up, scales to any fitness level, and turns a workout into a measurable
           score you can compare against friends.
-        </p>
-        <p className="text-base leading-[1.7] text-secondary">
+        </CollapsibleSeoParagraph>
+        <CollapsibleSeoParagraph plainText={PRODUCT_PITCH_TEXT}>
           <strong className="font-semibold text-ink">AMRAP With Friends</strong>{' '}
           takes that format and makes it social: host a live AMRAP session,
           share a code, and everyone&apos;s countdown, round count, and
           leaderboard position update in real time — whether you&apos;re all in
           the same gym or scattered across different time zones.
-        </p>
+        </CollapsibleSeoParagraph>
       </section>
 
       <section className="space-y-5">
