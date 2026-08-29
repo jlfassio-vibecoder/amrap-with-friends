@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchCoachWorkouts, type CoachWorkoutSummary } from '@/lib/api/coachWod';
+import { formatFeaturedWodTime } from '@/lib/api/featuredWod';
 import {
   deleteCoachFeaturedSchedule,
   fetchCoachFeaturedSchedule,
@@ -7,6 +8,9 @@ import {
   setCoachFeaturedSchedule,
   type CoachFeaturedSchedule,
 } from '@/lib/api/featuredWodSchedule';
+import { computeNextFeaturedOccurrences } from '@/lib/session/featuredWodOccurrencePreview';
+
+const PREVIEW_COUNT = 3;
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MAX_TIMES = 4;
@@ -68,6 +72,12 @@ function ScheduleForm({ workouts, schedule, onSaved, onCancel }: ScheduleFormPro
   const [error, setError] = useState<string | null>(null);
   const timezoneChoices = useMemo(() => timezoneOptions(), []);
   const timezoneRecognized = timezoneChoices.includes(timezone.trim());
+  const previewOccurrences = useMemo(() => {
+    if (!timezoneRecognized) {
+      return [];
+    }
+    return computeNextFeaturedOccurrences(days, times, timezone.trim(), new Date(), PREVIEW_COUNT);
+  }, [days, times, timezone, timezoneRecognized]);
 
   function toggleDay(day: number) {
     setDays((current) =>
@@ -231,6 +241,29 @@ function ScheduleForm({ workouts, schedule, onSaved, onCancel }: ScheduleFormPro
           </p>
         ) : null}
       </label>
+
+      {days.length > 0 && times.length > 0 ? (
+        <div className="space-y-1 rounded-card border border-border bg-page p-3">
+          <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
+            Next occurrences
+          </span>
+          {previewOccurrences.length > 0 ? (
+            <ul className="space-y-0.5 text-sm text-ink">
+              {previewOccurrences.map((occurrence) => (
+                <li key={occurrence.toISOString()}>
+                  {formatFeaturedWodTime(occurrence.toISOString())}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-secondary">
+              {timezoneRecognized
+                ? 'Add at least one day and time to preview.'
+                : 'Pick a recognized timezone to preview.'}
+            </p>
+          )}
+        </div>
+      ) : null}
 
       {error ? <p className="text-error text-sm">{error}</p> : null}
 

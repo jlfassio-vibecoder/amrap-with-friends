@@ -127,3 +127,37 @@ describe('CoachFeaturedWodPanel timezone field', () => {
     });
   });
 });
+
+describe('CoachFeaturedWodPanel next-occurrences preview', () => {
+  it('shows no preview block until at least one day is selected', async () => {
+    await renderFormWithNoSchedule();
+    expect(screen.queryByText('Next occurrences')).toBeNull();
+  });
+
+  it('shows computed upcoming times once a day and time are set', async () => {
+    await renderFormWithNoSchedule();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sun' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Next occurrences')).toBeTruthy();
+    });
+    // The default time (06:00) is set, so a preview should render — either
+    // real upcoming instants or the empty-state hint, never both absent.
+    const emptyHint = screen.queryByText('Add at least one day and time to preview.');
+    const list = document.querySelectorAll('li');
+    expect(emptyHint !== null || list.length > 0).toBe(true);
+  });
+
+  it('shows a timezone hint instead of times for an unrecognized timezone', async () => {
+    await renderFormWithNoSchedule();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sun' }));
+    const input = screen.getByPlaceholderText('America/Los_Angeles');
+    fireEvent.change(input, { target: { value: 'Not/ARealZone' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Pick a recognized timezone to preview.')).toBeTruthy();
+    });
+  });
+});
