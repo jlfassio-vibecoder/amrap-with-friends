@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { FeaturedWod } from '@/lib/api/featuredWod';
-import { getFeaturedWodCardPresentation } from './featuredWodCardPresentation';
+import {
+  FEATURED_WOD_LOBBY_LEAD_MS,
+  getFeaturedWodCardPresentation,
+} from './featuredWodCardPresentation';
 
 const SCHEDULED = '2026-09-01T13:00:00.000Z';
 const SCHEDULED_MS = Date.parse(SCHEDULED);
@@ -29,16 +32,29 @@ describe('getFeaturedWodCardPresentation', () => {
     );
     expect(presentation.phase).toBe('preview');
     expect(presentation.showJoinLobby).toBe(false);
+    expect(presentation.showLobbyOpensSoon).toBe(true);
     expect(presentation.statusLine.length).toBeGreaterThan(0);
   });
 
-  it('shows lobby join while waiting before scheduled_at', () => {
+  it('withholds join until the 15-minute lead window even when a session exists', () => {
+    const presentation = getFeaturedWodCardPresentation(
+      featured({ state: 'waiting' }),
+      SCHEDULED_MS - FEATURED_WOD_LOBBY_LEAD_MS - 60_000
+    );
+    expect(presentation.phase).toBe('lobby');
+    expect(presentation.showJoinLobby).toBe(false);
+    expect(presentation.showLobbyOpensSoon).toBe(true);
+    expect(presentation.statusLine).toContain('joining');
+  });
+
+  it('shows lobby join inside the 15-minute lead window', () => {
     const presentation = getFeaturedWodCardPresentation(
       featured({ state: 'waiting' }),
       SCHEDULED_MS - 60_000
     );
     expect(presentation.phase).toBe('lobby');
     expect(presentation.showJoinLobby).toBe(true);
+    expect(presentation.showLobbyOpensSoon).toBe(false);
     expect(presentation.statusLine).toContain('joining');
   });
 
@@ -62,6 +78,7 @@ describe('getFeaturedWodCardPresentation', () => {
     );
     expect(presentation.phase).toBe('work');
     expect(presentation.showJoinLobby).toBe(false);
+    expect(presentation.showLobbyOpensSoon).toBe(false);
     expect(presentation.statusLine).toBe('Session locked, amrap in progress.');
   });
 

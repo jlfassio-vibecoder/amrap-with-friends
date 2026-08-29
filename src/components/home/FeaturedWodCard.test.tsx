@@ -35,7 +35,8 @@ function featured(overrides: Partial<FeaturedWod> = {}): FeaturedWod {
     durationMinutes: 20,
     intensityTier: 4,
     tags: ['functional fitness'],
-    scheduledAt: '2026-09-01T13:00:00.000Z',
+    // Default inside the 15-minute join lead window.
+    scheduledAt: new Date(Date.now() + 5 * 60_000).toISOString(),
     sessionId: '22222222-2222-4222-8222-222222222222',
     state: 'waiting',
     startedAt: null,
@@ -147,6 +148,25 @@ describe('FeaturedWodCard', () => {
     expect(screen.queryByRole('link', { name: /Join/ })).toBeNull();
     expect(screen.getByText('Lobby opens shortly before start.')).toBeTruthy();
     expect(screen.queryByText(/joining/)).toBeNull();
+  });
+
+  it('keeps Join lobby hidden until 15 minutes before start even when a session exists', async () => {
+    fetchCurrentFeaturedWodMock.mockResolvedValue({
+      data: featured({
+        scheduledAt: new Date(Date.now() + 2 * 60 * 60_000).toISOString(),
+        attendeeCount: 1,
+      }),
+      error: null,
+    });
+
+    renderCard();
+
+    await waitFor(() => {
+      expect(screen.getByText('Sunrise AMRAP')).toBeTruthy();
+    });
+    expect(screen.queryByRole('link', { name: /Join/ })).toBeNull();
+    expect(screen.getByText('Lobby opens shortly before start.')).toBeTruthy();
+    expect(screen.getByText(/1 joining/)).toBeTruthy();
   });
 
   it('tracks featured_wod_joined when the join link is clicked', async () => {
