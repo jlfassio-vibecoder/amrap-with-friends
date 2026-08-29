@@ -5,6 +5,7 @@ import {
   formatFeaturedWodTime,
   type FeaturedWod,
 } from '@/lib/api/featuredWod';
+import { track } from '@/lib/analytics/track';
 
 const INTENSITY_LABEL: Record<number, string> = {
   1: 'Active Recovery',
@@ -27,6 +28,12 @@ export function FeaturedWodCard() {
       setLoading(false);
       if (!result.error) {
         setFeatured(result.data);
+        if (result.data) {
+          track('featured_wod_viewed', {
+            joinable: result.data.sessionId !== null,
+            state: result.data.state,
+          });
+        }
       }
     });
     return () => {
@@ -52,9 +59,22 @@ export function FeaturedWodCard() {
         {featured.state === 'work'
           ? 'Live now'
           : `${formatFeaturedWodTime(featured.scheduledAt)}`}
+        {featured.attendeeCount !== null
+          ? ` · ${featured.attendeeCount} joining`
+          : ''}
       </p>
       {featured.sessionId ? (
-        <Link className="btn-primary inline-block" to={`/join?s=${featured.sessionId}`}>
+        <Link
+          className="btn-primary inline-block"
+          to={`/join?s=${featured.sessionId}`}
+          onClick={() =>
+            track(
+              'featured_wod_joined',
+              { state: featured.state },
+              { sessionId: featured.sessionId }
+            )
+          }
+        >
           {featured.state === 'work' ? 'Join now' : 'Join lobby'}
         </Link>
       ) : (
