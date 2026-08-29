@@ -6,6 +6,7 @@ import {
   type FeaturedWod,
 } from '@/lib/api/featuredWod';
 import { track } from '@/lib/analytics/track';
+import { buildGoogleCalendarUrl, buildIcsFileContent } from '@/lib/calendar/buildCalendarEvent';
 
 const INTENSITY_LABEL: Record<number, string> = {
   1: 'Active Recovery',
@@ -14,6 +15,33 @@ const INTENSITY_LABEL: Record<number, string> = {
   4: 'Crucible',
   5: 'Tier 1',
 };
+
+function calendarEventInputFor(featured: FeaturedWod) {
+  const joinLine = featured.sessionId
+    ? `Join: ${window.location.origin}/join?s=${featured.sessionId}`
+    : null;
+  return {
+    // Once the session is generated the UID switches from the workout+time
+    // to the session id — a distinct occurrence either way, so this isn't a
+    // duplicate-vs-original conflict, just a different calendar entry.
+    uid: featured.sessionId ?? `${featured.workoutName}-${featured.scheduledAt}`,
+    title: `Featured WOD: ${featured.workoutName}`,
+    description: [featured.focus, joinLine].filter(Boolean).join('\n'),
+    startsAt: new Date(featured.scheduledAt),
+    durationMinutes: featured.durationMinutes,
+  };
+}
+
+function downloadIcsFile(featured: FeaturedWod) {
+  const ics = buildIcsFileContent(calendarEventInputFor(featured));
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'featured-wod.ics';
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 /** How often to re-poll while mounted, so the waiting -> live transition and
  * attendee count actually update without a page reload. There's no
@@ -87,6 +115,37 @@ export function FeaturedWodCard() {
         {featured.attendeeCount !== null
           ? ` · ${featured.attendeeCount} joining`
           : ''}
+      </p>
+      <p className="flex flex-wrap gap-3 text-xs">
+        <button
+          type="button"
+          className="link-accent"
+          onClick={() => {
+            downloadIcsFile(featured);
+            track(
+              'featured_wod_calendar_saved',
+              { method: 'ics' },
+              { sessionId: featured.sessionId }
+            );
+          }}
+        >
+          Download .ics
+        </button>
+        <a
+          className="link-accent"
+          href={buildGoogleCalendarUrl(calendarEventInputFor(featured))}
+          target="_blank"
+          rel="noreferrer"
+          onClick={() =>
+            track(
+              'featured_wod_calendar_saved',
+              { method: 'google' },
+              { sessionId: featured.sessionId }
+            )
+          }
+        >
+          Add to Google Calendar
+        </a>
       </p>
       {featured.sessionId ? (
         <Link

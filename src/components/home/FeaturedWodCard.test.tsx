@@ -217,6 +217,68 @@ describe('FeaturedWodCard', () => {
     });
   });
 
+  it('shows calendar links even before the session is generated, with a stable non-session UID', async () => {
+    fetchCurrentFeaturedWodMock.mockResolvedValue({
+      data: featured({ sessionId: null, state: null, attendeeCount: null }),
+      error: null,
+    });
+
+    renderCard();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Download .ics' })).toBeTruthy();
+    });
+    const googleLink = screen.getByRole('link', { name: 'Add to Google Calendar' }) as HTMLAnchorElement;
+    expect(googleLink.href).toContain('calendar.google.com/calendar/render');
+    expect(googleLink.href).toContain('Sunrise+AMRAP');
+  });
+
+  it('downloads an .ics file and tracks featured_wod_calendar_saved when clicked', async () => {
+    fetchCurrentFeaturedWodMock.mockResolvedValue({ data: featured(), error: null });
+    const createObjectURL = vi.fn().mockReturnValue('blob:fake-url');
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL });
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+    renderCard();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Download .ics' })).toBeTruthy();
+    });
+    screen.getByRole('button', { name: 'Download .ics' }).click();
+
+    expect(createObjectURL).toHaveBeenCalled();
+    const blob = createObjectURL.mock.calls[0][0] as Blob;
+    expect(blob.type).toBe('text/calendar;charset=utf-8');
+    expect(clickSpy).toHaveBeenCalled();
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:fake-url');
+    expect(trackMock).toHaveBeenCalledWith(
+      'featured_wod_calendar_saved',
+      { method: 'ics' },
+      { sessionId: '22222222-2222-4222-8222-222222222222' }
+    );
+
+    clickSpy.mockRestore();
+    vi.unstubAllGlobals();
+  });
+
+  it('tracks featured_wod_calendar_saved with method google when the Google Calendar link is clicked', async () => {
+    fetchCurrentFeaturedWodMock.mockResolvedValue({ data: featured(), error: null });
+
+    renderCard();
+
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: 'Add to Google Calendar' })).toBeTruthy();
+    });
+    screen.getByRole('link', { name: 'Add to Google Calendar' }).click();
+
+    expect(trackMock).toHaveBeenCalledWith(
+      'featured_wod_calendar_saved',
+      { method: 'google' },
+      { sessionId: '22222222-2222-4222-8222-222222222222' }
+    );
+  });
+
   it('stops polling after unmount', async () => {
     vi.useFakeTimers();
     fetchCurrentFeaturedWodMock.mockResolvedValue({ data: featured(), error: null });
