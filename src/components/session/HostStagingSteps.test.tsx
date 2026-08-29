@@ -58,7 +58,7 @@ describe('HostStagingSteps', () => {
     renderSteps();
     const durationHeader = screen.getByRole('button', { name: /Set duration/i });
     expect(durationHeader.getAttribute('aria-expanded')).toBe('true');
-    expect(screen.getByRole('button', { name: 'Engage staging area countdown timer' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Start countdown' })).toBeTruthy();
   });
 
   it('starts with all steps collapsed when the clock is armed', () => {
@@ -66,7 +66,7 @@ describe('HostStagingSteps', () => {
     expect(
       screen.getByRole('button', { name: /Set duration/i }).getAttribute('aria-expanded')
     ).toBe('false');
-    expect(screen.queryByRole('button', { name: 'Engage staging area countdown timer' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Start countdown' })).toBeNull();
   });
 
   it('collapses the open step when countdownArmed becomes true', () => {
@@ -102,7 +102,7 @@ describe('HostStagingSteps', () => {
     expect(
       screen.getByRole('button', { name: /Set duration/i }).getAttribute('aria-expanded')
     ).toBe('false');
-    expect(screen.getByRole('button', { name: 'COPY SESSION LINK' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'COPY RALLY LINK' })).toBeTruthy();
   });
 
   it('copies from the collapsed Copy link shortcut without expanding Share session', async () => {

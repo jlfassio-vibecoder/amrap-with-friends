@@ -162,7 +162,7 @@ interface IntakeFormProps {
   onSaved: (notices: string[]) => void;
 }
 
-const DOSSIER_SAVED_PREFIX = 'Your dossier was saved.';
+const PROFILE_SAVED_PREFIX = 'Your profile was saved.';
 
 function IntakeForm({
   initial,
@@ -422,10 +422,10 @@ function IntakeForm({
             { stage: 'email', error_message: emailResult.error },
             { userId }
           );
-          notices.push(`${DOSSIER_SAVED_PREFIX} Email update failed: ${emailResult.error}`);
+          notices.push(`${PROFILE_SAVED_PREFIX} Email update failed: ${emailResult.error}`);
         } else if (emailResult.needsEmailConfirmation) {
           notices.push(
-            `${DOSSIER_SAVED_PREFIX} Check your inbox to confirm your new email address.`
+            `${PROFILE_SAVED_PREFIX} Check your inbox to confirm your new email address.`
           );
         }
       }
@@ -438,7 +438,7 @@ function IntakeForm({
             { stage: 'password', error_message: passwordResult.error },
             { userId }
           );
-          notices.push(`${DOSSIER_SAVED_PREFIX} Password update failed: ${passwordResult.error}`);
+          notices.push(`${PROFILE_SAVED_PREFIX} Password update failed: ${passwordResult.error}`);
         }
       }
 
@@ -756,7 +756,7 @@ function IntakeForm({
       ) : null}
 
       <button type="submit" className="btn-primary w-full" disabled={submitting}>
-        {submitting ? 'Saving…' : 'File the dossier'}
+        {submitting ? 'Saving…' : 'Save profile'}
       </button>
     </form>
   );
@@ -772,7 +772,7 @@ export default function IntakePage() {
 
   if (isAuthLoading || loading) {
     return (
-      <NarrowPageLayout title="Intake" subtitle="Dossier">
+      <NarrowPageLayout title="Your profile" subtitle="Athlete details">
         <p className="text-sm text-secondary">Loading…</p>
       </NarrowPageLayout>
     );
@@ -780,8 +780,8 @@ export default function IntakePage() {
 
   if (!isAuthenticated) {
     return (
-      <NarrowPageLayout title="Intake" subtitle="Dossier">
-        <p className="text-sm text-secondary">Sign in to complete intake.</p>
+      <NarrowPageLayout title="Your profile" subtitle="Athlete details">
+        <p className="text-sm text-secondary">Sign in to set up your profile.</p>
         <p className="text-center text-sm">
           <Link className="link-accent" to="/">
             Back home
@@ -792,10 +792,10 @@ export default function IntakePage() {
   }
 
   return (
-    <NarrowPageLayout title="Intake" subtitle="The dossier">
+    <NarrowPageLayout title="Your profile" subtitle="Athlete details">
       <p className="text-sm text-secondary lg:hidden">State the claim. Telemetry decides.</p>
       <div className="hidden space-y-2 lg:block">
-        <h1 className="text-display text-5xl text-ink">Intake</h1>
+        <h1 className="text-display text-5xl text-ink">Your profile</h1>
         <p className="text-sm text-secondary">State the claim. Telemetry decides.</p>
       </div>
 

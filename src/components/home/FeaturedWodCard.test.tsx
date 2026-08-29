@@ -89,7 +89,7 @@ describe('FeaturedWodCard', () => {
     });
     expect(screen.getByText(/3 joining/)).toBeTruthy();
 
-    const joinLink = screen.getByRole('link', { name: 'Join lobby' });
+    const joinLink = screen.getByRole('link', { name: 'Join session' });
     expect(joinLink.getAttribute('href')).toBe(
       '/join?s=22222222-2222-4222-8222-222222222222'
     );
@@ -146,11 +146,11 @@ describe('FeaturedWodCard', () => {
       expect(screen.getByText('Sunrise AMRAP')).toBeTruthy();
     });
     expect(screen.queryByRole('link', { name: /Join/ })).toBeNull();
-    expect(screen.getByText('Lobby opens shortly before start.')).toBeTruthy();
+    expect(screen.getByText('Staging area opens shortly before start.')).toBeTruthy();
     expect(screen.queryByText(/joining/)).toBeNull();
   });
 
-  it('keeps Join lobby hidden until 15 minutes before start even when a session exists', async () => {
+  it('keeps Join session hidden until 15 minutes before start even when a session exists', async () => {
     fetchCurrentFeaturedWodMock.mockResolvedValue({
       data: featured({
         scheduledAt: new Date(Date.now() + 2 * 60 * 60_000).toISOString(),
@@ -165,7 +165,7 @@ describe('FeaturedWodCard', () => {
       expect(screen.getByText('Sunrise AMRAP')).toBeTruthy();
     });
     expect(screen.queryByRole('link', { name: /Join/ })).toBeNull();
-    expect(screen.getByText('Lobby opens shortly before start.')).toBeTruthy();
+    expect(screen.getByText('Staging area opens shortly before start.')).toBeTruthy();
     expect(screen.getByText(/1 joining/)).toBeTruthy();
   });
 
@@ -175,10 +175,10 @@ describe('FeaturedWodCard', () => {
     renderCard();
 
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: 'Join lobby' })).toBeTruthy();
+      expect(screen.getByRole('link', { name: 'Join session' })).toBeTruthy();
     });
 
-    screen.getByRole('link', { name: 'Join lobby' }).click();
+    screen.getByRole('link', { name: 'Join session' }).click();
 
     expect(trackMock).toHaveBeenCalledWith(
       'featured_wod_joined',
@@ -240,7 +240,7 @@ describe('FeaturedWodCard', () => {
     renderCard();
 
     await vi.waitFor(() => {
-      expect(screen.getByText('Lobby opens shortly before start.')).toBeTruthy();
+      expect(screen.getByText('Staging area opens shortly before start.')).toBeTruthy();
     });
     expect(trackMock).toHaveBeenCalledWith('featured_wod_viewed', {
       joinable: false,
@@ -250,7 +250,7 @@ describe('FeaturedWodCard', () => {
     await vi.advanceTimersByTimeAsync(20_000);
 
     await vi.waitFor(() => {
-      expect(screen.getByRole('link', { name: 'Join lobby' })).toBeTruthy();
+      expect(screen.getByRole('link', { name: 'Join session' })).toBeTruthy();
     });
     expect(trackMock).toHaveBeenCalledWith('featured_wod_viewed', {
       joinable: true,

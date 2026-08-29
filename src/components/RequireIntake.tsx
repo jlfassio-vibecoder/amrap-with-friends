@@ -36,8 +36,8 @@ export function RequireIntake({ children, guestMode, signedOutPreview }: Require
       <NarrowPageLayout title="Create session" subtitle="Sign in required">
         {signedOutPreview}
         <p className="text-sm text-secondary">
-          Sign in and complete intake before creating a session. You can still join
-          as a guest.
+          Sign in and set up your profile before creating a session. You can still
+          join as a guest.
         </p>
         {authOpen ? <AuthModal onClose={() => setAuthOpen(false)} /> : null}
         {!authOpen ? (
@@ -55,7 +55,7 @@ export function RequireIntake({ children, guestMode, signedOutPreview }: Require
 
   if (error) {
     return (
-      <NarrowPageLayout title="Intake" subtitle="Dossier">
+      <NarrowPageLayout title="Your profile" subtitle="Athlete details">
         <p className="text-error">Error: {error}</p>
       </NarrowPageLayout>
     );

@@ -41,6 +41,36 @@ Lobby schema and RPCs live in [`supabase/migrations/`](supabase/migrations/). Ap
 
 Manual RPC checks: [`supabase/scripts/verify_lobby_rpc.sql`](supabase/scripts/verify_lobby_rpc.sql).
 
+### Verifying a migration locally
+
+CI runs lint, typecheck and tests — it never executes SQL, so a migration that
+does not parse reaches production unchallenged. To replay the whole history
+against a throwaway local Postgres before pushing:
+
+1. `service postgresql start && createdb awf_replay`
+2. Load stand-ins for the Supabase platform objects the migrations assume —
+   the `auth` schema with a `users` table and a `uid()` function, the `anon` /
+   `authenticated` / `service_role` roles, `pgcrypto` in `extensions`, and a
+   `storage` schema.
+3. Replay `supabase/migrations/*.sql` in filename order with
+   `psql -v ON_ERROR_STOP=1`.
+
+Two migrations fail a from-scratch replay for reasons unrelated to their SQL:
+`20260822110000_lobby_schema_review_fixes.sql` drops a constraint that
+`rounds` depends on, and `20260829140000_coach_exercise_media_owner_policies.sql`
+calls `storage.foldername()`, which only exists on hosted Supabase. Everything
+after them replays clean.
+
+Exercising an RPC afterwards needs a row in `auth.users`, a matching
+`athlete_profiles` row (several columns are `NOT NULL`, and
+`perceived_classification` is one of `civilian` / `operator` / `special_ops`),
+then `SET request.jwt.claim.sub = '<uuid>'` so `auth.uid()` resolves.
+
+Note that `create_session` is overloaded such that a positional 3-argument call
+is ambiguous. The client always sends all seven named parameters, so this never
+bites in production, but a hand-written `psql` call has to use the 7-argument
+form.
+
 ### Hosted Supabase deploy (required for score lock at session finish)
 
 After linking the project (`supabase link --project-ref <ref>`):

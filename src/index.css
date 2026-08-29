@@ -40,6 +40,20 @@
   --color-avatar-teal: #4a8f8f;
 
   --shadow-card: 0 2px 0 0 var(--color-border);
+
+  /*
+   * Landing / brand-night palette. Deliberately theme-independent: the
+   * marketing hero and rally band are dark navy in light and dark mode
+   * alike, so these are declared once and never re-declared below.
+   */
+  --color-night: #061521;
+  --color-navy: #0b263a;
+  --color-deep: #123e55;
+  --color-gold: #f0b44d;
+  --color-night-ink: #f7f4ec;
+  --color-night-secondary: #becfca;
+  --color-night-far: #0d2a3d;
+  --color-night-border: rgb(228 238 232 / 0.18);
 }
 
 [data-theme='dark'] {
@@ -135,13 +149,32 @@
     @apply rounded-card border border-border bg-success-tint p-3 text-sm text-success-text;
   }
 
-  /* Large home-page brand mark; slightly brighter in dark theme so the dark logo reads. */
-  .brand-watermark {
-    opacity: 0.14;
+  /* --- Landing page ------------------------------------------------- */
+
+  /* Small uppercase section label with a leading rule, per the brand kit. */
+  .eyebrow {
+    @apply flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.16em];
   }
 
-  [data-theme='dark'] .brand-watermark {
-    opacity: 0.22;
-    filter: brightness(1.2);
+  .eyebrow::before {
+    @apply h-px w-8 bg-current;
+    content: '';
+  }
+
+  /* Charted-night ground shared by the hero and the rally band. */
+  .night-panel {
+    background-image:
+      radial-gradient(circle at 82% 18%, rgb(32 92 112 / 0.45) 0, transparent 45%),
+      radial-gradient(circle at 10% 90%, rgb(24 63 75 / 0.5) 0, transparent 42%),
+      linear-gradient(
+        122deg,
+        var(--color-night) 0%,
+        var(--color-navy) 55%,
+        var(--color-night-far) 100%
+      );
+  }
+
+  .landing-headline {
+    @apply font-display uppercase leading-[0.82] tracking-[0.01em];
   }
 }

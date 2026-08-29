@@ -173,7 +173,7 @@ export function HostStagingSteps({
             }
             onClick={() => void engageClock()}
           >
-            {busy ? 'Engaging…' : 'Engage staging area countdown timer'}
+            {busy ? 'Starting…' : 'Start countdown'}
           </button>
           {engageError ? <p className="text-error text-sm">{engageError}</p> : null}
         </div>
@@ -191,14 +191,14 @@ export function HostStagingSteps({
             className="link-accent text-xs font-medium"
             onClick={() => void copyInvite()}
           >
-            {secured ? 'Link secured' : 'Copy link'}
+            {secured ? 'Link copied' : 'Copy link'}
           </button>
           <button
             type="button"
             className="link-accent text-xs font-medium"
             onClick={() => void copySessionId()}
           >
-            {idSecured ? 'ID secured' : 'Copy session ID'}
+            {idSecured ? 'ID copied' : 'Copy session ID'}
           </button>
         </span>
       ),
@@ -209,14 +209,14 @@ export function HostStagingSteps({
             className="btn-primary w-full px-3 py-1.5 text-xs uppercase tracking-widest"
             onClick={() => void copyInvite()}
           >
-            {secured ? 'LINK SECURED' : 'COPY SESSION LINK'}
+            {secured ? 'LINK COPIED' : 'COPY RALLY LINK'}
           </button>
           <button
             type="button"
             className="btn-outline w-full px-3 py-1.5 text-xs uppercase tracking-widest"
             onClick={() => void copySessionId()}
           >
-            {idSecured ? 'ID SECURED' : 'COPY SESSION ID'}
+            {idSecured ? 'ID COPIED' : 'COPY SESSION ID'}
           </button>
           {copyError ? <p className="text-error text-sm">{copyError}</p> : null}
         </div>

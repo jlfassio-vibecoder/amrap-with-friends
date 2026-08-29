@@ -1,48 +1,43 @@
 import { Link } from 'react-router-dom';
 import { FeaturedWodCard } from '@/components/home/FeaturedWodCard';
 import { HomeSeoContent } from '@/components/home/HomeSeoContent';
-import { NarrowPageLayout } from '@/components/NarrowPageLayout';
+import { LandingHero } from '@/components/home/LandingHero';
+import { RallyCta } from '@/components/home/RallyCta';
 import { HostScheduledSessionsPanel } from '@/components/session/HostScheduledSessionsPanel';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 
+/**
+ * Home is the marketing landing page, so it composes its own full-bleed shell
+ * (hero and rally band run edge to edge) instead of using NarrowPageLayout,
+ * which constrains every child to a single measure. LandingHero carries the
+ * page header, since the nav sits on the hero's dark ground.
+ */
 function HomePage() {
   const { isAuthenticated, isAuthLoading } = useAmrapAuth();
+  const signedIn = !isAuthLoading && isAuthenticated;
 
   return (
-    <NarrowPageLayout
-      title="AMRAP With Friends"
-      subtitle="Enter the crucible, earn the title."
-      hideDesktopTitle
-      contentMaxWidthClassName="max-w-[860px]"
-      brandWatermark
-    >
-      <div className="flex flex-col items-center gap-6 py-6 text-center lg:py-16">
-        <div className="flex flex-wrap justify-center gap-4">
-          {!isAuthLoading && isAuthenticated ? (
-            <Link className="btn-primary" to="/hud">
-              HUD
-            </Link>
-          ) : null}
-          <Link
-            className={!isAuthLoading && isAuthenticated ? 'btn-outline' : 'btn-primary'}
-            to="/create"
-          >
-            Create session
-          </Link>
-          <Link className="btn-outline" to="/join">
-            Join session
-          </Link>
-        </div>
+    <main className="min-h-screen bg-page">
+      <LandingHero showHudAction={signedIn} />
+
+      <div className="mx-auto w-full max-w-[1080px] space-y-16 px-6 py-14 lg:px-10 lg:py-20">
+        <FeaturedWodCard />
+        <HomeSeoContent />
+        {/* Returning-host utility, so it sits after the pitch rather than
+            ahead of it. */}
+        <HostScheduledSessionsPanel />
       </div>
-      <FeaturedWodCard />
-      <HostScheduledSessionsPanel />
-      <HomeSeoContent />
-      <p className="pb-2 text-center text-xs text-muted">
+
+      <RallyCta />
+
+      <footer className="mx-auto flex w-full max-w-[1080px] flex-wrap items-center justify-between gap-3 px-6 py-8 text-xs text-muted lg:px-10">
+        <span className="text-display text-lg text-ink">AMRAP With Friends</span>
+        <span>Find your North Star. Move as one.</span>
         <Link className="link-accent" to="/coach">
           Coach
         </Link>
-      </p>
-    </NarrowPageLayout>
+      </footer>
+    </main>
   );
 }
 

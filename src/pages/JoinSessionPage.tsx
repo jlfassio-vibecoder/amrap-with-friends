@@ -139,7 +139,7 @@ export default function JoinSessionPage() {
 
   if (deepLink && !rallyUuidValid) {
     return (
-      <NarrowPageLayout title="Join session" subtitle="Rally point">
+      <NarrowPageLayout title="Join session" subtitle="You’ve been invited">
         <p className="text-error">{SESSION_LOCKED_OR_INVALID}</p>
         <p className="text-center text-sm">
           <Link className="link-accent" to="/join">
@@ -152,7 +152,7 @@ export default function JoinSessionPage() {
 
   if (deepLink && isAuthLoading) {
     return (
-      <NarrowPageLayout title="Join session" subtitle="Rally point">
+      <NarrowPageLayout title="Join session" subtitle="You’ve been invited">
         <p className="text-sm text-secondary">Checking identity…</p>
       </NarrowPageLayout>
     );
@@ -160,9 +160,9 @@ export default function JoinSessionPage() {
 
   if (deepLink && canAutoJoin && !error) {
     return (
-      <NarrowPageLayout title="Join session" subtitle="Rally point">
+      <NarrowPageLayout title="Join session" subtitle="You’ve been invited">
         <p className="text-sm text-secondary">
-          Welcome, {authCallsign}. Breaching lobby…
+          Welcome, {authCallsign}. Joining…
         </p>
         {loading ? <p className="text-sm text-secondary">Joining…</p> : null}
       </NarrowPageLayout>
@@ -171,27 +171,27 @@ export default function JoinSessionPage() {
 
   if (deepLink) {
     return (
-      <NarrowPageLayout title="Join session" subtitle="Rally point">
+      <NarrowPageLayout title="Join session" subtitle="You’ve been invited">
         <p className="text-sm text-secondary lg:hidden">
-          Enter a temporary callsign to breach the lobby. No account required.
+          Enter a name to join. No account required.
         </p>
         <div className="hidden space-y-2 lg:block">
-          <h1 className="text-display text-5xl text-ink">Rally point</h1>
+          <h1 className="text-display text-5xl text-ink">You’ve been invited</h1>
           <p className="text-sm text-secondary">
-            Enter a temporary callsign to breach the lobby. No account required.
+            Enter a name to join. No account required.
           </p>
         </div>
 
         <form className="card space-y-4 p-6" onSubmit={handleSubmit}>
           <label className="block space-y-1">
             <span className="text-sm font-semibold uppercase tracking-wide">
-              Enter temporary callsign
+              Your name
             </span>
             <input
               className="input-field"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
-              placeholder={authCallsign ?? 'Callsign'}
+              placeholder={authCallsign ?? 'Your name'}
               maxLength={50}
               required
               autoFocus
@@ -201,7 +201,7 @@ export default function JoinSessionPage() {
           {error ? <p className="text-error">{error}</p> : null}
 
           <button type="submit" className="btn-primary w-full uppercase tracking-widest" disabled={loading}>
-            {loading ? 'Joining…' : 'Breach lobby'}
+            {loading ? 'Joining…' : 'Join session'}
           </button>
         </form>
 

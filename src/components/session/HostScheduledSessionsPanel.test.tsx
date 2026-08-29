@@ -87,7 +87,7 @@ function renderPanel() {
 describe('HostScheduledSessionsPanel', () => {
   it('prompts signed-out users to sign in', () => {
     renderPanel();
-    expect(screen.getByText(/Sign in to see your scheduled rallies/i)).toBeTruthy();
+    expect(screen.getByText(/Sign in to see your scheduled sessions/i)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
     expect(screen.getByText('Auth modal')).toBeTruthy();
   });

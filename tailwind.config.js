@@ -30,6 +30,16 @@ export default {
           foreground: 'var(--color-neutral-foreground)',
         },
         'on-accent': 'var(--color-on-accent)',
+        night: {
+          DEFAULT: 'var(--color-night)',
+          ink: 'var(--color-night-ink)',
+          secondary: 'var(--color-night-secondary)',
+          border: 'var(--color-night-border)',
+          far: 'var(--color-night-far)',
+        },
+        navy: 'var(--color-navy)',
+        deep: 'var(--color-deep)',
+        gold: 'var(--color-gold)',
         avatar: {
           coral: 'var(--color-avatar-coral)',
           sage: 'var(--color-avatar-sage)',
