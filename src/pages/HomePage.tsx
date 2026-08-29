@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { FeaturedWodCard } from '@/components/home/FeaturedWodCard';
 import { HomeSeoContent } from '@/components/home/HomeSeoContent';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { HostScheduledSessionsPanel } from '@/components/session/HostScheduledSessionsPanel';
@@ -33,6 +34,7 @@ function HomePage() {
           </Link>
         </div>
       </div>
+      <FeaturedWodCard />
       <HostScheduledSessionsPanel />
       <HomeSeoContent />
       <p className="pb-2 text-center text-xs text-muted">

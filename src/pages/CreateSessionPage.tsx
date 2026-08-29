@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
+import { FeaturedWodCard } from '@/components/home/FeaturedWodCard';
 import {
   CreateSessionSummaryPanel,
   type CreateScheduleMode,
@@ -322,6 +323,8 @@ export default function CreateSessionPage() {
               Start an AMRAP session and invite friends to join.
             </p>
           </div>
+
+          <FeaturedWodCard />
 
           {intakeNotices.length > 0 ? (
             <div className="card space-y-2 p-4" role="status">

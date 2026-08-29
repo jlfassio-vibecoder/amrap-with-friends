@@ -83,7 +83,7 @@ describe('IntakePage', () => {
     expect(warnings).toHaveLength(2);
   });
 
-  it('defaults to imperial labels and disables submit until account and biometrics are set', () => {
+  it('defaults to imperial labels and lists blockers until account and biometrics are set', () => {
     renderIntake();
     expect(screen.getByLabelText(/Height \(in\)/)).toBeTruthy();
     expect(screen.getByLabelText(/Weight \(lb\)/)).toBeTruthy();
@@ -91,9 +91,12 @@ describe('IntakePage', () => {
       'value',
       'athlete@example.com'
     );
+    // New users get a username suggestion from the email local-part.
+    expect(screen.getByLabelText(/^Username$/)).toHaveProperty('value', 'athlete');
 
     const submit = screen.getByRole('button', { name: 'File the dossier' });
-    expect(submit).toHaveProperty('disabled', true);
+    expect(submit).toHaveProperty('disabled', false);
+    expect(screen.queryByText('Enter a nickname (1–50 characters).')).toBeTruthy();
 
     fireEvent.change(screen.getByLabelText(/Height \(in\)/), {
       target: { value: '71' },
@@ -103,10 +106,10 @@ describe('IntakePage', () => {
     });
     fireEvent.change(screen.getByLabelText(/^Age$/), { target: { value: '32' } });
     fireEvent.click(screen.getByRole('button', { name: 'CIVILIAN' }));
-    expect(submit).toHaveProperty('disabled', true);
+    expect(screen.getByText('Enter a nickname (1–50 characters).')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Male' }));
-    expect(submit).toHaveProperty('disabled', true);
+    expect(screen.getByText('Enter a nickname (1–50 characters).')).toBeTruthy();
 
     fireEvent.change(screen.getByLabelText(/^Username$/), {
       target: { value: 'ghost_ops' },
@@ -114,7 +117,69 @@ describe('IntakePage', () => {
     fireEvent.change(screen.getByLabelText(/^Nickname$/), {
       target: { value: 'Ghost' },
     });
+    expect(screen.queryByText('Enter a nickname (1–50 characters).')).toBeNull();
     expect(submit).toHaveProperty('disabled', false);
+  });
+
+  it('keeps File the dossier clickable and lists blockers when username is cleared', () => {
+    renderIntake();
+    fillRequiredFields();
+    const submit = screen.getByRole('button', { name: 'File the dossier' });
+    expect(submit).toHaveProperty('disabled', false);
+
+    fireEvent.change(screen.getByLabelText(/^Username$/), {
+      target: { value: '' },
+    });
+
+    expect(submit).toHaveProperty('disabled', false);
+    expect(screen.getAllByText('Enter a username.').length).toBeGreaterThan(0);
+  });
+
+  it('shows a no-spaces error when username includes a space and does not save', async () => {
+    saveMock.mockResolvedValue({ error: null });
+    renderIntake();
+    fillRequiredFields();
+
+    fireEvent.change(screen.getByLabelText(/^Username$/), {
+      target: { value: 'Justin Fassio' },
+    });
+
+    expect(screen.getByLabelText(/^Username$/)).toHaveProperty('value', 'Justin Fassio');
+    expect(
+      screen.getAllByText(
+        'No spaces — use letters, numbers, or underscore (e.g. Justin_Fassio).'
+      ).length
+    ).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'File the dossier' }));
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByLabelText(/^Username$/));
+    });
+    expect(saveMock).not.toHaveBeenCalled();
+  });
+
+  it('scrolls and focuses the first invalid field when File the dossier is clicked', async () => {
+    renderIntake();
+    fillRequiredFields();
+    fireEvent.change(screen.getByLabelText(/^Nickname$/), {
+      target: { value: '' },
+    });
+
+    const nicknameInput = screen.getByLabelText(/^Nickname$/);
+    const scrollIntoView = vi.fn();
+    nicknameInput.scrollIntoView = scrollIntoView;
+
+    fireEvent.click(screen.getByRole('button', { name: 'File the dossier' }));
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(nicknameInput);
+    });
+    expect(scrollIntoView).toHaveBeenCalled();
+    expect(screen.getAllByText('Enter a nickname (1–50 characters).').length).toBeGreaterThan(
+      0
+    );
+    expect(saveMock).not.toHaveBeenCalled();
   });
 
   it('converts imperial input to metric on save and includes identity fields', async () => {
