@@ -32,7 +32,7 @@ export function useCopySessionInvite(sessionId: string) {
         timerRef.current = null;
       }, SECURED_MS);
     } catch {
-      setError(`Could not copy link. Copy this rally URL manually: ${inviteUrl}`);
+      setError(`Could not copy link. Copy this session link manually: ${inviteUrl}`);
     }
   }
 
