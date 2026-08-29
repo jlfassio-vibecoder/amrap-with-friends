@@ -63,14 +63,17 @@ function phaseLabel(phase: string): string {
 /** Types WAITING once, then cycles an ellipsis. Honors prefers-reduced-motion. */
 function WaitingTypewriterLabel() {
   const WORD = 'WAITING';
-  const [chars, setChars] = useState(0);
-  const [dots, setDots] = useState(0);
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const [chars, setChars] = useState(() =>
+    prefersReducedMotion ? WORD.length : 0
+  );
+  const [dots, setDots] = useState(() => (prefersReducedMotion ? 3 : 0));
 
   useEffect(() => {
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduceMotion) {
-      setChars(WORD.length);
-      setDots(3);
+    if (prefersReducedMotion) {
       return;
     }
 
@@ -83,7 +86,7 @@ function WaitingTypewriterLabel() {
       setDots((count) => (count + 1) % 4);
     }, 420);
     return () => window.clearInterval(id);
-  }, [chars]);
+  }, [chars, prefersReducedMotion]);
 
   return (
     <p
@@ -112,111 +115,156 @@ function formatExerciseLabel(exercise: {
   return `${exercise.name} — ${exercise.target}${exercise.unit ? ` ${exercise.unit}` : ''}`;
 }
 
+type RestoredSessionIdentity = {
+  sessionId: string;
+  participantId: string;
+  nickname: string;
+  isHost: boolean;
+};
+
+type SyncIdentityBootstrap =
+  | { kind: 'ready'; identity: RestoredSessionIdentity }
+  | { kind: 'empty' }
+  | { kind: 'need-resume'; storedParticipantId: string | null; storedNickname: string };
+
+function readSyncIdentityBootstrap(
+  sessionId: string,
+  isAuthenticated: boolean
+): SyncIdentityBootstrap {
+  const storedParticipantId = getStoredParticipantId(sessionId);
+  const storedHostToken = getStoredHostToken(sessionId);
+  const storedNickname = getStoredNickname(sessionId) ?? 'Unknown';
+
+  if (storedParticipantId && storedHostToken) {
+    return {
+      kind: 'ready',
+      identity: {
+        sessionId,
+        participantId: storedParticipantId,
+        nickname: storedNickname,
+        isHost: true,
+      },
+    };
+  }
+
+  if (storedParticipantId && !isAuthenticated) {
+    return {
+      kind: 'ready',
+      identity: {
+        sessionId,
+        participantId: storedParticipantId,
+        nickname: storedNickname,
+        isHost: false,
+      },
+    };
+  }
+
+  if (!isAuthenticated) {
+    return { kind: 'empty' };
+  }
+
+  return {
+    kind: 'need-resume',
+    storedParticipantId,
+    storedNickname,
+  };
+}
+
 export default function SessionWaitingRoomPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const { isAuthenticated, isAuthLoading } = useAmrapAuth();
-  const [restoredIdentity, setRestoredIdentity] = useState<{
-    sessionId: string;
-    participantId: string;
-    nickname: string;
-    isHost: boolean;
-  } | null>(null);
-  const [resumeError, setResumeError] = useState<{
-    sessionId: string;
-    message: string;
-  } | null>(null);
-  const [identityBootstrapDone, setIdentityBootstrapDone] = useState(false);
 
-  const activeRestored =
-    restoredIdentity && restoredIdentity.sessionId === sessionId
-      ? restoredIdentity
+  const syncBootstrap =
+    sessionId && !isAuthLoading
+      ? readSyncIdentityBootstrap(sessionId, isAuthenticated)
       : null;
-  const activeResumeError =
-    resumeError && resumeError.sessionId === sessionId
-      ? resumeError.message
-      : null;
+  const needsResume = syncBootstrap?.kind === 'need-resume';
+  const resumeKey = `${sessionId ?? ''}:${isAuthenticated}:${isAuthLoading}`;
+
+  const [resumeState, setResumeState] = useState<{
+    key: string;
+    settled: boolean;
+    identity: RestoredSessionIdentity | null;
+    error: string | null;
+  }>({ key: '', settled: false, identity: null, error: null });
+
+  // Adjust resume bookkeeping when the session/auth inputs change (render-time pattern).
+  if (needsResume && resumeState.key !== resumeKey) {
+    setResumeState({
+      key: resumeKey,
+      settled: false,
+      identity: null,
+      error: null,
+    });
+  } else if (!needsResume && resumeState.key !== resumeKey) {
+    setResumeState({
+      key: resumeKey,
+      settled: true,
+      identity: null,
+      error: null,
+    });
+  }
 
   useEffect(() => {
-    if (!sessionId || isAuthLoading) {
+    if (!sessionId || !needsResume || isAuthLoading) {
       return;
     }
 
     let cancelled = false;
-    setIdentityBootstrapDone(false);
-    setResumeError(null);
-
     const storedParticipantId = getStoredParticipantId(sessionId);
-    const storedHostToken = getStoredHostToken(sessionId);
-    const storedNickname = getStoredNickname(sessionId);
+    const storedNickname = getStoredNickname(sessionId) ?? 'Unknown';
 
-    // Host identity already in sessionStorage — no RPC needed.
-    if (storedParticipantId && storedHostToken) {
-      setRestoredIdentity({
-        sessionId,
-        participantId: storedParticipantId,
-        nickname: storedNickname ?? 'Unknown',
-        isHost: true,
-      });
-      setIdentityBootstrapDone(true);
-      return;
-    }
-
-    // Unauthenticated joiner with a local participant — ready as guest.
-    if (storedParticipantId && !isAuthenticated) {
-      setRestoredIdentity({
-        sessionId,
-        participantId: storedParticipantId,
-        nickname: storedNickname ?? 'Unknown',
-        isHost: false,
-      });
-      setIdentityBootstrapDone(true);
-      return;
-    }
-
-    // No auth and no local participant — nothing to restore.
-    if (!isAuthenticated) {
-      setIdentityBootstrapDone(true);
-      return;
-    }
-
-    // Authenticated: resume restores host_token when this user is the host,
-    // even if a joiner participant id was already stored without host authority.
     void resumeSessionIdentity(sessionId).then((result) => {
       if (cancelled) {
         return;
       }
+
       if (result.error) {
         if (storedParticipantId) {
-          setRestoredIdentity({
-            sessionId,
-            participantId: storedParticipantId,
-            nickname: storedNickname ?? 'Unknown',
-            isHost: Boolean(getStoredHostToken(sessionId)),
+          setResumeState({
+            key: resumeKey,
+            settled: true,
+            identity: {
+              sessionId,
+              participantId: storedParticipantId,
+              nickname: storedNickname,
+              isHost: Boolean(getStoredHostToken(sessionId)),
+            },
+            error: null,
           });
-          setIdentityBootstrapDone(true);
           return;
         }
-        setResumeError({ sessionId, message: result.error.message });
-        setIdentityBootstrapDone(true);
+        setResumeState({
+          key: resumeKey,
+          settled: true,
+          identity: null,
+          error: result.error.message,
+        });
         return;
       }
+
       if (result.missing || !result.data) {
         if (storedParticipantId) {
-          setRestoredIdentity({
-            sessionId,
-            participantId: storedParticipantId,
-            nickname: storedNickname ?? 'Unknown',
-            isHost: Boolean(getStoredHostToken(sessionId)),
+          setResumeState({
+            key: resumeKey,
+            settled: true,
+            identity: {
+              sessionId,
+              participantId: storedParticipantId,
+              nickname: storedNickname,
+              isHost: Boolean(getStoredHostToken(sessionId)),
+            },
+            error: null,
           });
-          setIdentityBootstrapDone(true);
           return;
         }
-        setResumeError({
-          sessionId,
-          message:
+        setResumeState({
+          key: resumeKey,
+          settled: true,
+          identity: null,
+          error:
             'No participant identity found for this session. Join or create again.',
         });
-        setIdentityBootstrapDone(true);
         return;
       }
       // Actually persist the resumed identity — without this, useLiveAmrapSession
@@ -228,19 +276,39 @@ export default function SessionWaitingRoomPage() {
         nickname: result.data.nickname,
         hostToken: result.data.hostToken ?? undefined,
       });
-      setRestoredIdentity({
-        sessionId,
-        participantId: result.data.participantId,
-        nickname: result.data.nickname,
-        isHost: Boolean(result.data.hostToken),
+
+      setResumeState({
+        key: resumeKey,
+        settled: true,
+        identity: {
+          sessionId,
+          participantId: result.data.participantId,
+          nickname: result.data.nickname,
+          isHost: Boolean(result.data.hostToken),
+        },
+        error: null,
       });
-      setIdentityBootstrapDone(true);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [sessionId, isAuthenticated, isAuthLoading]);
+  }, [sessionId, needsResume, isAuthLoading, resumeKey]);
+
+  const identityBootstrapDone =
+    !isAuthLoading &&
+    syncBootstrap !== null &&
+    (syncBootstrap.kind !== 'need-resume' ||
+      (resumeState.key === resumeKey && resumeState.settled));
+
+  const activeRestored: RestoredSessionIdentity | null =
+    syncBootstrap?.kind === 'ready'
+      ? syncBootstrap.identity
+      : resumeState.key === resumeKey
+        ? resumeState.identity
+        : null;
+  const activeResumeError =
+    resumeState.key === resumeKey ? resumeState.error : null;
 
   if (!sessionId) {
     return (
