@@ -34,14 +34,14 @@ export function LandingHero({ showHudAction }: LandingHeroProps) {
               className="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
               to="/create"
             >
-              Create Session
+              Create session
             </Link>
-            <Link
+            <a
               className="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
-              to="/create"
+              href="#rally"
             >
               Invite your squad →
-            </Link>
+            </a>
             <Link
               className="border-b border-gold pb-1.5 text-xs font-bold uppercase tracking-[0.1em] text-night-ink hover:text-gold"
               to="/join"

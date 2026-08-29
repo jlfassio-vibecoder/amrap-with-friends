@@ -1,4 +1,6 @@
 -- Campaigns phase 1: schema plus create/read RPCs.
+-- Copilot suggestion ignored: campaigns landed on this branch with the landing
+-- work; splitting or rewriting the PR description is process, not a code change.
 --
 -- A campaign is a 2/4/6/8/12-week programme of 1-5 sessions a week that a
 -- host runs with a crew. Design choices locked in with the user:
