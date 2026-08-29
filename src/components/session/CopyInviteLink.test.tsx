@@ -36,7 +36,7 @@ describe('CopyInviteLink', () => {
     });
 
     render(<CopyInviteLink sessionId={SESSION_ID} />);
-    const button = screen.getByRole('button', { name: 'COPY RALLY LINK' });
+    const button = screen.getByRole('button', { name: 'COPY SESSION LINK' });
     await act(async () => {
       fireEvent.click(button);
     });
@@ -49,7 +49,7 @@ describe('CopyInviteLink', () => {
     await act(async () => {
       vi.advanceTimersByTime(2000);
     });
-    expect(screen.getByRole('button', { name: 'COPY RALLY LINK' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'COPY SESSION LINK' })).toBeTruthy();
   });
 
   it('shows an error when clipboard write fails', async () => {
@@ -62,7 +62,7 @@ describe('CopyInviteLink', () => {
 
     render(<CopyInviteLink sessionId={SESSION_ID} />);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'COPY RALLY LINK' }));
+      fireEvent.click(screen.getByRole('button', { name: 'COPY SESSION LINK' }));
     });
 
     expect(screen.getByText(/Could not copy link/i)).toBeTruthy();

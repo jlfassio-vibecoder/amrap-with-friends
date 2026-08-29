@@ -5,6 +5,7 @@ import {
   getStoredClaimToken,
   getStoredNickname,
   getStoredGhostSelection,
+  getStoredHostToken,
 } from '@/lib/sessionIdentity';
 import { useLiveAmrapSession } from '@/hooks/useLiveAmrapSession';
 import { useParticipantClaim } from '@/hooks/useParticipantClaim';
@@ -19,11 +20,11 @@ import { ParticipantsPanel } from '@/components/ParticipantsPanel';
 import { PartialRepsModal } from '@/components/PartialRepsModal';
 import { SessionScorecard, type SessionScorecardSaveState } from '@/components/SessionScorecard';
 import { SessionChat } from '@/components/SessionChat';
-import { GhostPicker } from '@/components/GhostPicker';
 import { GhostPacerStrip } from '@/components/GhostPacerStrip';
 import { CopyInviteLink } from '@/components/session/CopyInviteLink';
 import { EditRallyScheduleForm } from '@/components/session/EditRallyScheduleForm';
-import { LobbyCountdownPanel } from '@/components/session/LobbyCountdownPanel';
+import { ArmedLobbyControls } from '@/components/session/ArmedLobbyControls';
+import { HostStagingSteps } from '@/components/session/HostStagingSteps';
 import { SafetyNoticeModal } from '@/components/safety/SafetyNoticeModal';
 import { useSessionSafetyNotices } from '@/components/safety/useSessionSafetyNotices';
 import { CoachWalkthrough } from '@/components/walkthrough/CoachWalkthrough';
@@ -58,6 +59,46 @@ function phaseLabel(phase: string): string {
   }
 }
 
+/** Types WAITING once, then cycles an ellipsis. Honors prefers-reduced-motion. */
+function WaitingTypewriterLabel() {
+  const WORD = 'WAITING';
+  const [chars, setChars] = useState(0);
+  const [dots, setDots] = useState(0);
+
+  useEffect(() => {
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) {
+      setChars(WORD.length);
+      setDots(3);
+      return;
+    }
+
+    if (chars < WORD.length) {
+      const id = window.setTimeout(() => setChars((count) => count + 1), 90);
+      return () => window.clearTimeout(id);
+    }
+
+    const id = window.setInterval(() => {
+      setDots((count) => (count + 1) % 4);
+    }, 420);
+    return () => window.clearInterval(id);
+  }, [chars]);
+
+  return (
+    <p
+      className="text-display text-xs uppercase tracking-widest text-secondary"
+      aria-label="Waiting"
+    >
+      <span aria-hidden="true">
+        {WORD.slice(0, chars)}
+        {chars >= WORD.length ? (
+          <span className="inline-block w-[1.65em] text-left">{'.'.repeat(dots)}</span>
+        ) : null}
+      </span>
+    </p>
+  );
+}
+
 function formatExerciseLabel(exercise: {
   name: string;
   target?: number;
@@ -72,25 +113,19 @@ function formatExerciseLabel(exercise: {
 
 export default function SessionWaitingRoomPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
-  const storedParticipantId = sessionId ? getStoredParticipantId(sessionId) : null;
   const { isAuthenticated, isAuthLoading } = useAmrapAuth();
   const [restoredIdentity, setRestoredIdentity] = useState<{
     sessionId: string;
     participantId: string;
     nickname: string;
+    isHost: boolean;
   } | null>(null);
   const [resumeError, setResumeError] = useState<{
     sessionId: string;
     message: string;
   } | null>(null);
+  const [identityBootstrapDone, setIdentityBootstrapDone] = useState(false);
 
-  const shouldAttemptResume =
-    Boolean(sessionId) &&
-    !storedParticipantId &&
-    !isAuthLoading &&
-    isAuthenticated;
-
-  const resumeStartedForSession = useRef<string | null>(null);
   const activeRestored =
     restoredIdentity && restoredIdentity.sessionId === sessionId
       ? restoredIdentity
@@ -101,43 +136,101 @@ export default function SessionWaitingRoomPage() {
       : null;
 
   useEffect(() => {
-    if (!shouldAttemptResume || !sessionId) {
-      return;
-    }
-    if (resumeStartedForSession.current === sessionId) {
+    if (!sessionId || isAuthLoading) {
       return;
     }
 
-    resumeStartedForSession.current = sessionId;
     let cancelled = false;
+    setIdentityBootstrapDone(false);
+    setResumeError(null);
 
+    const storedParticipantId = getStoredParticipantId(sessionId);
+    const storedHostToken = getStoredHostToken(sessionId);
+    const storedNickname = getStoredNickname(sessionId);
+
+    // Host identity already in sessionStorage — no RPC needed.
+    if (storedParticipantId && storedHostToken) {
+      setRestoredIdentity({
+        sessionId,
+        participantId: storedParticipantId,
+        nickname: storedNickname ?? 'Unknown',
+        isHost: true,
+      });
+      setIdentityBootstrapDone(true);
+      return;
+    }
+
+    // Unauthenticated joiner with a local participant — ready as guest.
+    if (storedParticipantId && !isAuthenticated) {
+      setRestoredIdentity({
+        sessionId,
+        participantId: storedParticipantId,
+        nickname: storedNickname ?? 'Unknown',
+        isHost: false,
+      });
+      setIdentityBootstrapDone(true);
+      return;
+    }
+
+    // No auth and no local participant — nothing to restore.
+    if (!isAuthenticated) {
+      setIdentityBootstrapDone(true);
+      return;
+    }
+
+    // Authenticated: resume restores host_token when this user is the host,
+    // even if a joiner participant id was already stored without host authority.
     void resumeSessionIdentity(sessionId).then((result) => {
       if (cancelled) {
         return;
       }
       if (result.error) {
+        if (storedParticipantId) {
+          setRestoredIdentity({
+            sessionId,
+            participantId: storedParticipantId,
+            nickname: storedNickname ?? 'Unknown',
+            isHost: Boolean(getStoredHostToken(sessionId)),
+          });
+          setIdentityBootstrapDone(true);
+          return;
+        }
         setResumeError({ sessionId, message: result.error.message });
+        setIdentityBootstrapDone(true);
         return;
       }
       if (result.missing || !result.data) {
+        if (storedParticipantId) {
+          setRestoredIdentity({
+            sessionId,
+            participantId: storedParticipantId,
+            nickname: storedNickname ?? 'Unknown',
+            isHost: Boolean(getStoredHostToken(sessionId)),
+          });
+          setIdentityBootstrapDone(true);
+          return;
+        }
         setResumeError({
           sessionId,
           message:
             'No participant identity found for this session. Join or create again.',
         });
+        setIdentityBootstrapDone(true);
         return;
       }
       setRestoredIdentity({
         sessionId,
         participantId: result.data.participantId,
         nickname: result.data.nickname,
+        isHost: Boolean(result.data.hostToken),
       });
+      setIdentityBootstrapDone(true);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [shouldAttemptResume, sessionId]);
+  }, [sessionId, isAuthenticated, isAuthLoading]);
 
   if (!sessionId) {
     return (
@@ -148,32 +241,30 @@ export default function SessionWaitingRoomPage() {
     );
   }
 
-  const participantId =
-    storedParticipantId ?? activeRestored?.participantId ?? null;
-  const nickname =
-    (sessionId ? getStoredNickname(sessionId) : null) ??
-    activeRestored?.nickname ??
-    'Unknown';
-
-  if (participantId) {
-    return (
-      <LiveSessionView
-        sessionId={sessionId}
-        participantId={participantId}
-        nickname={nickname}
-      />
-    );
-  }
-
-  const isResuming =
-    isAuthLoading ||
-    (shouldAttemptResume && activeResumeError === null && activeRestored === null);
-
-  if (isResuming) {
+  if (isAuthLoading || !identityBootstrapDone) {
     return (
       <main className="mx-auto max-w-lg space-y-4 p-6">
         <p className="text-sm text-secondary">Restoring session identity…</p>
       </main>
+    );
+  }
+
+  const participantId =
+    activeRestored?.participantId ?? getStoredParticipantId(sessionId);
+  const nickname =
+    activeRestored?.nickname ??
+    getStoredNickname(sessionId) ??
+    'Unknown';
+  const hostTokenPresent = Boolean(getStoredHostToken(sessionId));
+
+  if (participantId) {
+    return (
+      <LiveSessionView
+        key={`${sessionId}:${hostTokenPresent ? 'host' : 'joiner'}`}
+        sessionId={sessionId}
+        participantId={participantId}
+        nickname={nickname}
+      />
     );
   }
 
@@ -308,7 +399,7 @@ function LiveSessionView({
     ghostPacer.error === null &&
     !ghostPacer.isLoading;
 
-  // Copilot suggestion ignored: ignition Start/Abort is restored in LobbyCountdownPanel when armed; changing showStart would duplicate host Start while ticking.
+  // Copilot suggestion ignored: ignition Start/Abort is restored in ArmedLobbyControls when armed; changing showStart would duplicate host Start while ticking.
   const showStart =
     isHost &&
     livePhase === 'waiting' &&
@@ -493,36 +584,43 @@ function LiveSessionView({
 
         <div className="space-y-6 px-6 lg:mx-auto lg:grid lg:w-full lg:max-w-7xl lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:items-stretch lg:gap-6 lg:space-y-0 lg:overflow-hidden lg:px-8 lg:py-6">
           <div className="space-y-6 lg:flex lg:min-h-0 lg:flex-col lg:gap-4 lg:overflow-hidden lg:space-y-0">
-            <div className="space-y-6 lg:min-h-0 lg:shrink lg:space-y-4 lg:overflow-y-auto lg:rounded-card lg:border lg:border-border lg:bg-surface lg:p-6 lg:shadow-card">
+            <div className="space-y-4 lg:flex lg:min-h-0 lg:shrink lg:flex-col lg:gap-3 lg:space-y-0 lg:overflow-y-auto lg:rounded-card lg:border lg:border-border lg:bg-surface lg:p-4 lg:shadow-card">
               <section
-                className="card space-y-3 p-4 text-center lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none"
+                className="card space-y-1.5 p-3 text-center lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none"
                 data-walkthrough-id="status"
               >
-                <p className="text-display text-sm text-secondary lg:text-base">
-                  {phaseLabel(live.phase)}
-                </p>
-                <p
-                  className={
-                    live.phase === 'waiting' && (lobbyTicking || lobbyIgnited)
-                      ? 'font-mono text-accent tabular-nums text-4xl tracking-widest lg:text-6xl xl:text-7xl'
-                      : 'text-display text-accent tabular-nums text-5xl lg:text-7xl xl:text-8xl'
-                  }
-                >
-                  {live.phase === 'waiting'
-                    ? lobbyTicking && lobbyRemaining !== null
+                {live.phase === 'waiting' ? (
+                  <WaitingTypewriterLabel />
+                ) : (
+                  <p className="text-display text-xs uppercase tracking-widest text-secondary">
+                    {phaseLabel(live.phase)}
+                  </p>
+                )}
+                {live.phase === 'waiting' && (lobbyTicking || lobbyIgnited) ? (
+                  <p className="font-mono text-accent tabular-nums text-3xl tracking-widest lg:text-5xl">
+                    {lobbyTicking && lobbyRemaining !== null
                       ? formatTMinus(lobbyRemaining)
-                      : lobbyIgnited
-                        ? 'IGNITION...'
-                        : '—'
-                    : formatTime(live.timeLeftSec)}
-                </p>
+                      : 'IGNITION...'}
+                  </p>
+                ) : live.phase !== 'waiting' ? (
+                  <p className="text-display text-accent tabular-nums text-5xl lg:text-7xl xl:text-8xl">
+                    {formatTime(live.timeLeftSec)}
+                  </p>
+                ) : null}
                 {live.phase === 'work' || live.phase === 'finished' ? (
                   <p className="text-sm text-secondary">
                     Elapsed: {formatTime(live.elapsedSec)}
                   </p>
                 ) : null}
                 <p className="text-xs text-muted">
-                  Realtime: {live.isRealtimeConnected ? 'connected' : 'connecting…'}
+                  Realtime:{' '}
+                  {live.isRealtimeConnected ? (
+                    <span className="font-semibold text-success-text [text-shadow:0_0_8px_rgb(90_158_82_/_0.95),0_0_18px_rgb(90_158_82_/_0.55)]">
+                      connected
+                    </span>
+                  ) : (
+                    <span>connecting…</span>
+                  )}
                 </p>
               </section>
 
@@ -547,31 +645,34 @@ function LiveSessionView({
                 )
               ) : null}
 
-              <LobbyCountdownPanel
-                sessionId={sessionId}
-                isHost={isHost}
-                phase={livePhase}
-                countdownArmed={lobbyCountdownArmed}
-                ticking={lobbyTicking}
-                actionsEnabled={sessionReady}
-                onAudioUnlock={handleAudioUnlock}
-                onStart={() => {
-                  handleAudioUnlock();
-                  void startSession();
-                }}
-              />
+              {isHost && live.phase === 'waiting' ? (
+                <HostStagingSteps
+                  sessionId={sessionId}
+                  countdownArmed={lobbyCountdownArmed}
+                  actionsEnabled={sessionReady}
+                  onAudioUnlock={handleAudioUnlock}
+                  showPacer={showGhostPicker}
+                  templateId={live.templateId}
+                  durationMinutes={live.workDurationSec / 60}
+                  ghostSelection={ghostSelection}
+                  onGhostChange={setGhostSelection}
+                />
+              ) : null}
 
-              {live.phase === 'waiting' ? (
+              {!isHost && live.phase === 'waiting' ? (
                 <CopyInviteLink sessionId={sessionId} />
               ) : null}
 
-              {showGhostPicker && live.templateId ? (
-                <GhostPicker
+              {isHost && lobbyCountdownArmed ? (
+                <ArmedLobbyControls
                   sessionId={sessionId}
-                  templateId={live.templateId}
-                  durationMinutes={live.workDurationSec / 60}
-                  value={ghostSelection}
-                  onChange={setGhostSelection}
+                  ticking={lobbyTicking}
+                  actionsEnabled={sessionReady}
+                  onAudioUnlock={handleAudioUnlock}
+                  onStart={() => {
+                    handleAudioUnlock();
+                    void startSession();
+                  }}
                 />
               ) : null}
 
@@ -595,7 +696,7 @@ function LiveSessionView({
                 {showStart && (
                   <button
                     type="button"
-                    className="btn-primary lg:px-6 lg:py-3 lg:text-base"
+                    className="btn-primary px-3 py-1.5 text-sm"
                     disabled={!sessionReady}
                     onClick={() => {
                       handleAudioUnlock();
@@ -608,7 +709,7 @@ function LiveSessionView({
                 {showPractice && (
                   <button
                     type="button"
-                    className="btn-outline lg:px-6 lg:py-3 lg:text-base"
+                    className="btn-outline px-3 py-1.5 text-sm"
                     disabled={!sessionReady}
                     onClick={() => {
                       handleAudioUnlock();
@@ -621,7 +722,7 @@ function LiveSessionView({
                 {showPause && (
                   <button
                     type="button"
-                    className="btn-outline lg:px-6 lg:py-3 lg:text-base"
+                    className="btn-outline px-3 py-1.5 text-sm lg:px-6 lg:py-3 lg:text-base"
                     onClick={() => {
                       handleAudioUnlock();
                       void live.pause();
@@ -633,7 +734,7 @@ function LiveSessionView({
                 {showResume && (
                   <button
                     type="button"
-                    className="btn-primary lg:px-6 lg:py-3 lg:text-base"
+                    className="btn-primary px-3 py-1.5 text-sm lg:px-6 lg:py-3 lg:text-base"
                     onClick={() => {
                       handleAudioUnlock();
                       void live.resume();
@@ -645,7 +746,7 @@ function LiveSessionView({
                 {showLogRound && (
                   <button
                     type="button"
-                    className="btn-success lg:px-6 lg:py-3 lg:text-base"
+                    className="btn-success px-3 py-1.5 text-sm lg:px-6 lg:py-3 lg:text-base"
                     onClick={() => {
                       playRoundLogged();
                       void live.logRound();
@@ -657,7 +758,7 @@ function LiveSessionView({
                 {showEndPractice && (
                   <button
                     type="button"
-                    className="btn-primary lg:px-6 lg:py-3 lg:text-base"
+                    className="btn-primary px-3 py-1.5 text-sm"
                     onClick={() => live.endPractice()}
                   >
                     Back to staging

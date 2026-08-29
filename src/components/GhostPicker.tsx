@@ -19,6 +19,8 @@ interface GhostPickerProps {
   durationMinutes: number;
   value: StoredGhostSelection | null;
   onChange: (selection: StoredGhostSelection | null) => void;
+  /** When true, omit the Select Pacer title/intro — parent step supplies the label. */
+  embedded?: boolean;
 }
 
 function formatGhostDate(createdAt: string): string {
@@ -45,6 +47,7 @@ export function GhostPicker({
   durationMinutes,
   value,
   onChange,
+  embedded = false,
 }: GhostPickerProps) {
   const { isAuthenticated, isAuthLoading } = useAmrapAuth();
   const [personalBest, setPersonalBest] = useState<GhostRunRef | null>(null);
@@ -116,20 +119,26 @@ export function GhostPicker({
 
   return (
     <section
-      className="card space-y-2 p-4 text-left lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none"
-      data-walkthrough-id="pacer"
+      className={
+        embedded
+          ? 'space-y-1.5 text-left'
+          : 'card space-y-1.5 p-3 text-left lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none'
+      }
+      data-walkthrough-id={embedded ? undefined : 'pacer'}
     >
-      <div className="space-y-1">
-        <label
-          htmlFor="ghost-picker"
-          className="text-display text-sm text-ink lg:text-base"
-        >
-          Select Pacer
-        </label>
-        <p className="text-xs text-secondary">
-          Race your personal best pacing curve in real time.
-        </p>
-      </div>
+      {embedded ? null : (
+        <div className="space-y-0.5">
+          <label
+            htmlFor="ghost-picker"
+            className="text-display text-xs uppercase tracking-widest text-secondary"
+          >
+            Select Pacer
+          </label>
+          <p className="text-[11px] text-secondary">
+            Race your personal best pacing curve in real time.
+          </p>
+        </div>
+      )}
 
       {!isAuthenticated && !isAuthLoading ? (
         <div className="space-y-2 text-sm">
@@ -145,7 +154,7 @@ export function GhostPicker({
       ) : (
         <select
           id="ghost-picker"
-          className="input-field w-full"
+          className="input-field w-full py-1.5 text-sm"
           value={selectedValue}
           disabled={isLoading || !canFetchGhosts}
           onChange={(event) =>
