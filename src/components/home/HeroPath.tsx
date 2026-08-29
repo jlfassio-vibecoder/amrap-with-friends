@@ -68,7 +68,7 @@ const STEPS = [
   {
     num: '02 / Set the bearing',
     Icon: BearingIcon,
-    title: 'Choose the mission',
+    title: 'Plan the mission',
     body: 'Pick a workout and a time domain. Everyone sees the same objective, the same clock, and the same direction before the countdown starts.',
     footnote: 'Clear objective · shared clock',
   },
