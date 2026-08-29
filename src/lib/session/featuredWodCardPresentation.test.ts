@@ -47,7 +47,7 @@ describe('getFeaturedWodCardPresentation', () => {
     expect(presentation.statusLine).toContain('joining');
   });
 
-  it('shows lobby join inside the 15-minute lead window', () => {
+  it('shows lobby join inside the 15-minute lead window while waiting', () => {
     const presentation = getFeaturedWodCardPresentation(
       featured({ state: 'waiting' }),
       SCHEDULED_MS - 60_000
@@ -58,14 +58,24 @@ describe('getFeaturedWodCardPresentation', () => {
     expect(presentation.statusLine).toContain('joining');
   });
 
-  it('shows lobby during setup, not amrap-in-progress', () => {
+  it('stays lobby after scheduled_at while still waiting (manual start)', () => {
     const presentation = getFeaturedWodCardPresentation(
-      featured({ state: 'setup' }),
-      SCHEDULED_MS + 3_000
+      featured({ state: 'waiting' }),
+      SCHEDULED_MS + 60_000
     );
     expect(presentation.phase).toBe('lobby');
     expect(presentation.showJoinLobby).toBe(true);
     expect(presentation.statusLine).not.toContain('amrap in progress');
+  });
+
+  it('locks once host has started setup', () => {
+    const presentation = getFeaturedWodCardPresentation(
+      featured({ state: 'setup' }),
+      SCHEDULED_MS + 3_000
+    );
+    expect(presentation.phase).toBe('work');
+    expect(presentation.showJoinLobby).toBe(false);
+    expect(presentation.statusLine).toBe('Session locked, amrap in progress.');
   });
 
   it('locks with exact in-progress copy once work starts', () => {
@@ -80,16 +90,6 @@ describe('getFeaturedWodCardPresentation', () => {
     expect(presentation.showJoinLobby).toBe(false);
     expect(presentation.showLobbyOpensSoon).toBe(false);
     expect(presentation.statusLine).toBe('Session locked, amrap in progress.');
-  });
-
-  it('locks with exact ended copy after full duration', () => {
-    const presentation = getFeaturedWodCardPresentation(
-      featured({ state: 'work' }),
-      SCHEDULED_MS + 10_000 + 15 * 60_000
-    );
-    expect(presentation.phase).toBe('finished');
-    expect(presentation.showJoinLobby).toBe(false);
-    expect(presentation.statusLine).toBe('Session locked, AMRAP ended.');
   });
 
   it('treats RPC finished as ended', () => {

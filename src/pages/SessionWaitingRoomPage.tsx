@@ -35,6 +35,7 @@ import { useGhostPacer } from '@/hooks/useGhostPacer';
 import { useTacticalAudio } from '@/hooks/useTacticalAudio';
 import type { StoredGhostSelection } from '@/lib/sessionIdentity';
 import {
+  elapsedPastLobbyCountdownSec,
   formatTMinus,
   remainingLobbyCountdownSec,
 } from '@/lib/session/lobbyCountdown';
@@ -391,7 +392,6 @@ function LiveSessionView({
   // Copilot suggestion ignored: activeGhostSelection already gates stored selection on isAuthenticated.
   const activeGhostSelection = isAuthenticated ? ghostSelection : null;
   const [nowMs, setNowMs] = useState(() => Date.now());
-  const ignitionStarted = useRef(false);
   const audioUnlockedRef = useRef(false);
   const {
     activeNotice: activeSafetyNotice,
@@ -426,6 +426,9 @@ function LiveSessionView({
   const lobbyTicking =
     lobbyCountdownArmed && lobbyRemaining !== null && lobbyRemaining > 0;
   const lobbyIgnited = lobbyCountdownArmed && lobbyRemaining === 0;
+  const lobbyOvertimeSec = lobbyIgnited
+    ? elapsedPastLobbyCountdownSec(lobbyCountdownEndsAt, nowMs)
+    : null;
 
   useEffect(() => {
     if (!lobbyCountdownArmed) {
@@ -436,23 +439,6 @@ function LiveSessionView({
     }, 250);
     return () => window.clearInterval(id);
   }, [lobbyCountdownArmed]);
-
-  useEffect(() => {
-    ignitionStarted.current = false;
-  }, [lobbyCountdownEndsAt, sessionId]);
-
-  useEffect(() => {
-    if (
-      !isHost ||
-      !lobbyIgnited ||
-      !sessionReady ||
-      ignitionStarted.current
-    ) {
-      return;
-    }
-    ignitionStarted.current = true;
-    void startSession();
-  }, [isHost, lobbyIgnited, sessionReady, startSession]);
 
   const ghostPacer = useGhostPacer({
     sessionId,
@@ -477,7 +463,7 @@ function LiveSessionView({
     ghostPacer.error === null &&
     !ghostPacer.isLoading;
 
-  // Copilot suggestion ignored: ignition Start/Abort is restored in ArmedLobbyControls when armed; changing showStart would duplicate host Start while ticking.
+  // Copilot suggestion ignored: Start/Abort while armed live in ArmedLobbyControls; changing showStart would duplicate host Start while ticking.
   const showStart =
     isHost &&
     livePhase === 'waiting' &&
@@ -493,6 +479,40 @@ function LiveSessionView({
     livePhase === 'waiting' && activeSafetyNotice !== null;
   const showWalkthrough = walkthrough.active;
   const showWalkthroughFinale = walkthrough.showingFinale;
+  const waitingStartPracticeActions =
+    showStart || showPractice ? (
+      <div
+        className="flex flex-wrap items-center gap-2"
+        data-walkthrough-id="actions"
+      >
+        {showStart ? (
+          <button
+            type="button"
+            className="btn-primary px-3 py-1.5 text-sm"
+            disabled={!sessionReady}
+            onClick={() => {
+              handleAudioUnlock();
+              void startSession();
+            }}
+          >
+            Start
+          </button>
+        ) : null}
+        {showPractice ? (
+          <button
+            type="button"
+            className="btn-outline px-3 py-1.5 text-sm"
+            disabled={!sessionReady}
+            onClick={() => {
+              handleAudioUnlock();
+              live.startPractice();
+            }}
+          >
+            Practice
+          </button>
+        ) : null}
+      </div>
+    ) : null;
   const showPause =
     livePhase === 'work' &&
     !live.isPaused &&
@@ -676,14 +696,27 @@ function LiveSessionView({
                 )}
                 {live.phase === 'waiting' && (lobbyTicking || lobbyIgnited) ? (
                   <p className="font-mono text-accent tabular-nums text-3xl tracking-widest lg:text-5xl">
-                    {lobbyTicking && lobbyRemaining !== null
-                      ? formatTMinus(lobbyRemaining)
-                      : 'IGNITION...'}
+                    {formatTMinus(lobbyRemaining ?? 0)}
                   </p>
                 ) : live.phase !== 'waiting' ? (
                   <p className="text-display text-accent tabular-nums text-5xl lg:text-7xl xl:text-8xl">
                     {formatTime(live.timeLeftSec)}
                   </p>
+                ) : null}
+                {isHost && lobbyCountdownArmed ? (
+                  <div className="flex justify-center pt-1">
+                    <ArmedLobbyControls
+                      sessionId={sessionId}
+                      ticking={lobbyTicking}
+                      overtimeSec={lobbyOvertimeSec}
+                      actionsEnabled={sessionReady}
+                      onAudioUnlock={handleAudioUnlock}
+                      onStart={() => {
+                        handleAudioUnlock();
+                        void startSession();
+                      }}
+                    />
+                  </div>
                 ) : null}
                 {live.phase === 'work' || live.phase === 'finished' ? (
                   <p className="text-sm text-secondary">
@@ -708,19 +741,29 @@ function LiveSessionView({
                     key={live.scheduledAt}
                     sessionId={sessionId}
                     scheduledAt={live.scheduledAt}
+                    dayActions={waitingStartPracticeActions}
                   />
                 ) : (
-                  <p className="text-sm text-secondary">
-                    Rally time:{' '}
-                    {new Date(live.scheduledAt).toLocaleString(undefined, {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: 'numeric',
-                      minute: '2-digit',
-                    })}
-                  </p>
+                  <div className="space-y-3">
+                    <p className="text-sm text-secondary">
+                      Rally time:{' '}
+                      {new Date(live.scheduledAt).toLocaleString(undefined, {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                    {waitingStartPracticeActions ? (
+                      <div className="flex justify-center">
+                        {waitingStartPracticeActions}
+                      </div>
+                    ) : null}
+                  </div>
                 )
+              ) : live.phase === 'waiting' && waitingStartPracticeActions ? (
+                <div className="flex justify-center">{waitingStartPracticeActions}</div>
               ) : null}
 
               {isHost && live.phase === 'waiting' ? (
@@ -741,19 +784,6 @@ function LiveSessionView({
                 <CopyInviteLink sessionId={sessionId} />
               ) : null}
 
-              {isHost && lobbyCountdownArmed ? (
-                <ArmedLobbyControls
-                  sessionId={sessionId}
-                  ticking={lobbyTicking}
-                  actionsEnabled={sessionReady}
-                  onAudioUnlock={handleAudioUnlock}
-                  onStart={() => {
-                    handleAudioUnlock();
-                    void startSession();
-                  }}
-                />
-              ) : null}
-
               {showGhostPacerError && activeGhostSelection ? (
                 <p className="alert-error text-sm">{ghostPacer.error}</p>
               ) : null}
@@ -771,32 +801,6 @@ function LiveSessionView({
                 className="flex flex-wrap gap-2 lg:justify-center"
                 data-walkthrough-id="actions"
               >
-                {showStart && (
-                  <button
-                    type="button"
-                    className="btn-primary px-3 py-1.5 text-sm"
-                    disabled={!sessionReady}
-                    onClick={() => {
-                      handleAudioUnlock();
-                      void startSession();
-                    }}
-                  >
-                    Start
-                  </button>
-                )}
-                {showPractice && (
-                  <button
-                    type="button"
-                    className="btn-outline px-3 py-1.5 text-sm"
-                    disabled={!sessionReady}
-                    onClick={() => {
-                      handleAudioUnlock();
-                      live.startPractice();
-                    }}
-                  >
-                    Practice
-                  </button>
-                )}
                 {showPause && (
                   <button
                     type="button"

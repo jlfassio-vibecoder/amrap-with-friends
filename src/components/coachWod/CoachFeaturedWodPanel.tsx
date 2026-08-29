@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { fetchCoachWorkouts, type CoachWorkoutSummary } from '@/lib/api/coachWod';
-import { formatFeaturedWodTime } from '@/lib/api/featuredWod';
+import { fetchCurrentFeaturedWod, formatFeaturedWodTime } from '@/lib/api/featuredWod';
 import {
   deleteCoachFeaturedSchedule,
   fetchCoachFeaturedSchedule,
@@ -10,6 +11,7 @@ import {
   type CoachFeaturedSchedule,
   type FeaturedWodAttendee,
 } from '@/lib/api/featuredWodSchedule';
+import { FEATURED_WOD_LOBBY_LEAD_MS } from '@/lib/session/featuredWodCardPresentation';
 import { computeNextFeaturedOccurrences } from '@/lib/session/featuredWodOccurrencePreview';
 
 const PREVIEW_COUNT = 3;
@@ -291,6 +293,65 @@ function ScheduleForm({ workouts, schedule, onSaved, onCancel }: ScheduleFormPro
   );
 }
 
+/** Join staging appears in the same lead window as the public Join lobby CTA. */
+function JoinStagingLink({ scheduleActive }: { scheduleActive: boolean }) {
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [scheduledAt, setScheduledAt] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!scheduleActive) {
+      setSessionId(null);
+      setScheduledAt(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    function poll() {
+      fetchCurrentFeaturedWod().then((result) => {
+        if (cancelled || result.error || !result.data) {
+          return;
+        }
+        setSessionId(result.data.sessionId);
+        setScheduledAt(result.data.scheduledAt);
+        setNowMs(Date.now());
+      });
+    }
+
+    poll();
+    const pollId = window.setInterval(poll, ATTENDEES_POLL_INTERVAL_MS);
+    const tickId = window.setInterval(() => setNowMs(Date.now()), 15_000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(pollId);
+      window.clearInterval(tickId);
+    };
+  }, [scheduleActive]);
+
+  if (!sessionId || !scheduledAt) {
+    return null;
+  }
+
+  const scheduledAtMs = Date.parse(scheduledAt);
+  if (
+    !Number.isFinite(scheduledAtMs) ||
+    nowMs < scheduledAtMs - FEATURED_WOD_LOBBY_LEAD_MS
+  ) {
+    return null;
+  }
+
+  return (
+    <Link
+      className="text-xs uppercase tracking-wide text-accent hover:underline"
+      to={`/session/${sessionId}`}
+    >
+      Join staging
+    </Link>
+  );
+}
+
 /** "Who's coming" — the specific athletes who've joined the coach's own
  * live Featured WOD session, not just the bare count already shown on the
  * public card. Only renders once a live session exists (sessionId !=
@@ -458,7 +519,7 @@ export function CoachFeaturedWodPanel() {
 
       <p className="text-xs text-secondary">
         Only one featured WOD can be live app-wide at a time. It publishes to the landing page
-        and Create session with an auto-starting lobby.
+        and Create session; the coach starts the AMRAP from staging.
       </p>
 
       {error ? <p className="text-error text-sm">{error}</p> : null}
@@ -482,6 +543,7 @@ export function CoachFeaturedWodPanel() {
             {schedule.timezone})
           </p>
           <div className="flex flex-wrap gap-3 pt-1">
+            <JoinStagingLink scheduleActive={schedule.active} />
             <button
               type="button"
               className="text-xs uppercase tracking-wide text-accent hover:underline"

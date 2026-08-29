@@ -50,7 +50,13 @@ export function HostStagingSteps({
   const [customSeconds, setCustomSeconds] = useState('300');
   const [busy, setBusy] = useState(false);
   const [engageError, setEngageError] = useState<string | null>(null);
-  const { secured, error: copyError, copyInvite } = useCopySessionInvite(sessionId);
+  const {
+    secured,
+    idSecured,
+    error: copyError,
+    copyInvite,
+    copySessionId,
+  } = useCopySessionInvite(sessionId);
 
   useEffect(() => {
     if (countdownArmed) {
@@ -167,7 +173,7 @@ export function HostStagingSteps({
             }
             onClick={() => void engageClock()}
           >
-            {busy ? 'Engaging…' : 'Engage clock'}
+            {busy ? 'Engaging…' : 'Engage staging area countdown timer'}
           </button>
           {engageError ? <p className="text-error text-sm">{engageError}</p> : null}
         </div>
@@ -179,13 +185,22 @@ export function HostStagingSteps({
       walkthroughId: 'rally-link',
       visible: true,
       summary: (
-        <button
-          type="button"
-          className="link-accent text-xs font-medium"
-          onClick={() => void copyInvite()}
-        >
-          {secured ? 'Link secured' : 'Copy link'}
-        </button>
+        <span className="flex shrink-0 items-center gap-3">
+          <button
+            type="button"
+            className="link-accent text-xs font-medium"
+            onClick={() => void copyInvite()}
+          >
+            {secured ? 'Link secured' : 'Copy link'}
+          </button>
+          <button
+            type="button"
+            className="link-accent text-xs font-medium"
+            onClick={() => void copySessionId()}
+          >
+            {idSecured ? 'ID secured' : 'Copy session ID'}
+          </button>
+        </span>
       ),
       body: (
         <div className="space-y-2 pb-3">
@@ -195,6 +210,13 @@ export function HostStagingSteps({
             onClick={() => void copyInvite()}
           >
             {secured ? 'LINK SECURED' : 'COPY SESSION LINK'}
+          </button>
+          <button
+            type="button"
+            className="btn-outline w-full px-3 py-1.5 text-xs uppercase tracking-widest"
+            onClick={() => void copySessionId()}
+          >
+            {idSecured ? 'ID SECURED' : 'COPY SESSION ID'}
           </button>
           {copyError ? <p className="text-error text-sm">{copyError}</p> : null}
         </div>

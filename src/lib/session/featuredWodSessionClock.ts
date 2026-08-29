@@ -1,7 +1,7 @@
 import { DEFAULT_SETUP_DURATION_SEC } from '@/lib/amrapTimer/constants';
 import type { LiveSessionPhase } from '@/lib/sessionSync/types';
 
-/** Setup length for featured auto-start; must match the scheduler SQL. */
+/** Setup length used when a featured session is manually started (host Start). */
 export const FEATURED_SETUP_DURATION_SEC = DEFAULT_SETUP_DURATION_SEC;
 
 export interface FeaturedSessionClock {
@@ -11,8 +11,9 @@ export interface FeaturedSessionClock {
 }
 
 /**
- * Wall-clock phase/remaining for a featured session anchored at scheduled_at.
- * Mirrors run_featured_wod_scheduler() setup then work windows.
+ * Wall-clock remaining for a featured session that has already left waiting
+ * (host Start). Does not invent setup/work from scheduled_at alone — callers
+ * must only use this once authoritative state is setup/work/finished.
  */
 export function computeFeaturedSessionClock(input: {
   scheduledAtMs: number;
