@@ -1,4 +1,3 @@
-import { computeFeaturedSessionClock } from '@/lib/session/featuredWodSessionClock';
 import type { FeaturedWod } from '@/lib/api/featuredWod';
 import { formatFeaturedWodTime } from '@/lib/api/featuredWod';
 
@@ -17,8 +16,9 @@ export interface FeaturedWodCardPresentation {
 }
 
 /**
- * Maps Featured WOD RPC + wall clock to landing-card copy/CTA.
+ * Maps Featured WOD RPC state to landing-card copy/CTA.
  * Lock strings use product-specified casing.
+ * Workout lock copy follows DB/RPC state from host Start — not scheduled_at.
  */
 export function getFeaturedWodCardPresentation(
   featured: FeaturedWod,
@@ -37,7 +37,7 @@ export function getFeaturedWodCardPresentation(
     };
   }
 
-  const phase = resolveCardPhase(featured, nowMs);
+  const phase = resolveCardPhase(featured);
 
   if (phase === 'work') {
     return {
@@ -70,27 +70,12 @@ export function getFeaturedWodCardPresentation(
   };
 }
 
-function resolveCardPhase(featured: FeaturedWod, nowMs: number): FeaturedWodCardPhase {
+function resolveCardPhase(featured: FeaturedWod): FeaturedWodCardPhase {
   if (featured.state === 'finished') {
     return 'finished';
   }
 
-  const scheduledAtMs = Date.parse(featured.scheduledAt);
-  if (Number.isFinite(scheduledAtMs)) {
-    const clock = computeFeaturedSessionClock({
-      scheduledAtMs,
-      durationMinutes: featured.durationMinutes,
-      nowMs,
-    });
-    if (clock.phase === 'work') {
-      return 'work';
-    }
-    if (clock.phase === 'finished') {
-      return 'finished';
-    }
-  }
-
-  if (featured.state === 'work') {
+  if (featured.state === 'work' || featured.state === 'setup') {
     return 'work';
   }
 

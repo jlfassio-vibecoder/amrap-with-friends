@@ -1,5 +1,4 @@
 import { DEFAULT_SETUP_DURATION_SEC } from '@/lib/amrapTimer/constants';
-import { computeFeaturedSessionClock } from '@/lib/session/featuredWodSessionClock';
 import type { LiveSessionPhase } from '@/lib/sessionSync/types';
 
 export const PUSH_STALE_MS = 3500;
@@ -104,24 +103,9 @@ export function snapshotToDisplay(
   const elapsedSinceSyncMs = nowMs - snapshot.receivedAtMs;
   const isStale = elapsedSinceSyncMs > PUSH_STALE_MS;
 
-  // Hostless featured sessions: derive from scheduled_at / started_at so the
-  // clock keeps moving between per-minute cron ticks (no host push stream).
+  // Featured: after host Start, keep work moving from started_at when pushes
+  // go stale. Do not invent setup/work from scheduled_at while still waiting.
   if (isStale && snapshot.isFeatured) {
-    if (snapshot.scheduledAtMs != null) {
-      const clock = computeFeaturedSessionClock({
-        scheduledAtMs: snapshot.scheduledAtMs,
-        durationMinutes: snapshot.workDurationSec / 60,
-        nowMs,
-      });
-      return {
-        phase: clock.phase,
-        timeLeftSec: clock.timeLeftSec,
-        isPaused: false,
-        workDurationSec: snapshot.workDurationSec,
-        workStartedAtMs: clock.workStartedAtMs,
-      };
-    }
-
     if (snapshot.phase === 'work' && snapshot.workStartedAtMs != null) {
       return wallClockWorkDisplay(snapshot, nowMs, snapshot.workStartedAtMs);
     }
@@ -157,10 +141,7 @@ export function snapshotToDisplay(
     displayPhase = 'work';
     displayTimeLeft = snapshot.workDurationSec;
     if (workStartedAtMs === null) {
-      workStartedAtMs =
-        snapshot.isFeatured && snapshot.scheduledAtMs != null
-          ? snapshot.scheduledAtMs + DEFAULT_SETUP_DURATION_SEC * 1000
-          : nowMs;
+      workStartedAtMs = nowMs;
     }
   }
 

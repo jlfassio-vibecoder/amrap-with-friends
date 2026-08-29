@@ -44,7 +44,7 @@ export const STAGING_WALKTHROUGH_STEPS: StagingWalkthroughStep[] = [
     role: 'host',
     targetId: WALKTHROUGH_TARGET.tMinus,
     title: 'T-Minus console',
-    body: 'Set a countdown, then Engage clock. When it hits zero, the workout starts for everyone.',
+    body: 'Set a countdown, then Engage staging area countdown timer. When it hits zero, press Start to begin the workout for everyone.',
   },
   {
     id: 'rally-link',

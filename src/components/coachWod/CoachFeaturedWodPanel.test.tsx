@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { CoachFeaturedWodPanel } from './CoachFeaturedWodPanel';
 
 const fetchCoachFeaturedScheduleMock = vi.fn();
 const setCoachFeaturedScheduleMock = vi.fn();
 const fetchCoachWorkoutsMock = vi.fn();
 const fetchCoachFeaturedWodAttendeesMock = vi.fn();
+const fetchCurrentFeaturedWodMock = vi.fn();
 
 vi.mock('@/lib/api/featuredWodSchedule', async () => {
   const actual = await vi.importActual<typeof import('@/lib/api/featuredWodSchedule')>(
@@ -19,6 +21,16 @@ vi.mock('@/lib/api/featuredWodSchedule', async () => {
     deleteCoachFeaturedSchedule: vi.fn(),
     fetchCoachFeaturedWodAttendees: (...args: unknown[]) =>
       fetchCoachFeaturedWodAttendeesMock(...args),
+  };
+});
+
+vi.mock('@/lib/api/featuredWod', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/api/featuredWod')>(
+    '@/lib/api/featuredWod'
+  );
+  return {
+    ...actual,
+    fetchCurrentFeaturedWod: (...args: unknown[]) => fetchCurrentFeaturedWodMock(...args),
   };
 });
 
@@ -51,21 +63,28 @@ afterEach(() => {
   setCoachFeaturedScheduleMock.mockReset();
   fetchCoachWorkoutsMock.mockReset();
   fetchCoachFeaturedWodAttendeesMock.mockReset();
+  fetchCurrentFeaturedWodMock.mockReset();
   fetchCoachFeaturedWodAttendeesMock.mockResolvedValue({
     data: { sessionId: null, attendees: [] },
     error: null,
   });
+  fetchCurrentFeaturedWodMock.mockResolvedValue({ data: null, error: null });
 });
 fetchCoachFeaturedWodAttendeesMock.mockResolvedValue({
   data: { sessionId: null, attendees: [] },
   error: null,
 });
+fetchCurrentFeaturedWodMock.mockResolvedValue({ data: null, error: null });
 
 async function renderFormWithNoSchedule() {
   fetchCoachFeaturedScheduleMock.mockResolvedValue({ data: null, error: null });
   fetchCoachWorkoutsMock.mockResolvedValue({ data: [PUBLISHED_WORKOUT], error: null });
 
-  render(<CoachFeaturedWodPanel />);
+  render(
+    <MemoryRouter>
+      <CoachFeaturedWodPanel />
+    </MemoryRouter>
+  );
 
   await waitFor(() => {
     expect(screen.getByRole('button', { name: 'Set featured WOD' })).toBeTruthy();
@@ -92,7 +111,11 @@ async function renderWithExistingSchedule() {
   fetchCoachFeaturedScheduleMock.mockResolvedValue({ data: EXISTING_SCHEDULE, error: null });
   fetchCoachWorkoutsMock.mockResolvedValue({ data: [PUBLISHED_WORKOUT], error: null });
 
-  render(<CoachFeaturedWodPanel />);
+  render(
+    <MemoryRouter>
+      <CoachFeaturedWodPanel />
+    </MemoryRouter>
+  );
 
   await waitFor(() => {
     expect(screen.getByText('Sunrise AMRAP')).toBeTruthy();
@@ -146,6 +169,60 @@ describe('CoachFeaturedWodPanel attendee list', () => {
     await waitFor(() => {
       expect(screen.getByText('No one has joined yet.')).toBeTruthy();
     });
+  });
+});
+
+describe('CoachFeaturedWodPanel join staging', () => {
+  it('hides Join staging more than 15 minutes before start', async () => {
+    fetchCurrentFeaturedWodMock.mockResolvedValue({
+      data: {
+        workoutName: 'Sunrise AMRAP',
+        focus: null,
+        durationMinutes: 20,
+        intensityTier: 3,
+        tags: [],
+        scheduledAt: new Date(Date.now() + 2 * 60 * 60_000).toISOString(),
+        sessionId: 'session-1',
+        state: 'waiting',
+        startedAt: null,
+        attendeeCount: 1,
+      },
+      error: null,
+    });
+
+    await renderWithExistingSchedule();
+
+    await waitFor(() => {
+      expect(fetchCurrentFeaturedWodMock).toHaveBeenCalled();
+    });
+    expect(screen.queryByRole('link', { name: /Join staging/i })).toBeNull();
+  });
+
+  it('shows Join staging within 15 minutes of start', async () => {
+    fetchCurrentFeaturedWodMock.mockResolvedValue({
+      data: {
+        workoutName: 'Sunrise AMRAP',
+        focus: null,
+        durationMinutes: 20,
+        intensityTier: 3,
+        tags: [],
+        scheduledAt: new Date(Date.now() + 5 * 60_000).toISOString(),
+        sessionId: 'session-1',
+        state: 'waiting',
+        startedAt: null,
+        attendeeCount: 1,
+      },
+      error: null,
+    });
+
+    await renderWithExistingSchedule();
+
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: /Join staging/i })).toBeTruthy();
+    });
+    expect(screen.getByRole('link', { name: /Join staging/i }).getAttribute('href')).toBe(
+      '/session/session-1'
+    );
   });
 });
 

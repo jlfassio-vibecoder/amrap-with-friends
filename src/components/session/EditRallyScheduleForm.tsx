@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { RallyScheduleFields } from '@/components/session/RallyScheduleFields';
 import { updateSessionScheduledAt } from '@/lib/api/sessions';
 import {
@@ -14,6 +14,7 @@ interface EditRallyScheduleFormProps {
   scheduledAt: string;
   onSaved?: (scheduledAt: string) => void;
   onCancel?: () => void;
+  dayActions?: ReactNode;
 }
 
 export function EditRallyScheduleForm({
@@ -21,6 +22,7 @@ export function EditRallyScheduleForm({
   scheduledAt,
   onSaved,
   onCancel,
+  dayActions,
 }: EditRallyScheduleFormProps) {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const initial = useMemo(
@@ -68,13 +70,14 @@ export function EditRallyScheduleForm({
 
   return (
     <form className="space-y-3" onSubmit={handleSubmit}>
-      <p className="text-sm font-semibold">Rally time</p>
+      <p className="text-sm font-semibold">Session time</p>
       <RallyScheduleFields
         rallyDay={rallyDay}
         rallyTime={rallyTime}
         disabled={loading}
         onRallyDayChange={setRallyDay}
         onRallyTimeChange={setRallyTime}
+        dayActions={dayActions}
       />
       {error ? <p className="text-error">{error}</p> : null}
       <div className="flex flex-wrap items-center gap-3">

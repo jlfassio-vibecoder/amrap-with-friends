@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { RallyDay } from '@/lib/session/rallySchedule';
 
 function chipClass(selected: boolean): string {
@@ -12,6 +13,8 @@ interface RallyScheduleFieldsProps {
   disabled?: boolean;
   onRallyDayChange: (value: RallyDay) => void;
   onRallyTimeChange: (value: string) => void;
+  /** Optional Start/Practice actions stacked above the Day field. */
+  dayActions?: ReactNode;
 }
 
 export function RallyScheduleFields({
@@ -20,9 +23,13 @@ export function RallyScheduleFields({
   disabled = false,
   onRallyDayChange,
   onRallyTimeChange,
+  dayActions,
 }: RallyScheduleFieldsProps) {
   return (
     <div className="space-y-3">
+      {dayActions ? (
+        <div className="flex flex-wrap items-center justify-center gap-2">{dayActions}</div>
+      ) : null}
       <div className="space-y-2">
         <p className="text-sm font-semibold">Day</p>
         <div
@@ -53,7 +60,7 @@ export function RallyScheduleFields({
         </div>
       </div>
       <label className="block space-y-1">
-        <span className="text-sm font-semibold">Time</span>
+        <span className="text-sm font-semibold">Scheduled time</span>
         <input
           className="input-field"
           type="time"

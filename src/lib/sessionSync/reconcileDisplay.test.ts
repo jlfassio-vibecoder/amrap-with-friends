@@ -84,7 +84,7 @@ describe('reconcileDisplay', () => {
     expect(display.phase).toBe('work');
   });
 
-  it('derives featured work remaining from wall clock when stale', () => {
+  it('derives featured work remaining from started_at when stale', () => {
     const snapshot = createAuthoritativeSnapshot(
       makeInput({
         state: 'work',
@@ -102,7 +102,7 @@ describe('reconcileDisplay', () => {
     expect(display.workStartedAtMs).toBe(SCHEDULED_MS + 10_000);
   });
 
-  it('derives featured setup remaining from scheduled_at when stale', () => {
+  it('does not invent featured setup from scheduled_at when stale', () => {
     const snapshot = createAuthoritativeSnapshot(
       makeInput({
         state: 'setup',
@@ -114,11 +114,26 @@ describe('reconcileDisplay', () => {
     );
     const display = snapshotToDisplay(snapshot, SCHEDULED_MS + 3000);
     expect(display.phase).toBe('setup');
-    expect(display.timeLeftSec).toBe(7);
+    expect(display.timeLeftSec).toBe(10);
     expect(display.workStartedAtMs).toBeNull();
   });
 
-  it('transitions featured setup to full work duration via wall clock', () => {
+  it('keeps featured waiting past scheduled_at when stale (manual start only)', () => {
+    const snapshot = createAuthoritativeSnapshot(
+      makeInput({
+        state: 'waiting',
+        time_left_sec: 10,
+        is_featured: true,
+        scheduled_at: SCHEDULED_ISO,
+      }),
+      SCHEDULED_MS - 60_000
+    );
+    const display = snapshotToDisplay(snapshot, SCHEDULED_MS + 30_000);
+    expect(display.phase).toBe('waiting');
+    expect(display.timeLeftSec).toBe(10);
+  });
+
+  it('transitions featured setup to work from sync countdown, not scheduled_at', () => {
     const snapshot = createAuthoritativeSnapshot(
       makeInput({
         state: 'setup',
@@ -128,10 +143,10 @@ describe('reconcileDisplay', () => {
       }),
       SCHEDULED_MS
     );
-    const display = snapshotToDisplay(snapshot, SCHEDULED_MS + 10_000);
+    const display = snapshotToDisplay(snapshot, SCHEDULED_MS + 2000);
     expect(display.phase).toBe('work');
     expect(display.timeLeftSec).toBe(900);
-    expect(display.workStartedAtMs).toBe(SCHEDULED_MS + 10_000);
+    expect(display.workStartedAtMs).toBe(SCHEDULED_MS + 2000);
   });
 
   it('transitions setup to work locally when countdown hits zero', () => {

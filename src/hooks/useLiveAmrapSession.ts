@@ -396,7 +396,7 @@ export function useLiveAmrapSession(
     ? timer.workDurationSec
     : workDurationSec;
 
-  const workout = session?.workout ?? [];
+  const workout = useMemo(() => session?.workout ?? [], [session?.workout]);
   const templateId = session?.template_id ?? null;
   const participantCount = channel.participants.length;
 

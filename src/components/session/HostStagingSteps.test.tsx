@@ -58,7 +58,7 @@ describe('HostStagingSteps', () => {
     renderSteps();
     const durationHeader = screen.getByRole('button', { name: /Set duration/i });
     expect(durationHeader.getAttribute('aria-expanded')).toBe('true');
-    expect(screen.getByRole('button', { name: 'Engage clock' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Engage staging area countdown timer' })).toBeTruthy();
   });
 
   it('starts with all steps collapsed when the clock is armed', () => {
@@ -66,7 +66,7 @@ describe('HostStagingSteps', () => {
     expect(
       screen.getByRole('button', { name: /Set duration/i }).getAttribute('aria-expanded')
     ).toBe('false');
-    expect(screen.queryByRole('button', { name: 'Engage clock' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Engage staging area countdown timer' })).toBeNull();
   });
 
   it('collapses the open step when countdownArmed becomes true', () => {
@@ -130,6 +130,31 @@ describe('HostStagingSteps', () => {
     expect(writeText).toHaveBeenCalledWith(
       `https://amrap.example/join?s=${SESSION_ID}`
     );
+    expect(shareHeader.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('copies only the session ID from the collapsed Share session shortcut', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+
+    renderSteps();
+    fireEvent.click(screen.getByRole('button', { name: /Set duration/i }));
+
+    const shareHeader = screen.getByRole('button', { name: /Share session/i });
+    const stepRoot = shareHeader.closest('[data-walkthrough-id="rally-link"]');
+    expect(stepRoot).toBeTruthy();
+    const copyIdShortcut = within(stepRoot as HTMLElement).getByRole('button', {
+      name: 'Copy session ID',
+    });
+
+    await act(async () => {
+      fireEvent.click(copyIdShortcut);
+    });
+
+    expect(writeText).toHaveBeenCalledWith(SESSION_ID);
     expect(shareHeader.getAttribute('aria-expanded')).toBe('false');
   });
 
