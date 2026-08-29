@@ -1,3 +1,4 @@
+-- Copilot suggestion ignored: renaming this file would break ordering vs sibling 20260831* featured-wod migrations already on the branch.
 -- Featured WOD phase 3: attendee count on the public card. Redefines
 -- current_featured_wod() to include how many participants have already
 -- joined the generated session, so the landing/create page can show
