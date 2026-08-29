@@ -255,15 +255,17 @@ describe('FeaturedWodCard', () => {
   });
 
   it('downloads an .ics file and tracks featured_wod_calendar_saved when clicked', async () => {
+    vi.useFakeTimers();
     fetchCurrentFeaturedWodMock.mockResolvedValue({ data: featured(), error: null });
     const createObjectURL = vi.fn().mockReturnValue('blob:fake-url');
     const revokeObjectURL = vi.fn();
     vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL });
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    const appendSpy = vi.spyOn(document.body, 'appendChild');
 
     renderCard();
 
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(screen.getByRole('button', { name: 'Download calendar invite' })).toBeTruthy();
     });
     screen.getByRole('button', { name: 'Download calendar invite' }).click();
@@ -271,7 +273,10 @@ describe('FeaturedWodCard', () => {
     expect(createObjectURL).toHaveBeenCalled();
     const blob = createObjectURL.mock.calls[0][0] as Blob;
     expect(blob.type).toBe('text/calendar;charset=utf-8');
+    expect(appendSpy).toHaveBeenCalled();
     expect(clickSpy).toHaveBeenCalled();
+    expect(revokeObjectURL).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1_000);
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:fake-url');
     expect(trackMock).toHaveBeenCalledWith(
       'featured_wod_calendar_saved',
@@ -280,6 +285,7 @@ describe('FeaturedWodCard', () => {
     );
 
     clickSpy.mockRestore();
+    appendSpy.mockRestore();
     vi.unstubAllGlobals();
   });
 

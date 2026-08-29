@@ -39,8 +39,13 @@ function downloadIcsFile(featured: FeaturedWod) {
   const link = document.createElement('a');
   link.href = url;
   link.download = 'featured-wod.ics';
+  link.rel = 'noopener';
+  link.style.display = 'none';
+  document.body.appendChild(link);
   link.click();
-  URL.revokeObjectURL(url);
+  link.remove();
+  // Defer revoke so the browser can start reading the blob after click().
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
 
 /** How often to re-poll while mounted, so the waiting -> live transition and
