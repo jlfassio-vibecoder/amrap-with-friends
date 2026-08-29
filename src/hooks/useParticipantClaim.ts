@@ -15,6 +15,7 @@ import { track } from '@/lib/analytics/track';
 
 export function useParticipantClaim(sessionId: string) {
   const { user, isAuthenticated, isAuthLoading } = useAmrapAuth();
+  const userId = user?.id ?? null;
   const participantId = getStoredParticipantId(sessionId);
   const claimToken = getStoredClaimToken(sessionId);
 
@@ -25,7 +26,7 @@ export function useParticipantClaim(sessionId: string) {
   const [claimError, setClaimError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isAuthLoading || !isAuthenticated || !participantId || !user) {
+    if (isAuthLoading || !isAuthenticated || !participantId || !userId) {
       return;
     }
 
@@ -44,14 +45,14 @@ export function useParticipantClaim(sessionId: string) {
     return () => {
       cancelled = true;
     };
-  }, [isAuthLoading, isAuthenticated, participantId, user?.id]);
+  }, [isAuthLoading, isAuthenticated, participantId, userId]);
 
   const claimStatus: ClaimStatus = useMemo(() => {
-    if (isAuthLoading || !isAuthenticated || !user) {
+    if (isAuthLoading || !isAuthenticated || !userId) {
       return 'unknown';
     }
     return claimStatusFromServer;
-  }, [isAuthLoading, isAuthenticated, user, claimStatusFromServer]);
+  }, [isAuthLoading, isAuthenticated, userId, claimStatusFromServer]);
 
   const showClaimPrompt = shouldShowClaimPrompt({
     isAuthenticated,
@@ -67,10 +68,10 @@ export function useParticipantClaim(sessionId: string) {
       track(
         'claim_prompt_shown',
         {},
-        { userId: user?.id ?? null, sessionId, participantId }
+        { userId, sessionId, participantId }
       );
     }
-  }, [showClaimPrompt, user?.id, sessionId, participantId]);
+  }, [showClaimPrompt, userId, sessionId, participantId]);
 
   async function saveToAccount() {
     if (!participantId || !claimToken) {
@@ -98,7 +99,7 @@ export function useParticipantClaim(sessionId: string) {
         track(
           'claim_conflict',
           { reason: result.data.reason },
-          { userId: user?.id ?? null, sessionId, participantId }
+          { userId, sessionId, participantId }
         );
         setClaimError('This session was already saved to another account.');
       } else if (result.data.reason === 'invalid_claim_token') {
@@ -115,7 +116,7 @@ export function useParticipantClaim(sessionId: string) {
       track(
         'claim_completed',
         { already_claimed: result.data.alreadyClaimed ?? false },
-        { userId: user?.id ?? null, sessionId, participantId }
+        { userId, sessionId, participantId }
       );
       setClaimMessage(
         result.data.alreadyClaimed

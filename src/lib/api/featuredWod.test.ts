@@ -35,6 +35,7 @@ describe('fetchCurrentFeaturedWod', () => {
           scheduledAt: '2026-09-01T13:00:00.000Z',
           sessionId: null,
           state: null,
+          attendeeCount: null,
         },
       },
       error: null,
@@ -46,6 +47,7 @@ describe('fetchCurrentFeaturedWod', () => {
     expect(result.data?.workoutName).toBe('Sunrise AMRAP');
     expect(result.data?.sessionId).toBeNull();
     expect(result.data?.state).toBeNull();
+    expect(result.data?.attendeeCount).toBeNull();
   });
 
   it('parses a live, joinable featured wod', async () => {
@@ -61,6 +63,7 @@ describe('fetchCurrentFeaturedWod', () => {
           scheduledAt: '2026-09-01T13:00:00.000Z',
           sessionId: '22222222-2222-4222-8222-222222222222',
           state: 'waiting',
+          attendeeCount: 4,
         },
       },
       error: null,
@@ -70,6 +73,7 @@ describe('fetchCurrentFeaturedWod', () => {
 
     expect(result.data?.sessionId).toBe('22222222-2222-4222-8222-222222222222');
     expect(result.data?.state).toBe('waiting');
+    expect(result.data?.attendeeCount).toBe(4);
   });
 
   it('maps RPC errors', async () => {

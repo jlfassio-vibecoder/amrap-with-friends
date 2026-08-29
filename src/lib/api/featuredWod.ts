@@ -11,6 +11,9 @@ export interface FeaturedWod {
    * lead window) — the card shows a time but no join CTA until then. */
   sessionId: string | null;
   state: 'waiting' | 'work' | null;
+  /** Null until sessionId is set — participant count for the generated
+   * session (host included), so the card can show "N joining". */
+  attendeeCount: number | null;
 }
 
 export type FeaturedWodApiError = { message: string };
@@ -54,6 +57,7 @@ function parseFeaturedWod(row: Record<string, unknown>): FeaturedWod | null {
     scheduledAt,
     sessionId: readString(row.sessionId),
     state: readState(row.state),
+    attendeeCount: readNumber(row.attendeeCount),
   };
 }
 
