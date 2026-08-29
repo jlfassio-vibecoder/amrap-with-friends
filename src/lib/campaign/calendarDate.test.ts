@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { addCalendarDays, isCalendarDate, isLocalTime, weekdayOf } from './calendarDate';
+import {
+  addCalendarDays,
+  calendarDateToday,
+  isCalendarDate,
+  isLocalTime,
+  weekdayOf,
+} from './calendarDate';
 
 describe('isCalendarDate', () => {
   it('accepts a real date', () => {
@@ -85,5 +91,17 @@ describe('weekdayOf', () => {
     expect(weekdayOf('2026-03-08')).toBe(0);
     expect(weekdayOf('2026-03-09')).toBe(1);
     expect(weekdayOf('2026-03-14')).toBe(6);
+  });
+});
+
+describe('calendarDateToday', () => {
+  it('formats the local date, zero padded', () => {
+    expect(calendarDateToday(new Date(2026, 9, 5, 12, 0, 0))).toBe('2026-10-05');
+    expect(calendarDateToday(new Date(2026, 0, 9, 12, 0, 0))).toBe('2026-01-09');
+  });
+
+  it('uses local parts, so a late evening does not report tomorrow', () => {
+    // 23:30 local on the 5th is already the 6th in UTC at a negative offset.
+    expect(calendarDateToday(new Date(2026, 9, 5, 23, 30, 0))).toBe('2026-10-05');
   });
 });

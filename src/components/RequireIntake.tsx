@@ -11,9 +11,19 @@ interface RequireIntakeProps {
    * visitor isn't authenticated — for content that should stay visible even
    * behind the gate (e.g. a public Featured WOD preview). */
   signedOutPreview?: ReactNode;
+  /** Title on the signed-out gate. Defaults to the create-session wording. */
+  gateTitle?: string;
+  /** Explains what signing in unlocks here, so the gate matches the route. */
+  gateMessage?: string;
 }
 
-export function RequireIntake({ children, guestMode, signedOutPreview }: RequireIntakeProps) {
+export function RequireIntake({
+  children,
+  guestMode,
+  signedOutPreview,
+  gateTitle = 'Create session',
+  gateMessage = 'Sign in and set up your profile before creating a session. You can still join as a guest.',
+}: RequireIntakeProps) {
   const location = useLocation();
   const { profile, missing, loading, isAuthenticated, isAuthLoading, error } =
     useAthleteProfile();
@@ -33,12 +43,9 @@ export function RequireIntake({ children, guestMode, signedOutPreview }: Require
     }
 
     return (
-      <NarrowPageLayout title="Create session" subtitle="Sign in required">
+      <NarrowPageLayout title={gateTitle} subtitle="Sign in required">
         {signedOutPreview}
-        <p className="text-sm text-secondary">
-          Sign in and set up your profile before creating a session. You can still
-          join as a guest.
-        </p>
+        <p className="text-sm text-secondary">{gateMessage}</p>
         {authOpen ? <AuthModal onClose={() => setAuthOpen(false)} /> : null}
         {!authOpen ? (
           <button

@@ -47,10 +47,22 @@ describe('buildCampaignCalendar', () => {
     expect(calendar.occurrences[1].localTime).toBe('06:30');
   });
 
-  it('reports the start and end dates of the whole campaign', () => {
+  it('reports the first and last session dates, not just the anchor', () => {
     const calendar = buildCampaignCalendar(input());
-    expect(calendar.startDate).toBe(MONDAY);
-    expect(calendar.endDate).toBe('2026-03-26');
+    expect(calendar.anchorDate).toBe(MONDAY);
+    expect(calendar.firstSessionDate).toBe(MONDAY);
+    expect(calendar.lastSessionDate).toBe('2026-03-26');
+  });
+
+  it('distinguishes the anchor from the first session when they differ', () => {
+    // Anchored to a Sunday with a Monday slot: the campaign is described by
+    // the Monday, because that is the day anyone actually trains.
+    const calendar = buildCampaignCalendar(
+      input({ weekCount: 2, startDate: '2026-03-01', slots: [{ weekday: 1, timeLocal: '18:00' }] })
+    );
+    expect(calendar.anchorDate).toBe('2026-03-01');
+    expect(calendar.firstSessionDate).toBe('2026-03-02');
+    expect(calendar.lastSessionDate).toBe('2026-03-09');
   });
 
   it('never schedules before the start date when a slot day precedes it', () => {

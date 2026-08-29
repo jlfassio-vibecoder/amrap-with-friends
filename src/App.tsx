@@ -10,6 +10,8 @@ const CreateSessionPage = lazy(() => import('./pages/CreateSessionPage'));
 const JoinSessionPage = lazy(() => import('./pages/JoinSessionPage'));
 const SessionWaitingRoomPage = lazy(() => import('./pages/SessionWaitingRoomPage'));
 const MySessionsPage = lazy(() => import('./pages/MySessionsPage'));
+const CreateCampaignPage = lazy(() => import('./pages/CreateCampaignPage'));
+const CampaignDetailPage = lazy(() => import('./pages/CampaignDetailPage'));
 const HUDPage = lazy(() => import('./pages/HUDPage'));
 const IntakePage = lazy(() => import('./pages/IntakePage'));
 const CoachPage = lazy(() => import('./pages/CoachPage'));
@@ -40,6 +42,30 @@ function App() {
             }
           />
           <Route path="/join" element={<JoinSessionPage />} />
+          <Route
+            path="/campaign/new"
+            element={
+              <RequireIntake
+                guestMode="sign-in"
+                gateTitle="New campaign"
+                gateMessage="Sign in and set up your profile to plan a campaign. Campaigns track weeks of work, so they need an account."
+              >
+                <CreateCampaignPage />
+              </RequireIntake>
+            }
+          />
+          <Route
+            path="/campaign/:campaignId"
+            element={
+              <RequireIntake
+                guestMode="sign-in"
+                gateTitle="Campaign"
+                gateMessage="Sign in to see this campaign. Campaigns are only visible to the crew training them."
+              >
+                <CampaignDetailPage />
+              </RequireIntake>
+            }
+          />
           <Route path="/session/:sessionId" element={<SessionWaitingRoomPage />} />
           <Route path="/my-sessions" element={<MySessionsPage />} />
           <Route path="/intake" element={<IntakePage />} />

@@ -51,9 +51,16 @@ export interface CampaignCalendar {
   occurrences: CampaignOccurrence[];
   sessionsPerWeek: number;
   totalSessions: number;
-  startDate: string;
+  /**
+   * The anchor week 1 is measured from — what the host picked. Not necessarily
+   * a training day: a campaign anchored to a Sunday with Mon/Wed/Fri slots
+   * holds its first session on the Monday.
+   */
+  anchorDate: string;
+  /** Local date of the first session. Use this when describing the campaign. */
+  firstSessionDate: string;
   /** Local date of the final session. */
-  endDate: string;
+  lastSessionDate: string;
 }
 
 /**

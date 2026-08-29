@@ -4,8 +4,32 @@ export {
   MAX_SESSIONS_PER_WEEK,
   MIN_SESSIONS_PER_WEEK,
 } from './constants';
-export { addCalendarDays, isCalendarDate, isLocalTime, weekdayOf } from './calendarDate';
+export {
+  addCalendarDays,
+  calendarDateToday,
+  isCalendarDate,
+  isLocalTime,
+  weekdayOf,
+} from './calendarDate';
 export { buildCampaignCalendar } from './buildCampaignCalendar';
+export {
+  WEEKDAY_LABELS,
+  WEEKDAY_SHORT,
+  campaignProgress,
+  defaultCampaignStartDate,
+  formatCampaignDate,
+  formatCampaignShape,
+  formatCampaignSpan,
+  formatOccurrenceDate,
+  formatSlotLabel,
+  groupOccurrencesByWeek,
+  suggestedSlots,
+} from './campaignPresentation';
+export type {
+  CampaignProgress,
+  CampaignWeekGroup,
+  WeekGroupable,
+} from './campaignPresentation';
 export { assignCampaignWorkouts } from './assignCampaignWorkouts';
 export type { AssignCampaignWorkoutsInput } from './assignCampaignWorkouts';
 export {
