@@ -16,6 +16,7 @@ export interface SessionRow {
   lobby_countdown_ends_at: string | null;
   segment_index: number;
   created_at: string;
+  is_featured: boolean;
 }
 
 export interface ParticipantRow {

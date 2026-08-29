@@ -17,6 +17,14 @@ export interface UseAmrapTimerReturn {
   workStartedAtMs: number | null;
   rounds: AmrapRoundLog[];
   start: (config: { setupDurationSec: number; workDurationSec: number }) => void;
+  hydrate: (config: {
+    phase: 'setup' | 'work';
+    setupDurationSec: number;
+    workDurationSec: number;
+    timeLeftSec: number;
+    workStartedAtMs: number | null;
+    isPaused: boolean;
+  }) => void;
   pause: () => void;
   resume: () => void;
   finish: () => void;
@@ -56,6 +64,28 @@ export function useAmrapTimer(): UseAmrapTimerReturn {
     []
   );
 
+  const hydrate = useCallback(
+    (config: {
+      phase: 'setup' | 'work';
+      setupDurationSec: number;
+      workDurationSec: number;
+      timeLeftSec: number;
+      workStartedAtMs: number | null;
+      isPaused: boolean;
+    }) => {
+      dispatch({
+        type: 'hydrate',
+        phase: config.phase,
+        setupDurationSec: config.setupDurationSec,
+        workDurationSec: config.workDurationSec,
+        timeLeftSec: config.timeLeftSec,
+        workStartedAtMs: config.workStartedAtMs,
+        isPaused: config.isPaused,
+      });
+    },
+    []
+  );
+
   const pause = useCallback(() => {
     dispatch({ type: 'pause' });
   }, []);
@@ -86,6 +116,7 @@ export function useAmrapTimer(): UseAmrapTimerReturn {
     workStartedAtMs: state.workStartedAtMs,
     rounds: state.rounds,
     start,
+    hydrate,
     pause,
     resume,
     finish,

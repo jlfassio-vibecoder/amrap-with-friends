@@ -1,5 +1,7 @@
 import { callRpc } from '@/lib/api/callRpc';
 
+export type FeaturedWodState = 'waiting' | 'setup' | 'work' | 'finished' | null;
+
 export interface FeaturedWod {
   workoutName: string;
   focus: string | null;
@@ -10,7 +12,9 @@ export interface FeaturedWod {
   /** Null until the scheduler has generated the actual session (within its
    * lead window) — the card shows a time but no join CTA until then. */
   sessionId: string | null;
-  state: 'waiting' | 'work' | null;
+  state: FeaturedWodState;
+  /** Wall-clock work start when state is work; null otherwise. */
+  startedAt: string | null;
   /** Null until sessionId is set — participant count for the generated
    * session (host included), so the card can show "N joining". */
   attendeeCount: number | null;
@@ -34,8 +38,16 @@ function readNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
-function readState(value: unknown): FeaturedWod['state'] {
-  return value === 'waiting' || value === 'work' ? value : null;
+function readState(value: unknown): FeaturedWodState {
+  if (
+    value === 'waiting' ||
+    value === 'setup' ||
+    value === 'work' ||
+    value === 'finished'
+  ) {
+    return value;
+  }
+  return null;
 }
 
 function parseFeaturedWod(row: Record<string, unknown>): FeaturedWod | null {
@@ -57,6 +69,7 @@ function parseFeaturedWod(row: Record<string, unknown>): FeaturedWod | null {
     scheduledAt,
     sessionId: readString(row.sessionId),
     state: readState(row.state),
+    startedAt: readString(row.startedAt),
     attendeeCount: readNumber(row.attendeeCount),
   };
 }

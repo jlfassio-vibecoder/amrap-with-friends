@@ -29,5 +29,8 @@ export interface JoinSessionInput {
 
 export interface JoinSessionResult {
   participantId: string;
-  claimToken: string;
+  claimToken: string | null;
+  hostToken: string | null;
+  nickname: string;
+  role: string;
 }

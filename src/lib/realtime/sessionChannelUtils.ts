@@ -96,6 +96,7 @@ export function parseSessionRow(record: Record<string, unknown>): SessionRow | n
     lobby_countdown_ends_at: lobbyCountdownEndsAt,
     segment_index: segmentIndex,
     created_at: createdAt,
+    is_featured: record.is_featured === true,
   };
 }
 

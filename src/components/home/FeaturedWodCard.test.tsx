@@ -38,6 +38,7 @@ function featured(overrides: Partial<FeaturedWod> = {}): FeaturedWod {
     scheduledAt: '2026-09-01T13:00:00.000Z',
     sessionId: '22222222-2222-4222-8222-222222222222',
     state: 'waiting',
+    startedAt: null,
     attendeeCount: 3,
     ...overrides,
   };
@@ -98,18 +99,38 @@ describe('FeaturedWodCard', () => {
     );
   });
 
-  it('shows "Live now" and "Join now" for a session in progress', async () => {
+  it('shows locked in-progress copy and hides join once work starts', async () => {
+    const scheduledAt = new Date(Date.now() - 30_000).toISOString();
     fetchCurrentFeaturedWodMock.mockResolvedValue({
-      data: featured({ state: 'work' }),
+      data: featured({
+        state: 'work',
+        scheduledAt,
+        startedAt: new Date(Date.now() - 20_000).toISOString(),
+        durationMinutes: 15,
+      }),
       error: null,
     });
 
     renderCard();
 
     await waitFor(() => {
-      expect(screen.getByText(/Live now/)).toBeTruthy();
+      expect(screen.getByText('Session locked, amrap in progress.')).toBeTruthy();
     });
-    expect(screen.getByRole('link', { name: 'Join now' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: /Join/ })).toBeNull();
+  });
+
+  it('shows locked ended copy and hides join after the amrap completes', async () => {
+    fetchCurrentFeaturedWodMock.mockResolvedValue({
+      data: featured({ state: 'finished', attendeeCount: 2 }),
+      error: null,
+    });
+
+    renderCard();
+
+    await waitFor(() => {
+      expect(screen.getByText('Session locked, AMRAP ended.')).toBeTruthy();
+    });
+    expect(screen.queryByRole('link', { name: /Join/ })).toBeNull();
   });
 
   it('shows a no-join message and no attendee count before the session is generated', async () => {
@@ -226,7 +247,7 @@ describe('FeaturedWodCard', () => {
     renderCard();
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Download .ics' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Download calendar invite' })).toBeTruthy();
     });
     const googleLink = screen.getByRole('link', { name: 'Add to Google Calendar' }) as HTMLAnchorElement;
     expect(googleLink.href).toContain('calendar.google.com/calendar/render');
@@ -243,9 +264,9 @@ describe('FeaturedWodCard', () => {
     renderCard();
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Download .ics' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Download calendar invite' })).toBeTruthy();
     });
-    screen.getByRole('button', { name: 'Download .ics' }).click();
+    screen.getByRole('button', { name: 'Download calendar invite' }).click();
 
     expect(createObjectURL).toHaveBeenCalled();
     const blob = createObjectURL.mock.calls[0][0] as Blob;

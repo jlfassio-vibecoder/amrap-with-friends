@@ -12,6 +12,9 @@ export interface MySessionEntry {
   role: 'host' | 'joiner';
   sessionId: string;
   createdAt: string;
+  /** Featured occurrence start; prefer over createdAt for display when set. */
+  scheduledAt: string | null;
+  isFeatured: boolean;
   durationMinutes: number;
   workout: WorkoutExercise[];
   state: string;
@@ -147,6 +150,8 @@ function parseMySessionEntry(raw: unknown): MySessionEntry | null {
     role,
     sessionId,
     createdAt,
+    scheduledAt: readString(row.scheduled_at),
+    isFeatured: row.is_featured === true,
     durationMinutes,
     workout: readWorkout(row.workout),
     state,

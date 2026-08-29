@@ -37,6 +37,8 @@ function entry(overrides: Partial<MySessionEntry> = {}): MySessionEntry {
     role: 'host',
     sessionId: '22222222-2222-4222-8222-222222222222',
     createdAt: '2026-08-22T12:00:00.000Z',
+    scheduledAt: null,
+    isFeatured: false,
     durationMinutes: 5,
     workout: [{ name: 'Mountain Climbers', target: 20, unit: 'reps' }],
     state: 'waiting',
@@ -155,5 +157,33 @@ describe('MySessionsPage delete', () => {
         screen.getByText(/No saved sessions yet/)
       ).toBeTruthy();
     });
+  });
+
+  it('confirms featured delete as a single date/time cancel', async () => {
+    fetchMySessionsMock.mockResolvedValue({
+      data: [
+        entry({
+          isFeatured: true,
+          scheduledAt: '2026-09-05T16:45:00.000Z',
+          coachWorkoutName: 'THE UNDERTOW',
+        }),
+      ],
+      error: null,
+    });
+    deleteIncompleteSessionMock.mockImplementation(async () => ({ error: null }));
+    const confirmMock = vi.fn(() => true);
+    vi.stubGlobal('confirm', confirmMock);
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Featured/)).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+    expect(confirmMock).toHaveBeenCalledWith(
+      expect.stringMatching(/this date and time only/i)
+    );
   });
 });

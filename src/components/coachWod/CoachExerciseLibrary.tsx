@@ -99,17 +99,22 @@ export function CoachExerciseLibrary() {
         <ul className="divide-y divide-divider">
           {exercises.map((exercise) => (
             <li key={exercise.id} className="flex items-center justify-between gap-3 py-2">
-              <span className="text-sm font-semibold text-ink">
-                {exercise.name}
-                {exercise.isShared ? (
-                  <span className="ml-2 rounded-card bg-accent-tint px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
-                    Shared
-                  </span>
-                ) : null}
-                {!exercise.isOwner ? (
-                  <span className="ml-2 rounded-card border border-border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary">
-                    Another coach
-                  </span>
+              <span className="min-w-0">
+                <span className="text-sm font-semibold text-ink">
+                  {exercise.name}
+                  {exercise.isShared ? (
+                    <span className="ml-2 rounded-card bg-accent-tint px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
+                      Shared
+                    </span>
+                  ) : null}
+                  {!exercise.isOwner ? (
+                    <span className="ml-2 rounded-card border border-border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary">
+                      Another coach
+                    </span>
+                  ) : null}
+                </span>
+                {exercise.subtitle ? (
+                  <span className="mt-0.5 block text-xs text-secondary">{exercise.subtitle}</span>
                 ) : null}
               </span>
               <span className="flex shrink-0 gap-3 text-xs uppercase tracking-wide">

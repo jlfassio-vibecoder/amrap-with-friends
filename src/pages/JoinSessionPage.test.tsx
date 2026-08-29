@@ -9,6 +9,7 @@ import {
 } from '@/lib/api/sessions';
 
 const joinSessionMock = vi.fn();
+const resumeSessionIdentityMock = vi.fn();
 const authState = vi.hoisted(() => ({
   isAuthenticated: false,
   isAuthLoading: false,
@@ -24,6 +25,10 @@ vi.mock('@/lib/api/sessions', async () => {
     joinSession: (...args: unknown[]) => joinSessionMock(...args),
   };
 });
+
+vi.mock('@/lib/api/resumeSessionIdentity', () => ({
+  resumeSessionIdentity: (...args: unknown[]) => resumeSessionIdentityMock(...args),
+}));
 
 vi.mock('@/hooks/useAmrapAuth', () => ({
   useAmrapAuth: () => ({
@@ -50,6 +55,7 @@ const SESSION_ID = '11111111-1111-4111-8111-111111111111';
 afterEach(() => {
   cleanup();
   joinSessionMock.mockReset();
+  resumeSessionIdentityMock.mockReset();
   authState.isAuthenticated = false;
   authState.isAuthLoading = false;
   authState.user = null;
@@ -100,8 +106,19 @@ describe('JoinSessionPage deep link', () => {
   it('auto-joins authenticated users with email local-part', async () => {
     authState.isAuthenticated = true;
     authState.user = { id: 'user-1', email: 'operator@example.com' };
+    resumeSessionIdentityMock.mockResolvedValue({
+      data: null,
+      missing: true,
+      error: null,
+    });
     joinSessionMock.mockResolvedValue({
-      data: { participantId: 'p1', claimToken: 'c1' },
+      data: {
+        participantId: 'p1',
+        claimToken: 'c1',
+        hostToken: null,
+        nickname: 'operator',
+        role: 'joiner',
+      },
       error: null,
     });
 
@@ -109,11 +126,35 @@ describe('JoinSessionPage deep link', () => {
 
     expect(screen.getByText(/Welcome, operator/i)).toBeTruthy();
     await waitFor(() => {
+      expect(resumeSessionIdentityMock).toHaveBeenCalledWith(SESSION_ID);
       expect(joinSessionMock).toHaveBeenCalledWith({
         sessionId: SESSION_ID,
         nickname: 'operator',
       });
     });
+    expect(await screen.findByText('In lobby')).toBeTruthy();
+  });
+
+  it('reclaims host via resume before join for authenticated users', async () => {
+    authState.isAuthenticated = true;
+    authState.user = { id: 'user-1', email: 'coach@example.com' };
+    resumeSessionIdentityMock.mockResolvedValue({
+      data: {
+        participantId: 'host-1',
+        nickname: 'Coach',
+        role: 'host',
+        hostToken: 'host-secret',
+      },
+      missing: false,
+      error: null,
+    });
+
+    renderJoin(`/join?s=${SESSION_ID}`);
+
+    await waitFor(() => {
+      expect(resumeSessionIdentityMock).toHaveBeenCalledWith(SESSION_ID);
+    });
+    expect(joinSessionMock).not.toHaveBeenCalled();
     expect(await screen.findByText('In lobby')).toBeTruthy();
   });
 

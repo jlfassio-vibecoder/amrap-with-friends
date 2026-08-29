@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   fetchCurrentFeaturedWod,
-  formatFeaturedWodTime,
   type FeaturedWod,
 } from '@/lib/api/featuredWod';
+import { getFeaturedWodCardPresentation } from '@/lib/session/featuredWodCardPresentation';
 import { track } from '@/lib/analytics/track';
 import { buildGoogleCalendarUrl, buildIcsFileContent } from '@/lib/calendar/buildCalendarEvent';
 
@@ -52,6 +52,7 @@ const POLL_INTERVAL_MS = 20_000;
 export function FeaturedWodCard() {
   const [featured, setFeatured] = useState<FeaturedWod | null>(null);
   const [loading, setLoading] = useState(true);
+  const [nowMs, setNowMs] = useState(() => Date.now());
   // undefined = "haven't tracked a view yet", distinct from a legitimate
   // null sessionId (a not-yet-generated next occurrence).
   const trackedSessionRef = useRef<string | null | undefined>(undefined);
@@ -69,6 +70,7 @@ export function FeaturedWodCard() {
           return;
         }
         setFeatured(result.data);
+        setNowMs(Date.now());
 
         // Track a view once per distinct joinable session, not on every
         // poll tick — a session going from "next occurrence" to an actual
@@ -94,9 +96,21 @@ export function FeaturedWodCard() {
     };
   }, []);
 
+  // Tick once a second while a generated session exists so setup→work→ended
+  // copy updates between 20s RPC polls.
+  useEffect(() => {
+    if (!featured?.sessionId) {
+      return;
+    }
+    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [featured?.sessionId]);
+
   if (loading || !featured) {
     return null;
   }
+
+  const presentation = getFeaturedWodCardPresentation(featured, nowMs);
 
   return (
     <div className="card space-y-2 border-2 border-accent bg-accent-tint/40 p-4 text-left">
@@ -108,14 +122,7 @@ export function FeaturedWodCard() {
         {INTENSITY_LABEL[featured.intensityTier] ?? featured.intensityTier}
         {featured.tags.length > 0 ? ` · ${featured.tags.join(', ')}` : ''}
       </p>
-      <p className="text-sm font-semibold text-ink">
-        {featured.state === 'work'
-          ? 'Live now'
-          : `${formatFeaturedWodTime(featured.scheduledAt)}`}
-        {featured.attendeeCount !== null
-          ? ` · ${featured.attendeeCount} joining`
-          : ''}
-      </p>
+      <p className="text-sm font-semibold text-ink">{presentation.statusLine}</p>
       <p className="flex flex-wrap gap-3 text-xs">
         <button
           type="button"
@@ -129,7 +136,7 @@ export function FeaturedWodCard() {
             );
           }}
         >
-          Download .ics
+          Download calendar invite
         </button>
         <a
           className="link-accent"
@@ -147,7 +154,7 @@ export function FeaturedWodCard() {
           Add to Google Calendar
         </a>
       </p>
-      {featured.sessionId ? (
+      {presentation.showJoinLobby ? (
         <Link
           className="btn-primary inline-block"
           to={`/join?s=${featured.sessionId}`}
@@ -159,9 +166,9 @@ export function FeaturedWodCard() {
             )
           }
         >
-          {featured.state === 'work' ? 'Join now' : 'Join lobby'}
+          Join lobby
         </Link>
-      ) : (
+      ) : featured.sessionId ? null : (
         <p className="text-xs text-secondary">Lobby opens shortly before start.</p>
       )}
     </div>

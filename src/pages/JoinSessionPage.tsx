@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { HostScheduledSessionsPanel } from '@/components/session/HostScheduledSessionsPanel';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
+import { resumeSessionIdentity } from '@/lib/api/resumeSessionIdentity';
 import {
   isSessionIdUuid,
   joinSession,
@@ -45,6 +46,33 @@ export default function JoinSessionPage() {
 
     setLoading(true);
     try {
+      // Authenticated reclaim first: Featured WOD / prior claim already has a
+      // participants row with user_id — avoid inserting a duplicate joiner.
+      if (isAuthenticated) {
+        const resumed = await resumeSessionIdentity(targetSessionId.trim());
+        if (resumed.data) {
+          track(
+            'session_joined',
+            { deep_link: deep, auth: true, resumed: true },
+            {
+              userId: user?.id ?? null,
+              sessionId: targetSessionId.trim(),
+              participantId: resumed.data.participantId,
+            }
+          );
+          navigate(`/session/${targetSessionId.trim()}`);
+          return;
+        }
+        if (resumed.error) {
+          setError(
+            deep
+              ? mapDeepLinkJoinError(resumed.error.message)
+              : resumed.error.message
+          );
+          return;
+        }
+      }
+
       const result = await joinSession({
         sessionId: targetSessionId,
         nickname: callsign,
@@ -60,7 +88,12 @@ export default function JoinSessionPage() {
       if (result.data) {
         track(
           'session_joined',
-          { deep_link: deep, auth: isAuthenticated },
+          {
+            deep_link: deep,
+            auth: isAuthenticated,
+            resumed: false,
+            role: result.data.role,
+          },
           {
             userId: user?.id ?? null,
             sessionId: targetSessionId.trim(),

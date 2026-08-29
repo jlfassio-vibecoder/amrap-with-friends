@@ -10,6 +10,8 @@ export interface CoachExercisePhoto {
 export interface CoachExercise {
   id: string;
   name: string;
+  /** Alternate name / aka shown as a sub-heading under the primary name. */
+  subtitle: string | null;
   instructions: string[];
   cues: string[];
   tips: string | null;
@@ -70,6 +72,7 @@ export interface PublishedCoachWorkoutMovement {
   exercise: {
     id: string;
     name: string;
+    subtitle: string | null;
     instructions: string[];
     cues: string[];
     tips: string | null;
@@ -101,6 +104,7 @@ export interface CoachWorkoutHistoryEntry {
 export interface UpsertCoachExerciseInput {
   id?: string;
   name: string;
+  subtitle?: string | null;
   instructions: string[];
   cues: string[];
   tips?: string | null;
@@ -189,6 +193,7 @@ function parseExercise(row: Record<string, unknown>): CoachExercise | null {
   return {
     id,
     name,
+    subtitle: readString(row.subtitle),
     instructions: asStringArray(row.instructions),
     cues: asStringArray(row.cues),
     tips: readString(row.tips),
@@ -227,7 +232,7 @@ function parseWorkoutSummary(row: Record<string, unknown>): CoachWorkoutSummary 
   const durationMinutes = readNumber(row.durationMinutes);
   const intensityTier = readNumber(row.intensityTier);
   const movementCount = readNumber(row.movementCount);
-  const updatedAt = readString(row.updatedAt);
+  const updatedAt = readString(row.updated_at ?? row.updatedAt);
   if (
     !id ||
     !name ||
@@ -300,6 +305,7 @@ function parsePublishedMovementExercise(
   return {
     id,
     name,
+    subtitle: readString(row.subtitle),
     instructions: asStringArray(row.instructions),
     cues: asStringArray(row.cues),
     tips: readString(row.tips),
@@ -402,6 +408,7 @@ export async function upsertCoachExercise(input: UpsertCoachExerciseInput): Prom
   const { data, error } = await callRpc('coach_upsert_exercise', {
     p_id: input.id ?? null,
     p_name: input.name,
+    p_subtitle: input.subtitle ?? null,
     p_instructions: input.instructions,
     p_cues: input.cues,
     p_tips: input.tips ?? null,
