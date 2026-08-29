@@ -63,7 +63,7 @@ function wallClockWorkDisplay(
   workStartedAtMs: number
 ): DisplayState {
   const elapsedWorkSec = Math.max(0, Math.floor((nowMs - workStartedAtMs) / 1000));
-  let displayTimeLeft = Math.max(0, snapshot.workDurationSec - elapsedWorkSec);
+  const displayTimeLeft = Math.max(0, snapshot.workDurationSec - elapsedWorkSec);
   let displayPhase: LiveSessionPhase = 'work';
   if (displayTimeLeft === 0) {
     displayPhase = 'finished';
