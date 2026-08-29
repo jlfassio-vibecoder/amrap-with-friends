@@ -799,7 +799,9 @@ function LiveSessionView({
 
               <section
                 className="flex flex-wrap gap-2 lg:justify-center"
-                data-walkthrough-id="actions"
+                {...(waitingStartPracticeActions
+                  ? {}
+                  : { 'data-walkthrough-id': 'actions' })}
               >
                 {showPause && (
                   <button

@@ -82,12 +82,14 @@ export function ArmedLobbyControls({
             >
               Start
             </button>
-            <span
-              className="font-mono text-sm tabular-nums text-accent"
-              aria-label="Time past countdown end"
-            >
-              {formatPlusElapsed(overtimeSec ?? 0)}
-            </span>
+            {overtimeSec != null ? (
+              <span
+                className="font-mono text-sm tabular-nums text-accent"
+                aria-label="Time past countdown end"
+              >
+                {formatPlusElapsed(overtimeSec)}
+              </span>
+            ) : null}
           </>
         )}
       </section>

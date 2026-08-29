@@ -59,6 +59,20 @@ describe('ArmedLobbyControls', () => {
     expect(onStart).toHaveBeenCalledTimes(1);
   });
 
+  it('hides +elapsed when overtimeSec is null after T-0', () => {
+    render(
+      <ArmedLobbyControls
+        sessionId={SESSION_ID}
+        ticking={false}
+        overtimeSec={null}
+        onStart={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'Start' })).toBeTruthy();
+    expect(screen.queryByLabelText('Time past countdown end')).toBeNull();
+  });
+
   it('shows +00:00 when overtime is zero', () => {
     render(
       <ArmedLobbyControls

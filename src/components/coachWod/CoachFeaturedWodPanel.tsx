@@ -307,14 +307,27 @@ function JoinStagingLink({ scheduleActive }: { scheduleActive: boolean }) {
     let cancelled = false;
 
     function poll() {
-      fetchCurrentFeaturedWod().then((result) => {
-        if (cancelled || result.error || !result.data) {
-          return;
-        }
-        setSessionId(result.data.sessionId);
-        setScheduledAt(result.data.scheduledAt);
-        setNowMs(Date.now());
-      });
+      fetchCurrentFeaturedWod()
+        .then((result) => {
+          if (cancelled) {
+            return;
+          }
+          if (result.error || !result.data) {
+            setSessionId(null);
+            setScheduledAt(null);
+            return;
+          }
+          setSessionId(result.data.sessionId);
+          setScheduledAt(result.data.scheduledAt);
+          setNowMs(Date.now());
+        })
+        .catch(() => {
+          if (cancelled) {
+            return;
+          }
+          setSessionId(null);
+          setScheduledAt(null);
+        });
     }
 
     // Avoid synchronous update path from effect body

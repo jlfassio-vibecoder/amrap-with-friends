@@ -11,9 +11,10 @@ export interface FeaturedSessionClock {
 }
 
 /**
- * Wall-clock remaining for a featured session that has already left waiting
- * (host Start). Does not invent setup/work from scheduled_at alone — callers
- * must only use this once authoritative state is setup/work/finished.
+ * Derives setup/work/finished remaining from an absolute start anchor
+ * (`scheduledAtMs`) plus setup and work durations.
+ * Callers must only invoke this after host Start with a real start anchor;
+ * do not pass schedule-only `scheduled_at` to invent a live phase while waiting.
  */
 export function computeFeaturedSessionClock(input: {
   scheduledAtMs: number;
