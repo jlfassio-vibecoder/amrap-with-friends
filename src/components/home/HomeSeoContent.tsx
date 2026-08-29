@@ -1,11 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { HeroPath } from '@/components/home/HeroPath';
+import { LiveLeaderboardPreview } from '@/components/home/LiveLeaderboardPreview';
 import { WorkoutStyleInfoModal } from '@/components/workoutStyle/WorkoutStyleInfoModal';
-import {
-  WORKOUT_CATEGORIES,
-  type TimeDomain,
-  type WorkoutCategory,
-} from '@/data/workoutTemplates';
+import { WORKOUT_CATEGORIES, type TimeDomain, type WorkoutCategory } from '@/data/workoutTemplates';
 
 function ClockIcon() {
   return (
@@ -103,36 +101,44 @@ export function HomeSeoContent() {
   }
 
   return (
-    <div className="flex flex-col gap-14 pb-10 text-left">
-      <section className="space-y-4">
-        <h1 className="text-display text-4xl text-ink">
-          What Is an AMRAP Workout?
-        </h1>
-        <p className="text-base leading-[1.7] text-secondary">
-          AMRAP stands for{' '}
-          <strong className="font-semibold text-ink">
-            As Many Rounds (or Reps) As Possible
-          </strong>{' '}
-          — a timed workout format where you cycle through a short list of
-          exercises for a fixed duration, completing as many full rounds as you
-          can before the clock runs out. It&apos;s one of the most popular
-          workout styles in functional fitness because it&apos;s simple to set
-          up, scales to any fitness level, and turns a workout into a measurable
-          score you can compare against friends.
-        </p>
-        <p className="text-base leading-[1.7] text-secondary">
-          <strong className="font-semibold text-ink">AMRAP With Friends</strong>{' '}
-          takes that format and makes it social: host a live AMRAP session,
-          share a code, and everyone&apos;s countdown, round count, and
-          leaderboard position update in real time — whether you&apos;re all in
-          the same gym or scattered across different time zones.
-        </p>
+    <div className="flex flex-col gap-16 text-left">
+      <section className="grid gap-8 md:grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)] md:gap-14">
+        <div className="space-y-3">
+          <p className="eyebrow text-accent">What is an AMRAP?</p>
+          <h2 className="text-display text-[clamp(2.25rem,5vw,3.25rem)] leading-[0.9] text-ink">
+            As many rounds. As possible.
+          </h2>
+        </div>
+        <div className="space-y-4">
+          <p className="text-base leading-[1.7] text-secondary">
+            AMRAP stands for{' '}
+            <strong className="font-semibold text-ink">As Many Rounds (or Reps) As Possible</strong>{' '}
+            — a timed workout format where you cycle through a short list of exercises for a fixed
+            duration, completing as many full rounds as you can before the clock runs out. It&apos;s
+            one of the most popular workout styles in functional fitness because it&apos;s simple to
+            set up, scales to any fitness level, and turns a workout into a measurable score you can
+            compare against friends.
+          </p>
+          <p className="text-base leading-[1.7] text-secondary">
+            <strong className="font-semibold text-ink">AMRAP With Friends</strong> takes that format
+            and makes it social: host a live AMRAP session, share a code, and everyone&apos;s
+            countdown, round count, and leaderboard position update in real time — whether
+            you&apos;re all in the same gym or scattered across different time zones.
+          </p>
+        </div>
       </section>
 
-      <section className="space-y-5">
-        <h2 className="text-display text-[1.75rem] text-ink">
-          Built for Training Together
-        </h2>
+      <HeroPath />
+
+      <LiveLeaderboardPreview />
+
+      <section className="space-y-6">
+        <div className="space-y-3">
+          <p className="eyebrow text-accent">The kit</p>
+          <h2 className="text-display text-[clamp(2.25rem,5vw,3.25rem)] leading-[0.9] text-ink">
+            Built for training together
+          </h2>
+        </div>
         <div className="grid gap-4 md:grid-cols-3">
           {FEATURES.map(({ title, description, Icon }) => (
             <article key={title} className="card space-y-3 p-6">
@@ -144,13 +150,16 @@ export function HomeSeoContent() {
         </div>
       </section>
 
-      <section className="space-y-4">
-        <h2 className="text-display text-[1.75rem] text-ink">
-          AMRAP Workout Styles
-        </h2>
-        <p className="text-[15px] text-secondary">
-          Every AMRAP in the library is built around a specific training
-          stimulus — from quick anaerobic sprints to longer aerobic grinds:
+      <section className="space-y-5">
+        <div className="space-y-3">
+          <p className="eyebrow text-accent">The library</p>
+          <h2 className="text-display text-[clamp(2.25rem,5vw,3.25rem)] leading-[0.9] text-ink">
+            AMRAP workout styles
+          </h2>
+        </div>
+        <p className="max-w-[38rem] text-[15px] leading-[1.6] text-secondary">
+          Every AMRAP in the library is built around a specific training stimulus — from quick
+          anaerobic sprints to longer aerobic grinds. Pick one to see what it asks of you:
         </p>
         <div className="flex flex-wrap gap-2">
           {WORKOUT_CATEGORIES.map((category) => {
@@ -159,7 +168,7 @@ export function HomeSeoContent() {
               <button
                 key={category.id}
                 type="button"
-                className="rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold text-secondary hover:border-accent/40 hover:text-ink"
+                className="hover:border-accent/40 rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold text-secondary hover:text-ink"
                 onClick={() => setInfoCategory(category.id)}
               >
                 {category.label} — {durations} min

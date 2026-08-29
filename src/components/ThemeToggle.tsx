@@ -1,4 +1,5 @@
 import { useTheme } from '@/hooks/useTheme';
+import type { HeaderTone } from '@/components/headerTone';
 
 function SunIcon() {
   return (
@@ -37,14 +38,19 @@ function MoonIcon() {
   );
 }
 
-export function ThemeToggle() {
+export function ThemeToggle({ tone = 'default' }: { tone?: HeaderTone }) {
   const { theme, toggle } = useTheme();
   const isDark = theme === 'dark';
+
+  const toneClassName =
+    tone === 'night'
+      ? 'text-night-secondary hover:bg-night-border hover:text-night-ink'
+      : 'text-secondary hover:bg-accent-tint hover:text-ink';
 
   return (
     <button
       type="button"
-      className="inline-flex items-center justify-center rounded-card p-2 text-secondary hover:bg-accent-tint hover:text-ink"
+      className={`inline-flex items-center justify-center rounded-card p-2 ${toneClassName}`}
       onClick={toggle}
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       title={isDark ? 'Light mode' : 'Dark mode'}
