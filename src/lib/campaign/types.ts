@@ -1,4 +1,5 @@
 import type { IntensityTier, TimeDomain, WorkoutCategory } from '@/data/workoutTemplates';
+import type { WorkoutExercise } from '@/lib/api/sessionTypes';
 
 export class CampaignValidationError extends Error {
   constructor(message: string) {
@@ -70,4 +71,10 @@ export interface PlannedCampaignOccurrence extends CampaignOccurrence {
   durationMinutes: TimeDomain;
   category: WorkoutCategory;
   intensityTier: IntensityTier;
+  /**
+   * The movements, resolved at plan time. The template library is client-side,
+   * so an occurrence has to carry its own workout — the generator copies this
+   * into the session rather than looking a template up.
+   */
+  workout: WorkoutExercise[];
 }

@@ -1,5 +1,6 @@
 import { WORKOUT_TEMPLATES, type WorkoutTemplate } from '@/data/workoutTemplates';
 import { filterWorkoutTemplates } from '@/lib/workout/filterWorkoutTemplates';
+import { templateToExercises } from '@/lib/workout/templateToExercises';
 import {
   CampaignValidationError,
   type CampaignOccurrence,
@@ -70,6 +71,7 @@ export function assignCampaignWorkouts(
       durationMinutes: template.durationMinutes,
       category: tracks[trackIndex].category,
       intensityTier: template.intensityTier,
+      workout: templateToExercises(template),
     };
   });
 }

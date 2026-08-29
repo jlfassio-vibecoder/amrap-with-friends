@@ -120,6 +120,27 @@ describe('assignCampaignWorkouts', () => {
     }
   });
 
+  it('carries the resolved workout so the server never needs the template library', () => {
+    const [first] = assignCampaignWorkouts({
+      occurrences: occurrences(1),
+      tracks: [TRACKS[0]],
+      templates: TEMPLATES,
+    });
+    expect(first.workout).toEqual([{ name: 'Burpees', target: 10, unit: 'reps' }]);
+  });
+
+  it('resolves real library movements for every session of a campaign', () => {
+    const planned = assignCampaignWorkouts({
+      occurrences: occurrences(12),
+      tracks: [
+        { durationMinutes: 10, category: 'blood-shunt' },
+        { durationMinutes: 15, category: 'engine-room' },
+      ],
+    });
+    expect(planned.every((entry) => entry.workout.length > 0)).toBe(true);
+    expect(planned.every((entry) => entry.workout.every((m) => m.name.length > 0))).toBe(true);
+  });
+
   it('is deterministic across runs', () => {
     const args = {
       occurrences: occurrences(8),
