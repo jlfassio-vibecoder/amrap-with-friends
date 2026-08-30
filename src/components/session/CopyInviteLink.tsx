@@ -2,6 +2,7 @@ import { useCopySessionInvite } from '@/components/session/useCopySessionInvite'
 
 interface CopyInviteLinkProps {
   sessionId: string;
+  lobbyId?: string | null;
   /** When true, omit the outer walkthrough wrapper (parent owns the anchor). */
   embedded?: boolean;
   className?: string;
@@ -9,10 +10,11 @@ interface CopyInviteLinkProps {
 
 export function CopyInviteLink({
   sessionId,
+  lobbyId = null,
   embedded = false,
   className,
 }: CopyInviteLinkProps) {
-  const { secured, error, copyInvite } = useCopySessionInvite(sessionId);
+  const { secured, error, copyInvite } = useCopySessionInvite(sessionId, lobbyId);
 
   const button = (
     <button

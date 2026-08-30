@@ -22,7 +22,8 @@ import {
   type WorkoutCategory,
   type WorkoutTemplate,
 } from '@/data/workoutTemplates';
-import { createSession, fetchHostActiveSessionCount } from '@/lib/api/sessions';
+import { fetchHostActiveSessionCount } from '@/lib/api/sessions';
+import { createLobbySession } from '@/lib/api/lobby';
 import { getSupabaseConfigError } from '@/lib/supabase';
 import { track } from '@/lib/analytics/track';
 import { quotasFromProfile } from '@/lib/hud/classificationQuotas';
@@ -283,7 +284,7 @@ export default function CreateSessionPage() {
           : workoutSource === 'coach' && selectedCoachWorkout
             ? `coach:${selectedCoachWorkout.id}`
             : undefined;
-      const result = await createSession({
+      const result = await createLobbySession({
         nickname,
         durationMinutes,
         workout,

@@ -76,7 +76,7 @@ export function useSessionChannel(
         supabase
           .from('sessions')
           .select(
-            'id, duration_minutes, workout, template_id, state, time_left_sec, is_paused, started_at, scheduled_at, lobby_countdown_ends_at, segment_index, created_at, is_featured'
+            'id, duration_minutes, workout, template_id, state, time_left_sec, is_paused, started_at, scheduled_at, lobby_countdown_ends_at, segment_index, created_at, is_featured, lobby_id'
           )
           .eq('id', sessionId)
           .maybeSingle(),

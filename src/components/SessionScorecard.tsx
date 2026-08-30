@@ -1,6 +1,7 @@
 import type { LeaderboardEntry } from '@/lib/sessionSync/types';
 import { resolvePacingData } from '@/lib/scoring/resolvePacingData';
 import { ScoreBreakdownDisplay } from '@/components/ScoreBreakdownDisplay';
+import { Link } from 'react-router-dom';
 
 export type SessionScorecardSaveState = 'idle' | 'saving' | 'saved' | 'unavailable';
 
@@ -12,6 +13,8 @@ interface SessionScorecardProps {
   onSave: () => void;
   saveError?: string | null;
   saveMessage?: string | null;
+  /** When set (lobby daisy-chain), primary exit goes back to staging. */
+  stagingHref?: string | null;
 }
 
 function saveButtonLabel(saveState: SessionScorecardSaveState): string {
@@ -35,6 +38,7 @@ export function SessionScorecard({
   onSave,
   saveError = null,
   saveMessage = null,
+  stagingHref = null,
 }: SessionScorecardProps) {
   const titleId = 'session-scorecard-title';
   const showSaveAction = saveState !== 'unavailable';
@@ -116,9 +120,23 @@ export function SessionScorecard({
           </p>
         )}
 
-        <button type="button" className="btn-neutral w-full text-sm" onClick={onClose}>
-          Close
-        </button>
+        {stagingHref ? (
+          <div className="space-y-2">
+            <Link className="btn-primary inline-flex w-full justify-center text-sm" to={stagingHref}>
+              Back to staging
+            </Link>
+            <button type="button" className="btn-neutral w-full text-sm" onClick={onClose}>
+              Close
+            </button>
+            <Link className="link-accent block text-center text-sm" to="/">
+              Back home
+            </Link>
+          </div>
+        ) : (
+          <button type="button" className="btn-neutral w-full text-sm" onClick={onClose}>
+            Close
+          </button>
+        )}
       </div>
     </div>
   );

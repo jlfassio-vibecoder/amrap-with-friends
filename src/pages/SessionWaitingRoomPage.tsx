@@ -33,6 +33,9 @@ import { WalkthroughCompleteModal } from '@/components/walkthrough/WalkthroughCo
 import { useStagingWalkthrough } from '@/components/walkthrough/useStagingWalkthrough';
 import { useGhostPacer } from '@/hooks/useGhostPacer';
 import { useTacticalAudio } from '@/hooks/useTacticalAudio';
+import { useLobbyForceNav } from '@/hooks/useLobbyForceNav';
+import { getLobby } from '@/lib/api/lobby';
+import { setStoredLobbyIdForSession, getStoredLobbyIdForSession } from '@/lib/lobbyIdentity';
 import type { StoredGhostSelection } from '@/lib/sessionIdentity';
 import {
   elapsedPastLobbyCountdownSec,
@@ -402,6 +405,40 @@ function LiveSessionView({
   const channel = useSessionChannel(sessionId, { participantId, nickname });
   const live = useLiveAmrapSession(sessionId, channel);
   const { isHost, start: startSession, phase: livePhase } = live;
+
+  const lobbyId =
+    channel.session?.lobby_id ?? getStoredLobbyIdForSession(sessionId) ?? null;
+
+  useEffect(() => {
+    if (channel.session?.lobby_id) {
+      setStoredLobbyIdForSession(sessionId, channel.session.lobby_id);
+    }
+  }, [channel.session?.lobby_id, sessionId]);
+
+  const [lobbyActiveSessionId, setLobbyActiveSessionId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!lobbyId || livePhase !== 'finished') {
+      return;
+    }
+    let cancelled = false;
+    void getLobby(lobbyId).then((result) => {
+      if (!cancelled && result.data) {
+        setLobbyActiveSessionId(result.data.activeSessionId);
+      }
+    });
+    const id = window.setInterval(() => {
+      void getLobby(lobbyId).then((result) => {
+        if (!cancelled && result.data) {
+          setLobbyActiveSessionId(result.data.activeSessionId);
+        }
+      });
+    }, 4000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [lobbyId, livePhase]);
+
   const walkthrough = useStagingWalkthrough({
     sessionId,
     isHost,
@@ -540,6 +577,17 @@ function LiveSessionView({
     claim.showClaimPrompt &&
     !showPartialRepsModal &&
     !showScorecard;
+
+  useLobbyForceNav({
+    lobbyId,
+    activeSessionId: lobbyActiveSessionId,
+    currentSessionId: sessionId,
+    enabled: livePhase === 'finished' && !showPartialRepsModal,
+  });
+
+  const stagingHref = lobbyId ? `/lobby/${lobbyId}` : null;
+  const exitHref = stagingHref ?? '/';
+  const exitLabel = stagingHref ? 'Back to staging' : 'Back home';
 
   const canSave = canOfferSessionSave({
     claimToken,
@@ -769,6 +817,7 @@ function LiveSessionView({
               {isHost && live.phase === 'waiting' ? (
                 <HostStagingSteps
                   sessionId={sessionId}
+                  lobbyId={lobbyId}
                   countdownArmed={lobbyCountdownArmed}
                   actionsEnabled={sessionReady}
                   onAudioUnlock={handleAudioUnlock}
@@ -781,7 +830,7 @@ function LiveSessionView({
               ) : null}
 
               {!isHost && live.phase === 'waiting' ? (
-                <CopyInviteLink sessionId={sessionId} />
+                <CopyInviteLink sessionId={sessionId} lobbyId={lobbyId} />
               ) : null}
 
               {showGhostPacerError && activeGhostSelection ? (
@@ -917,7 +966,9 @@ function LiveSessionView({
           <p>
             <span className="font-semibold text-ink">Your nickname:</span> {live.nickname}
           </p>
-          <Link className="link-accent" to="/">Back home</Link>
+          <Link className="link-accent" to={exitHref}>
+            {exitLabel}
+          </Link>
         </section>
 
         <footer className="hidden border-t border-divider bg-surface text-sm text-secondary lg:flex lg:shrink-0 lg:items-center lg:justify-between lg:px-8 lg:py-3">
@@ -927,7 +978,9 @@ function LiveSessionView({
           <span>
             <span className="font-semibold text-ink">Your nickname:</span> {live.nickname}
           </span>
-          <Link className="link-accent" to="/">Back home</Link>
+          <Link className="link-accent" to={exitHref}>
+            {exitLabel}
+          </Link>
         </footer>
       </div>
 
@@ -948,6 +1001,7 @@ function LiveSessionView({
           saveError={claim.claimError}
           saveMessage={claim.claimMessage}
           onClose={() => setScorecardDismissed(true)}
+          stagingHref={stagingHref}
         />
       ) : null}
 

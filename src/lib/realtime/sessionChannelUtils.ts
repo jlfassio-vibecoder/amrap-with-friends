@@ -83,6 +83,14 @@ export function parseSessionRow(record: Record<string, unknown>): SessionRow | n
         ? templateIdRaw.trim()
         : null;
 
+  const lobbyIdRaw = record.lobby_id;
+  const lobbyId =
+    lobbyIdRaw === null || lobbyIdRaw === undefined
+      ? null
+      : typeof lobbyIdRaw === 'string' && lobbyIdRaw.trim().length > 0
+        ? lobbyIdRaw.trim()
+        : null;
+
   return {
     id,
     duration_minutes: durationMinutes,
@@ -97,6 +105,7 @@ export function parseSessionRow(record: Record<string, unknown>): SessionRow | n
     segment_index: segmentIndex,
     created_at: createdAt,
     is_featured: record.is_featured === true,
+    lobby_id: lobbyId,
   };
 }
 

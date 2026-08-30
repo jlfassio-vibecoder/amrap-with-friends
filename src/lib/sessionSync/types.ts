@@ -17,6 +17,7 @@ export interface SessionRow {
   segment_index: number;
   created_at: string;
   is_featured: boolean;
+  lobby_id: string | null;
 }
 
 export interface ParticipantRow {
