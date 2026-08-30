@@ -3,10 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { joinLobby } from '@/lib/api/lobby';
 import { getStoredLobbyNickname } from '@/lib/lobbyIdentity';
 import { getStoredNickname } from '@/lib/sessionIdentity';
+import { getSupabaseClient } from '@/lib/supabase';
 
 /**
- * When the lobby's active_session_id points at a different session than the
- * one the viewer is on, navigate into that session (forced launch / straggler pull).
+ * When the lobby's active_session_id points at a live session the viewer is
+ * not on, join and navigate (forced launch / straggler pull).
+ *
+ * Skips finished sessions so `/lobby/:id` stays reachable after AAR, and only
+ * navigates after joinLobby succeeds so identity is persisted first.
  */
 export function useLobbyForceNav(input: {
   lobbyId: string | null | undefined;
@@ -33,20 +37,42 @@ export function useLobbyForceNav(input: {
     if (lastNavigatedRef.current === target) {
       return;
     }
-    lastNavigatedRef.current = target;
 
-    const nickname =
-      getStoredLobbyNickname(lobbyId) ?? getStoredNickname(target) ?? 'Athlete';
+    const nickname = getStoredLobbyNickname(lobbyId) ?? getStoredNickname(target) ?? 'Athlete';
+
+    let cancelled = false;
 
     void (async () => {
-      await joinLobby({ lobbyId, nickname });
+      const supabase = getSupabaseClient();
+      const { data: sessionRow } = await supabase
+        .from('sessions')
+        .select('state')
+        .eq('id', target)
+        .maybeSingle();
+
+      if (cancelled) {
+        return;
+      }
+
+      const state =
+        sessionRow && typeof sessionRow === 'object'
+          ? (sessionRow as { state?: string }).state
+          : null;
+      if (state !== 'waiting' && state !== 'setup' && state !== 'work') {
+        return;
+      }
+
+      const joined = await joinLobby({ lobbyId, nickname });
+      if (cancelled || joined.error || !joined.data) {
+        return;
+      }
+
+      lastNavigatedRef.current = target;
       navigate(`/session/${target}`, { replace: true });
     })();
-  }, [
-    input.activeSessionId,
-    input.currentSessionId,
-    input.enabled,
-    input.lobbyId,
-    navigate,
-  ]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [input.activeSessionId, input.currentSessionId, input.enabled, input.lobbyId, navigate]);
 }

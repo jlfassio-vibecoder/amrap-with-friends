@@ -826,6 +826,7 @@ BEGIN
     FROM public.lobby_members
     WHERE lobby_id = p_lobby_id
       AND status = 'active'
+      AND user_id IS NOT NULL
     ORDER BY joined_at ASC
   LOOP
     v_role := CASE
