@@ -282,6 +282,7 @@ describe('useLobbyForceNav', () => {
         createdAt: '',
         updatedAt: '',
         members: [],
+        nextMissionPendingAt: null,
       },
       error: null,
     });

@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import {
   getStoredParticipantId,
@@ -23,6 +23,8 @@ import { SessionScorecard, type SessionScorecardSaveState } from '@/components/S
 import { SessionChat } from '@/components/SessionChat';
 import { GhostPacerStrip } from '@/components/GhostPacerStrip';
 import { CopyInviteLink } from '@/components/session/CopyInviteLink';
+import { DaisyChainCta } from '@/components/session/DaisyChainCta';
+import { MissionLoadingModal } from '@/components/session/MissionLoadingModal';
 import { EditRallyScheduleForm } from '@/components/session/EditRallyScheduleForm';
 import { ArmedLobbyControls } from '@/components/session/ArmedLobbyControls';
 import { HostStagingSteps } from '@/components/session/HostStagingSteps';
@@ -37,8 +39,9 @@ import { useLobbyForceNav } from '@/hooks/useLobbyForceNav';
 import { useLobbyHostHandoff } from '@/hooks/useLobbyHostHandoff';
 import { useStaleLobbyHostClaim } from '@/hooks/useStaleLobbyHostClaim';
 import { useLobbyChannel } from '@/lib/realtime/useLobbyChannel';
-import { passLobbyCommand, touchLobbyPresence } from '@/lib/api/lobby';
+import { announceNextMission, passLobbyCommand, touchLobbyPresence } from '@/lib/api/lobby';
 import { canPassLobbyCommand } from '@/lib/lobby/canPassLobbyCommand';
+import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
 import {
   getStoredLobbyIdForSession,
   getStoredLobbyMemberId,
@@ -393,13 +396,16 @@ function LiveSessionView({
   nickname: string;
   onHostAuthorityChange?: () => void;
 }) {
+  const navigate = useNavigate();
   const claimToken = getStoredClaimToken(sessionId);
   const { isAuthenticated, isAuthLoading, user } = useAmrapAuth();
   const [passBusy, setPassBusy] = useState(false);
   const [passError, setPassError] = useState<string | null>(null);
   const [forceNavError, setForceNavError] = useState<string | null>(null);
+  const [daisyExitError, setDaisyExitError] = useState<string | null>(null);
   const [isSubmittingPartialReps, setIsSubmittingPartialReps] = useState(false);
   const [scorecardDismissed, setScorecardDismissed] = useState(false);
+  const [missionLoadingDismissed, setMissionLoadingDismissed] = useState(false);
   const [authOpenForSave, setAuthOpenForSave] = useState(false);
   const pendingSaveAfterAuth = useRef(false);
   const [ghostSelection, setGhostSelection] = useState<StoredGhostSelection | null>(() =>
@@ -610,7 +616,8 @@ function LiveSessionView({
     activeSessionId: lobbyChannel.lobby?.activeSessionId,
     activeSessionState: lobbyChannel.lobby?.activeSessionState,
     currentSessionId: sessionId,
-    enabled: livePhase === 'finished' && !showPartialRepsModal,
+    // Hold straggler pull until AAR is dismissed — Daisy-chain / Close are the exits.
+    enabled: livePhase === 'finished' && !showPartialRepsModal && !showScorecard,
     onError: setForceNavError,
   });
 
@@ -640,8 +647,51 @@ function LiveSessionView({
     Boolean(lobbyChannel.lobby?.members.length);
 
   const stagingHref = lobbyId ? `/lobby/${lobbyId}` : null;
-  const exitHref = stagingHref ?? '/';
-  const exitLabel = stagingHref ? 'Back to staging' : 'Back home';
+  const nextMissionPendingAt = lobbyChannel.lobby?.nextMissionPendingAt ?? null;
+  const missionLoadingStorageKey =
+    lobbyId && nextMissionPendingAt ? `mission-loading:${lobbyId}:${nextMissionPendingAt}` : null;
+
+  useEffect(() => {
+    if (!missionLoadingStorageKey) {
+      setMissionLoadingDismissed(false);
+      return;
+    }
+    try {
+      setMissionLoadingDismissed(sessionStorage.getItem(missionLoadingStorageKey) === '1');
+    } catch {
+      setMissionLoadingDismissed(false);
+    }
+  }, [missionLoadingStorageKey]);
+
+  const showMissionLoadingModal =
+    livePhase === 'finished' && Boolean(nextMissionPendingAt) && !missionLoadingDismissed;
+
+  async function handleDaisyChainExit() {
+    if (!stagingHref) {
+      navigate('/');
+      return;
+    }
+    setDaisyExitError(null);
+    if (isHost && lobbyId) {
+      const result = await announceNextMission(lobbyId);
+      if (result.error) {
+        setDaisyExitError(result.error.message);
+        return;
+      }
+    }
+    navigate(stagingHref);
+  }
+
+  function dismissMissionLoading() {
+    if (missionLoadingStorageKey) {
+      try {
+        sessionStorage.setItem(missionLoadingStorageKey, '1');
+      } catch {
+        /* sessionStorage unavailable */
+      }
+    }
+    setMissionLoadingDismissed(true);
+  }
 
   const canSave = canOfferSessionSave({
     claimToken,
@@ -974,7 +1024,9 @@ function LiveSessionView({
 
             {live.workout.length > 0 && (
               <section className="card shrink-0 space-y-2 p-4" data-walkthrough-id="workout">
-                <h2 className="text-display text-sm text-ink lg:text-lg">Workout</h2>
+                <h2 className="text-display text-center text-xl text-ink lg:text-3xl">
+                  {resolveWorkoutTitle(live.templateId)}
+                </h2>
                 <ul className="space-y-1 text-sm lg:space-y-4">
                   {live.workout.map((exercise, index) => (
                     <li
@@ -1004,59 +1056,65 @@ function LiveSessionView({
             />
           </div>
 
-          <ParticipantsPanel
-            leaderboard={live.leaderboard}
-            presence={live.presence}
-            selfParticipantId={live.participantId}
-            phase={live.phase}
-            className="lg:min-h-0 lg:overflow-hidden"
-          />
+          <div className="flex min-h-0 flex-col gap-6 lg:overflow-hidden">
+            <ParticipantsPanel
+              leaderboard={live.leaderboard}
+              presence={live.presence}
+              selfParticipantId={live.participantId}
+              phase={live.phase}
+              className={
+                showLobbyPass && lobbyChannel.lobby
+                  ? 'lg:min-h-0 lg:flex-[2] lg:overflow-hidden'
+                  : 'lg:min-h-0 lg:flex-1 lg:overflow-hidden'
+              }
+            />
 
-          {showLobbyPass && lobbyChannel.lobby ? (
-            <section className="card space-y-3 p-4 lg:col-span-1">
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-secondary">
-                Pass Command
-              </h2>
-              <ul className="space-y-2">
-                {lobbyChannel.lobby.members.map((member) => {
-                  const canPass = canPassLobbyCommand(member, user?.id);
-                  const isMemberHost = Boolean(
-                    lobbyChannel.lobby?.hostUserId &&
-                    member.userId === lobbyChannel.lobby.hostUserId
-                  );
-                  if (!canPass && !isMemberHost) {
-                    return null;
-                  }
-                  return (
-                    <li
-                      key={member.id}
-                      className="flex flex-wrap items-center justify-between gap-2 border-b border-divider py-2 last:border-0"
-                    >
-                      <div>
-                        <span className="text-ink">{member.nickname}</span>
-                        {isMemberHost ? (
-                          <span className="ml-2 text-xs uppercase tracking-widest text-accent">
-                            Host
-                          </span>
+            {showLobbyPass && lobbyChannel.lobby ? (
+              <section className="card flex min-h-0 flex-col space-y-3 overflow-hidden p-4 lg:flex-1 lg:overflow-y-auto">
+                <h2 className="shrink-0 text-sm font-semibold uppercase tracking-widest text-secondary">
+                  Pass Command
+                </h2>
+                <ul className="min-h-0 space-y-2 overflow-y-auto">
+                  {lobbyChannel.lobby.members.map((member) => {
+                    const canPass = canPassLobbyCommand(member, user?.id);
+                    const isMemberHost = Boolean(
+                      lobbyChannel.lobby?.hostUserId &&
+                      member.userId === lobbyChannel.lobby.hostUserId
+                    );
+                    if (!canPass && !isMemberHost) {
+                      return null;
+                    }
+                    return (
+                      <li
+                        key={member.id}
+                        className="flex flex-wrap items-center justify-between gap-2 border-b border-divider py-2 last:border-0"
+                      >
+                        <div>
+                          <span className="text-ink">{member.nickname}</span>
+                          {isMemberHost ? (
+                            <span className="ml-2 text-xs uppercase tracking-widest text-accent">
+                              Host
+                            </span>
+                          ) : null}
+                        </div>
+                        {canPass ? (
+                          <button
+                            type="button"
+                            className="text-xs uppercase tracking-widest text-muted hover:text-ink"
+                            disabled={passBusy || !member.userId}
+                            onClick={() => member.userId && void handlePassCommand(member.userId)}
+                          >
+                            Pass Command
+                          </button>
                         ) : null}
-                      </div>
-                      {canPass ? (
-                        <button
-                          type="button"
-                          className="text-xs uppercase tracking-widest text-muted hover:text-ink"
-                          disabled={passBusy || !member.userId}
-                          onClick={() => member.userId && void handlePassCommand(member.userId)}
-                        >
-                          Pass Command
-                        </button>
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ul>
-              {passError ? <p className="text-error text-sm">{passError}</p> : null}
-            </section>
-          ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+                {passError ? <p className="text-error shrink-0 text-sm">{passError}</p> : null}
+              </section>
+            ) : null}
+          </div>
         </div>
 
         <section className="space-y-2 px-6 pb-6 text-sm text-secondary lg:hidden">
@@ -1066,11 +1124,16 @@ function LiveSessionView({
           <p>
             <span className="font-semibold text-ink">Your nickname:</span> {live.nickname}
           </p>
+          {daisyExitError ? <p className="text-error text-sm">{daisyExitError}</p> : null}
           {forceNavError ? <p className="text-error text-sm">{forceNavError}</p> : null}
           <div className="flex flex-wrap gap-4">
-            <Link className="link-accent" to={exitHref}>
-              {exitLabel}
-            </Link>
+            {stagingHref ? (
+              <DaisyChainCta className="link-accent text-sm" onActivate={handleDaisyChainExit} />
+            ) : (
+              <Link className="link-accent" to="/">
+                Back home
+              </Link>
+            )}
             {stagingHref ? (
               <Link className="link-accent" to="/">
                 Back home
@@ -1087,10 +1150,15 @@ function LiveSessionView({
             <span className="font-semibold text-ink">Your nickname:</span> {live.nickname}
           </span>
           <span className="flex flex-wrap items-center gap-4">
+            {daisyExitError ? <span className="text-error text-sm">{daisyExitError}</span> : null}
             {forceNavError ? <span className="text-error text-sm">{forceNavError}</span> : null}
-            <Link className="link-accent" to={exitHref}>
-              {exitLabel}
-            </Link>
+            {stagingHref ? (
+              <DaisyChainCta className="link-accent text-sm" onActivate={handleDaisyChainExit} />
+            ) : (
+              <Link className="link-accent" to="/">
+                Back home
+              </Link>
+            )}
             {stagingHref ? (
               <Link className="link-accent" to="/">
                 Back home
@@ -1118,8 +1186,12 @@ function LiveSessionView({
           saveMessage={claim.claimMessage}
           onClose={() => setScorecardDismissed(true)}
           stagingHref={stagingHref}
+          lobbyId={lobbyId}
+          isHost={isHost}
         />
       ) : null}
+
+      {showMissionLoadingModal ? <MissionLoadingModal onConfirm={dismissMissionLoading} /> : null}
 
       {authOpenForSave ? <AuthModal onClose={handleAuthCloseForSave} /> : null}
 

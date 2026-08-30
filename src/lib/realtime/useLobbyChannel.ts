@@ -42,6 +42,11 @@ export function parseLobbyRow(record: Record<string, unknown>): Partial<LobbySna
     status,
     createdAt: typeof record.created_at === 'string' ? record.created_at : '',
     updatedAt: typeof record.updated_at === 'string' ? record.updated_at : '',
+    ...(typeof record.next_mission_pending_at === 'string'
+      ? { nextMissionPendingAt: record.next_mission_pending_at }
+      : record.next_mission_pending_at === null
+        ? { nextMissionPendingAt: null }
+        : {}),
   };
 }
 

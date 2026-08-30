@@ -1,7 +1,10 @@
 import type { LeaderboardEntry } from '@/lib/sessionSync/types';
 import { resolvePacingData } from '@/lib/scoring/resolvePacingData';
 import { ScoreBreakdownDisplay } from '@/components/ScoreBreakdownDisplay';
-import { Link } from 'react-router-dom';
+import { DaisyChainCta } from '@/components/session/DaisyChainCta';
+import { announceNextMission } from '@/lib/api/lobby';
+import { Link, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 
 export type SessionScorecardSaveState = 'idle' | 'saving' | 'saved' | 'unavailable';
 
@@ -13,8 +16,10 @@ interface SessionScorecardProps {
   onSave: () => void;
   saveError?: string | null;
   saveMessage?: string | null;
-  /** When set (lobby daisy-chain), primary exit goes back to staging. */
+  /** When set (lobby daisy-chain), primary exit opens the next-session picker. */
   stagingHref?: string | null;
+  lobbyId?: string | null;
+  isHost?: boolean;
 }
 
 function saveButtonLabel(saveState: SessionScorecardSaveState): string {
@@ -39,15 +44,34 @@ export function SessionScorecard({
   saveError = null,
   saveMessage = null,
   stagingHref = null,
+  lobbyId = null,
+  isHost = false,
 }: SessionScorecardProps) {
+  const navigate = useNavigate();
   const titleId = 'session-scorecard-title';
   const showSaveAction = saveState !== 'unavailable';
   const saveDisabled = saveState === 'saving' || saveState === 'saved';
+  const [daisyError, setDaisyError] = useState<string | null>(null);
   const pacingData = resolvePacingData({
     roundCount: entry.roundCount,
     partialReps: entry.partialReps,
     liveRounds: entry.rounds,
   });
+
+  async function handleDaisyChain() {
+    if (!stagingHref) {
+      return;
+    }
+    setDaisyError(null);
+    if (isHost && lobbyId) {
+      const result = await announceNextMission(lobbyId);
+      if (result.error) {
+        setDaisyError(result.error.message);
+        return;
+      }
+    }
+    navigate(stagingHref);
+  }
 
   return (
     <div
@@ -97,21 +121,15 @@ export function SessionScorecard({
             <button
               type="button"
               className={
-                saveState === 'saved'
-                  ? 'btn-outline w-full text-sm'
-                  : 'btn-primary w-full text-sm'
+                saveState === 'saved' ? 'btn-outline w-full text-sm' : 'btn-primary w-full text-sm'
               }
               disabled={saveDisabled}
               onClick={onSave}
             >
               {saveButtonLabel(saveState)}
             </button>
-            {saveMessage ? (
-              <p className="text-sm text-accent">{saveMessage}</p>
-            ) : null}
-            {saveError ? (
-              <p className="text-sm text-error">{saveError}</p>
-            ) : null}
+            {saveMessage ? <p className="text-sm text-accent">{saveMessage}</p> : null}
+            {saveError ? <p className="text-error text-sm">{saveError}</p> : null}
           </div>
         ) : (
           <p className="text-sm text-secondary">
@@ -122,9 +140,8 @@ export function SessionScorecard({
 
         {stagingHref ? (
           <div className="space-y-2">
-            <Link className="btn-primary inline-flex w-full justify-center text-sm" to={stagingHref}>
-              Back to staging
-            </Link>
+            <DaisyChainCta onActivate={handleDaisyChain} />
+            {daisyError ? <p className="text-error text-sm">{daisyError}</p> : null}
             <button type="button" className="btn-neutral w-full text-sm" onClick={onClose}>
               Close
             </button>

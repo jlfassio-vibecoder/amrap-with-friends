@@ -52,4 +52,16 @@ describe('parseLobbyRow', () => {
     const parsed = parseLobbyRow({ ...ROW, active_session_id: null });
     expect(parsed?.activeSessionId).toBeNull();
   });
+
+  it('reads next_mission_pending_at when present', () => {
+    expect(
+      parseLobbyRow({ ...ROW, next_mission_pending_at: '2026-09-01T12:00:00Z' })
+    ).toMatchObject({
+      nextMissionPendingAt: '2026-09-01T12:00:00Z',
+    });
+    expect(parseLobbyRow({ ...ROW, next_mission_pending_at: null })).toMatchObject({
+      nextMissionPendingAt: null,
+    });
+    expect(parseLobbyRow(ROW)).not.toHaveProperty('nextMissionPendingAt');
+  });
 });
