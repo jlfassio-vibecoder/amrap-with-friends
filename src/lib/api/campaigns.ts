@@ -3,7 +3,9 @@ import type { WorkoutExercise } from '@/lib/api/sessionTypes';
 import {
   computeCampaignStandings,
   type CampaignStandingRow,
+  type CampaignStandingsMember,
   type CampaignStandingsOccurrence,
+  type CampaignStandingsScore,
   type CampaignWeekCount,
   type PlannedCampaignOccurrence,
 } from '@/lib/campaign';
@@ -408,20 +410,28 @@ export async function leaveCampaign(
   return { error: null };
 }
 
-export type { CampaignStandingRow };
+export type { CampaignStandingRow, CampaignStandingsMember, CampaignStandingsScore };
+
+export type CampaignStandingsPayload = {
+  standings: CampaignStandingRow[];
+  members: CampaignStandingsMember[];
+  scores: CampaignStandingsScore[];
+};
 
 /**
  * Fetches the raw standings matrix from Postgres and ranks in TypeScript so
- * the aggregation rules stay unit-tested in one place.
+ * the aggregation rules stay unit-tested in one place. Also returns the matrix
+ * so the detail page can compute benchmark → retest progress without a second RPC.
  */
 export async function fetchCampaignStandings(
   campaignId: string
-): Promise<{ data: CampaignStandingRow[]; error: CampaignApiError | null }> {
+): Promise<{ data: CampaignStandingsPayload; error: CampaignApiError | null }> {
+  const empty: CampaignStandingsPayload = { standings: [], members: [], scores: [] };
   const { data, error } = await callRpc('campaign_standings', {
     p_campaign_id: campaignId,
   });
   if (error) {
-    return { data: [], error: { message: mapError(error.message) } };
+    return { data: empty, error: { message: mapError(error.message) } };
   }
 
   const root = readRecord(data);
@@ -444,7 +454,7 @@ export async function fetchCampaignStandings(
         left: readString(row.status) === 'left',
       };
     })
-    .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+    .filter((entry): entry is CampaignStandingsMember => entry !== null);
 
   const occurrences = occurrencesRaw
     .map((raw): CampaignStandingsOccurrence | null => {
@@ -481,10 +491,14 @@ export async function fetchCampaignStandings(
           : readNumber(row.final_score);
       return { occurrenceId, userId, finalScore };
     })
-    .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+    .filter((entry): entry is CampaignStandingsScore => entry !== null);
 
   return {
-    data: computeCampaignStandings({ members, occurrences, scores }),
+    data: {
+      standings: computeCampaignStandings({ members, occurrences, scores }),
+      members,
+      scores,
+    },
     error: null,
   };
 }

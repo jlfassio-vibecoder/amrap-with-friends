@@ -50,6 +50,17 @@ export type {
   CampaignStandingsScore,
 } from './computeCampaignStandings';
 export {
+  computeCampaignTestProgress,
+  formatCampaignRepDelta,
+  formatCampaignRepScore,
+} from './computeCampaignTestProgress';
+export type {
+  CampaignTestProgress,
+  CampaignTestProgressInput,
+  CampaignTestProgressRow,
+  TestProgressOccurrence,
+} from './computeCampaignTestProgress';
+export {
   CampaignValidationError,
   type CampaignCalendar,
   type CampaignOccurrence,

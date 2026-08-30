@@ -10,14 +10,21 @@ import {
   leaveCampaign,
   type CampaignDetail,
   type CampaignStandingRow,
+  type CampaignStandingsMember,
+  type CampaignStandingsScore,
 } from '@/lib/api/campaigns';
 import {
   campaignProgress,
+  campaignRoleDescription,
+  computeCampaignTestProgress,
   deriveCampaignRoles,
+  formatCampaignRepDelta,
+  formatCampaignRepScore,
   formatCampaignShape,
   formatOccurrenceDate,
   groupOccurrencesByWeek,
   type CampaignOccurrenceRole,
+  type CampaignTestProgress,
 } from '@/lib/campaign';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -34,9 +41,7 @@ const OCCURRENCE_LABEL: Record<string, string> = {
   skipped: 'Skipped',
 };
 
-const WORKOUT_NAMES = new Map(
-  WORKOUT_TEMPLATES.map((template) => [template.id, template.name])
-);
+const WORKOUT_NAMES = new Map(WORKOUT_TEMPLATES.map((template) => [template.id, template.name]));
 
 function formatNormalisedAverage(value: number | null): string {
   if (value === null) {
@@ -50,6 +55,8 @@ export default function CampaignDetailPage() {
   const navigate = useNavigate();
   const [detail, setDetail] = useState<CampaignDetail | null>(null);
   const [standings, setStandings] = useState<CampaignStandingRow[]>([]);
+  const [standingsMembers, setStandingsMembers] = useState<CampaignStandingsMember[]>([]);
+  const [standingsScores, setStandingsScores] = useState<CampaignStandingsScore[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loadedId, setLoadedId] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
@@ -72,11 +79,21 @@ export default function CampaignDetailPage() {
           setError(detailResult.error?.message ?? 'That campaign is not available.');
           setDetail(null);
           setStandings([]);
+          setStandingsMembers([]);
+          setStandingsScores([]);
         } else {
           setError(null);
           setDetail(detailResult.data);
           // Standings ACL mirrors detail; a soft failure leaves the rest of the page usable.
-          setStandings(standingsResult.error ? [] : standingsResult.data);
+          if (standingsResult.error) {
+            setStandings([]);
+            setStandingsMembers([]);
+            setStandingsScores([]);
+          } else {
+            setStandings(standingsResult.data.standings);
+            setStandingsMembers(standingsResult.data.members);
+            setStandingsScores(standingsResult.data.scores);
+          }
         }
         setLoadedId(campaignId);
       })
@@ -87,6 +104,8 @@ export default function CampaignDetailPage() {
         setError('That campaign is not available.');
         setDetail(null);
         setStandings([]);
+        setStandingsMembers([]);
+        setStandingsScores([]);
         setLoadedId(campaignId);
       });
 
@@ -151,6 +170,17 @@ export default function CampaignDetailPage() {
     (occurrence) => occurrence.status === 'generated' || occurrence.status === 'done'
   );
 
+  const testProgress: CampaignTestProgress | null = computeCampaignTestProgress({
+    occurrences: detail.occurrences.map((occurrence) => ({
+      occurrenceId: occurrence.occurrenceId,
+      weekNumber: occurrence.weekNumber,
+      templateId: occurrence.templateId,
+      localDate: occurrence.localDate,
+    })),
+    members: standingsMembers,
+    scores: standingsScores,
+  });
+
   return (
     <NarrowPageLayout
       title={detail.name}
@@ -180,6 +210,54 @@ export default function CampaignDetailPage() {
 
         {detail.goal ? <p className="text-sm text-secondary">{detail.goal}</p> : null}
       </section>
+
+      {testProgress ? (
+        <section className="card space-y-4 p-6">
+          <div>
+            <h2 className="text-display text-xl text-ink">The test</h2>
+            <p className="text-sm text-secondary">{campaignRoleDescription('retest')}</p>
+          </div>
+          {!testProgress.hasBenchmarkScore ? (
+            <p className="text-sm text-secondary">Scores show up after the opening benchmark.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[20rem] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-divider text-xs uppercase tracking-widest text-muted">
+                    <th className="pb-2 pr-3 font-semibold">Athlete</th>
+                    <th className="pb-2 pr-3 font-semibold">Week 1</th>
+                    <th className="pb-2 pr-3 font-semibold">Latest retest</th>
+                    <th className="pb-2 font-semibold">Change</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {testProgress.rows.map((row) => (
+                    <tr key={row.userId} className="border-b border-divider last:border-0">
+                      <td className="py-2.5 pr-3 text-ink">
+                        {row.nickname ?? 'Athlete'}
+                        {row.left ? (
+                          <span className="ml-2 text-xs uppercase tracking-widest text-muted">
+                            Left
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="py-2.5 pr-3 tabular-nums text-ink">
+                        {formatCampaignRepScore(row.benchmarkScore)}
+                      </td>
+                      <td className="py-2.5 pr-3 tabular-nums text-ink">
+                        {formatCampaignRepScore(row.retestScore)}
+                      </td>
+                      <td className="py-2.5 tabular-nums text-ink">
+                        {formatCampaignRepDelta(row.delta)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      ) : null}
 
       <section className="card space-y-4 p-6">
         <h2 className="text-display text-xl text-ink">Standings</h2>
@@ -247,18 +325,15 @@ export default function CampaignDetailPage() {
         </ul>
 
         {detail.viewerRole === 'host' && detail.inviteCode ? (
-          <CopyCampaignInvite
-            inviteCode={detail.inviteCode}
-            campaignId={detail.campaignId}
-          />
+          <CopyCampaignInvite inviteCode={detail.inviteCode} campaignId={detail.campaignId} />
         ) : null}
 
         {detail.viewerRole === 'member' ? (
           confirmLeave ? (
             <div className="space-y-2">
               <p className="text-sm text-secondary">
-                Leave this campaign? Your finished sessions stay on your record,
-                and the host can invite you back.
+                Leave this campaign? Your finished sessions stay on your record, and the host can
+                invite you back.
               </p>
               <div className="flex flex-wrap gap-3">
                 <button
@@ -306,9 +381,7 @@ export default function CampaignDetailPage() {
                   <span className="flex flex-wrap items-baseline gap-2 text-sm font-semibold text-ink">
                     {formatOccurrenceDate(occurrence.localDate)}
                     <span className="font-normal text-secondary">{occurrence.localTime}</span>
-                    <CampaignRoleBadge
-                      role={roleBySequence.get(occurrence.sequence) ?? 'build'}
-                    />
+                    <CampaignRoleBadge role={roleBySequence.get(occurrence.sequence) ?? 'build'} />
                   </span>
                   <span className="flex items-baseline gap-3 text-sm text-secondary">
                     {occurrence.templateId ? (
