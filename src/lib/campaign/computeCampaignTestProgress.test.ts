@@ -115,9 +115,73 @@ describe('computeCampaignTestProgress', () => {
         left: false,
         benchmarkScore: 40,
         retestScore: null,
+        benchmarkMadeUp: false,
+        retestMadeUp: false,
         delta: null,
       },
     ]);
+  });
+
+  it('flags when Week 1 or latest retest came from a makeup', () => {
+    const occurrences = [
+      occurrence({
+        occurrenceId: 'bench',
+        templateId: 'flash-flood',
+        weekNumber: 1,
+        localDate: '2026-03-02',
+      }),
+      occurrence({
+        occurrenceId: 'build',
+        templateId: 'other',
+        weekNumber: 1,
+        localDate: '2026-03-04',
+      }),
+      occurrence({
+        occurrenceId: 'build2',
+        templateId: 'other-2',
+        weekNumber: 2,
+        localDate: '2026-03-09',
+      }),
+      occurrence({
+        occurrenceId: 'retest',
+        templateId: 'flash-flood',
+        weekNumber: 2,
+        localDate: '2026-03-11',
+      }),
+    ];
+
+    const bothLive = computeCampaignTestProgress({
+      occurrences,
+      members: [member({ userId: 'u1' }), member({ userId: 'u2' })],
+      scores: [
+        { occurrenceId: 'bench', userId: 'u1', finalScore: 40 },
+        { occurrenceId: 'retest', userId: 'u1', finalScore: 48 },
+        { occurrenceId: 'bench', userId: 'u2', finalScore: 35, madeUp: true },
+        { occurrenceId: 'retest', userId: 'u2', finalScore: 42, madeUp: true },
+      ],
+    });
+
+    expect(bothLive?.rows.find((row) => row.userId === 'u1')).toMatchObject({
+      benchmarkMadeUp: false,
+      retestMadeUp: false,
+    });
+    expect(bothLive?.rows.find((row) => row.userId === 'u2')).toMatchObject({
+      benchmarkMadeUp: true,
+      retestMadeUp: true,
+    });
+
+    const mixed = computeCampaignTestProgress({
+      occurrences,
+      members: [member({ userId: 'u3' })],
+      scores: [
+        { occurrenceId: 'bench', userId: 'u3', finalScore: 30, madeUp: true },
+        { occurrenceId: 'retest', userId: 'u3', finalScore: 40 },
+      ],
+    });
+    expect(mixed?.rows[0]).toMatchObject({
+      benchmarkMadeUp: true,
+      retestMadeUp: false,
+    });
   });
 
   it('uses the chronologically latest scored retest for the delta', () => {

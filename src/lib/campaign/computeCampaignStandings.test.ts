@@ -31,9 +31,10 @@ function occurrence(
 function score(
   occurrenceId: string,
   userId: string,
-  finalScore: number | null
+  finalScore: number | null,
+  madeUp = false
 ): CampaignStandingsScore {
-  return { occurrenceId, userId, finalScore };
+  return { occurrenceId, userId, finalScore, madeUp: madeUp || undefined };
 }
 
 function input(partial: Partial<CampaignStandingsInput>): CampaignStandingsInput {
@@ -229,5 +230,23 @@ describe('computeCampaignStandings', () => {
     );
 
     expect(rows[0]).toMatchObject({ attended: 1, eligible: 3 });
+  });
+
+  it('flags members who have at least one makeup score', () => {
+    const rows = computeCampaignStandings(
+      input({
+        members: [member('a'), member('b')],
+        occurrences: [occurrence('o1', '2026-10-05'), occurrence('o2', '2026-10-07')],
+        scores: [
+          score('o1', 'a', 100, true),
+          score('o1', 'b', 90),
+          score('o2', 'a', 80),
+          score('o2', 'b', 80),
+        ],
+      })
+    );
+
+    expect(rows.find((row) => row.userId === 'a')).toMatchObject({ hasMadeUp: true });
+    expect(rows.find((row) => row.userId === 'b')).toMatchObject({ hasMadeUp: false });
   });
 });
