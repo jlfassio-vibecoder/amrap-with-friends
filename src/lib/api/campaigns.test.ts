@@ -261,6 +261,7 @@ describe('fetchCampaignDetail', () => {
     expect(result.data?.inviteCode).toBeNull();
     expect(result.data?.occurrences[0].occurrenceId).toBe('o1');
     expect(result.data?.members[0].nickname).toBe('Maya');
+    expect(result.data?.makeups).toEqual([]);
   });
 
   it('trims the Postgres time to HH:MM for display', async () => {

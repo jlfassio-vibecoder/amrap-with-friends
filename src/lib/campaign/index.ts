@@ -70,6 +70,13 @@ export type {
   CampaignTestProgressRow,
   TestProgressOccurrence,
 } from './computeCampaignTestProgress';
+export { campaignMakeupQueue, campaignMakeupQueueHead } from './campaignMakeupQueue';
+export type {
+  MakeupQueueInput,
+  MakeupQueueMakeup,
+  MakeupQueueOccurrence,
+  MakeupQueueScore,
+} from './campaignMakeupQueue';
 export {
   CampaignValidationError,
   type CampaignCalendar,

@@ -214,7 +214,7 @@ describe('computeCampaignStandings', () => {
     expect(rows[1]).toMatchObject({ userId: 'active', left: false, rank: 2 });
   });
 
-  it('only counts generated and done occurrences toward eligibility', () => {
+  it('counts generated, done, and skipped occurrences toward eligibility', () => {
     const rows = computeCampaignStandings(
       input({
         members: [member('a')],
@@ -228,6 +228,6 @@ describe('computeCampaignStandings', () => {
       })
     );
 
-    expect(rows[0]).toMatchObject({ attended: 1, eligible: 2 });
+    expect(rows[0]).toMatchObject({ attended: 1, eligible: 3 });
   });
 });

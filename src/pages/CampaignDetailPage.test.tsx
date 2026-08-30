@@ -11,6 +11,7 @@ const endMock = vi.fn();
 const deleteMock = vi.fn();
 const updateMock = vi.fn();
 const rescheduleMock = vi.fn();
+const startMakeupMock = vi.fn();
 const navigateMock = vi.fn();
 
 vi.mock('@/lib/api/campaigns', () => ({
@@ -21,6 +22,7 @@ vi.mock('@/lib/api/campaigns', () => ({
   deleteCampaign: (...args: unknown[]) => deleteMock(...args),
   updateCampaign: (...args: unknown[]) => updateMock(...args),
   rescheduleCampaignOccurrence: (...args: unknown[]) => rescheduleMock(...args),
+  startCampaignMakeup: (...args: unknown[]) => startMakeupMock(...args),
 }));
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
@@ -69,6 +71,7 @@ function detail(overrides = {}) {
     status: 'active',
     viewerRole: 'host',
     inviteCode: 'ABC123',
+    makeups: [],
     occurrences: [
       occurrence(1, 1, { status: 'done' }),
       occurrence(2, 1),
@@ -104,6 +107,7 @@ beforeEach(() => {
   deleteMock.mockReset();
   updateMock.mockReset();
   rescheduleMock.mockReset();
+  startMakeupMock.mockReset();
   navigateMock.mockReset();
   fetchDetailMock.mockResolvedValue({ data: detail(), error: null });
   fetchStandingsMock.mockResolvedValue({
@@ -115,6 +119,7 @@ beforeEach(() => {
   deleteMock.mockResolvedValue({ error: null });
   updateMock.mockResolvedValue({ error: null });
   rescheduleMock.mockResolvedValue({ error: null });
+  startMakeupMock.mockResolvedValue({ data: { sessionId: 'makeup-sess' }, error: null });
   Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
 });
 
@@ -597,6 +602,87 @@ describe('CampaignDetailPage', () => {
       );
       expect(screen.getByText('Save')).toBeTruthy();
       expect(fetchDetailMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('makeup queue', () => {
+    it('shows You owe N and Make this up for the oldest missed session', async () => {
+      fetchDetailMock.mockResolvedValue({
+        data: detail({
+          members: [
+            {
+              userId: 'user-1',
+              role: 'host',
+              nickname: 'Maya',
+              joinedAt: '2026-09-01T00:00:00Z',
+            },
+          ],
+          occurrences: [
+            occurrence(1, 1, { status: 'done', localDate: '2026-10-05' }),
+            occurrence(2, 1, { status: 'skipped', localDate: '2026-10-07' }),
+            occurrence(3, 2, { status: 'planned', localDate: '2026-10-12' }),
+          ],
+        }),
+        error: null,
+      });
+
+      renderPage();
+
+      await waitFor(() => expect(screen.getByText('You owe 2 sessions')).toBeTruthy());
+      expect(screen.getByText(/Next up: Mon 5 Oct/)).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Make this up' })).toBeTruthy();
+    });
+
+    it('navigates to the makeup session when Make this up succeeds', async () => {
+      fetchDetailMock.mockResolvedValue({
+        data: detail({
+          members: [
+            {
+              userId: 'user-1',
+              role: 'host',
+              nickname: 'Maya',
+              joinedAt: '2026-09-01T00:00:00Z',
+            },
+          ],
+          occurrences: [occurrence(1, 1, { status: 'done' })],
+        }),
+        error: null,
+      });
+      startMakeupMock.mockResolvedValue({ data: { sessionId: 'makeup-sess' }, error: null });
+
+      renderPage();
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Make this up' })).toBeTruthy()
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Make this up' }));
+
+      await waitFor(() => {
+        expect(startMakeupMock).toHaveBeenCalledWith('o1');
+        expect(navigateMock).toHaveBeenCalledWith('/session/makeup-sess');
+      });
+    });
+
+    it('hides the owe card when the campaign is closed', async () => {
+      fetchDetailMock.mockResolvedValue({
+        data: detail({
+          status: 'abandoned',
+          members: [
+            {
+              userId: 'user-1',
+              role: 'host',
+              nickname: 'Maya',
+              joinedAt: '2026-09-01T00:00:00Z',
+            },
+          ],
+          occurrences: [occurrence(1, 1, { status: 'done' })],
+        }),
+        error: null,
+      });
+
+      renderPage();
+      await waitFor(() => expect(screen.getByText('Ended early')).toBeTruthy());
+      expect(screen.queryByText(/You owe/)).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Make this up' })).toBeNull();
     });
   });
 });

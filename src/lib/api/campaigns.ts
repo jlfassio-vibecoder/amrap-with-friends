@@ -55,6 +55,11 @@ export interface CampaignMemberEntry {
   joinedAt: string;
 }
 
+export interface CampaignMakeupEntry {
+  occurrenceId: string;
+  sessionId: string;
+}
+
 export interface CampaignDetail {
   campaignId: string;
   name: string;
@@ -68,6 +73,8 @@ export interface CampaignDetail {
   inviteCode: string | null;
   occurrences: CampaignOccurrenceEntry[];
   members: CampaignMemberEntry[];
+  /** Viewer's makeup rows for this campaign — feeds the owed queue. */
+  makeups: CampaignMakeupEntry[];
 }
 
 export interface CreateCampaignInput {
@@ -96,6 +103,9 @@ const ERROR_COPY: Record<string, string> = {
     'This campaign has already started, so it cannot be deleted. End it instead.',
   'Campaign has other athletes':
     'Other athletes have joined, so it cannot be deleted. End it instead — their finished sessions stay on their record.',
+  'Not next to make up': 'Make up the oldest session you owe first.',
+  'Host session limit reached':
+    'You already have three sessions open. Finish one before starting a makeup.',
   'Name the campaign in 80 characters or fewer': 'Name the campaign in 80 characters or fewer.',
   'Keep the goal to 280 characters or fewer': 'Keep the goal to 280 characters or fewer.',
   'Session already scheduled': 'That session is already open, so its time cannot be changed now.',
@@ -201,6 +211,16 @@ function parseMember(raw: unknown): CampaignMemberEntry | null {
   };
 }
 
+function parseMakeup(raw: unknown): CampaignMakeupEntry | null {
+  const row = readRecord(raw);
+  const occurrenceId = readString(row.occurrence_id);
+  const sessionId = readString(row.session_id);
+  if (!occurrenceId || !sessionId) {
+    return null;
+  }
+  return { occurrenceId, sessionId };
+}
+
 /**
  * The client builds the calendar (see `@/lib/campaign`) and sends it whole.
  * The workout library lives here, not in Postgres, so each occurrence carries
@@ -295,6 +315,7 @@ export async function fetchCampaignDetail(
 
   const occurrences = Array.isArray(root.occurrences) ? root.occurrences : [];
   const members = Array.isArray(root.members) ? root.members : [];
+  const makeups = Array.isArray(root.makeups) ? root.makeups : [];
 
   return {
     data: {
@@ -314,6 +335,9 @@ export async function fetchCampaignDetail(
       members: members
         .map(parseMember)
         .filter((entry): entry is CampaignMemberEntry => entry !== null),
+      makeups: makeups
+        .map(parseMakeup)
+        .filter((entry): entry is CampaignMakeupEntry => entry !== null),
     },
     error: null,
   };
@@ -494,6 +518,27 @@ export async function deleteCampaign(
   return { error: null };
 }
 
+/**
+ * Starts (or resumes) a solo makeup session for the oldest owed occurrence.
+ * The session never sets campaign_occurrence_id — the link lives in
+ * campaign_makeups so the live-session unique index stays intact.
+ */
+export async function startCampaignMakeup(
+  occurrenceId: string
+): Promise<{ data: { sessionId: string } | null; error: CampaignApiError | null }> {
+  const { data, error } = await callRpc('start_campaign_makeup', {
+    p_occurrence_id: occurrenceId,
+  });
+  if (error) {
+    return { data: null, error: { message: mapError(error.message) } };
+  }
+  const sessionId = readString(readRecord(data).session_id);
+  if (!sessionId) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+  return { data: { sessionId }, error: null };
+}
+
 export type { CampaignStandingRow, CampaignStandingsMember, CampaignStandingsScore };
 
 export type CampaignStandingsPayload = {
@@ -562,7 +607,7 @@ export async function fetchCampaignStandings(
     .filter((entry): entry is CampaignStandingsOccurrence => entry !== null);
 
   const scores = scoresRaw
-    .map((raw) => {
+    .map((raw): CampaignStandingsScore | null => {
       const row = readRecord(raw);
       const occurrenceId = readString(row.occurrence_id);
       const userId = readString(row.user_id);
@@ -573,7 +618,12 @@ export async function fetchCampaignStandings(
         row.final_score === null || row.final_score === undefined
           ? null
           : readNumber(row.final_score);
-      return { occurrenceId, userId, finalScore };
+      return {
+        occurrenceId,
+        userId,
+        finalScore,
+        madeUp: row.made_up === true,
+      };
     })
     .filter((entry): entry is CampaignStandingsScore => entry !== null);
 

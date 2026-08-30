@@ -4,6 +4,7 @@ import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { CampaignEditForm } from '@/components/campaign/CampaignEditForm';
 import { CampaignScheduleSection } from '@/components/campaign/CampaignScheduleSection';
 import { CopyCampaignInvite } from '@/components/campaign/CopyCampaignInvite';
+import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import {
   deleteCampaign,
   endCampaign,
@@ -11,6 +12,7 @@ import {
   fetchCampaignStandings,
   leaveCampaign,
   rescheduleCampaignOccurrence,
+  startCampaignMakeup,
   updateCampaign,
   type CampaignDetail,
   type CampaignStandingRow,
@@ -18,8 +20,10 @@ import {
   type CampaignStandingsScore,
 } from '@/lib/api/campaigns';
 import {
+  campaignMakeupQueue,
   campaignProgress,
   campaignRoleDescription,
+  campaignRoleLabel,
   canDeleteCampaign,
   canEditCampaign,
   canEndCampaign,
@@ -29,6 +33,7 @@ import {
   formatCampaignRepDelta,
   formatCampaignRepScore,
   formatCampaignShape,
+  formatOccurrenceDate,
   type CampaignOccurrenceRole,
   type CampaignTestProgress,
 } from '@/lib/campaign';
@@ -50,6 +55,7 @@ function formatNormalisedAverage(value: number | null): string {
 export default function CampaignDetailPage() {
   const { campaignId } = useParams<{ campaignId: string }>();
   const navigate = useNavigate();
+  const { user } = useAmrapAuth();
   const [detail, setDetail] = useState<CampaignDetail | null>(null);
   const [standings, setStandings] = useState<CampaignStandingRow[]>([]);
   const [standingsMembers, setStandingsMembers] = useState<CampaignStandingsMember[]>([]);
@@ -65,6 +71,8 @@ export default function CampaignDetailPage() {
   const [hostActionError, setHostActionError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [editingDetails, setEditingDetails] = useState(false);
+  const [makeupBusy, setMakeupBusy] = useState(false);
+  const [makeupError, setMakeupError] = useState<string | null>(null);
 
   useEffect(() => {
     // A missing id is a routing problem, not a load — it is rendered below
@@ -213,6 +221,18 @@ export default function CampaignDetailPage() {
     navigate('/');
   }
 
+  async function handleMakeUp(occurrenceId: string) {
+    setMakeupBusy(true);
+    setMakeupError(null);
+    const result = await startCampaignMakeup(occurrenceId);
+    setMakeupBusy(false);
+    if (result.error || !result.data) {
+      setMakeupError(result.error?.message ?? 'Something went wrong. Please try again.');
+      return;
+    }
+    navigate(`/session/${result.data.sessionId}`);
+  }
+
   const progress = campaignProgress(
     detail.occurrences.filter((occurrence) => occurrence.status === 'done').length,
     detail.occurrences.length
@@ -252,6 +272,29 @@ export default function CampaignDetailPage() {
     scores: standingsScores,
     campaignStatus: detail.status,
   });
+
+  const viewerMember = detail.members.find((member) => member.userId === user?.id);
+  const viewerJoinedLocalDate = viewerMember
+    ? new Date(viewerMember.joinedAt).toLocaleDateString('en-CA', {
+        timeZone: detail.timezone,
+      })
+    : null;
+  const owedQueue =
+    detail.status === 'active' && user?.id && viewerJoinedLocalDate
+      ? campaignMakeupQueue({
+          occurrences: detail.occurrences,
+          viewerJoinedLocalDate,
+          viewerUserId: user.id,
+          scores: standingsScores,
+          makeups: detail.makeups,
+        })
+      : [];
+  const owedHead = owedQueue[0] ?? null;
+  const headRole = owedHead
+    ? roleBySequence.get(
+        detail.occurrences.find((row) => row.occurrenceId === owedHead.occurrenceId)?.sequence ?? -1
+      )
+    : null;
 
   return (
     <NarrowPageLayout
@@ -306,6 +349,35 @@ export default function CampaignDetailPage() {
           </div>
         )}
       </section>
+
+      {owedQueue.length > 0 && owedHead ? (
+        <section className="card space-y-4 p-6">
+          <div>
+            <h2 className="text-display text-xl text-ink">
+              {owedQueue.length === 1
+                ? 'You owe 1 session'
+                : `You owe ${owedQueue.length} sessions`}
+            </h2>
+            <p className="text-sm text-secondary">
+              Make them up oldest first. Live campaign sessions stay open — this only settles what
+              you missed.
+            </p>
+          </div>
+          <p className="text-sm text-ink">
+            Next up: {formatOccurrenceDate(owedHead.localDate)}
+            {headRole && campaignRoleLabel(headRole) ? ` · ${campaignRoleLabel(headRole)}` : null}
+          </p>
+          {makeupError ? <p className="text-error text-sm">{makeupError}</p> : null}
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={makeupBusy}
+            onClick={() => void handleMakeUp(owedHead.occurrenceId)}
+          >
+            {makeupBusy ? 'Opening…' : 'Make this up'}
+          </button>
+        </section>
+      ) : null}
 
       {testProgress ? (
         <section className="card space-y-4 p-6">
