@@ -433,9 +433,19 @@ export async function startNextLobbySession(input: {
 }
 
 export async function leaveLobby(
-  lobbyId: string
+  lobbyId: string,
+  options?: { lobbyMemberId?: string | null }
 ): Promise<{ data: { left: boolean; closed?: boolean } | null; error: LobbyApiError | null }> {
-  const { data, error } = await callRpc('leave_lobby', { p_lobby_id: lobbyId });
+  // As with joinLobby: a guest has no user_id for the server to match on, so it
+  // leaves with the member id it was handed. The server only accepts an active
+  // guest seat in this lobby, so a stale id simply reports left: false.
+  const lobbyMemberId =
+    options?.lobbyMemberId === undefined ? getStoredLobbyMemberId(lobbyId) : options.lobbyMemberId;
+
+  const { data, error } = await callRpc('leave_lobby', {
+    p_lobby_id: lobbyId,
+    p_lobby_member_id: lobbyMemberId,
+  });
   if (error) {
     return { data: null, error: { message: mapRpcError(error.message) } };
   }

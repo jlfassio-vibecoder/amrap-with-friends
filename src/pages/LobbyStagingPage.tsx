@@ -15,6 +15,7 @@ import {
   touchLobbyPresence,
 } from '@/lib/api/lobby';
 import {
+  clearStoredLobbyIdentity,
   getStoredLobbyMemberId,
   getStoredLobbyNickname,
   persistLobbyIdentity,
@@ -239,7 +240,15 @@ export default function LobbyStagingPage() {
   async function handleLeave() {
     setBusy(true);
     try {
-      await leaveLobby(lobbyId);
+      // Was navigating home regardless: a guest's leave failed with
+      // "Authentication required" and the seat stayed active, while the control
+      // looked like it had worked.
+      const result = await leaveLobby(lobbyId);
+      if (result.error) {
+        setActionError(result.error.message);
+        return;
+      }
+      clearStoredLobbyIdentity(lobbyId);
       navigate('/');
     } finally {
       setBusy(false);
