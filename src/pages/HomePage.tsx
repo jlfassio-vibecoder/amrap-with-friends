@@ -17,7 +17,7 @@ function HomePage() {
   const signedIn = !isAuthLoading && isAuthenticated;
 
   return (
-    <main className="min-h-screen bg-page">
+    <main className="home-marketing min-h-screen bg-page">
       <LandingHero showHudAction={signedIn} />
 
       <div className="mx-auto w-full max-w-[1080px] space-y-16 px-6 py-14 lg:px-10 lg:py-20">

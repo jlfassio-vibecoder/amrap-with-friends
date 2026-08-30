@@ -26,7 +26,7 @@ export function LandingHero({ showHudAction }: LandingHeroProps) {
             Stronger Together. Move as one.
           </p>
           <p className="mt-6 max-w-[26rem] text-[15px] leading-[1.6] text-night-secondary">
-            Training is hard. Showing up alone is harder. Bring your people, lock in a shared
+            Training is hard. Showing up alone is harder. Bring your squad, lock in a shared
             mission, and earn the kind of progress that only happens together.
           </p>
 
