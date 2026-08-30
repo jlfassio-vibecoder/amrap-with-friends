@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { supabase } from '@/lib/supabase';
+import * as sessionIdentity from '@/lib/sessionIdentity';
 import {
   createCampaign,
   fetchCampaignDetail,
@@ -7,6 +8,7 @@ import {
   fetchMyCampaigns,
   joinCampaign,
   leaveCampaign,
+  startCampaignMakeup,
 } from './campaigns';
 import type { PlannedCampaignOccurrence } from '@/lib/campaign';
 
@@ -15,11 +17,19 @@ vi.mock('@/lib/supabase', () => ({
   getSupabaseClient: vi.fn(),
 }));
 vi.mock('@/lib/analytics/track', () => ({ track: vi.fn() }));
+vi.mock('@/lib/sessionIdentity', () => ({
+  persistSessionIdentity: vi.fn(),
+  setStoredGhostSelection: vi.fn(),
+}));
 
 const rpcMock = vi.mocked(supabase.rpc);
+const persistMock = vi.mocked(sessionIdentity.persistSessionIdentity);
+const ghostSeedMock = vi.mocked(sessionIdentity.setStoredGhostSelection);
 
 beforeEach(() => {
   rpcMock.mockReset();
+  persistMock.mockReset();
+  ghostSeedMock.mockReset();
 });
 
 function occurrence(sequence: number): PlannedCampaignOccurrence {
@@ -42,7 +52,13 @@ function occurrence(sequence: number): PlannedCampaignOccurrence {
 describe('createCampaign', () => {
   it('sends snake_case occurrences the RPC expects', async () => {
     rpcMock.mockResolvedValue({
-      data: { ok: true, campaign_id: 'c1', invite_code: 'ABC123', total_sessions: 2, sessions_per_week: 2 },
+      data: {
+        ok: true,
+        campaign_id: 'c1',
+        invite_code: 'ABC123',
+        total_sessions: 2,
+        sessions_per_week: 2,
+      },
       error: null,
     } as never);
 
@@ -249,7 +265,13 @@ describe('fetchCampaignDetail', () => {
           },
         ],
         members: [
-          { user_id: 'u1', role: 'host', status: 'active', joined_at: '2026-09-01T00:00:00Z', nickname: 'Maya' },
+          {
+            user_id: 'u1',
+            role: 'host',
+            status: 'active',
+            joined_at: '2026-09-01T00:00:00Z',
+            nickname: 'Maya',
+          },
         ],
       },
       error: null,
@@ -388,6 +410,82 @@ describe('leaveCampaign', () => {
     } as never);
     expect((await leaveCampaign('c1')).error?.message).toBe(
       'You are running this campaign, so you cannot leave it.'
+    );
+  });
+});
+
+describe('startCampaignMakeup', () => {
+  it('persists identity and seeds the ghost pacer when a crewmate recording is returned', async () => {
+    rpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        session_id: 'makeup-sess',
+        host_token: 'host-1',
+        participant_id: 'part-1',
+        claim_token: 'claim-1',
+        nickname: 'Jules',
+        pacer: {
+          session_id: 'live-sess',
+          participant_id: 'crew-part',
+          nickname: 'Maya',
+          final_score: 120,
+          base_score: 100,
+          created_at: '2026-10-05T12:00:00.000Z',
+        },
+      },
+      error: null,
+    } as never);
+
+    const result = await startCampaignMakeup('o1');
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual({ sessionId: 'makeup-sess' });
+    expect(rpcMock).toHaveBeenCalledWith('start_campaign_makeup', {
+      p_occurrence_id: 'o1',
+    });
+    expect(persistMock).toHaveBeenCalledWith('makeup-sess', {
+      nickname: 'Jules',
+      participantId: 'part-1',
+      hostToken: 'host-1',
+      claimToken: 'claim-1',
+    });
+    expect(ghostSeedMock).toHaveBeenCalledWith(
+      'makeup-sess',
+      expect.objectContaining({
+        sessionId: 'live-sess',
+        participantId: 'crew-part',
+        nickname: 'Maya',
+        finalScore: 120,
+      })
+    );
+  });
+
+  it('skips ghost seeding when no pacer is available', async () => {
+    rpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        session_id: 'makeup-sess',
+        host_token: 'host-1',
+        participant_id: 'part-1',
+        claim_token: 'claim-1',
+        nickname: 'Jules',
+        pacer: null,
+      },
+      error: null,
+    } as never);
+
+    const result = await startCampaignMakeup('o1');
+    expect(result.error).toBeNull();
+    expect(persistMock).toHaveBeenCalled();
+    expect(ghostSeedMock).not.toHaveBeenCalled();
+  });
+
+  it('maps Not next to make up', async () => {
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: { message: 'Not next to make up' },
+    } as never);
+    expect((await startCampaignMakeup('o2')).error?.message).toBe(
+      'Make up the oldest session you owe first.'
     );
   });
 });

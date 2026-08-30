@@ -24,7 +24,7 @@ export type CampaignStandingsScore = {
   occurrenceId: string;
   userId: string;
   finalScore: number | null;
-  /** True when the score came from a makeup session. Presentational until Phase 3. */
+  /** True when the score came from a makeup session. */
   madeUp?: boolean;
 };
 
@@ -42,6 +42,8 @@ export type CampaignStandingRow = {
   attended: number;
   eligible: number;
   left: boolean;
+  /** True when at least one counted score came from a makeup session. */
+  hasMadeUp: boolean;
   /** 1-based rank on normalised average; null averages sort last. */
   rank: number;
 };
@@ -72,6 +74,7 @@ function isCountableStatus(status: CampaignStandingsOccurrence['status']): boole
  */
 export function computeCampaignStandings(input: CampaignStandingsInput): CampaignStandingRow[] {
   const scoresByOccurrence = new Map<string, Map<string, number>>();
+  const madeUpByOccurrence = new Map<string, Map<string, boolean>>();
   for (const entry of input.scores) {
     const value = scoreValue(entry.finalScore);
     if (value === null) {
@@ -83,6 +86,13 @@ export function computeCampaignStandings(input: CampaignStandingsInput): Campaig
       scoresByOccurrence.set(entry.occurrenceId, byUser);
     }
     byUser.set(entry.userId, value);
+
+    let madeUpByUser = madeUpByOccurrence.get(entry.occurrenceId);
+    if (!madeUpByUser) {
+      madeUpByUser = new Map();
+      madeUpByOccurrence.set(entry.occurrenceId, madeUpByUser);
+    }
+    madeUpByUser.set(entry.userId, entry.madeUp === true);
   }
 
   const bestByOccurrence = new Map<string, number>();
@@ -100,6 +110,7 @@ export function computeCampaignStandings(input: CampaignStandingsInput): Campaig
     let attended = 0;
     let eligible = 0;
     let ratioSum = 0;
+    let hasMadeUp = false;
 
     for (const occurrence of input.occurrences) {
       if (occurrence.localDate < member.joinedLocalDate) {
@@ -117,6 +128,9 @@ export function computeCampaignStandings(input: CampaignStandingsInput): Campaig
       }
 
       attended += 1;
+      if (madeUpByOccurrence.get(occurrence.occurrenceId)?.get(member.userId)) {
+        hasMadeUp = true;
+      }
       const athlete = byUser.get(member.userId) ?? 0;
       const best = bestByOccurrence.get(occurrence.occurrenceId) ?? 0;
       // Single attendee (or everyone at zero): they are the best → 1.0.
@@ -135,6 +149,7 @@ export function computeCampaignStandings(input: CampaignStandingsInput): Campaig
       attended,
       eligible,
       left: member.left,
+      hasMadeUp,
     };
   });
 

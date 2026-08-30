@@ -17,6 +17,10 @@ export type CampaignTestProgressRow = {
   left: boolean;
   benchmarkScore: number | null;
   retestScore: number | null;
+  /** True when the Week 1 score came from a makeup session. */
+  benchmarkMadeUp: boolean;
+  /** True when the latest retest score came from a makeup session. */
+  retestMadeUp: boolean;
   /** Latest scored retest minus benchmark; null when either side is missing. */
   delta: number | null;
 };
@@ -77,6 +81,7 @@ export function computeCampaignTestProgress(
     .filter((index) => index >= 0);
 
   const scoresByOccurrence = new Map<string, Map<string, number>>();
+  const madeUpByOccurrence = new Map<string, Map<string, boolean>>();
   for (const entry of scores) {
     const value = scoreValue(entry.finalScore);
     if (value === null) {
@@ -88,10 +93,21 @@ export function computeCampaignTestProgress(
       scoresByOccurrence.set(entry.occurrenceId, byUser);
     }
     byUser.set(entry.userId, value);
+
+    let madeUpByUser = madeUpByOccurrence.get(entry.occurrenceId);
+    if (!madeUpByUser) {
+      madeUpByUser = new Map();
+      madeUpByOccurrence.set(entry.occurrenceId, madeUpByUser);
+    }
+    madeUpByUser.set(entry.userId, entry.madeUp === true);
   }
 
   function scoreFor(occurrenceId: string, userId: string): number | null {
     return scoresByOccurrence.get(occurrenceId)?.get(userId) ?? null;
+  }
+
+  function madeUpFor(occurrenceId: string, userId: string): boolean {
+    return madeUpByOccurrence.get(occurrenceId)?.get(userId) === true;
   }
 
   const rows: CampaignTestProgressRow[] = members.map((member) => {
@@ -99,8 +115,11 @@ export function computeCampaignTestProgress(
     const benchmarkScore = joinedAfterBenchmark
       ? null
       : scoreFor(benchmark.occurrenceId, member.userId);
+    const benchmarkMadeUp =
+      benchmarkScore !== null && madeUpFor(benchmark.occurrenceId, member.userId);
 
     let retestScore: number | null = null;
+    let retestMadeUp = false;
     for (const index of retestIndices) {
       const occurrence = occurrences[index];
       if (member.joinedLocalDate > occurrence.localDate) {
@@ -109,6 +128,7 @@ export function computeCampaignTestProgress(
       const value = scoreFor(occurrence.occurrenceId, member.userId);
       if (value !== null) {
         retestScore = value;
+        retestMadeUp = madeUpFor(occurrence.occurrenceId, member.userId);
       }
     }
 
@@ -121,6 +141,8 @@ export function computeCampaignTestProgress(
       left: member.left,
       benchmarkScore,
       retestScore,
+      benchmarkMadeUp,
+      retestMadeUp,
       delta,
     };
   });

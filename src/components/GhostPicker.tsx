@@ -1,17 +1,11 @@
 import { useEffect, useState } from 'react';
 import { AuthModal } from '@/components/AuthModal';
-import {
-  fetchAvailableGhosts,
-  type GhostRunRef,
-} from '@/lib/api/ghost';
+import { fetchAvailableGhosts, type GhostRunRef } from '@/lib/api/ghost';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { ghostRunRefToStoredSelection } from '@/hooks/useGhostPacer';
-import {
-  setStoredGhostSelection,
-  type StoredGhostSelection,
-} from '@/lib/sessionIdentity';
+import { setStoredGhostSelection, type StoredGhostSelection } from '@/lib/sessionIdentity';
 
-export type GhostPickerValue = 'none' | 'personal-best';
+export type GhostPickerValue = 'none' | 'personal-best' | `crew:${string}`;
 
 interface GhostPickerProps {
   sessionId: string;
@@ -41,6 +35,17 @@ function personalBestLabel(ghost: GhostRunRef): string {
     : `Personal Best · ${ghost.finalScore} reps`;
 }
 
+function crewGhostLabel(ghost: GhostRunRef): string {
+  const dateLabel = formatGhostDate(ghost.createdAt);
+  return dateLabel
+    ? `${ghost.nickname} · ${ghost.finalScore} reps · ${dateLabel}`
+    : `${ghost.nickname} · ${ghost.finalScore} reps`;
+}
+
+function crewOptionValue(participantId: string): GhostPickerValue {
+  return `crew:${participantId}`;
+}
+
 export function GhostPicker({
   sessionId,
   templateId,
@@ -51,6 +56,7 @@ export function GhostPicker({
 }: GhostPickerProps) {
   const { isAuthenticated, isAuthLoading } = useAmrapAuth();
   const [personalBest, setPersonalBest] = useState<GhostRunRef | null>(null);
+  const [crewRuns, setCrewRuns] = useState<GhostRunRef[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
@@ -71,34 +77,43 @@ export function GhostPicker({
       }
     });
 
-    fetchAvailableGhosts(templateId, durationMinutes).then((result) => {
+    fetchAvailableGhosts(templateId, durationMinutes, sessionId).then((result) => {
       if (cancelled) {
         return;
       }
 
       if (result.error) {
         setPersonalBest(null);
+        setCrewRuns([]);
         setLoadError(result.error.message);
         setIsLoading(false);
         return;
       }
 
       setPersonalBest(result.data?.personalBest ?? null);
+      setCrewRuns(result.data?.friends ?? []);
       setIsLoading(false);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [canFetchGhosts, templateId, durationMinutes]);
+  }, [canFetchGhosts, templateId, durationMinutes, sessionId]);
 
   const displayedPersonalBest = canFetchGhosts ? personalBest : null;
+  const displayedCrew = canFetchGhosts ? crewRuns : [];
 
-  // Copilot suggestion ignored: selectedValue is already gated on displayedPersonalBest to avoid orphan options.
-  const selectedValue: GhostPickerValue =
-    value?.label.startsWith('Personal Best') && displayedPersonalBest
-      ? 'personal-best'
-      : 'none';
+  let selectedValue: GhostPickerValue = 'none';
+  if (value) {
+    const crewMatch = displayedCrew.find(
+      (run) => run.participantId === value.participantId && run.sessionId === value.sessionId
+    );
+    if (crewMatch) {
+      selectedValue = crewOptionValue(crewMatch.participantId);
+    } else if (value.label.startsWith('Personal Best') && displayedPersonalBest) {
+      selectedValue = 'personal-best';
+    }
+  }
 
   function handleSelect(nextValue: GhostPickerValue) {
     if (nextValue === 'none') {
@@ -107,15 +122,34 @@ export function GhostPicker({
       return;
     }
 
-    if (!displayedPersonalBest) {
+    if (nextValue === 'personal-best') {
+      if (!displayedPersonalBest) {
+        return;
+      }
+      const label = personalBestLabel(displayedPersonalBest);
+      const selection = ghostRunRefToStoredSelection(displayedPersonalBest, label);
+      setStoredGhostSelection(sessionId, selection);
+      onChange(selection);
       return;
     }
 
-    const label = personalBestLabel(displayedPersonalBest);
-    const selection = ghostRunRefToStoredSelection(displayedPersonalBest, label);
-    setStoredGhostSelection(sessionId, selection);
-    onChange(selection);
+    if (nextValue.startsWith('crew:')) {
+      const participantId = nextValue.slice('crew:'.length);
+      const run = displayedCrew.find((entry) => entry.participantId === participantId);
+      if (!run) {
+        return;
+      }
+      const label = crewGhostLabel(run);
+      const selection = ghostRunRefToStoredSelection(run, label);
+      setStoredGhostSelection(sessionId, selection);
+      onChange(selection);
+    }
   }
+
+  const intro =
+    displayedCrew.length > 0
+      ? 'Race a crewmate from the session you missed, or your personal best.'
+      : 'Race your personal best pacing curve in real time.';
 
   return (
     <section
@@ -134,20 +168,14 @@ export function GhostPicker({
           >
             Select Pacer
           </label>
-          <p className="text-[11px] text-secondary">
-            Race your personal best pacing curve in real time.
-          </p>
+          <p className="text-[11px] text-secondary">{intro}</p>
         </div>
       )}
 
       {!isAuthenticated && !isAuthLoading ? (
         <div className="space-y-2 text-sm">
           <p className="text-secondary">Sign in to load your personal best ghost.</p>
-          <button
-            type="button"
-            className="btn-outline text-sm"
-            onClick={() => setAuthOpen(true)}
-          >
+          <button type="button" className="btn-outline text-sm" onClick={() => setAuthOpen(true)}>
             Sign in
           </button>
         </div>
@@ -157,31 +185,30 @@ export function GhostPicker({
           className="input-field w-full py-1.5 text-sm"
           value={selectedValue}
           disabled={isLoading || !canFetchGhosts}
-          onChange={(event) =>
-            handleSelect(event.target.value as GhostPickerValue)
-          }
+          onChange={(event) => handleSelect(event.target.value as GhostPickerValue)}
         >
           <option value="none">None</option>
-          {displayedPersonalBest ? (
-            <option value="personal-best">
-              {personalBestLabel(displayedPersonalBest)}
+          {displayedCrew.map((run) => (
+            <option key={run.participantId} value={crewOptionValue(run.participantId)}>
+              {crewGhostLabel(run)}
             </option>
+          ))}
+          {displayedPersonalBest ? (
+            <option value="personal-best">{personalBestLabel(displayedPersonalBest)}</option>
           ) : null}
         </select>
       )}
 
-      {isLoading && canFetchGhosts ? (
-        <p className="text-xs text-muted">Loading personal best…</p>
-      ) : null}
+      {isLoading && canFetchGhosts ? <p className="text-xs text-muted">Loading pacers…</p> : null}
 
-      {loadError ? (
-        <p className="text-xs text-error">{loadError}</p>
-      ) : null}
+      {loadError ? <p className="text-error text-xs">{loadError}</p> : null}
 
-      {canFetchGhosts && !isLoading && !displayedPersonalBest && !loadError ? (
-        <p className="text-xs text-muted">
-          No locked personal best found for this template yet.
-        </p>
+      {canFetchGhosts &&
+      !isLoading &&
+      !displayedPersonalBest &&
+      displayedCrew.length === 0 &&
+      !loadError ? (
+        <p className="text-xs text-muted">No locked personal best found for this template yet.</p>
       ) : null}
 
       {authOpen ? <AuthModal onClose={() => setAuthOpen(false)} /> : null}

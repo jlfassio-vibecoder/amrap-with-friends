@@ -171,6 +171,7 @@ describe('CampaignDetailPage', () => {
             attended: 2,
             eligible: 2,
             left: false,
+            hasMadeUp: false,
             rank: 1,
           },
           {
@@ -180,6 +181,7 @@ describe('CampaignDetailPage', () => {
             attended: 1,
             eligible: 2,
             left: true,
+            hasMadeUp: false,
             rank: 2,
           },
         ],
@@ -207,6 +209,147 @@ describe('CampaignDetailPage', () => {
     expect(screen.getByText('2 of 2')).toBeTruthy();
     expect(screen.getByText('1 of 2')).toBeTruthy();
     expect(screen.getAllByText('Left').length).toBeGreaterThan(0);
+  });
+
+  it('marks makeup scores and shows the Made up footnote', async () => {
+    fetchDetailMock.mockResolvedValue({
+      data: detail({
+        occurrences: [
+          occurrence(1, 1, {
+            status: 'done',
+            sessionId: 's1',
+            templateId: 'flash-flood',
+            localDate: '2026-10-05',
+          }),
+          occurrence(2, 1, {
+            status: 'done',
+            sessionId: 's2',
+            templateId: 'other',
+            localDate: '2026-10-07',
+          }),
+          occurrence(3, 2, {
+            status: 'done',
+            sessionId: 's3',
+            templateId: 'other-2',
+            localDate: '2026-10-12',
+          }),
+          occurrence(4, 2, {
+            status: 'done',
+            sessionId: 's4',
+            templateId: 'flash-flood',
+            localDate: '2026-10-14',
+          }),
+        ],
+      }),
+      error: null,
+    });
+    fetchStandingsMock.mockResolvedValue({
+      data: {
+        standings: [
+          {
+            userId: 'u1',
+            nickname: 'Maya',
+            normalisedAverage: 1,
+            attended: 2,
+            eligible: 2,
+            left: false,
+            hasMadeUp: true,
+            rank: 1,
+          },
+        ],
+        members: [
+          {
+            userId: 'u1',
+            nickname: 'Maya',
+            joinedLocalDate: '2026-09-01',
+            left: false,
+          },
+        ],
+        scores: [
+          { occurrenceId: 'o1', userId: 'u1', finalScore: 40, madeUp: true },
+          { occurrenceId: 'o4', userId: 'u1', finalScore: 48 },
+        ],
+      },
+      error: null,
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getAllByText('Made up').length).toBeGreaterThan(0));
+    expect(
+      screen.getAllByText(
+        'Made up means they scored it alone after missing the live session with the crew. It still counts.'
+      ).length
+    ).toBeGreaterThan(0);
+  });
+
+  it('hides Made up markers and footnote when every score was live', async () => {
+    fetchDetailMock.mockResolvedValue({
+      data: detail({
+        occurrences: [
+          occurrence(1, 1, {
+            status: 'done',
+            sessionId: 's1',
+            templateId: 'flash-flood',
+            localDate: '2026-10-05',
+          }),
+          occurrence(2, 1, {
+            status: 'done',
+            sessionId: 's2',
+            templateId: 'other',
+            localDate: '2026-10-07',
+          }),
+          occurrence(3, 2, {
+            status: 'done',
+            sessionId: 's3',
+            templateId: 'other-2',
+            localDate: '2026-10-12',
+          }),
+          occurrence(4, 2, {
+            status: 'done',
+            sessionId: 's4',
+            templateId: 'flash-flood',
+            localDate: '2026-10-14',
+          }),
+        ],
+      }),
+      error: null,
+    });
+    fetchStandingsMock.mockResolvedValue({
+      data: {
+        standings: [
+          {
+            userId: 'u1',
+            nickname: 'Maya',
+            normalisedAverage: 1,
+            attended: 2,
+            eligible: 2,
+            left: false,
+            hasMadeUp: false,
+            rank: 1,
+          },
+        ],
+        members: [
+          {
+            userId: 'u1',
+            nickname: 'Maya',
+            joinedLocalDate: '2026-09-01',
+            left: false,
+          },
+        ],
+        scores: [
+          { occurrenceId: 'o1', userId: 'u1', finalScore: 40 },
+          { occurrenceId: 'o4', userId: 'u1', finalScore: 48 },
+        ],
+      },
+      error: null,
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByText('The test')).toBeTruthy());
+    expect(screen.queryByText('Made up')).toBeNull();
+    expect(
+      screen.queryByText(
+        'Made up means they scored it alone after missing the live session with the crew. It still counts.'
+      )
+    ).toBeNull();
   });
 
   it('groups the schedule into weeks', async () => {

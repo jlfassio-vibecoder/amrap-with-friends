@@ -260,6 +260,9 @@ export default function CampaignDetailPage() {
   const hasCountableSessions = detail.occurrences.some(
     (occurrence) => occurrence.status === 'generated' || occurrence.status === 'done'
   );
+  const hasMadeUpScores = standingsScores.some((score) => score.madeUp === true);
+  const madeUpFootnote =
+    'Made up means they scored it alone after missing the live session with the crew. It still counts.';
 
   const testProgress: CampaignTestProgress | null = computeCampaignTestProgress({
     occurrences: detail.occurrences.map((occurrence) => ({
@@ -408,6 +411,11 @@ export default function CampaignDetailPage() {
                             Left
                           </span>
                         ) : null}
+                        {row.benchmarkMadeUp || row.retestMadeUp ? (
+                          <span className="ml-2 text-xs uppercase tracking-widest text-muted">
+                            Made up
+                          </span>
+                        ) : null}
                       </td>
                       <td className="py-2.5 pr-3 tabular-nums text-ink">
                         {formatCampaignRepScore(row.benchmarkScore)}
@@ -422,6 +430,9 @@ export default function CampaignDetailPage() {
                   ))}
                 </tbody>
               </table>
+              {hasMadeUpScores ? (
+                <p className="mt-3 text-sm text-secondary">{madeUpFootnote}</p>
+              ) : null}
             </div>
           )}
         </section>
@@ -455,6 +466,11 @@ export default function CampaignDetailPage() {
                           Left
                         </span>
                       ) : null}
+                      {row.hasMadeUp ? (
+                        <span className="ml-2 text-xs uppercase tracking-widest text-muted">
+                          Made up
+                        </span>
+                      ) : null}
                     </td>
                     <td className="py-2.5 pr-3 tabular-nums text-ink">
                       {formatNormalisedAverage(row.normalisedAverage)}
@@ -466,6 +482,9 @@ export default function CampaignDetailPage() {
                 ))}
               </tbody>
             </table>
+            {hasMadeUpScores ? (
+              <p className="mt-3 text-sm text-secondary">{madeUpFootnote}</p>
+            ) : null}
           </div>
         )}
       </section>
