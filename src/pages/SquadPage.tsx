@@ -272,7 +272,7 @@ export default function SquadPage() {
                   <button
                     type="button"
                     className="btn-primary text-sm"
-                    disabled={busyId === hit.userId}
+                    disabled={busyId === hit.requestId}
                     onClick={() => void handleRespond(hit.requestId as string, true)}
                   >
                     Accept

@@ -31,7 +31,7 @@ opaque verb for one action. Same brand, opposite sides of the line.
 | **Campaign**     | A multi-week programme (2–12 weeks, 1–5 sessions a week) with an end goal. | Buttons, page titles, routes. Always with its length: "8-week campaign" |
 | **Squad**        | A persistent friends list for inviting people to train together. Not a session. | Buttons, page titles, routes, nav — "Your squad", `/squad`         |
 | **Staging area** | The pre-workout screen where the crew gathers before the clock starts.     | Page title and any prose about that screen                              |
-| **Rally link**   | The shared invite URL for a session. Nothing else — it never means a session or a squad. | The copy button, and prose about sharing                  |
+| **Rally link**   | The shared invite URL for a session. Never a squad invite.                 | The copy button, and prose about sharing                                |
 
 **Session vs. mission.** Both name one workout, so each has a job. Session is
 what the user creates, joins, and navigates to, so it owns the buttons and the

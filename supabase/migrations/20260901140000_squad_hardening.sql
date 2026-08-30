@@ -355,8 +355,13 @@ BEGIN
   -- A decline never blocks this path: the owner handing out their link after
   -- declining is them changing their mind.
   IF NOT FOUND THEN
-    INSERT INTO public.squad_requests (from_user_id, to_user_id, status)
-    VALUES (v_owner, v_uid, 'pending');
+    BEGIN
+      INSERT INTO public.squad_requests (from_user_id, to_user_id, status)
+      VALUES (v_owner, v_uid, 'pending');
+    EXCEPTION WHEN unique_violation THEN
+      -- Owner sent an invite in the same instant; become_friends will accept it.
+      NULL;
+    END;
   END IF;
 
   PERFORM public.squad_become_friends(v_owner, v_uid);
