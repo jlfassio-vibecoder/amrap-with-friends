@@ -46,6 +46,27 @@ export default function HUDPage() {
           </p>
         </div>
 
+        <div className="flex flex-wrap items-center gap-x-7 gap-y-4">
+          <Link
+            className="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
+            to="/create"
+          >
+            Create session
+          </Link>
+          <a
+            className="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
+            href="/#rally"
+          >
+            Invite your squad →
+          </a>
+          <Link
+            className="border-b border-accent pb-1.5 text-xs font-bold uppercase tracking-[0.1em] text-ink hover:text-accent"
+            to="/join"
+          >
+            Join a session
+          </Link>
+        </div>
+
         {loading || profileLoading ? (
           <p className="text-sm text-secondary">Loading…</p>
         ) : null}

@@ -1,8 +1,11 @@
 import { callRpc } from '@/lib/api/callRpc';
 import type { WorkoutExercise } from '@/lib/api/sessionTypes';
-import type {
-  CampaignWeekCount,
-  PlannedCampaignOccurrence,
+import {
+  computeCampaignStandings,
+  type CampaignStandingRow,
+  type CampaignStandingsOccurrence,
+  type CampaignWeekCount,
+  type PlannedCampaignOccurrence,
 } from '@/lib/campaign';
 
 export type CampaignApiError = { message: string };
@@ -403,4 +406,85 @@ export async function leaveCampaign(
     return { error: { message: mapError(error.message) } };
   }
   return { error: null };
+}
+
+export type { CampaignStandingRow };
+
+/**
+ * Fetches the raw standings matrix from Postgres and ranks in TypeScript so
+ * the aggregation rules stay unit-tested in one place.
+ */
+export async function fetchCampaignStandings(
+  campaignId: string
+): Promise<{ data: CampaignStandingRow[]; error: CampaignApiError | null }> {
+  const { data, error } = await callRpc('campaign_standings', {
+    p_campaign_id: campaignId,
+  });
+  if (error) {
+    return { data: [], error: { message: mapError(error.message) } };
+  }
+
+  const root = readRecord(data);
+  const membersRaw = Array.isArray(root.members) ? root.members : [];
+  const occurrencesRaw = Array.isArray(root.occurrences) ? root.occurrences : [];
+  const scoresRaw = Array.isArray(root.scores) ? root.scores : [];
+
+  const members = membersRaw
+    .map((raw) => {
+      const row = readRecord(raw);
+      const userId = readString(row.user_id);
+      const joinedLocalDate = readString(row.joined_local_date);
+      if (!userId || !joinedLocalDate) {
+        return null;
+      }
+      return {
+        userId,
+        nickname: readString(row.nickname),
+        joinedLocalDate,
+        left: readString(row.status) === 'left',
+      };
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+
+  const occurrences = occurrencesRaw
+    .map((raw): CampaignStandingsOccurrence | null => {
+      const row = readRecord(raw);
+      const occurrenceId = readString(row.occurrence_id);
+      const localDate = readString(row.local_date);
+      const status = readString(row.status);
+      if (!occurrenceId || !localDate || !status) {
+        return null;
+      }
+      if (
+        status !== 'planned' &&
+        status !== 'generated' &&
+        status !== 'done' &&
+        status !== 'skipped'
+      ) {
+        return null;
+      }
+      return { occurrenceId, localDate, status };
+    })
+    .filter((entry): entry is CampaignStandingsOccurrence => entry !== null);
+
+  const scores = scoresRaw
+    .map((raw) => {
+      const row = readRecord(raw);
+      const occurrenceId = readString(row.occurrence_id);
+      const userId = readString(row.user_id);
+      if (!occurrenceId || !userId) {
+        return null;
+      }
+      const finalScore =
+        row.final_score === null || row.final_score === undefined
+          ? null
+          : readNumber(row.final_score);
+      return { occurrenceId, userId, finalScore };
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+
+  return {
+    data: computeCampaignStandings({ members, occurrences, scores }),
+    error: null,
+  };
 }

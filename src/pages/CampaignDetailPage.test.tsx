@@ -5,11 +5,13 @@ import { ThemeProvider } from '@/contexts/ThemeProvider';
 import CampaignDetailPage from './CampaignDetailPage';
 
 const fetchDetailMock = vi.fn();
+const fetchStandingsMock = vi.fn();
 const leaveMock = vi.fn();
 const navigateMock = vi.fn();
 
 vi.mock('@/lib/api/campaigns', () => ({
   fetchCampaignDetail: (...args: unknown[]) => fetchDetailMock(...args),
+  fetchCampaignStandings: (...args: unknown[]) => fetchStandingsMock(...args),
   leaveCampaign: (...args: unknown[]) => leaveMock(...args),
 }));
 vi.mock('react-router-dom', async () => {
@@ -88,9 +90,11 @@ function renderPage() {
 afterEach(() => cleanup());
 beforeEach(() => {
   fetchDetailMock.mockReset();
+  fetchStandingsMock.mockReset();
   leaveMock.mockReset();
   navigateMock.mockReset();
   fetchDetailMock.mockResolvedValue({ data: detail(), error: null });
+  fetchStandingsMock.mockResolvedValue({ data: [], error: null });
   leaveMock.mockResolvedValue({ error: null });
   Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
 });
@@ -107,6 +111,61 @@ describe('CampaignDetailPage', () => {
     renderPage();
     await waitFor(() => expect(screen.getByText('1 of 4 sessions done')).toBeTruthy());
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('25');
+  });
+
+  it('shows empty standings copy before any session is generated', async () => {
+    fetchDetailMock.mockResolvedValue({
+      data: detail({
+        occurrences: [occurrence(1, 1), occurrence(2, 1), occurrence(3, 2), occurrence(4, 2)],
+      }),
+      error: null,
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Standings')).toBeTruthy());
+    expect(
+      screen.getByText('Standings show up once the first campaign session is generated.')
+    ).toBeTruthy();
+  });
+
+  it('lists standings with rank, average, and sessions attended', async () => {
+    fetchDetailMock.mockResolvedValue({
+      data: detail({
+        occurrences: [
+          occurrence(1, 1, { status: 'done', sessionId: 's1' }),
+          occurrence(2, 1, { status: 'generated', sessionId: 's2' }),
+        ],
+      }),
+      error: null,
+    });
+    fetchStandingsMock.mockResolvedValue({
+      data: [
+        {
+          userId: 'u1',
+          nickname: 'Maya',
+          normalisedAverage: 1,
+          attended: 2,
+          eligible: 2,
+          left: false,
+          rank: 1,
+        },
+        {
+          userId: 'u2',
+          nickname: 'Jules',
+          normalisedAverage: 0.5,
+          attended: 1,
+          eligible: 2,
+          left: true,
+          rank: 2,
+        },
+      ],
+      error: null,
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByText('100%')).toBeTruthy());
+    expect(screen.getByText('50%')).toBeTruthy();
+    expect(screen.getByText('2 of 2')).toBeTruthy();
+    expect(screen.getByText('1 of 2')).toBeTruthy();
+    expect(screen.getByText('Left')).toBeTruthy();
   });
 
   it('groups the schedule into weeks', async () => {

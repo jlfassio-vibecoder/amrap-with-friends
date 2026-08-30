@@ -33,6 +33,14 @@ export type {
 } from './campaignPresentation';
 export { assignCampaignWorkouts } from './assignCampaignWorkouts';
 export type { AssignCampaignWorkoutsInput } from './assignCampaignWorkouts';
+export { computeCampaignStandings } from './computeCampaignStandings';
+export type {
+  CampaignStandingRow,
+  CampaignStandingsInput,
+  CampaignStandingsMember,
+  CampaignStandingsOccurrence,
+  CampaignStandingsScore,
+} from './computeCampaignStandings';
 export {
   CampaignValidationError,
   type CampaignCalendar,
