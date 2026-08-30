@@ -187,3 +187,19 @@ describe('MySessionsPage delete', () => {
     );
   });
 });
+
+describe('MySessionsPage CTAs', () => {
+  it('links Create session and New campaign to their routes', async () => {
+    fetchMySessionsMock.mockResolvedValue({ data: [], error: null });
+    renderPage();
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('link', { name: 'Create session' }).getAttribute('href')
+      ).toBe('/create');
+      expect(
+        screen.getByRole('link', { name: 'New campaign' }).getAttribute('href')
+      ).toBe('/campaign/new');
+    });
+  });
+});
