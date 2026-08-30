@@ -27,7 +27,7 @@ export default function CampaignDetailPage() {
   const { campaignId } = useParams<{ campaignId: string }>();
   const [detail, setDetail] = useState<CampaignDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loadedId, setLoadedId] = useState<string | null>(null);
 
   useEffect(() => {
     // A missing id is a routing problem, not a load — it is rendered below
@@ -37,22 +37,37 @@ export default function CampaignDetailPage() {
     }
 
     let cancelled = false;
-    fetchCampaignDetail(campaignId).then((result) => {
-      if (cancelled) {
-        return;
-      }
-      if (result.error || !result.data) {
-        setError(result.error?.message ?? 'That campaign is not available.');
-      } else {
-        setDetail(result.data);
-      }
-      setLoading(false);
-    });
+    fetchCampaignDetail(campaignId)
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+        if (result.error || !result.data) {
+          setError(result.error?.message ?? 'That campaign is not available.');
+          setDetail(null);
+        } else {
+          setError(null);
+          setDetail(result.data);
+        }
+        setLoadedId(campaignId);
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+        setError('That campaign is not available.');
+        setDetail(null);
+        setLoadedId(campaignId);
+      });
 
     return () => {
       cancelled = true;
     };
   }, [campaignId]);
+
+  // Treat a mismatched loaded id as loading so a route change never flashes
+  // the previous campaign while the next fetch is in flight.
+  const loading = Boolean(campaignId) && loadedId !== campaignId;
 
   if (campaignId && loading) {
     return (

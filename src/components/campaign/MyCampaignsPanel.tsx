@@ -12,6 +12,7 @@ import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 export function MyCampaignsPanel() {
   const { isAuthenticated, isAuthLoading } = useAmrapAuth();
   const [campaigns, setCampaigns] = useState<CampaignSummary[]>([]);
+  const [error, setError] = useState<string | null>(null);
   // Starts true and is only ever cleared from the fetch callback: setting it
   // synchronously inside the effect would cascade an extra render on mount.
   const [loading, setLoading] = useState(true);
@@ -22,13 +23,28 @@ export function MyCampaignsPanel() {
     }
 
     let cancelled = false;
-    fetchMyCampaigns().then((result) => {
-      if (cancelled) {
-        return;
-      }
-      setCampaigns(result.data);
-      setLoading(false);
-    });
+    fetchMyCampaigns()
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+        if (result.error) {
+          setError(result.error.message);
+          setCampaigns([]);
+        } else {
+          setError(null);
+          setCampaigns(result.data);
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+        setError('Something went wrong. Please try again.');
+        setCampaigns([]);
+        setLoading(false);
+      });
 
     return () => {
       cancelled = true;
@@ -55,14 +71,16 @@ export function MyCampaignsPanel() {
 
       {loading ? <p className="text-sm text-secondary">Loading campaigns…</p> : null}
 
-      {!loading && campaigns.length === 0 ? (
+      {!loading && error ? <p className="text-sm text-error">{error}</p> : null}
+
+      {!loading && !error && campaigns.length === 0 ? (
         <p className="text-sm text-secondary">
           No campaigns yet. Pick a length, a few training days, and the styles you
           want to train.
         </p>
       ) : null}
 
-      {campaigns.length > 0 ? (
+      {!loading && !error && campaigns.length > 0 ? (
         <ul className="divide-y divide-divider">
           {campaigns.map((campaign) => {
             const progress = campaignProgress(

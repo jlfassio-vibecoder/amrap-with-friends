@@ -83,27 +83,32 @@ export default function CreateCampaignPage() {
 
     setSaving(true);
     setError(null);
-    const result = await createCampaign({
-      name,
-      goal,
-      weekCount,
-      startDate,
-      occurrences: planned.occurrences,
-    });
-    setSaving(false);
+    try {
+      const result = await createCampaign({
+        name,
+        goal,
+        weekCount,
+        startDate,
+        occurrences: planned.occurrences,
+      });
 
-    if (result.error || !result.data) {
-      setError(result.error?.message ?? 'Something went wrong. Please try again.');
-      return;
+      if (result.error || !result.data) {
+        setError(result.error?.message ?? 'Something went wrong. Please try again.');
+        return;
+      }
+
+      trackEvent('campaign_created', {
+        week_count: weekCount,
+        sessions_per_week: planned.calendar.sessionsPerWeek,
+        total_sessions: planned.calendar.totalSessions,
+        track_count: tracks.length,
+      });
+      navigate(`/campaign/${result.data.campaignId}`);
+    } catch {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setSaving(false);
     }
-
-    trackEvent('campaign_created', {
-      week_count: weekCount,
-      sessions_per_week: planned.calendar.sessionsPerWeek,
-      total_sessions: planned.calendar.totalSessions,
-      track_count: tracks.length,
-    });
-    navigate(`/campaign/${result.data.campaignId}`);
   }
 
   return (
