@@ -84,6 +84,34 @@ export function groupOccurrencesByWeek<T extends WeekGroupable>(
     }));
 }
 
+/**
+ * Which weeks to show in the create-campaign schedule preview.
+ *
+ * Always keeps the opening stretch, the finale, and every week that holds a
+ * retest — otherwise a mid-campaign checkpoint vanishes into "N more weeks".
+ */
+export function selectCampaignPreviewWeekNumbers(input: {
+  weekNumbers: number[];
+  retestWeekNumbers: Iterable<number>;
+  openingWeeks: number;
+}): number[] {
+  const { weekNumbers, openingWeeks } = input;
+  if (weekNumbers.length === 0) {
+    return [];
+  }
+
+  const selected = new Set<number>();
+  for (const weekNumber of weekNumbers.slice(0, Math.max(0, openingWeeks))) {
+    selected.add(weekNumber);
+  }
+  selected.add(weekNumbers[weekNumbers.length - 1]);
+  for (const weekNumber of input.retestWeekNumbers) {
+    selected.add(weekNumber);
+  }
+
+  return weekNumbers.filter((weekNumber) => selected.has(weekNumber));
+}
+
 export interface CampaignProgress {
   done: number;
   total: number;
@@ -125,10 +153,7 @@ export function suggestedSlots(sessionsPerWeek: number, timeLocal = '18:00'): Ca
 }
 
 /** "24 sessions · 3 a week · 8 weeks" */
-export function formatCampaignShape(
-  weekCount: number,
-  sessionsPerWeek: number
-): string {
+export function formatCampaignShape(weekCount: number, sessionsPerWeek: number): string {
   const total = weekCount * sessionsPerWeek;
   const perWeek = sessionsPerWeek === 1 ? '1 a week' : `${sessionsPerWeek} a week`;
   return `${total} sessions · ${perWeek} · ${weekCount} weeks`;

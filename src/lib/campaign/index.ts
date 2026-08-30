@@ -26,6 +26,7 @@ export {
   formatOccurrenceDate,
   formatSlotLabel,
   groupOccurrencesByWeek,
+  selectCampaignPreviewWeekNumbers,
   suggestedSlots,
 } from './campaignPresentation';
 export type { CampaignProgress, CampaignWeekGroup, WeekGroupable } from './campaignPresentation';
