@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
+import { WorkoutTemplatePicker } from '@/components/createSession/WorkoutTemplatePicker';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useLobbyForceNav } from '@/hooks/useLobbyForceNav';
 import { useLobbyChannel } from '@/lib/realtime/useLobbyChannel';
@@ -18,11 +19,21 @@ import {
   getStoredLobbyNickname,
   persistLobbyIdentity,
 } from '@/lib/lobbyIdentity';
+import { canPassLobbyCommand } from '@/lib/lobby/canPassLobbyCommand';
 import { setStoredHostToken } from '@/lib/sessionIdentity';
 import { buildLobbyInviteUrl } from '@/lib/session/buildLobbyInviteUrl';
 import { parseWorkoutText } from '@/lib/workout/parseWorkoutLines';
+import { applyTemplate } from '@/lib/workout/templateToExercises';
+import { firstAvailableCategoryForDuration } from '@/lib/workout/filterWorkoutTemplates';
 import { callsignFromEmail } from '@/lib/sessionIdentity';
 import { resumeSessionIdentity } from '@/lib/api/resumeSessionIdentity';
+import {
+  WORKOUT_CATEGORIES,
+  WORKOUT_TEMPLATES,
+  type TimeDomain,
+  type WorkoutCategory,
+  type WorkoutTemplate,
+} from '@/data/workoutTemplates';
 
 const HEARTBEAT_MS = 15_000;
 const STALE_CHECK_MS = 20_000;
@@ -36,12 +47,17 @@ export default function LobbyStagingPage() {
   const [nickname, setNickname] = useState(
     () => getStoredLobbyNickname(lobbyId) ?? callsignFromEmail(user?.email) ?? 'Athlete'
   );
-  const [durationMinutes, setDurationMinutes] = useState(12);
+  const [durationMinutes, setDurationMinutes] = useState<TimeDomain>(10);
+  const [selectedCategory, setSelectedCategory] = useState<WorkoutCategory>('blood-shunt');
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [workoutText, setWorkoutText] = useState('10 Burpees\n15 Air Squats');
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const rejoinAttemptedRef = useRef(false);
+
+  const selectedTemplate =
+    WORKOUT_TEMPLATES.find((template) => template.id === selectedTemplateId) ?? null;
 
   const presence = memberId ? { memberId, nickname } : null;
   const { lobby, presenceByMemberId, error, refresh } = useLobbyChannel(
@@ -163,6 +179,10 @@ export default function LobbyStagingPage() {
   async function handleStartNext(event: FormEvent) {
     event.preventDefault();
     setActionError(null);
+    if (!selectedTemplate) {
+      setActionError('Select a workout from the library before starting the next session.');
+      return;
+    }
     setBusy(true);
     try {
       const workout = parseWorkoutText(workoutText);
@@ -170,6 +190,8 @@ export default function LobbyStagingPage() {
         lobbyId,
         durationMinutes,
         workout,
+        templateId: selectedTemplate.id,
+        intensityTier: selectedTemplate.intensityTier,
       });
       if (result.error) {
         setActionError(result.error.message);
@@ -187,6 +209,29 @@ export default function LobbyStagingPage() {
       setActionError(e instanceof Error ? e.message : 'Could not start the next session.');
     } finally {
       setBusy(false);
+    }
+  }
+
+  function handleDurationChange(duration: TimeDomain) {
+    setDurationMinutes(duration);
+    const nextCategory = firstAvailableCategoryForDuration(
+      WORKOUT_CATEGORIES,
+      duration,
+      WORKOUT_TEMPLATES
+    );
+    if (nextCategory) {
+      setSelectedCategory(nextCategory);
+    }
+    setSelectedTemplateId(null);
+  }
+
+  function handleTemplateSelect(template: WorkoutTemplate) {
+    const applied = applyTemplate(template);
+    setDurationMinutes(applied.durationMinutes as TimeDomain);
+    setWorkoutText(applied.workoutText);
+    setSelectedTemplateId(template.id);
+    if (template.category) {
+      setSelectedCategory(template.category);
     }
   }
 
@@ -269,11 +314,7 @@ export default function LobbyStagingPage() {
               {lobby.members.map((member) => {
                 const online = Boolean(presenceByMemberId[member.id]);
                 const isMemberHost = member.userId === lobby.hostUserId;
-                const canPass =
-                  isHost &&
-                  Boolean(member.userId) &&
-                  member.userId !== user?.id &&
-                  member.status === 'active';
+                const canPass = isHost && canPassLobbyCommand(member, user?.id);
                 return (
                   <li
                     key={member.id}
@@ -318,27 +359,32 @@ export default function LobbyStagingPage() {
           <section className="card space-y-4 p-5">
             <h2 className="text-display text-xl text-ink">Next session</h2>
             <form className="space-y-4" onSubmit={(e) => void handleStartNext(e)}>
-              <label className="block space-y-1 text-sm">
-                <span className="text-secondary">Duration (minutes)</span>
-                <input
-                  className="input-field w-full"
-                  type="number"
-                  min={1}
-                  max={60}
-                  value={durationMinutes}
-                  onChange={(e) => setDurationMinutes(Number(e.target.value) || 12)}
-                />
-              </label>
-              <label className="block space-y-1 text-sm">
-                <span className="text-secondary">Workout (one movement per line)</span>
-                <textarea
-                  className="input-field min-h-28 w-full"
-                  value={workoutText}
-                  onChange={(e) => setWorkoutText(e.target.value)}
-                />
-              </label>
+              <WorkoutTemplatePicker
+                durationMinutes={durationMinutes}
+                selectedCategory={selectedCategory}
+                selectedTemplateId={selectedTemplateId}
+                onDurationChange={handleDurationChange}
+                onCategoryChange={(category) => {
+                  setSelectedCategory(category);
+                  setSelectedTemplateId(null);
+                }}
+                onTemplateSelect={handleTemplateSelect}
+              />
+              {selectedTemplate ? (
+                <p className="text-sm text-secondary">
+                  Selected: <span className="text-ink">{selectedTemplate.name}</span>
+                </p>
+              ) : (
+                <p className="text-sm text-secondary">
+                  Select a workout to start the next session.
+                </p>
+              )}
               {displayError ? <p className="text-error text-sm">{displayError}</p> : null}
-              <button type="submit" className="btn-primary w-full" disabled={busy}>
+              <button
+                type="submit"
+                className="btn-primary w-full"
+                disabled={busy || !selectedTemplate}
+              >
                 {busy ? 'Starting…' : 'Start next session'}
               </button>
             </form>

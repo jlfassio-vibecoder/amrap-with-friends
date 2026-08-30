@@ -160,8 +160,17 @@ describe('lobby API', () => {
       lobbyId: LOBBY_ID,
       durationMinutes: 10,
       workout: [{ name: 'Air Squats', target: 15 }],
+      templateId: 'blood-shunt-10',
+      intensityTier: 3,
     });
 
+    expect(rpcMock).toHaveBeenCalledWith(
+      'start_next_lobby_session',
+      expect.objectContaining({
+        p_template_id: 'blood-shunt-10',
+        p_intensity_tier: 3,
+      })
+    );
     expect(result.error).toBeNull();
     expect(result.data?.sessionId).toBe(SESSION_ID);
     expect(sessionIdentity.persistSessionIdentity).toHaveBeenCalledWith(

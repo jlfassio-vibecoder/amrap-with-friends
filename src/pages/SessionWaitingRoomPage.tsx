@@ -34,7 +34,10 @@ import { useStagingWalkthrough } from '@/components/walkthrough/useStagingWalkth
 import { useGhostPacer } from '@/hooks/useGhostPacer';
 import { useTacticalAudio } from '@/hooks/useTacticalAudio';
 import { useLobbyForceNav } from '@/hooks/useLobbyForceNav';
+import { useLobbyHostHandoff } from '@/hooks/useLobbyHostHandoff';
 import { useLobbyChannel } from '@/lib/realtime/useLobbyChannel';
+import { passLobbyCommand } from '@/lib/api/lobby';
+import { canPassLobbyCommand } from '@/lib/lobby/canPassLobbyCommand';
 import {
   getStoredLobbyIdForSession,
   getStoredLobbyMemberId,
@@ -42,6 +45,7 @@ import {
   setStoredLobbyIdForSession,
 } from '@/lib/lobbyIdentity';
 import type { StoredGhostSelection } from '@/lib/sessionIdentity';
+import { clearStoredHostToken } from '@/lib/sessionIdentity';
 import {
   elapsedPastLobbyCountdownSec,
   formatTMinus,
@@ -187,6 +191,10 @@ export default function SessionWaitingRoomPage() {
     identity: RestoredSessionIdentity | null;
     error: string | null;
   }>({ key: '', settled: false, identity: null, error: null });
+  const [hostTokenSessionId, setHostTokenSessionId] = useState(sessionId ?? '');
+  const [hostTokenPresent, setHostTokenPresent] = useState(() =>
+    Boolean(sessionId && getStoredHostToken(sessionId))
+  );
 
   // Adjust resume bookkeeping when the session/auth inputs change (render-time pattern).
   if (needsResume && resumeState.key !== resumeKey) {
@@ -203,6 +211,11 @@ export default function SessionWaitingRoomPage() {
       identity: null,
       error: null,
     });
+  }
+
+  if ((sessionId ?? '') !== hostTokenSessionId) {
+    setHostTokenSessionId(sessionId ?? '');
+    setHostTokenPresent(Boolean(sessionId && getStoredHostToken(sessionId)));
   }
 
   useEffect(() => {
@@ -329,7 +342,6 @@ export default function SessionWaitingRoomPage() {
 
   const participantId = activeRestored?.participantId ?? getStoredParticipantId(sessionId);
   const nickname = activeRestored?.nickname ?? getStoredNickname(sessionId) ?? 'Unknown';
-  const hostTokenPresent = Boolean(getStoredHostToken(sessionId));
 
   if (participantId) {
     return (
@@ -338,6 +350,7 @@ export default function SessionWaitingRoomPage() {
         sessionId={sessionId}
         participantId={participantId}
         nickname={nickname}
+        onHostAuthorityChange={() => setHostTokenPresent(Boolean(getStoredHostToken(sessionId)))}
       />
     );
   }
@@ -370,13 +383,17 @@ function LiveSessionView({
   sessionId,
   participantId,
   nickname,
+  onHostAuthorityChange,
 }: {
   sessionId: string;
   participantId: string;
   nickname: string;
+  onHostAuthorityChange?: () => void;
 }) {
   const claimToken = getStoredClaimToken(sessionId);
-  const { isAuthenticated, isAuthLoading } = useAmrapAuth();
+  const { isAuthenticated, isAuthLoading, user } = useAmrapAuth();
+  const [passBusy, setPassBusy] = useState(false);
+  const [passError, setPassError] = useState<string | null>(null);
   const [isSubmittingPartialReps, setIsSubmittingPartialReps] = useState(false);
   const [scorecardDismissed, setScorecardDismissed] = useState(false);
   const [authOpenForSave, setAuthOpenForSave] = useState(false);
@@ -413,9 +430,19 @@ function LiveSessionView({
       ? { memberId: lobbyMemberId, nickname: lobbyNickname }
       : null;
   const lobbyChannel = useLobbyChannel(
-    livePhase === 'finished' && lobbyId ? lobbyId : undefined,
+    lobbyId && (livePhase === 'waiting' || livePhase === 'setup' || livePhase === 'finished')
+      ? lobbyId
+      : undefined,
     lobbyChannelPresence
   );
+
+  useLobbyHostHandoff({
+    hostUserId: lobbyChannel.lobby?.hostUserId,
+    activeSessionId: lobbyChannel.lobby?.activeSessionId ?? sessionId,
+    userId: user?.id,
+    enabled: Boolean(lobbyId) && (livePhase === 'waiting' || livePhase === 'setup'),
+    onHostAuthorityChange,
+  });
 
   const walkthrough = useStagingWalkthrough({
     sessionId,
@@ -545,6 +572,31 @@ function LiveSessionView({
     currentSessionId: sessionId,
     enabled: livePhase === 'finished' && !showPartialRepsModal,
   });
+
+  async function handlePassCommand(toUserId: string) {
+    if (!lobbyId) {
+      return;
+    }
+    setPassError(null);
+    setPassBusy(true);
+    try {
+      const result = await passLobbyCommand({ lobbyId, toUserId });
+      if (result.error) {
+        setPassError(result.error.message);
+        return;
+      }
+      clearStoredHostToken(sessionId);
+      onHostAuthorityChange?.();
+    } finally {
+      setPassBusy(false);
+    }
+  }
+
+  const showLobbyPass =
+    isHost &&
+    Boolean(lobbyId) &&
+    (livePhase === 'waiting' || livePhase === 'setup') &&
+    Boolean(lobbyChannel.lobby?.members.length);
 
   const stagingHref = lobbyId ? `/lobby/${lobbyId}` : null;
   const exitHref = stagingHref ?? '/';
@@ -899,6 +951,49 @@ function LiveSessionView({
             phase={live.phase}
             className="lg:min-h-0 lg:overflow-hidden"
           />
+
+          {showLobbyPass && lobbyChannel.lobby ? (
+            <section className="card space-y-3 p-4 lg:col-span-1">
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-secondary">
+                Pass Command
+              </h2>
+              <ul className="space-y-2">
+                {lobbyChannel.lobby.members.map((member) => {
+                  const canPass = canPassLobbyCommand(member, user?.id);
+                  const isMemberHost = member.userId === lobbyChannel.lobby?.hostUserId;
+                  if (!canPass && !isMemberHost) {
+                    return null;
+                  }
+                  return (
+                    <li
+                      key={member.id}
+                      className="flex flex-wrap items-center justify-between gap-2 border-b border-divider py-2 last:border-0"
+                    >
+                      <div>
+                        <span className="text-ink">{member.nickname}</span>
+                        {isMemberHost ? (
+                          <span className="ml-2 text-xs uppercase tracking-widest text-accent">
+                            Host
+                          </span>
+                        ) : null}
+                      </div>
+                      {canPass ? (
+                        <button
+                          type="button"
+                          className="text-xs uppercase tracking-widest text-muted hover:text-ink"
+                          disabled={passBusy || !member.userId}
+                          onClick={() => member.userId && void handlePassCommand(member.userId)}
+                        >
+                          Pass Command
+                        </button>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+              {passError ? <p className="text-error text-sm">{passError}</p> : null}
+            </section>
+          ) : null}
         </div>
 
         <section className="space-y-2 px-6 pb-6 text-sm text-secondary lg:hidden">
