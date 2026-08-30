@@ -1,4 +1,6 @@
 import { useCopySessionInvite } from '@/components/session/useCopySessionInvite';
+import { useAthleteProfile } from '@/hooks/useAthleteProfile';
+import { ogCardFromSex } from '@/lib/share/ogCard';
 
 interface CopyInviteLinkProps {
   sessionId: string;
@@ -14,15 +16,14 @@ export function CopyInviteLink({
   embedded = false,
   className,
 }: CopyInviteLinkProps) {
-  const { secured, error, copyInvite } = useCopySessionInvite(sessionId, lobbyId);
+  const { profile } = useAthleteProfile();
+  const card = ogCardFromSex(profile?.biologicalSex);
+  const { secured, error, copyInvite } = useCopySessionInvite(sessionId, lobbyId, card);
 
   const button = (
     <button
       type="button"
-      className={
-        className ??
-        'btn-primary w-full px-3 py-1.5 text-xs uppercase tracking-widest'
-      }
+      className={className ?? 'btn-primary w-full px-3 py-1.5 text-xs uppercase tracking-widest'}
       onClick={() => void copyInvite()}
     >
       {secured ? 'LINK COPIED' : 'COPY RALLY LINK'}

@@ -3,6 +3,15 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { CopyInviteLink } from './CopyInviteLink';
 import { buildRallyInviteUrl } from '@/lib/session/buildRallyInviteUrl';
 
+vi.mock('@/hooks/useAthleteProfile', () => ({
+  useAthleteProfile: () => ({
+    profile: null,
+    missing: false,
+    loading: false,
+    error: null,
+  }),
+}));
+
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
 
 afterEach(() => {
@@ -12,9 +21,15 @@ afterEach(() => {
 });
 
 describe('buildRallyInviteUrl', () => {
-  it('builds /join?s= with origin and session id', () => {
+  it('builds /join?s= with origin, session id, and default female card', () => {
     expect(buildRallyInviteUrl(SESSION_ID, 'https://amrap.example')).toBe(
-      `https://amrap.example/join?s=${SESSION_ID}`
+      `https://amrap.example/join?s=${SESSION_ID}&card=f`
+    );
+  });
+
+  it('bakes a male card when requested', () => {
+    expect(buildRallyInviteUrl(SESSION_ID, 'https://amrap.example', 'm')).toBe(
+      `https://amrap.example/join?s=${SESSION_ID}&card=m`
     );
   });
 });
@@ -42,7 +57,7 @@ describe('CopyInviteLink', () => {
     });
 
     expect(writeText).toHaveBeenCalledWith(
-      `https://amrap.example/join?s=${SESSION_ID}`
+      `https://amrap.example/join?s=${SESSION_ID}&card=f`
     );
     expect(screen.getByRole('button', { name: 'LINK COPIED' })).toBeTruthy();
 

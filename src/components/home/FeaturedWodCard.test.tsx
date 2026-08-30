@@ -21,6 +21,15 @@ vi.mock('@/lib/analytics/track', () => ({
   track: (...args: unknown[]) => trackMock(...args),
 }));
 
+vi.mock('@/hooks/useAthleteProfile', () => ({
+  useAthleteProfile: () => ({
+    profile: null,
+    missing: false,
+    loading: false,
+    error: null,
+  }),
+}));
+
 afterEach(() => {
   cleanup();
   fetchCurrentFeaturedWodMock.mockReset();
@@ -279,7 +288,16 @@ describe('FeaturedWodCard', () => {
     fetchCurrentFeaturedWodMock.mockResolvedValue({ data: featured(), error: null });
     const createObjectURL = vi.fn().mockReturnValue('blob:fake-url');
     const revokeObjectURL = vi.fn();
-    vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL });
+    const RealURL = globalThis.URL;
+    function PatchedURL(
+      this: unknown,
+      ...args: ConstructorParameters<typeof URL>
+    ): URL {
+      return Reflect.construct(RealURL, args) as URL;
+    }
+    Object.setPrototypeOf(PatchedURL, RealURL);
+    Object.assign(PatchedURL, RealURL, { createObjectURL, revokeObjectURL });
+    vi.stubGlobal('URL', PatchedURL);
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
     const appendSpy = vi.spyOn(document.body, 'appendChild');
 

@@ -15,6 +15,8 @@ import {
   type SquadSearchHit,
 } from '@/lib/api/squad';
 import { buildSquadInviteUrl } from '@/lib/squad';
+import { useAthleteProfile } from '@/hooks/useAthleteProfile';
+import { ogCardFromSex } from '@/lib/share/ogCard';
 
 function displayName(athlete: SquadAthlete): string {
   return athlete.nickname ?? athlete.username ?? 'Athlete';
@@ -31,6 +33,7 @@ function handleLabel(athlete: SquadAthlete): string | null {
 }
 
 export default function SquadPage() {
+  const { profile } = useAthleteProfile();
   const [squad, setSquad] = useState<MySquad | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -147,7 +150,13 @@ export default function SquadPage() {
     await reload();
   }
 
-  const inviteUrl = squad ? buildSquadInviteUrl(squad.inviteCode, window.location.origin) : '';
+  const inviteUrl = squad
+    ? buildSquadInviteUrl(
+        squad.inviteCode,
+        window.location.origin,
+        ogCardFromSex(profile?.biologicalSex)
+      )
+    : '';
 
   if (loading) {
     return (
