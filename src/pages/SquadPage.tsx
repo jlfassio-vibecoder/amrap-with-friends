@@ -8,6 +8,7 @@ import {
   removeSquadFriend,
   respondSquadInvite,
   searchAthletes,
+  rotateSquadInviteCode,
   sendSquadInvite,
   type MySquad,
   type SquadAthlete,
@@ -37,6 +38,8 @@ export default function SquadPage() {
   const [hits, setHits] = useState<SquadSearchHit[]>([]);
   const [searching, setSearching] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const { copied, error: copyError, copy } = useCopyFlash();
 
   const reload = useCallback(async () => {
@@ -82,6 +85,19 @@ export default function SquadPage() {
       return;
     }
     setHits(result.data);
+  }
+
+  async function handleResetLink() {
+    setResetting(true);
+    setError(null);
+    const result = await rotateSquadInviteCode();
+    setResetting(false);
+    setConfirmReset(false);
+    if (result.error || !result.data) {
+      setError(result.error?.message ?? 'Something went wrong. Please try again.');
+      return;
+    }
+    setSquad((current) => (current ? { ...current, inviteCode: result.data as string } : current));
   }
 
   async function handleInvite(userId: string) {
@@ -172,6 +188,40 @@ export default function SquadPage() {
           {copied ? 'LINK COPIED' : 'COPY INVITE LINK'}
         </button>
         {copyError ? <p className="text-error text-sm">{copyError}</p> : null}
+
+        {confirmReset ? (
+          <div className="space-y-2">
+            <p className="text-sm text-secondary">
+              Reset the link? Anyone still holding the old one will not be able to
+              use it. People already on your squad stay.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={resetting}
+                onClick={() => void handleResetLink()}
+              >
+                {resetting ? 'Resetting…' : 'Yes, reset it'}
+              </button>
+              <button
+                type="button"
+                className="btn-outline"
+                onClick={() => setConfirmReset(false)}
+              >
+                Keep it
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="text-sm font-semibold text-accent"
+            onClick={() => setConfirmReset(true)}
+          >
+            Reset link
+          </button>
+        )}
       </section>
 
       <section className="card space-y-4 p-6">
@@ -217,6 +267,15 @@ export default function SquadPage() {
                     onClick={() => void handleInvite(hit.userId)}
                   >
                     Invite
+                  </button>
+                ) : hit.status === 'pending_in' && hit.requestId ? (
+                  <button
+                    type="button"
+                    className="btn-primary text-sm"
+                    disabled={busyId === hit.requestId}
+                    onClick={() => void handleRespond(hit.requestId as string, true)}
+                  >
+                    Accept
                   </button>
                 ) : (
                   <span className="text-xs uppercase tracking-widest text-muted">

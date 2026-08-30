@@ -4,6 +4,7 @@ import {
   acceptSquadInviteCode,
   fetchMySquad,
   fetchSquadInvitePreview,
+  rotateSquadInviteCode,
   searchAthletes,
   sendSquadInvite,
 } from './squad';
@@ -75,8 +76,8 @@ describe('searchAthletes', () => {
     const result = await searchAthletes('jul');
     expect(result.error).toBeNull();
     expect(result.data).toEqual([
-      { userId: 'u2', username: 'jules', nickname: 'Jules', status: 'none' },
-      { userId: 'u3', username: 'rico', nickname: 'Rico', status: 'friends' },
+      { userId: 'u2', username: 'jules', nickname: 'Jules', status: 'none', requestId: null },
+      { userId: 'u3', username: 'rico', nickname: 'Rico', status: 'friends', requestId: null },
     ]);
     expect(rpcMock).toHaveBeenCalledWith('search_athletes', { p_query: 'jul' });
   });
@@ -127,5 +128,80 @@ describe('acceptSquadInviteCode', () => {
     expect(rpcMock).toHaveBeenCalledWith('accept_squad_invite_code', {
       p_invite_code: 'ABC123',
     });
+  });
+});
+
+describe('searchAthletes request ids', () => {
+  it('carries the request id so an incoming invite is actionable from search', async () => {
+    rpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        athletes: [
+          {
+            user_id: 'u2',
+            username: 'bob',
+            nickname: 'Bob',
+            status: 'pending_in',
+            request_id: 'req-1',
+          },
+        ],
+      },
+      error: null,
+    } as never);
+
+    const result = await searchAthletes('bob');
+    expect(result.data[0]).toMatchObject({ status: 'pending_in', requestId: 'req-1' });
+  });
+
+  it('leaves the request id null when there is nothing pending', async () => {
+    rpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        athletes: [{ user_id: 'u2', username: 'bob', nickname: 'Bob', status: 'none' }],
+      },
+      error: null,
+    } as never);
+    expect((await searchAthletes('bob')).data[0].requestId).toBeNull();
+  });
+});
+
+describe('decline guards', () => {
+  it('explains a recent decline instead of leaking the raw error', async () => {
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: { message: 'Invite declined recently' },
+    } as never);
+    expect((await sendSquadInvite('u2')).error?.message).toBe(
+      'They declined recently. Give it a few days before asking again.'
+    );
+  });
+
+  it('explains a permanent block', async () => {
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: { message: 'Invite blocked' },
+    } as never);
+    expect((await sendSquadInvite('u2')).error?.message).toBe(
+      'They have declined your invites, so you cannot send another.'
+    );
+  });
+});
+
+describe('rotateSquadInviteCode', () => {
+  it('returns the new code', async () => {
+    rpcMock.mockResolvedValue({
+      data: { ok: true, invite_code: 'NEWCODE123' },
+      error: null,
+    } as never);
+    const result = await rotateSquadInviteCode();
+    expect(result.data).toBe('NEWCODE123');
+    expect(result.error).toBeNull();
+  });
+
+  it('fails safe when the RPC returns no code', async () => {
+    rpcMock.mockResolvedValue({ data: { ok: true }, error: null } as never);
+    const result = await rotateSquadInviteCode();
+    expect(result.data).toBeNull();
+    expect(result.error?.message).toBe('Something went wrong. Please try again.');
   });
 });

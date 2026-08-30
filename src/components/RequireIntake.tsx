@@ -15,6 +15,9 @@ interface RequireIntakeProps {
   gateTitle?: string;
   /** Explains what signing in unlocks here, so the gate matches the route. */
   gateMessage?: string;
+  /** False where the route genuinely needs an account, so the auth modal does
+   * not offer guest play the gate has already ruled out. */
+  gateAllowsGuest?: boolean;
 }
 
 export function RequireIntake({
@@ -23,6 +26,7 @@ export function RequireIntake({
   signedOutPreview,
   gateTitle = 'Create session',
   gateMessage = 'Sign in and set up your profile before creating a session. You can still join as a guest.',
+  gateAllowsGuest = true,
 }: RequireIntakeProps) {
   const location = useLocation();
   const { profile, missing, loading, isAuthenticated, isAuthLoading, error } =
@@ -46,7 +50,9 @@ export function RequireIntake({
       <NarrowPageLayout title={gateTitle} subtitle="Sign in required">
         {signedOutPreview}
         <p className="text-sm text-secondary">{gateMessage}</p>
-        {authOpen ? <AuthModal onClose={() => setAuthOpen(false)} /> : null}
+        {authOpen ? (
+          <AuthModal onClose={() => setAuthOpen(false)} guestAllowed={gateAllowsGuest} />
+        ) : null}
         {!authOpen ? (
           <button
             type="button"

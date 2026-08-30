@@ -16,6 +16,8 @@ export interface SquadRequestEntry extends SquadAthlete {
 
 export interface SquadSearchHit extends SquadAthlete {
   status: SquadSearchStatus;
+  /** Present for pending_in / pending_out, so a search result can be acted on. */
+  requestId: string | null;
 }
 
 export interface MySquad {
@@ -36,6 +38,9 @@ const ERROR_COPY: Record<string, string> = {
   'Intake required': 'Complete your profile before inviting people to your squad.',
   'Already friends': "You are already on each other's squad.",
   'Squad full': 'That squad is full.',
+  'Invite declined recently':
+    'They declined recently. Give it a few days before asking again.',
+  'Invite blocked': 'They have declined your invites, so you cannot send another.',
   'Invite not found': 'That invite is not available.',
   'Friend not found': 'That person is not on your squad.',
 };
@@ -104,7 +109,7 @@ function parseSearchHit(raw: unknown): SquadSearchHit | null {
   ) {
     return null;
   }
-  return { ...athlete, status };
+  return { ...athlete, status, requestId: readString(readRecord(raw).request_id) };
 }
 
 export async function fetchMySquad(): Promise<{
@@ -242,4 +247,25 @@ export async function acceptSquadInviteCode(
     return { error: { message: mapError(error.message) } };
   }
   return { error: null };
+}
+
+/**
+ * Retires the current personal invite link and issues a new one. The old link
+ * stops working immediately, which is the only way back once a link has been
+ * shared somewhere the athlete did not intend.
+ */
+export async function rotateSquadInviteCode(): Promise<{
+  data: string | null;
+  error: SquadApiError | null;
+}> {
+  const { data, error } = await callRpc('rotate_squad_invite_code');
+  if (error) {
+    return { data: null, error: { message: mapError(error.message) } };
+  }
+
+  const code = readString(readRecord(data).invite_code);
+  if (!code) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+  return { data: code, error: null };
 }

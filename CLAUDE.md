@@ -29,8 +29,9 @@ opaque verb for one action. Same brand, opposite sides of the line.
 | **Session**      | One AMRAP workout, start to finish. The structural noun.                   | Buttons, page titles, routes — "Create session", `/session/:id`         |
 | **Mission**      | That same workout's objective. The editorial noun.                         | Prose and headings only — "Today's mission", "Mission in progress"      |
 | **Campaign**     | A multi-week programme (2–12 weeks, 1–5 sessions a week) with an end goal. | Buttons, page titles, routes. Always with its length: "8-week campaign" |
+| **Squad**        | A persistent friends list for inviting people to train together. Not a session. | Buttons, page titles, routes, nav — "Your squad", `/squad`         |
 | **Staging area** | The pre-workout screen where the crew gathers before the clock starts.     | Page title and any prose about that screen                              |
-| **Rally link**   | The shared invite URL. Nothing else — it never means a session.            | The copy button, and prose about sharing                                |
+| **Rally link**   | The shared invite URL for a session. Never a squad invite.                 | The copy button, and prose about sharing                                |
 
 **Session vs. mission.** Both name one workout, so each has a job. Session is
 what the user creates, joins, and navigates to, so it owns the buttons and the
