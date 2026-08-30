@@ -64,9 +64,18 @@ describe('deriveCampaignRoles', () => {
 
   it('never treats the opening session as an easy day', () => {
     // Two tests back to back would otherwise try to deload index -1 and 0.
-    const roles = deriveCampaignRoles(rows(8, 1, ['a', 'a', 'b', 'c', 'd', 'e', 'f', 'g']));
+    // Finale still repeats the benchmark so the schedule reads as a real programme.
+    const roles = deriveCampaignRoles(rows(8, 1, ['a', 'a', 'b', 'c', 'd', 'e', 'f', 'a']));
     expect(roles[0]).toBe('benchmark');
     expect(roles[1]).toBe('retest');
+    expect(roles[0]).not.toBe('deload');
+  });
+
+  it('labels nothing when the opening workout repeats but the campaign does not finish on it', () => {
+    // Older flat rotations often revisit week one's workout mid-board without
+    // ending on it — that is not a retest.
+    const roles = deriveCampaignRoles(rows(8, 1, ['a', 'b', 'a', 'c', 'd', 'e', 'f', 'g']));
+    expect(roles.every((role) => role === 'build')).toBe(true);
   });
 
   it('labels nothing when the opening workout is unknown', () => {

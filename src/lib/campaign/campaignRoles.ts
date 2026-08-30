@@ -35,6 +35,14 @@ export function deriveCampaignRoles(
     return roles;
   }
 
+  // A real programme finishes by repeating the opening workout. Mid-campaign
+  // repeats without that end-cap are ordinary rotation noise (common on older
+  // flat schedules) — do not invent tests or easy days for them.
+  const finale = occurrences[occurrences.length - 1];
+  if (finale.templateId !== benchmarkId) {
+    return roles;
+  }
+
   const testIndices = occurrences
     .map((occurrence, index) => (occurrence.templateId === benchmarkId ? index : -1))
     .filter((index) => index >= 0);
