@@ -9,6 +9,7 @@ import { RequireCoach } from '@/components/RequireCoach';
 const CreateSessionPage = lazy(() => import('./pages/CreateSessionPage'));
 const JoinSessionPage = lazy(() => import('./pages/JoinSessionPage'));
 const SessionWaitingRoomPage = lazy(() => import('./pages/SessionWaitingRoomPage'));
+const LobbyStagingPage = lazy(() => import('./pages/LobbyStagingPage'));
 const MySessionsPage = lazy(() => import('./pages/MySessionsPage'));
 const CreateCampaignPage = lazy(() => import('./pages/CreateCampaignPage'));
 const CampaignDetailPage = lazy(() => import('./pages/CampaignDetailPage'));
@@ -45,6 +46,7 @@ function App() {
             }
           />
           <Route path="/join" element={<JoinSessionPage />} />
+          <Route path="/lobby/:lobbyId" element={<LobbyStagingPage />} />
           {/* Public: the invite preview is what convinces someone to sign up,
               so it must render before the auth gate. */}
           <Route path="/campaign/join" element={<JoinCampaignPage />} />

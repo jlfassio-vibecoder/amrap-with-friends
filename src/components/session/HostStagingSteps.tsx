@@ -16,6 +16,7 @@ type ExpandedStep = 0 | 1 | 2 | null;
 
 export interface HostStagingStepsProps {
   sessionId: string;
+  lobbyId?: string | null;
   countdownArmed: boolean;
   actionsEnabled?: boolean;
   onAudioUnlock?: () => void;
@@ -33,6 +34,7 @@ function durationSummaryLabel(seconds: number): string {
 
 export function HostStagingSteps({
   sessionId,
+  lobbyId = null,
   countdownArmed,
   actionsEnabled = true,
   onAudioUnlock,
@@ -56,7 +58,7 @@ export function HostStagingSteps({
     error: copyError,
     copyInvite,
     copySessionId,
-  } = useCopySessionInvite(sessionId);
+  } = useCopySessionInvite(sessionId, lobbyId);
 
   useEffect(() => {
     if (countdownArmed) {

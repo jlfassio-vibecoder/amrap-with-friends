@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { buildRallyInviteUrl } from '@/lib/session/buildRallyInviteUrl';
+import { buildLobbyInviteUrl } from '@/lib/session/buildLobbyInviteUrl';
 import { track } from '@/lib/analytics/track';
 
 const SECURED_MS = 2000;
 
-export function useCopySessionInvite(sessionId: string) {
+export function useCopySessionInvite(sessionId: string, lobbyId?: string | null) {
   const [secured, setSecured] = useState(false);
   const [idSecured, setIdSecured] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,10 +39,12 @@ export function useCopySessionInvite(sessionId: string) {
 
   async function copyInvite() {
     setError(null);
-    const inviteUrl = buildRallyInviteUrl(sessionId, window.location.origin);
+    const inviteUrl = lobbyId
+      ? buildLobbyInviteUrl(lobbyId, window.location.origin)
+      : buildRallyInviteUrl(sessionId, window.location.origin);
     try {
       await navigator.clipboard.writeText(inviteUrl);
-      track('rally_link_copied', {}, { sessionId });
+      track('rally_link_copied', { lobby: Boolean(lobbyId) }, { sessionId });
       flash(setSecured, linkTimerRef);
     } catch {
       setError(`Could not copy link. Copy this session link manually: ${inviteUrl}`);
