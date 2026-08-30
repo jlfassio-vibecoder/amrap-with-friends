@@ -3,7 +3,10 @@ import { supabase } from '@/lib/supabase';
 import {
   createCampaign,
   fetchCampaignDetail,
+  fetchCampaignInvitePreview,
   fetchMyCampaigns,
+  joinCampaign,
+  leaveCampaign,
 } from './campaigns';
 import type { PlannedCampaignOccurrence } from '@/lib/campaign';
 
@@ -281,5 +284,109 @@ describe('fetchCampaignDetail', () => {
     const result = await fetchCampaignDetail('missing');
     expect(result.data).toBeNull();
     expect(result.error?.message).toBe('That campaign is not available.');
+  });
+});
+
+describe('fetchCampaignInvitePreview', () => {
+  it('parses the preview a signed-out visitor sees', async () => {
+    rpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        name: 'Winter Engine Build',
+        goal: 'Eight rounds by week four.',
+        week_count: 8,
+        sessions_per_week: 3,
+        status: 'active',
+        host_nickname: 'Maya',
+        member_count: 4,
+        member_limit: 50,
+        first_session_date: '2026-10-05',
+        last_session_date: '2026-11-27',
+      },
+      error: null,
+    } as never);
+
+    const result = await fetchCampaignInvitePreview('ABC123');
+    expect(result.error).toBeNull();
+    expect(result.data).toMatchObject({
+      name: 'Winter Engine Build',
+      hostNickname: 'Maya',
+      memberCount: 4,
+      memberLimit: 50,
+    });
+    const [name, params] = rpcMock.mock.calls[0] as [string, Record<string, unknown>];
+    expect(name).toBe('campaign_invite_preview');
+    expect(params.p_invite_code).toBe('ABC123');
+  });
+
+  it('rejects a blank code without calling the RPC', async () => {
+    const result = await fetchCampaignInvitePreview('   ');
+    expect(result.error?.message).toBe('That invite link is not valid.');
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it('maps an unknown code to copy that does not confirm what exists', async () => {
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: { message: 'Campaign not found' },
+    } as never);
+    const result = await fetchCampaignInvitePreview('NOPE');
+    expect(result.error?.message).toBe('That campaign is not available.');
+  });
+});
+
+describe('joinCampaign', () => {
+  it('returns the campaign to navigate to', async () => {
+    rpcMock.mockResolvedValue({
+      data: { ok: true, campaign_id: 'c1', name: 'Winter', already_member: false },
+      error: null,
+    } as never);
+    const result = await joinCampaign('ABC123');
+    expect(result.data).toEqual({ campaignId: 'c1', name: 'Winter', alreadyMember: false });
+  });
+
+  it('treats a repeat join as success, not an error', async () => {
+    rpcMock.mockResolvedValue({
+      data: { ok: true, campaign_id: 'c1', name: 'Winter', already_member: true },
+      error: null,
+    } as never);
+    const result = await joinCampaign('ABC123');
+    expect(result.error).toBeNull();
+    expect(result.data?.alreadyMember).toBe(true);
+  });
+
+  it('explains a closed campaign', async () => {
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: { message: 'Campaign closed' },
+    } as never);
+    expect((await joinCampaign('ABC123')).error?.message).toBe(
+      'This campaign has already finished.'
+    );
+  });
+
+  it('explains a full campaign', async () => {
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: { message: 'Campaign full' },
+    } as never);
+    expect((await joinCampaign('ABC123')).error?.message).toBe('This campaign is full.');
+  });
+});
+
+describe('leaveCampaign', () => {
+  it('reports success', async () => {
+    rpcMock.mockResolvedValue({ data: { ok: true }, error: null } as never);
+    expect((await leaveCampaign('c1')).error).toBeNull();
+  });
+
+  it('explains why a host cannot leave', async () => {
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: { message: 'Host cannot leave' },
+    } as never);
+    expect((await leaveCampaign('c1')).error?.message).toBe(
+      'You are running this campaign, so you cannot leave it.'
+    );
   });
 });

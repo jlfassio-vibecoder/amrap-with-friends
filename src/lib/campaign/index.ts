@@ -12,6 +12,7 @@ export {
   weekdayOf,
 } from './calendarDate';
 export { buildCampaignCalendar } from './buildCampaignCalendar';
+export { buildCampaignInviteUrl } from './buildCampaignInviteUrl';
 export {
   WEEKDAY_LABELS,
   WEEKDAY_SHORT,

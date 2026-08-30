@@ -1,14 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ThemeProvider } from '@/contexts/ThemeProvider';
 import CampaignDetailPage from './CampaignDetailPage';
 
 const fetchDetailMock = vi.fn();
+const leaveMock = vi.fn();
+const navigateMock = vi.fn();
 
 vi.mock('@/lib/api/campaigns', () => ({
   fetchCampaignDetail: (...args: unknown[]) => fetchDetailMock(...args),
+  leaveCampaign: (...args: unknown[]) => leaveMock(...args),
 }));
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return { ...actual, useNavigate: () => navigateMock };
+});
+vi.mock('@/lib/analytics/track', () => ({ track: vi.fn() }));
 vi.mock('@/hooks/useAmrapAuth', () => ({
   useAmrapAuth: () => ({
     isAuthenticated: true,
@@ -80,7 +88,11 @@ function renderPage() {
 afterEach(() => cleanup());
 beforeEach(() => {
   fetchDetailMock.mockReset();
+  leaveMock.mockReset();
+  navigateMock.mockReset();
   fetchDetailMock.mockResolvedValue({ data: detail(), error: null });
+  leaveMock.mockResolvedValue({ error: null });
+  Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
 });
 
 describe('CampaignDetailPage', () => {
@@ -139,9 +151,84 @@ describe('CampaignDetailPage', () => {
     );
   });
 
-  it('does not leak the invite code before joining is built', async () => {
+  it('gives the host a rally link to share, without printing the raw code', async () => {
+    renderPage();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'COPY RALLY LINK' })).toBeTruthy()
+    );
+    expect(screen.queryByText('ABC123')).toBeNull();
+  });
+
+  it('copies the invite URL built from the code', async () => {
+    renderPage();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'COPY RALLY LINK' })).toBeTruthy()
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'COPY RALLY LINK' }));
+    await waitFor(() =>
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        expect.stringContaining('/campaign/join?c=ABC123')
+      )
+    );
+    await waitFor(() => expect(screen.getByRole('button', { name: 'LINK COPIED' })).toBeTruthy());
+  });
+
+  it('offers no invite or leave control to the host beyond sharing', async () => {
     renderPage();
     await waitFor(() => expect(screen.getByText('Week 1')).toBeTruthy());
-    expect(screen.queryByText('ABC123')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Leave campaign' })).toBeNull();
+  });
+
+  it('lets a member leave, but confirms first', async () => {
+    fetchDetailMock.mockResolvedValue({
+      data: detail({ viewerRole: 'member', inviteCode: null }),
+      error: null,
+    });
+    renderPage();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Leave campaign' })).toBeTruthy()
+    );
+    // Sharing is host-only.
+    expect(screen.queryByRole('button', { name: 'COPY RALLY LINK' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Leave campaign' }));
+    expect(leaveMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, leave' }));
+    await waitFor(() => expect(leaveMock).toHaveBeenCalledWith('c1'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/'));
+  });
+
+  it('lets a member back out of leaving', async () => {
+    fetchDetailMock.mockResolvedValue({
+      data: detail({ viewerRole: 'member', inviteCode: null }),
+      error: null,
+    });
+    renderPage();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Leave campaign' })).toBeTruthy()
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Leave campaign' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Stay' }));
+    expect(screen.getByRole('button', { name: 'Leave campaign' })).toBeTruthy();
+    expect(leaveMock).not.toHaveBeenCalled();
+  });
+
+  it('surfaces a failed leave instead of navigating away', async () => {
+    fetchDetailMock.mockResolvedValue({
+      data: detail({ viewerRole: 'member', inviteCode: null }),
+      error: null,
+    });
+    leaveMock.mockResolvedValue({ error: { message: 'That campaign is not available.' } });
+    renderPage();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Leave campaign' })).toBeTruthy()
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Leave campaign' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, leave' }));
+    await waitFor(() =>
+      expect(screen.getByText('That campaign is not available.')).toBeTruthy()
+    );
+    expect(navigateMock).not.toHaveBeenCalled();
   });
 });

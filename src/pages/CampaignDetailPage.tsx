@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
-import { fetchCampaignDetail, type CampaignDetail } from '@/lib/api/campaigns';
+import { CopyCampaignInvite } from '@/components/campaign/CopyCampaignInvite';
+import {
+  fetchCampaignDetail,
+  leaveCampaign,
+  type CampaignDetail,
+} from '@/lib/api/campaigns';
 import {
   campaignProgress,
   formatCampaignShape,
@@ -25,9 +30,12 @@ const OCCURRENCE_LABEL: Record<string, string> = {
 
 export default function CampaignDetailPage() {
   const { campaignId } = useParams<{ campaignId: string }>();
+  const navigate = useNavigate();
   const [detail, setDetail] = useState<CampaignDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadedId, setLoadedId] = useState<string | null>(null);
+  const [leaving, setLeaving] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
 
   useEffect(() => {
     // A missing id is a routing problem, not a load — it is rendered below
@@ -90,6 +98,21 @@ export default function CampaignDetailPage() {
     );
   }
 
+  async function handleLeave() {
+    if (!campaignId) {
+      return;
+    }
+    setLeaving(true);
+    const result = await leaveCampaign(campaignId);
+    setLeaving(false);
+    if (result.error) {
+      setError(result.error.message);
+      setConfirmLeave(false);
+      return;
+    }
+    navigate('/');
+  }
+
   const progress = campaignProgress(
     detail.occurrences.filter((occurrence) => occurrence.status === 'done').length,
     detail.occurrences.length
@@ -126,8 +149,14 @@ export default function CampaignDetailPage() {
         {detail.goal ? <p className="text-sm text-secondary">{detail.goal}</p> : null}
       </section>
 
-      <section className="card space-y-3 p-6">
-        <h2 className="text-display text-xl text-ink">The crew</h2>
+      <section className="card space-y-4 p-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-display text-xl text-ink">The crew</h2>
+          <span className="text-xs text-muted">
+            {detail.members.length === 1 ? '1 athlete' : `${detail.members.length} athletes`}
+          </span>
+        </div>
+
         <ul className="flex flex-wrap gap-2">
           {detail.members.map((member) => (
             <li
@@ -141,6 +170,49 @@ export default function CampaignDetailPage() {
             </li>
           ))}
         </ul>
+
+        {detail.viewerRole === 'host' && detail.inviteCode ? (
+          <CopyCampaignInvite
+            inviteCode={detail.inviteCode}
+            campaignId={detail.campaignId}
+          />
+        ) : null}
+
+        {detail.viewerRole === 'member' ? (
+          confirmLeave ? (
+            <div className="space-y-2">
+              <p className="text-sm text-secondary">
+                Leave this campaign? Your finished sessions stay on your record,
+                and the host can invite you back.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={leaving}
+                  onClick={() => void handleLeave()}
+                >
+                  {leaving ? 'Leaving…' : 'Yes, leave'}
+                </button>
+                <button
+                  type="button"
+                  className="btn-outline"
+                  onClick={() => setConfirmLeave(false)}
+                >
+                  Stay
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="text-sm font-semibold text-accent"
+              onClick={() => setConfirmLeave(true)}
+            >
+              Leave campaign
+            </button>
+          )
+        ) : null}
       </section>
 
       <section className="space-y-4">

@@ -84,6 +84,9 @@ const ERROR_COPY: Record<string, string> = {
   'Authentication required': 'Sign in to manage campaigns.',
   'Intake required': 'Complete your profile before starting a campaign.',
   'Campaign limit reached': 'You already have three campaigns running. Finish one first.',
+  'Campaign closed': 'This campaign has already finished.',
+  'Campaign full': 'This campaign is full.',
+  'Host cannot leave': 'You are running this campaign, so you cannot leave it.',
   'Campaign not found': 'That campaign is not available.',
   invalid_timezone: 'We could not read your timezone. Try again from this device.',
 };
@@ -298,4 +301,106 @@ export async function fetchCampaignDetail(
     },
     error: null,
   };
+}
+
+export interface CampaignInvitePreview {
+  name: string;
+  goal: string | null;
+  weekCount: number;
+  sessionsPerWeek: number;
+  status: CampaignStatus;
+  hostNickname: string | null;
+  memberCount: number;
+  memberLimit: number;
+  firstSessionDate: string | null;
+  lastSessionDate: string | null;
+}
+
+export interface JoinCampaignResult {
+  campaignId: string;
+  name: string;
+  /** True when the athlete was already on the roster — a repeat click, not an error. */
+  alreadyMember: boolean;
+}
+
+/**
+ * Readable without an account: the invite code is the secret, so someone
+ * following a link can see what they are being asked to commit to before
+ * they sign up. Deliberately excludes the roster and the calendar.
+ */
+export async function fetchCampaignInvitePreview(
+  inviteCode: string
+): Promise<{ data: CampaignInvitePreview | null; error: CampaignApiError | null }> {
+  const code = inviteCode.trim();
+  if (!code) {
+    return { data: null, error: { message: 'That invite link is not valid.' } };
+  }
+
+  const { data, error } = await callRpc('campaign_invite_preview', {
+    p_invite_code: code,
+  });
+  if (error) {
+    return { data: null, error: { message: mapError(error.message) } };
+  }
+
+  const row = readRecord(data);
+  const name = readString(row.name);
+  if (!name) {
+    return { data: null, error: { message: 'That campaign is not available.' } };
+  }
+
+  return {
+    data: {
+      name,
+      goal: readString(row.goal),
+      weekCount: readNumber(row.week_count),
+      sessionsPerWeek: readNumber(row.sessions_per_week),
+      status: (readString(row.status) ?? 'active') as CampaignStatus,
+      hostNickname: readString(row.host_nickname),
+      memberCount: readNumber(row.member_count),
+      memberLimit: readNumber(row.member_limit),
+      firstSessionDate: readString(row.first_session_date),
+      lastSessionDate: readString(row.last_session_date),
+    },
+    error: null,
+  };
+}
+
+export async function joinCampaign(
+  inviteCode: string
+): Promise<{ data: JoinCampaignResult | null; error: CampaignApiError | null }> {
+  const code = inviteCode.trim();
+  if (!code) {
+    return { data: null, error: { message: 'That invite link is not valid.' } };
+  }
+
+  const { data, error } = await callRpc('join_campaign', { p_invite_code: code });
+  if (error) {
+    return { data: null, error: { message: mapError(error.message) } };
+  }
+
+  const row = readRecord(data);
+  const campaignId = readString(row.campaign_id);
+  if (!campaignId) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  return {
+    data: {
+      campaignId,
+      name: readString(row.name) ?? '',
+      alreadyMember: row.already_member === true,
+    },
+    error: null,
+  };
+}
+
+export async function leaveCampaign(
+  campaignId: string
+): Promise<{ error: CampaignApiError | null }> {
+  const { error } = await callRpc('leave_campaign', { p_campaign_id: campaignId });
+  if (error) {
+    return { error: { message: mapError(error.message) } };
+  }
+  return { error: null };
 }
