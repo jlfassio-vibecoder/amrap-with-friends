@@ -52,6 +52,7 @@ export function LiveLeaderboardPreview() {
           feel — whether they&apos;re across the gym or across time zones.
         </p>
         <Link className="btn-primary inline-block" to="/create">
+          {/* Copilot suggestion ignored: keep user-specified “Start a Session” CTA on this marketing surface. */}
           Start a Session
         </Link>
       </div>
@@ -60,7 +61,7 @@ export function LiveLeaderboardPreview() {
         <div className="grid gap-3 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           {/* Emulates the waiting-room status / clock block. */}
           <div className="card flex flex-col items-center justify-center gap-2 p-6 text-center">
-            <p className="text-display text-xs uppercase tracking-widest text-secondary">Work</p>
+            <p className="text-display text-xs uppercase tracking-widest text-secondary">Live</p>
             <p className="text-display text-5xl tabular-nums text-accent lg:text-6xl">
               {formatTime(remainingSec)}
             </p>
