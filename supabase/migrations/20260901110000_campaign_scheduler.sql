@@ -17,6 +17,8 @@ DECLARE
   v_setup_sec int := 10;
 BEGIN
   -- Generate planned occurrences that fall in the open window.
+  -- Window is in SQL (not just the loop body) so each cron tick skips rows
+  -- that are not due yet / already past the late bound.
   FOR v_occ IN
     SELECT
       o.id,
@@ -27,22 +29,22 @@ BEGIN
       o.local_date,
       o.local_time,
       c.host_user_id,
-      c.timezone
+      c.timezone,
+      (
+        (o.local_date::text || ' ' || o.local_time::text)::timestamp
+        AT TIME ZONE c.timezone
+      ) AS due_at
     FROM public.campaign_occurrences o
     INNER JOIN public.campaigns c ON c.id = o.campaign_id
     WHERE o.status = 'planned'
       AND o.session_id IS NULL
       AND c.status = 'active'
+      AND (
+        (o.local_date::text || ' ' || o.local_time::text)::timestamp
+        AT TIME ZONE c.timezone
+      ) BETWEEN now() - interval '2 minutes' AND now() + interval '15 minutes'
   LOOP
-    v_due := (
-      (v_occ.local_date::text || ' ' || v_occ.local_time::text)::timestamp
-      AT TIME ZONE v_occ.timezone
-    );
-
-    IF v_due < now() - interval '2 minutes'
-       OR v_due > now() + interval '15 minutes' THEN
-      CONTINUE;
-    END IF;
+    v_due := v_occ.due_at;
 
     v_host_nickname := coalesce(
       (SELECT nickname FROM public.athlete_profiles WHERE user_id = v_occ.host_user_id),

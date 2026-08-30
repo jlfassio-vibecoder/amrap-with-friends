@@ -7,7 +7,7 @@
 -- Membership itself still requires an account and a completed profile.
 
 -- A campaign is a crew, not a broadcast. The cap is generous enough for a
--- gym class and small enough that an leaked code cannot be used to bloat a
+-- gym class and small enough that a leaked code cannot be used to bloat a
 -- campaign indefinitely.
 CREATE OR REPLACE FUNCTION public.campaign_member_limit()
 RETURNS int
