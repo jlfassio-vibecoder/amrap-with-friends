@@ -44,9 +44,16 @@ export type CampaignStandingRow = {
   rank: number;
 };
 
-function scoreValue(finalScore: number | null | undefined): number {
+/**
+ * A usable score, or null when the row carries no evidence the athlete
+ * trained. The scheduler seeds a host participant into every generated
+ * session, so a row without a real score means "absent", not "scored zero" —
+ * counting those as attendance overstated attendance and averaged the
+ * absences in as zeros.
+ */
+function scoreValue(finalScore: number | null | undefined): number | null {
   if (typeof finalScore !== 'number' || !Number.isFinite(finalScore)) {
-    return 0;
+    return null;
   }
   return Math.max(0, finalScore);
 }
@@ -62,12 +69,16 @@ function isCountableStatus(status: CampaignStandingsOccurrence['status']): boole
 export function computeCampaignStandings(input: CampaignStandingsInput): CampaignStandingRow[] {
   const scoresByOccurrence = new Map<string, Map<string, number>>();
   for (const entry of input.scores) {
+    const value = scoreValue(entry.finalScore);
+    if (value === null) {
+      continue;
+    }
     let byUser = scoresByOccurrence.get(entry.occurrenceId);
     if (!byUser) {
       byUser = new Map();
       scoresByOccurrence.set(entry.occurrenceId, byUser);
     }
-    byUser.set(entry.userId, scoreValue(entry.finalScore));
+    byUser.set(entry.userId, value);
   }
 
   const bestByOccurrence = new Map<string, number>();
