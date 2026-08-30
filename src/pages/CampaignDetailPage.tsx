@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
+import { CampaignRoleBadge } from '@/components/campaign/CampaignRoleBadge';
 import { CopyCampaignInvite } from '@/components/campaign/CopyCampaignInvite';
+import { WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
 import {
   fetchCampaignDetail,
   fetchCampaignStandings,
@@ -11,9 +13,11 @@ import {
 } from '@/lib/api/campaigns';
 import {
   campaignProgress,
+  deriveCampaignRoles,
   formatCampaignShape,
   formatOccurrenceDate,
   groupOccurrencesByWeek,
+  type CampaignOccurrenceRole,
 } from '@/lib/campaign';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -29,6 +33,10 @@ const OCCURRENCE_LABEL: Record<string, string> = {
   done: 'Done',
   skipped: 'Skipped',
 };
+
+const WORKOUT_NAMES = new Map(
+  WORKOUT_TEMPLATES.map((template) => [template.id, template.name])
+);
 
 function formatNormalisedAverage(value: number | null): string {
   if (value === null) {
@@ -132,6 +140,13 @@ export default function CampaignDetailPage() {
     detail.occurrences.length
   );
   const weeks = groupOccurrencesByWeek(detail.occurrences);
+
+  // The role is read back out of the schedule rather than stored, so a
+  // campaign created before this existed still labels its tests correctly.
+  const roleBySequence = new Map<number, CampaignOccurrenceRole>();
+  deriveCampaignRoles(detail.occurrences).forEach((role, index) => {
+    roleBySequence.set(detail.occurrences[index].sequence, role);
+  });
   const hasCountableSessions = detail.occurrences.some(
     (occurrence) => occurrence.status === 'generated' || occurrence.status === 'done'
   );
@@ -288,13 +303,17 @@ export default function CampaignDetailPage() {
                   key={occurrence.occurrenceId}
                   className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3"
                 >
-                  <span className="text-sm font-semibold text-ink">
+                  <span className="flex flex-wrap items-baseline gap-2 text-sm font-semibold text-ink">
                     {formatOccurrenceDate(occurrence.localDate)}
-                    <span className="ml-2 font-normal text-secondary">
-                      {occurrence.localTime}
-                    </span>
+                    <span className="font-normal text-secondary">{occurrence.localTime}</span>
+                    <CampaignRoleBadge
+                      role={roleBySequence.get(occurrence.sequence) ?? 'build'}
+                    />
                   </span>
                   <span className="flex items-baseline gap-3 text-sm text-secondary">
+                    {occurrence.templateId ? (
+                      <span>{WORKOUT_NAMES.get(occurrence.templateId) ?? 'Workout'}</span>
+                    ) : null}
                     <span>{occurrence.durationMinutes} min</span>
                     {occurrence.sessionId ? (
                       <Link className="link-accent" to={`/session/${occurrence.sessionId}`}>

@@ -1,8 +1,10 @@
 export {
   CAMPAIGN_WEEK_COUNTS,
   MAX_CAMPAIGN_OCCURRENCES,
+  MAX_CAMPAIGN_TESTS,
   MAX_SESSIONS_PER_WEEK,
   MIN_SESSIONS_PER_WEEK,
+  MIN_WEEKS_FOR_DELOAD,
 } from './constants';
 export {
   addCalendarDays,
@@ -26,13 +28,18 @@ export {
   groupOccurrencesByWeek,
   suggestedSlots,
 } from './campaignPresentation';
-export type {
-  CampaignProgress,
-  CampaignWeekGroup,
-  WeekGroupable,
-} from './campaignPresentation';
-export { assignCampaignWorkouts } from './assignCampaignWorkouts';
-export type { AssignCampaignWorkoutsInput } from './assignCampaignWorkouts';
+export type { CampaignProgress, CampaignWeekGroup, WeekGroupable } from './campaignPresentation';
+export { planCampaignWorkouts } from './planCampaignWorkouts';
+export type { PlanCampaignWorkoutsInput } from './planCampaignWorkouts';
+export {
+  allBenchmarkTemplateIds,
+  allBenchmarkTrackKeys,
+  benchmarkTemplateIdFor,
+  campaignTrackKey,
+} from './campaignBenchmarks';
+export { orderPoolByVolume, repsPerRound } from './campaignVolume';
+export { campaignRoleDescription, campaignRoleLabel, deriveCampaignRoles } from './campaignRoles';
+export type { CampaignOccurrenceRole, RoleReadableOccurrence } from './campaignRoles';
 export { computeCampaignStandings } from './computeCampaignStandings';
 export type {
   CampaignStandingRow,

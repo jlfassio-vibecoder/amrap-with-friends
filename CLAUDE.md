@@ -32,6 +32,15 @@ opaque verb for one action. Same brand, opposite sides of the line.
 | **Squad**        | A persistent friends list for inviting people to train together. Not a session. | Buttons, page titles, routes, nav — "Your squad", `/squad`         |
 | **Staging area** | The pre-workout screen where the crew gathers before the clock starts.     | Page title and any prose about that screen                              |
 | **Rally link**   | The shared invite URL for a session. Never a squad invite.                 | The copy button, and prose about sharing                                |
+| **Benchmark**    | A campaign's opening session. Its score is the number the campaign is measured against. | The badge on that session, and prose about it            |
+| **Retest**       | The same workout as the benchmark, run again later in the campaign.       | The badge on those sessions                                             |
+| **Easy day**     | The light session before a retest, so the test measures fitness not fatigue. | The badge on that session                                             |
+
+**Benchmark, retest and easy day are the only session badges.** Everything else
+in a campaign is just a session and gets no label — a badge on every row labels
+nothing. They pass the click test because each one changes what the athlete
+should do that day: go hard and record it, compare it, or hold back. Internally
+the fourth role is `build`, which is deliberately never shown.
 
 **Session vs. mission.** Both name one workout, so each has a job. Session is
 what the user creates, joins, and navigates to, so it owns the buttons and the
@@ -95,6 +104,16 @@ Workout and classification names are content, not chrome, and are untouched:
   their own `.test.ts` beside them. Put new logic there rather than inside a
   component — it is the repo's strongest convention and the reason the suite is
   large and fast.
+- **A campaign's session roles are derived, never stored.** `campaign_occurrences`
+  carries a `template_id` and nothing about what the session is _for_.
+  `planCampaignWorkouts` keeps the benchmark out of the build rotation, so the
+  only sessions running the first workout are the tests, and `deriveCampaignRoles`
+  recovers benchmark/retest/easy-day from the schedule alone. That is why the
+  create preview and the campaign detail page label sessions identically with no
+  column, no migration, and no way for a stored role to drift from the workout
+  actually scheduled. The benchmark ids in `campaignBenchmarks.ts` are the one
+  thing that must never change: editing one invalidates every result recorded
+  against it.
 - **Scheduled sessions are generated, not pre-created.** A recurring rule lives
   in its own table and a per-minute `pg_cron` job materialises `sessions` rows in
   a tight window around each occurrence (see `run_featured_wod_scheduler()`).
