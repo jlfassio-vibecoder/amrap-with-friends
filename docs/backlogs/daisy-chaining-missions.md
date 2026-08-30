@@ -59,3 +59,9 @@ the earlier epic note of 6 was superseded by the soft abuse/cost raise).
 - Guest-as-host
 - Mid-workout host failover
 - Empty-lobby / idle TTL `pg_cron` (manual close + last-host leave already close the room)
+
+## Manual exit criteria
+
+Run the two-browser checklist in
+[daisy-chaining-manual-verification.md](./daisy-chaining-manual-verification.md)
+before calling the epic done.
