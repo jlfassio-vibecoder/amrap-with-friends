@@ -55,6 +55,7 @@ function App() {
                 guestMode="sign-in"
                 gateTitle="New campaign"
                 gateMessage="Sign in and set up your profile to plan a campaign. Campaigns track weeks of work, so they need an account."
+                gateAllowsGuest={false}
               >
                 <CreateCampaignPage />
               </RequireIntake>
@@ -67,6 +68,7 @@ function App() {
                 guestMode="sign-in"
                 gateTitle="Campaign"
                 gateMessage="Sign in to see this campaign. Campaigns are only visible to the crew training them."
+                gateAllowsGuest={false}
               >
                 <CampaignDetailPage />
               </RequireIntake>

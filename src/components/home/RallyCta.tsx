@@ -18,8 +18,8 @@ export function RallyCta() {
           Your next mission begins with one invitation.
         </h2>
         <p className="mt-6 max-w-[32rem] text-base leading-[1.6] text-night-secondary">
-          Set up the session in under a minute and share the code. When the timer starts, every
-          member of the squad sees the same North Star.
+          Set up the session in under a minute and share the rally link. When the timer starts, every
+          member of the squad is synced to the same timer and workout.
         </p>
 
         <div className="mt-9 flex flex-wrap items-center gap-x-7 gap-y-4">
