@@ -96,6 +96,13 @@ const ERROR_COPY: Record<string, string> = {
     'This campaign has already started, so it cannot be deleted. End it instead.',
   'Campaign has other athletes':
     'Other athletes have joined, so it cannot be deleted. End it instead — their finished sessions stay on their record.',
+  'Name the campaign in 80 characters or fewer': 'Name the campaign in 80 characters or fewer.',
+  'Keep the goal to 280 characters or fewer': 'Keep the goal to 280 characters or fewer.',
+  'Session already scheduled': 'That session is already open, so its time cannot be changed now.',
+  'Pick a date and a time': 'Pick a date and a time.',
+  'Pick a time in the future': 'Pick a time that has not passed yet.',
+  'Move it after the session before it': 'Move it later than the session before it.',
+  'Move it before the session after it': 'Move it earlier than the session after it.',
   'Campaign not found': 'That campaign is not available.',
   invalid_timezone: 'We could not read your timezone. Try again from this device.',
 };
@@ -408,6 +415,51 @@ export async function leaveCampaign(
   campaignId: string
 ): Promise<{ error: CampaignApiError | null }> {
   const { error } = await callRpc('leave_campaign', { p_campaign_id: campaignId });
+  if (error) {
+    return { error: { message: mapError(error.message) } };
+  }
+  return { error: null };
+}
+
+/**
+ * Renames a campaign or rewrites its goal. Deliberately cannot touch the
+ * workouts: the benchmark is what every result is measured against, so it is
+ * not the host's to swap after the fact.
+ */
+export async function updateCampaign(
+  campaignId: string,
+  input: { name: string; goal: string }
+): Promise<{ error: CampaignApiError | null }> {
+  const name = input.name.trim();
+  if (!name) {
+    return { error: { message: 'Name the campaign.' } };
+  }
+  const { error } = await callRpc('update_campaign', {
+    p_campaign_id: campaignId,
+    p_name: name,
+    p_goal: input.goal.trim() || null,
+  });
+  if (error) {
+    return { error: { message: mapError(error.message) } };
+  }
+  return { error: null };
+}
+
+/**
+ * Moves one session that has not run yet. The new time has to stay between the
+ * sessions either side of it — the whole app reads a campaign in sequence
+ * order, so a session that jumped its neighbours would render out of order.
+ */
+export async function rescheduleCampaignOccurrence(
+  occurrenceId: string,
+  localDate: string,
+  localTime: string
+): Promise<{ error: CampaignApiError | null }> {
+  const { error } = await callRpc('reschedule_campaign_occurrence', {
+    p_occurrence_id: occurrenceId,
+    p_local_date: localDate,
+    p_local_time: localTime,
+  });
   if (error) {
     return { error: { message: mapError(error.message) } };
   }

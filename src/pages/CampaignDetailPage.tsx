@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
-import { CampaignRoleBadge } from '@/components/campaign/CampaignRoleBadge';
+import { CampaignEditForm } from '@/components/campaign/CampaignEditForm';
+import { CampaignScheduleSection } from '@/components/campaign/CampaignScheduleSection';
 import { CopyCampaignInvite } from '@/components/campaign/CopyCampaignInvite';
-import { WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
 import {
   deleteCampaign,
   endCampaign,
   fetchCampaignDetail,
   fetchCampaignStandings,
   leaveCampaign,
+  rescheduleCampaignOccurrence,
+  updateCampaign,
   type CampaignDetail,
   type CampaignStandingRow,
   type CampaignStandingsMember,
@@ -19,14 +21,14 @@ import {
   campaignProgress,
   campaignRoleDescription,
   canDeleteCampaign,
+  canEditCampaign,
   canEndCampaign,
+  canRescheduleOccurrence,
   computeCampaignTestProgress,
   deriveCampaignRoles,
   formatCampaignRepDelta,
   formatCampaignRepScore,
   formatCampaignShape,
-  formatOccurrenceDate,
-  groupOccurrencesByWeek,
   type CampaignOccurrenceRole,
   type CampaignTestProgress,
 } from '@/lib/campaign';
@@ -37,15 +39,6 @@ const STATUS_LABEL: Record<string, string> = {
   complete: 'Complete',
   abandoned: 'Ended early',
 };
-
-const OCCURRENCE_LABEL: Record<string, string> = {
-  planned: 'Planned',
-  generated: 'Staging area open',
-  done: 'Done',
-  skipped: 'Skipped',
-};
-
-const WORKOUT_NAMES = new Map(WORKOUT_TEMPLATES.map((template) => [template.id, template.name]));
 
 function formatNormalisedAverage(value: number | null): string {
   if (value === null) {
@@ -71,6 +64,7 @@ export default function CampaignDetailPage() {
   // delete should leave the campaign readable.
   const [hostActionError, setHostActionError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [editingDetails, setEditingDetails] = useState(false);
 
   useEffect(() => {
     // A missing id is a routing problem, not a load — it is rendered below
@@ -164,6 +158,28 @@ export default function CampaignDetailPage() {
     navigate('/');
   }
 
+  async function handleSaveDetails(next: { name: string; goal: string }) {
+    if (!campaignId) {
+      return 'Something went wrong. Please try again.';
+    }
+    const result = await updateCampaign(campaignId, next);
+    if (result.error) {
+      return result.error.message;
+    }
+    setEditingDetails(false);
+    setReloadKey((key) => key + 1);
+    return null;
+  }
+
+  async function handleMove(occurrenceId: string, localDate: string, localTime: string) {
+    const result = await rescheduleCampaignOccurrence(occurrenceId, localDate, localTime);
+    if (result.error) {
+      return result.error.message;
+    }
+    setReloadKey((key) => key + 1);
+    return null;
+  }
+
   async function handleEnd() {
     if (!campaignId) {
       return;
@@ -201,7 +217,6 @@ export default function CampaignDetailPage() {
     detail.occurrences.filter((occurrence) => occurrence.status === 'done').length,
     detail.occurrences.length
   );
-  const weeks = groupOccurrencesByWeek(detail.occurrences);
 
   // The role is read back out of the schedule rather than stored, so a
   // campaign created before this existed still labels its tests correctly.
@@ -220,6 +235,7 @@ export default function CampaignDetailPage() {
   };
   const showEnd = canEndCampaign(lifecycle);
   const showDelete = canDeleteCampaign(lifecycle);
+  const showEdit = canEditCampaign(lifecycle);
 
   const hasCountableSessions = detail.occurrences.some(
     (occurrence) => occurrence.status === 'generated' || occurrence.status === 'done'
@@ -264,7 +280,31 @@ export default function CampaignDetailPage() {
           <div className="h-full bg-accent" style={{ width: `${progress.percent}%` }} />
         </div>
 
-        {detail.goal ? <p className="text-sm text-secondary">{detail.goal}</p> : null}
+        {editingDetails ? (
+          <CampaignEditForm
+            name={detail.name}
+            goal={detail.goal ?? ''}
+            onSave={handleSaveDetails}
+            onCancel={() => setEditingDetails(false)}
+          />
+        ) : (
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+            {detail.goal ? (
+              <p className="text-sm text-secondary">{detail.goal}</p>
+            ) : (
+              <p className="text-sm text-muted">No goal set.</p>
+            )}
+            {showEdit ? (
+              <button
+                type="button"
+                className="text-sm font-semibold text-accent"
+                onClick={() => setEditingDetails(true)}
+              >
+                Edit name and goal
+              </button>
+            ) : null}
+          </div>
+        )}
       </section>
 
       {testProgress ? (
@@ -487,45 +527,17 @@ export default function CampaignDetailPage() {
         ) : null}
       </section>
 
-      <section className="space-y-4">
-        <h2 className="text-display text-xl text-ink">The schedule</h2>
-        {weeks.map((week) => (
-          <div key={week.weekNumber} className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-widest text-secondary">
-              Week {week.weekNumber}
-            </p>
-            <ul className="divide-y divide-divider rounded-card border border-border bg-surface">
-              {week.occurrences.map((occurrence) => (
-                <li
-                  key={occurrence.occurrenceId}
-                  className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3"
-                >
-                  <span className="flex flex-wrap items-baseline gap-2 text-sm font-semibold text-ink">
-                    {formatOccurrenceDate(occurrence.localDate)}
-                    <span className="font-normal text-secondary">{occurrence.localTime}</span>
-                    <CampaignRoleBadge role={roleBySequence.get(occurrence.sequence) ?? 'build'} />
-                  </span>
-                  <span className="flex items-baseline gap-3 text-sm text-secondary">
-                    {occurrence.templateId ? (
-                      <span>{WORKOUT_NAMES.get(occurrence.templateId) ?? 'Workout'}</span>
-                    ) : null}
-                    <span>{occurrence.durationMinutes} min</span>
-                    {occurrence.sessionId ? (
-                      <Link className="link-accent" to={`/session/${occurrence.sessionId}`}>
-                        {OCCURRENCE_LABEL[occurrence.status] ?? occurrence.status}
-                      </Link>
-                    ) : (
-                      <span className="text-xs uppercase tracking-widest text-muted">
-                        {OCCURRENCE_LABEL[occurrence.status] ?? occurrence.status}
-                      </span>
-                    )}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </section>
+      <CampaignScheduleSection
+        occurrences={detail.occurrences}
+        roleBySequence={roleBySequence}
+        canMove={(occurrence) =>
+          canRescheduleOccurrence(lifecycle, {
+            status: occurrence.status,
+            sessionId: occurrence.sessionId,
+          })
+        }
+        onMove={handleMove}
+      />
 
       <p className="text-center text-sm">
         <Link className="link-accent" to="/">

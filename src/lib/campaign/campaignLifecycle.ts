@@ -44,6 +44,26 @@ export function canEndCampaign(input: CampaignLifecycleInput): boolean {
 }
 
 /**
+ * Renaming and re-goaling stay open for as long as the campaign is running.
+ * Neither touches a workout, so neither can disturb the benchmark.
+ */
+export function canEditCampaign(input: CampaignLifecycleInput): boolean {
+  return input.viewerRole === 'host' && !isCampaignClosed(input.status);
+}
+
+/**
+ * A session can be moved while it is still only a plan. Once the generator has
+ * made it a session the staging area is open and people may be on their way,
+ * so the time stops being the host's to change.
+ */
+export function canRescheduleOccurrence(
+  input: CampaignLifecycleInput,
+  occurrence: LifecycleOccurrence
+): boolean {
+  return canEditCampaign(input) && occurrence.status === 'planned' && occurrence.sessionId === null;
+}
+
+/**
  * Deleting is for a campaign that was never real: nothing has run and nobody
  * else has joined, so there is no history to lose and no one else's plan to
  * destroy. Anything further along ends instead.

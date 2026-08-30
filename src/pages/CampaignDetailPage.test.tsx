@@ -9,6 +9,8 @@ const fetchStandingsMock = vi.fn();
 const leaveMock = vi.fn();
 const endMock = vi.fn();
 const deleteMock = vi.fn();
+const updateMock = vi.fn();
+const rescheduleMock = vi.fn();
 const navigateMock = vi.fn();
 
 vi.mock('@/lib/api/campaigns', () => ({
@@ -17,6 +19,8 @@ vi.mock('@/lib/api/campaigns', () => ({
   leaveCampaign: (...args: unknown[]) => leaveMock(...args),
   endCampaign: (...args: unknown[]) => endMock(...args),
   deleteCampaign: (...args: unknown[]) => deleteMock(...args),
+  updateCampaign: (...args: unknown[]) => updateMock(...args),
+  rescheduleCampaignOccurrence: (...args: unknown[]) => rescheduleMock(...args),
 }));
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
@@ -98,6 +102,8 @@ beforeEach(() => {
   leaveMock.mockReset();
   endMock.mockReset();
   deleteMock.mockReset();
+  updateMock.mockReset();
+  rescheduleMock.mockReset();
   navigateMock.mockReset();
   fetchDetailMock.mockResolvedValue({ data: detail(), error: null });
   fetchStandingsMock.mockResolvedValue({
@@ -107,6 +113,8 @@ beforeEach(() => {
   leaveMock.mockResolvedValue({ error: null });
   endMock.mockResolvedValue({ error: null });
   deleteMock.mockResolvedValue({ error: null });
+  updateMock.mockResolvedValue({ error: null });
+  rescheduleMock.mockResolvedValue({ error: null });
   Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
 });
 
@@ -486,6 +494,109 @@ describe('CampaignDetailPage', () => {
       renderPage();
       await waitFor(() => expect(screen.getByText('The test')).toBeTruthy());
       expect(screen.getByText('+8 reps')).toBeTruthy();
+    });
+  });
+
+  describe('editing', () => {
+    it('lets the host rename the campaign and rewrite the goal', async () => {
+      renderPage();
+      await waitFor(() => expect(screen.getByText('Edit name and goal')).toBeTruthy());
+
+      fireEvent.click(screen.getByText('Edit name and goal'));
+      const name = screen.getByDisplayValue('Winter Engine Build');
+      fireEvent.change(name, { target: { value: 'Spring Engine Build' } });
+      fireEvent.change(screen.getByDisplayValue('Eight rounds by week four.'), {
+        target: { value: 'Ten rounds by week eight.' },
+      });
+      fireEvent.click(screen.getByText('Save changes'));
+
+      await waitFor(() =>
+        expect(updateMock).toHaveBeenCalledWith('c1', {
+          name: 'Spring Engine Build',
+          goal: 'Ten rounds by week eight.',
+        })
+      );
+      // Reloaded, so the page shows what the server actually stored.
+      await waitFor(() => expect(fetchDetailMock).toHaveBeenCalledTimes(2));
+    });
+
+    it('keeps the form open and shows why when the server refuses', async () => {
+      updateMock.mockResolvedValue({
+        error: { message: 'Name the campaign in 80 characters or fewer.' },
+      });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('Edit name and goal')).toBeTruthy());
+      fireEvent.click(screen.getByText('Edit name and goal'));
+      fireEvent.click(screen.getByText('Save changes'));
+
+      await waitFor(() =>
+        expect(screen.getByText('Name the campaign in 80 characters or fewer.')).toBeTruthy()
+      );
+      expect(screen.getByText('Save changes')).toBeTruthy();
+    });
+
+    it('offers no edit to a member or on a closed campaign', async () => {
+      fetchDetailMock.mockResolvedValue({
+        data: detail({ viewerRole: 'member', inviteCode: null }),
+        error: null,
+      });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('Leave campaign')).toBeTruthy());
+      expect(screen.queryByText('Edit name and goal')).toBeNull();
+
+      cleanup();
+      fetchDetailMock.mockResolvedValue({ data: detail({ status: 'complete' }), error: null });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('Complete')).toBeTruthy());
+      expect(screen.queryByText('Edit name and goal')).toBeNull();
+    });
+
+    it('moves a session that has not run yet', async () => {
+      renderPage();
+      // Session 1 is done, so only the three still planned can be moved.
+      await waitFor(() => expect(screen.getAllByText('Change time').length).toBe(3));
+
+      fireEvent.click(screen.getAllByText('Change time')[0]);
+      fireEvent.change(screen.getByDisplayValue('2026-10-05'), {
+        target: { value: '2026-10-06' },
+      });
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => expect(rescheduleMock).toHaveBeenCalledWith('o2', '2026-10-06', '06:30'));
+      await waitFor(() => expect(fetchDetailMock).toHaveBeenCalledTimes(2));
+    });
+
+    it('does not offer to move a session whose staging area is open', async () => {
+      fetchDetailMock.mockResolvedValue({
+        data: detail({
+          occurrences: [
+            occurrence(1, 1, { status: 'generated', sessionId: 's1' }),
+            occurrence(2, 1, { status: 'done', sessionId: 's2' }),
+            occurrence(3, 2, { status: 'skipped' }),
+            occurrence(4, 2),
+          ],
+        }),
+        error: null,
+      });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('The schedule')).toBeTruthy());
+      expect(screen.getAllByText('Change time').length).toBe(1);
+    });
+
+    it('keeps the row open and shows why when a move is refused', async () => {
+      rescheduleMock.mockResolvedValue({
+        error: { message: 'Move it before the session after it.' },
+      });
+      renderPage();
+      await waitFor(() => expect(screen.getAllByText('Change time').length).toBe(3));
+      fireEvent.click(screen.getAllByText('Change time')[0]);
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() =>
+        expect(screen.getByText('Move it before the session after it.')).toBeTruthy()
+      );
+      expect(screen.getByText('Save')).toBeTruthy();
+      expect(fetchDetailMock).toHaveBeenCalledTimes(1);
     });
   });
 });

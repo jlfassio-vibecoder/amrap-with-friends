@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   canDeleteCampaign,
+  canEditCampaign,
   canEndCampaign,
+  canRescheduleOccurrence,
   hasCampaignStarted,
   type CampaignLifecycleInput,
 } from './campaignLifecycle';
@@ -100,5 +102,49 @@ describe('canDeleteCampaign', () => {
   it('is the narrower of the two, so ending is always available where deleting is', () => {
     const fresh = input();
     expect(canDeleteCampaign(fresh) && canEndCampaign(fresh)).toBe(true);
+  });
+});
+
+describe('canEditCampaign', () => {
+  it('lets the host rename a live campaign, however far along it is', () => {
+    expect(canEditCampaign(input())).toBe(true);
+    expect(canEditCampaign(input({ occurrences: [{ status: 'done', sessionId: 's1' }] }))).toBe(
+      true
+    );
+  });
+
+  it('offers nothing to a member', () => {
+    expect(canEditCampaign(input({ viewerRole: 'member' }))).toBe(false);
+  });
+
+  it('offers nothing once the campaign is over', () => {
+    expect(canEditCampaign(input({ status: 'complete' }))).toBe(false);
+    expect(canEditCampaign(input({ status: 'abandoned' }))).toBe(false);
+  });
+});
+
+describe('canRescheduleOccurrence', () => {
+  const planned_ = { status: 'planned', sessionId: null };
+
+  it('moves a session that is still only a plan', () => {
+    expect(canRescheduleOccurrence(input(), planned_)).toBe(true);
+  });
+
+  it('refuses one whose staging area is already open', () => {
+    expect(canRescheduleOccurrence(input(), { status: 'generated', sessionId: 's1' })).toBe(false);
+  });
+
+  it('refuses one that has been run or missed', () => {
+    expect(canRescheduleOccurrence(input(), { status: 'done', sessionId: 's1' })).toBe(false);
+    expect(canRescheduleOccurrence(input(), { status: 'skipped', sessionId: null })).toBe(false);
+  });
+
+  it('refuses a planned row that somehow already has a session', () => {
+    expect(canRescheduleOccurrence(input(), { status: 'planned', sessionId: 's1' })).toBe(false);
+  });
+
+  it('offers nothing to a member, or on a closed campaign', () => {
+    expect(canRescheduleOccurrence(input({ viewerRole: 'member' }), planned_)).toBe(false);
+    expect(canRescheduleOccurrence(input({ status: 'abandoned' }), planned_)).toBe(false);
   });
 });
