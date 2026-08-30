@@ -133,6 +133,7 @@ export function CampaignTrackPicker({ tracks, onChange }: CampaignTrackPickerPro
                       <button
                         type="button"
                         className="text-[0.65rem] font-bold uppercase tracking-widest text-accent"
+                        aria-label={`Measure on ${campaignTrackLabel(track)}`}
                         onClick={() => measureOn(index)}
                       >
                         Measure on this

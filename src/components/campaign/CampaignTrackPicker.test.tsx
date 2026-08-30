@@ -16,7 +16,9 @@ describe('CampaignTrackPicker', () => {
     render(<CampaignTrackPicker tracks={tracks} onChange={onChange} />);
 
     expect(screen.getByText('Measured on this')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Measure on this' })).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Measure on Sustained Engine · 15 min' })
+    ).toBeTruthy();
   });
 
   it('moves a track to the front when Measure on this is clicked', () => {
@@ -27,7 +29,9 @@ describe('CampaignTrackPicker', () => {
     ];
     render(<CampaignTrackPicker tracks={tracks} onChange={onChange} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Measure on this' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Measure on Sustained Engine · 15 min' })
+    );
     expect(onChange).toHaveBeenCalledWith([
       { durationMinutes: 15, category: 'engine-room' },
       { durationMinutes: 10, category: 'blood-shunt' },
