@@ -40,6 +40,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS lobby_members_active_user_uidx
 CREATE INDEX IF NOT EXISTS idx_lobby_members_lobby_id
   ON public.lobby_members (lobby_id);
 
+CREATE INDEX IF NOT EXISTS idx_lobby_members_lobby_active
+  ON public.lobby_members (lobby_id)
+  WHERE status = 'active';
+
 CREATE INDEX IF NOT EXISTS idx_lobbies_host_user_id
   ON public.lobbies (host_user_id);
 
@@ -216,7 +220,26 @@ SET search_path = pg_catalog, public, extensions
 AS $$
 DECLARE
   v_uid uuid;
+  v_grace interval := interval '45 seconds';
 BEGIN
+  -- Prefer earliest joined active claimed member who is still fresh.
+  SELECT m.user_id
+  INTO v_uid
+  FROM public.lobby_members m
+  WHERE m.lobby_id = p_lobby_id
+    AND m.status = 'active'
+    AND m.user_id IS NOT NULL
+    AND m.user_id IS DISTINCT FROM p_exclude_user_id
+    AND m.last_seen_at IS NOT NULL
+    AND m.last_seen_at > (now() - v_grace)
+  ORDER BY m.joined_at ASC
+  LIMIT 1;
+
+  IF v_uid IS NOT NULL THEN
+    RETURN v_uid;
+  END IF;
+
+  -- Fall back to earliest active claimed member if everyone else is stale.
   SELECT m.user_id
   INTO v_uid
   FROM public.lobby_members m
@@ -526,6 +549,7 @@ BEGIN
   v_role := NULL;
   v_claim_token := NULL;
   v_host_token := NULL;
+  v_session_state := NULL;
 
   IF v_session_id IS NOT NULL THEN
     SELECT state INTO v_session_state
@@ -548,6 +572,17 @@ BEGIN
           WHERE session_id = v_session_id
             AND user_id = v_uid
             AND id <> v_participant_id;
+
+          IF v_session_state IN ('waiting', 'setup', 'work') THEN
+            v_claim_token :=
+              replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
+            v_claim_hash := encode(digest(v_claim_token, 'sha256'), 'hex');
+
+            UPDATE public.participants
+            SET claim_token_hash = v_claim_hash,
+                nickname = coalesce(nullif(nickname, ''), v_nickname)
+            WHERE id = v_participant_id;
+          END IF;
 
           IF v_role = 'host' THEN
             SELECT host_token INTO v_host_token
@@ -592,6 +627,8 @@ BEGIN
 
         v_role := 'joiner';
       END IF;
+    ELSE
+      v_session_state := NULL;
     END IF;
   END IF;
 
@@ -602,6 +639,7 @@ BEGIN
     'status', v_lobby.status,
     'active_session_id', v_session_id,
     'session_id', v_session_id,
+    'session_state', v_session_state,
     'participant_id', v_participant_id,
     'nickname', v_nickname,
     'role', v_role,
@@ -630,7 +668,12 @@ AS $$
 DECLARE
   v_uid uuid;
   v_lobby public.lobbies%ROWTYPE;
-  v_host_token text;
+  v_session_state text;
+  v_target_nickname text;
+  v_target_participant uuid;
+  v_claim_token text;
+  v_claim_hash text;
+  v_rotated text;
 BEGIN
   v_uid := auth.uid();
   IF v_uid IS NULL THEN
@@ -658,28 +701,78 @@ BEGIN
     RAISE EXCEPTION 'Only the host can pass command';
   END IF;
 
-  IF NOT EXISTS (
-    SELECT 1
-    FROM public.lobby_members
-    WHERE lobby_id = p_lobby_id
-      AND user_id = p_to_user_id
-      AND status = 'active'
-  ) THEN
+  SELECT nickname INTO v_target_nickname
+  FROM public.lobby_members
+  WHERE lobby_id = p_lobby_id
+    AND user_id = p_to_user_id
+    AND status = 'active'
+  LIMIT 1;
+
+  IF v_target_nickname IS NULL THEN
     RAISE EXCEPTION 'Target is not an active crew member';
   END IF;
 
-  UPDATE public.lobbies
-  SET host_user_id = p_to_user_id
-  WHERE id = p_lobby_id;
+  IF v_lobby.active_session_id IS NOT NULL THEN
+    SELECT state INTO v_session_state
+    FROM public.sessions
+    WHERE id = v_lobby.active_session_id
+    FOR UPDATE;
 
-  v_host_token := public._lobby_rotate_waiting_host(v_lobby.active_session_id, p_to_user_id);
+    IF NOT FOUND THEN
+      v_session_state := NULL;
+    ELSIF v_session_state = 'work' THEN
+      RAISE EXCEPTION 'Cannot pass command during a live session';
+    ELSIF v_session_state IN ('waiting', 'setup') THEN
+      SELECT id INTO v_target_participant
+      FROM public.participants
+      WHERE session_id = v_lobby.active_session_id
+        AND user_id = p_to_user_id
+      ORDER BY joined_at ASC
+      LIMIT 1;
 
+      IF v_target_participant IS NULL THEN
+        v_claim_token :=
+          replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
+        v_claim_hash := encode(digest(v_claim_token, 'sha256'), 'hex');
+
+        INSERT INTO public.participants (session_id, nickname, role, claim_token_hash, user_id)
+        VALUES (
+          v_lobby.active_session_id,
+          v_target_nickname,
+          'joiner',
+          v_claim_hash,
+          p_to_user_id
+        );
+      END IF;
+
+      UPDATE public.lobbies
+      SET host_user_id = p_to_user_id
+      WHERE id = p_lobby_id;
+
+      v_rotated := public._lobby_rotate_waiting_host(v_lobby.active_session_id, p_to_user_id);
+      IF v_rotated IS NULL THEN
+        RAISE EXCEPTION 'Cannot pass command during a live session';
+      END IF;
+    ELSIF v_session_state = 'finished' THEN
+      UPDATE public.lobbies
+      SET host_user_id = p_to_user_id
+      WHERE id = p_lobby_id;
+    ELSE
+      RAISE EXCEPTION 'Cannot pass command during a live session';
+    END IF;
+  ELSE
+    UPDATE public.lobbies
+    SET host_user_id = p_to_user_id
+    WHERE id = p_lobby_id;
+  END IF;
+
+  -- Never return the rotated token to the outgoing host.
   RETURN jsonb_build_object(
     'ok', true,
     'lobby_id', p_lobby_id,
     'host_user_id', p_to_user_id,
     'active_session_id', v_lobby.active_session_id,
-    'host_token', v_host_token
+    'host_token', NULL
   );
 END;
 $$;
@@ -767,11 +860,21 @@ BEGIN
   IF v_lobby.active_session_id IS NOT NULL THEN
     SELECT state INTO v_prior_state
     FROM public.sessions
-    WHERE id = v_lobby.active_session_id;
+    WHERE id = v_lobby.active_session_id
+    FOR UPDATE;
 
     IF FOUND AND v_prior_state IS DISTINCT FROM 'finished' THEN
       RAISE EXCEPTION 'Current session is still active';
     END IF;
+  END IF;
+
+  -- Host may have changed under concurrent claim/pass; re-read.
+  SELECT host_user_id INTO v_lobby.host_user_id
+  FROM public.lobbies
+  WHERE id = p_lobby_id;
+
+  IF v_lobby.host_user_id IS DISTINCT FROM v_uid THEN
+    RAISE EXCEPTION 'Only the host can start the next session';
   END IF;
 
   SELECT count(*)::int
@@ -786,6 +889,15 @@ BEGIN
     AND s.campaign_occurrence_id IS NULL
     AND NOT EXISTS (
       SELECT 1 FROM public.campaign_makeups m WHERE m.session_id = s.id
+    )
+    AND (
+      s.lobby_id IS NULL
+      OR EXISTS (
+        SELECT 1
+        FROM public.lobbies l
+        WHERE l.id = s.lobby_id
+          AND l.status = 'open'
+      )
     );
 
   IF v_active >= 3 THEN
@@ -889,7 +1001,6 @@ DECLARE
   v_uid uuid;
   v_lobby public.lobbies%ROWTYPE;
   v_successor uuid;
-  v_host_token text;
   v_was_host boolean := false;
   v_updated int;
 BEGIN
@@ -927,6 +1038,11 @@ BEGIN
     v_successor := public._lobby_pick_successor(p_lobby_id, v_uid);
 
     IF v_successor IS NULL THEN
+      UPDATE public.sessions
+      SET state = 'finished', is_paused = false, time_left_sec = 0
+      WHERE lobby_id = p_lobby_id
+        AND state IN ('waiting', 'setup');
+
       UPDATE public.lobbies
       SET status = 'closed',
           active_session_id = NULL
@@ -944,7 +1060,7 @@ BEGIN
     SET host_user_id = v_successor
     WHERE id = p_lobby_id;
 
-    v_host_token := public._lobby_rotate_waiting_host(v_lobby.active_session_id, v_successor);
+    PERFORM public._lobby_rotate_waiting_host(v_lobby.active_session_id, v_successor);
   END IF;
 
   RETURN jsonb_build_object(
@@ -952,8 +1068,7 @@ BEGIN
     'lobby_id', p_lobby_id,
     'left', true,
     'was_host', v_was_host,
-    'host_user_id', coalesce(v_successor, v_lobby.host_user_id),
-    'host_token', v_host_token
+    'host_user_id', coalesce(v_successor, v_lobby.host_user_id)
   );
 END;
 $$;
@@ -993,6 +1108,11 @@ BEGIN
     RAISE EXCEPTION 'Only the host can close the staging area';
   END IF;
 
+  UPDATE public.sessions
+  SET state = 'finished', is_paused = false, time_left_sec = 0
+  WHERE lobby_id = p_lobby_id
+    AND state IN ('waiting', 'setup');
+
   UPDATE public.lobbies
   SET status = 'closed',
       active_session_id = NULL
@@ -1023,6 +1143,7 @@ AS $$
 DECLARE
   v_lobby public.lobbies%ROWTYPE;
   v_members jsonb;
+  v_active_session_state text;
 BEGIN
   IF p_lobby_id IS NULL THEN
     RAISE EXCEPTION 'Lobby not found';
@@ -1031,6 +1152,13 @@ BEGIN
   SELECT * INTO v_lobby FROM public.lobbies WHERE id = p_lobby_id;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Lobby not found';
+  END IF;
+
+  v_active_session_state := NULL;
+  IF v_lobby.active_session_id IS NOT NULL THEN
+    SELECT state INTO v_active_session_state
+    FROM public.sessions
+    WHERE id = v_lobby.active_session_id;
   END IF;
 
   SELECT coalesce(
@@ -1057,6 +1185,7 @@ BEGIN
     'lobby_id', v_lobby.id,
     'host_user_id', v_lobby.host_user_id,
     'active_session_id', v_lobby.active_session_id,
+    'active_session_state', v_active_session_state,
     'status', v_lobby.status,
     'created_at', v_lobby.created_at,
     'updated_at', v_lobby.updated_at,
@@ -1116,6 +1245,12 @@ DECLARE
   v_grace interval := interval '45 seconds';
   v_host_token text;
   v_successor uuid;
+  v_session_state text;
+  v_nickname text;
+  v_participant_id uuid;
+  v_claim_token text;
+  v_claim_hash text;
+  v_rotated text;
 BEGIN
   v_uid := auth.uid();
   IF v_uid IS NULL THEN
@@ -1170,13 +1305,11 @@ BEGIN
     );
   END IF;
 
-  -- Deterministic successor: earliest active claimed member (prefer caller if they are first).
   v_successor := public._lobby_pick_successor(p_lobby_id, v_lobby.host_user_id);
   IF v_successor IS NULL THEN
     RAISE EXCEPTION 'No successor available';
   END IF;
 
-  -- Only the elected successor may take command this call (avoids token races).
   IF v_successor IS DISTINCT FROM v_uid THEN
     RETURN jsonb_build_object(
       'ok', true,
@@ -1187,11 +1320,73 @@ BEGIN
     );
   END IF;
 
-  UPDATE public.lobbies
-  SET host_user_id = v_uid
-  WHERE id = p_lobby_id;
+  SELECT nickname INTO v_nickname
+  FROM public.lobby_members
+  WHERE lobby_id = p_lobby_id
+    AND user_id = v_uid
+    AND status = 'active'
+  LIMIT 1;
 
-  v_host_token := public._lobby_rotate_waiting_host(v_lobby.active_session_id, v_uid);
+  IF v_nickname IS NULL THEN
+    RAISE EXCEPTION 'Not a lobby member';
+  END IF;
+
+  v_host_token := NULL;
+
+  IF v_lobby.active_session_id IS NOT NULL THEN
+    SELECT state INTO v_session_state
+    FROM public.sessions
+    WHERE id = v_lobby.active_session_id
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+      v_session_state := NULL;
+    ELSIF v_session_state = 'work' THEN
+      RAISE EXCEPTION 'Cannot claim command during a live session';
+    ELSIF v_session_state IN ('waiting', 'setup') THEN
+      SELECT id INTO v_participant_id
+      FROM public.participants
+      WHERE session_id = v_lobby.active_session_id
+        AND user_id = v_uid
+      ORDER BY joined_at ASC
+      LIMIT 1;
+
+      IF v_participant_id IS NULL THEN
+        v_claim_token :=
+          replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
+        v_claim_hash := encode(digest(v_claim_token, 'sha256'), 'hex');
+
+        INSERT INTO public.participants (session_id, nickname, role, claim_token_hash, user_id)
+        VALUES (
+          v_lobby.active_session_id,
+          v_nickname,
+          'joiner',
+          v_claim_hash,
+          v_uid
+        );
+      END IF;
+
+      UPDATE public.lobbies
+      SET host_user_id = v_uid
+      WHERE id = p_lobby_id;
+
+      v_rotated := public._lobby_rotate_waiting_host(v_lobby.active_session_id, v_uid);
+      IF v_rotated IS NULL THEN
+        RAISE EXCEPTION 'Cannot claim command during a live session';
+      END IF;
+      v_host_token := v_rotated;
+    ELSIF v_session_state = 'finished' THEN
+      UPDATE public.lobbies
+      SET host_user_id = v_uid
+      WHERE id = p_lobby_id;
+    ELSE
+      RAISE EXCEPTION 'Cannot claim command during a live session';
+    END IF;
+  ELSE
+    UPDATE public.lobbies
+    SET host_user_id = v_uid
+    WHERE id = p_lobby_id;
+  END IF;
 
   RETURN jsonb_build_object(
     'ok', true,

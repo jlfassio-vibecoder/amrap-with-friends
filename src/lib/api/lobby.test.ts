@@ -2,18 +2,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createLobbySession,
   joinLobby,
+  leaveLobby,
   passLobbyCommand,
   startNextLobbySession,
 } from './lobby';
 import { supabase } from '@/lib/supabase';
 import * as sessionIdentity from '@/lib/sessionIdentity';
 import * as lobbyIdentity from '@/lib/lobbyIdentity';
+import { track } from '@/lib/analytics/track';
 
 vi.mock('@/lib/supabase', () => ({
   supabase: { rpc: vi.fn(), from: vi.fn() },
 }));
 vi.mock('@/lib/sessionIdentity', () => ({
   persistSessionIdentity: vi.fn(),
+  clearStoredHostToken: vi.fn(),
 }));
 vi.mock('@/lib/lobbyIdentity', () => ({
   persistLobbyIdentity: vi.fn(),
@@ -21,6 +24,8 @@ vi.mock('@/lib/lobbyIdentity', () => ({
   getStoredLobbyNickname: vi.fn(() => 'Host'),
 }));
 vi.mock('@/lib/analytics/track', () => ({ track: vi.fn() }));
+
+const trackMock = vi.mocked(track);
 
 const rpcMock = vi.mocked(supabase.rpc);
 
@@ -87,12 +92,47 @@ describe('lobby API', () => {
     expect(result.error?.message).toBe('Staging area not found.');
   });
 
-  it('passLobbyCommand returns the new host token', async () => {
+  it('joinLobby persists rotated claim_token and session_state on reclaim', async () => {
+    rpcMock.mockResolvedValue({
+      data: {
+        lobby_id: LOBBY_ID,
+        lobby_member_id: MEMBER_ID,
+        host_user_id: 'user-1',
+        status: 'open',
+        active_session_id: SESSION_ID,
+        session_id: SESSION_ID,
+        session_state: 'waiting',
+        participant_id: PARTICIPANT_ID,
+        nickname: 'Jules',
+        role: 'joiner',
+        claim_token: 'rotated-claim',
+        host_token: null,
+      },
+      error: null,
+      count: null,
+      status: 200,
+      statusText: 'OK',
+    } as never);
+
+    const result = await joinLobby({ lobbyId: LOBBY_ID, nickname: 'Jules' });
+    expect(result.error).toBeNull();
+    expect(result.data?.sessionState).toBe('waiting');
+    expect(result.data?.claimToken).toBe('rotated-claim');
+    expect(sessionIdentity.persistSessionIdentity).toHaveBeenCalledWith(
+      SESSION_ID,
+      expect.objectContaining({
+        participantId: PARTICIPANT_ID,
+        claimToken: 'rotated-claim',
+      })
+    );
+  });
+
+  it('passLobbyCommand returns null host_token and clears the old host token', async () => {
     rpcMock.mockResolvedValue({
       data: {
         ok: true,
         host_user_id: 'user-2',
-        host_token: 'rotated',
+        host_token: null,
         active_session_id: SESSION_ID,
       },
       error: null,
@@ -105,9 +145,48 @@ describe('lobby API', () => {
     expect(result.error).toBeNull();
     expect(result.data).toEqual({
       hostUserId: 'user-2',
-      hostToken: 'rotated',
+      hostToken: null,
       activeSessionId: SESSION_ID,
     });
+    expect(sessionIdentity.clearStoredHostToken).toHaveBeenCalledWith(SESSION_ID);
+  });
+
+  it('leaveLobby tracks lobby_closed when the last host leaves', async () => {
+    rpcMock.mockResolvedValue({
+      data: { ok: true, lobby_id: LOBBY_ID, left: true, closed: true },
+      error: null,
+      count: null,
+      status: 200,
+      statusText: 'OK',
+    } as never);
+
+    const result = await leaveLobby(LOBBY_ID);
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual({ left: true, closed: true });
+    expect(trackMock).toHaveBeenCalledWith('lobby_closed', {});
+    expect(trackMock).not.toHaveBeenCalledWith('lobby_host_reassigned', {});
+  });
+
+  it('leaveLobby tracks lobby_host_reassigned when host leaves a successor', async () => {
+    rpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        lobby_id: LOBBY_ID,
+        left: true,
+        was_host: true,
+        host_user_id: 'user-2',
+      },
+      error: null,
+      count: null,
+      status: 200,
+      statusText: 'OK',
+    } as never);
+
+    const result = await leaveLobby(LOBBY_ID);
+    expect(result.error).toBeNull();
+    expect(result.data?.left).toBe(true);
+    expect(trackMock).toHaveBeenCalledWith('lobby_host_reassigned', {});
+    expect(trackMock).not.toHaveBeenCalledWith('lobby_closed', {});
   });
 
   it('startNextLobbySession seeds the new session identity', async () => {
@@ -128,8 +207,17 @@ describe('lobby API', () => {
       lobbyId: LOBBY_ID,
       durationMinutes: 10,
       workout: [{ name: 'Air Squats', target: 15 }],
+      templateId: 'blood-shunt-10',
+      intensityTier: 3,
     });
 
+    expect(rpcMock).toHaveBeenCalledWith(
+      'start_next_lobby_session',
+      expect.objectContaining({
+        p_template_id: 'blood-shunt-10',
+        p_intensity_tier: 3,
+      })
+    );
     expect(result.error).toBeNull();
     expect(result.data?.sessionId).toBe(SESSION_ID);
     expect(sessionIdentity.persistSessionIdentity).toHaveBeenCalledWith(

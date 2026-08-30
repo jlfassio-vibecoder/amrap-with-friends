@@ -5,7 +5,7 @@ import {
   getStoredLobbyNickname,
   persistLobbyIdentity,
 } from '@/lib/lobbyIdentity';
-import { persistSessionIdentity } from '@/lib/sessionIdentity';
+import { clearStoredHostToken, persistSessionIdentity } from '@/lib/sessionIdentity';
 import { track } from '@/lib/analytics/track';
 
 export type LobbyApiError = { message: string };
@@ -19,10 +19,13 @@ export type LobbyMember = {
   joinedAt: string;
 };
 
+export type LobbySessionState = 'waiting' | 'setup' | 'work' | 'finished';
+
 export type LobbySnapshot = {
   lobbyId: string;
   hostUserId: string;
   activeSessionId: string | null;
+  activeSessionState: LobbySessionState | null;
   status: 'open' | 'closed';
   createdAt: string;
   updatedAt: string;
@@ -45,12 +48,26 @@ export type JoinLobbyResult = {
   status: string;
   activeSessionId: string | null;
   sessionId: string | null;
+  sessionState: LobbySessionState | null;
   participantId: string | null;
   nickname: string;
   role: 'host' | 'joiner' | null;
   claimToken: string | null;
   hostToken: string | null;
 };
+
+export function isLiveLobbySessionState(
+  state: string | null | undefined
+): state is 'waiting' | 'setup' | 'work' {
+  return state === 'waiting' || state === 'setup' || state === 'work';
+}
+
+function parseLobbySessionState(value: unknown): LobbySessionState | null {
+  if (value === 'waiting' || value === 'setup' || value === 'work' || value === 'finished') {
+    return value;
+  }
+  return null;
+}
 
 const LOBBY_ID_UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -94,6 +111,12 @@ function mapRpcError(message: string | undefined): string {
   }
   if (message.includes('Cannot pass command to yourself')) {
     return 'Pick someone else to pass command to.';
+  }
+  if (
+    message.includes('Cannot pass command during a live session') ||
+    message.includes('Cannot claim command during a live session')
+  ) {
+    return 'Cannot change host during a live session.';
   }
   if (message.includes('Current session is still active')) {
     return 'Finish the current session before starting the next one.';
@@ -227,6 +250,7 @@ export async function joinLobby(input: {
   const role = roleRaw === 'host' || roleRaw === 'joiner' ? roleRaw : null;
   const claimToken = readString(raw.claim_token);
   const hostToken = readString(raw.host_token);
+  const sessionState = parseLobbySessionState(raw.session_state);
 
   if (!lobbyId || !lobbyMemberId || !hostUserId) {
     return { data: null, error: { message: 'Something went wrong. Please try again.' } };
@@ -247,11 +271,7 @@ export async function joinLobby(input: {
     });
   }
 
-  track(
-    'lobby_joined',
-    { has_session: Boolean(sessionId), role },
-    { sessionId, participantId }
-  );
+  track('lobby_joined', { has_session: Boolean(sessionId), role }, { sessionId, participantId });
 
   return {
     data: {
@@ -261,6 +281,7 @@ export async function joinLobby(input: {
       status,
       activeSessionId,
       sessionId,
+      sessionState,
       participantId,
       nickname: readString(raw.nickname) ?? nickname,
       role,
@@ -285,7 +306,13 @@ export async function getLobby(
   const status = readString(raw.status);
   const createdAt = readString(raw.created_at);
   const updatedAt = readString(raw.updated_at);
-  if (!id || !hostUserId || (status !== 'open' && status !== 'closed') || !createdAt || !updatedAt) {
+  if (
+    !id ||
+    !hostUserId ||
+    (status !== 'open' && status !== 'closed') ||
+    !createdAt ||
+    !updatedAt
+  ) {
     return { data: null, error: { message: 'Something went wrong. Please try again.' } };
   }
 
@@ -301,6 +328,7 @@ export async function getLobby(
       lobbyId: id,
       hostUserId,
       activeSessionId: readString(raw.active_session_id),
+      activeSessionState: parseLobbySessionState(raw.active_session_state),
       status,
       createdAt,
       updatedAt,
@@ -310,10 +338,7 @@ export async function getLobby(
   };
 }
 
-export async function passLobbyCommand(input: {
-  lobbyId: string;
-  toUserId: string;
-}): Promise<{
+export async function passLobbyCommand(input: { lobbyId: string; toUserId: string }): Promise<{
   data: { hostUserId: string; hostToken: string | null; activeSessionId: string | null } | null;
   error: LobbyApiError | null;
 }> {
@@ -329,12 +354,17 @@ export async function passLobbyCommand(input: {
   if (!hostUserId) {
     return { data: null, error: { message: 'Something went wrong. Please try again.' } };
   }
+  const activeSessionId = readString(raw.active_session_id);
+  // Rotated token is never returned to the outgoing host; clear any stale local copy.
+  if (activeSessionId) {
+    clearStoredHostToken(activeSessionId);
+  }
   track('command_passed', { to_user_id: input.toUserId });
   return {
     data: {
       hostUserId,
       hostToken: readString(raw.host_token),
-      activeSessionId: readString(raw.active_session_id),
+      activeSessionId,
     },
     error: null,
   };
@@ -396,8 +426,15 @@ export async function leaveLobby(
     return { data: null, error: { message: mapRpcError(error.message) } };
   }
   const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  const closed = raw.closed === true;
+  const wasHost = raw.was_host === true;
+  if (closed) {
+    track('lobby_closed', {});
+  } else if (wasHost) {
+    track('lobby_host_reassigned', {});
+  }
   return {
-    data: { left: raw.left === true, closed: raw.closed === true },
+    data: { left: raw.left === true, closed },
     error: null,
   };
 }

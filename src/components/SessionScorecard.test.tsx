@@ -1,5 +1,6 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { SessionScorecard } from './SessionScorecard';
 import type { LeaderboardEntry } from '@/lib/sessionSync/types';
 
@@ -37,47 +38,44 @@ const scorecardProps = {
 
 describe('SessionScorecard', () => {
   it('renders save button when saveState is idle', () => {
-    render(
-      <SessionScorecard
-        {...scorecardProps}
-        saveState="idle"
-      />
-    );
+    render(<SessionScorecard {...scorecardProps} saveState="idle" />);
 
     expect(screen.getByRole('button', { name: 'Save to my account' })).toBeDefined();
   });
 
   it('renders saving label when saveState is saving', () => {
-    render(
-      <SessionScorecard
-        {...scorecardProps}
-        saveState="saving"
-      />
-    );
+    render(<SessionScorecard {...scorecardProps} saveState="saving" />);
 
     expect(screen.getByRole('button', { name: 'Saving…' })).toBeDefined();
   });
 
   it('renders saved label when saveState is saved', () => {
-    render(
-      <SessionScorecard
-        {...scorecardProps}
-        saveState="saved"
-      />
-    );
+    render(<SessionScorecard {...scorecardProps} saveState="saved" />);
 
     expect(screen.getByRole('button', { name: 'Saved to my account' })).toBeDefined();
   });
 
   it('shows unavailable message when saveState is unavailable', () => {
-    render(
-      <SessionScorecard
-        {...scorecardProps}
-        saveState="unavailable"
-      />
-    );
+    render(<SessionScorecard {...scorecardProps} saveState="unavailable" />);
 
     expect(screen.queryByRole('button', { name: 'Save to my account' })).toBeNull();
     expect(screen.getByText(/can no longer be saved/i)).toBeDefined();
+  });
+
+  it('shows Back to staging primary and Back home secondary when stagingHref is set', () => {
+    render(
+      <MemoryRouter>
+        <SessionScorecard
+          {...scorecardProps}
+          saveState="saved"
+          stagingHref="/lobby/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        />
+      </MemoryRouter>
+    );
+
+    const staging = screen.getByRole('link', { name: 'Back to staging' });
+    expect(staging.getAttribute('href')).toBe('/lobby/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+    const home = screen.getByRole('link', { name: 'Back home' });
+    expect(home.getAttribute('href')).toBe('/');
   });
 });

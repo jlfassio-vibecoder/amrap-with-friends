@@ -34,14 +34,26 @@ import { useStagingWalkthrough } from '@/components/walkthrough/useStagingWalkth
 import { useGhostPacer } from '@/hooks/useGhostPacer';
 import { useTacticalAudio } from '@/hooks/useTacticalAudio';
 import { useLobbyForceNav } from '@/hooks/useLobbyForceNav';
-import { getLobby } from '@/lib/api/lobby';
-import { setStoredLobbyIdForSession, getStoredLobbyIdForSession } from '@/lib/lobbyIdentity';
+import { useLobbyHostHandoff } from '@/hooks/useLobbyHostHandoff';
+import { useStaleLobbyHostClaim } from '@/hooks/useStaleLobbyHostClaim';
+import { useLobbyChannel } from '@/lib/realtime/useLobbyChannel';
+import { passLobbyCommand, touchLobbyPresence } from '@/lib/api/lobby';
+import { canPassLobbyCommand } from '@/lib/lobby/canPassLobbyCommand';
+import {
+  getStoredLobbyIdForSession,
+  getStoredLobbyMemberId,
+  getStoredLobbyNickname,
+  setStoredLobbyIdForSession,
+} from '@/lib/lobbyIdentity';
 import type { StoredGhostSelection } from '@/lib/sessionIdentity';
+import { clearStoredHostToken, setStoredHostToken } from '@/lib/sessionIdentity';
 import {
   elapsedPastLobbyCountdownSec,
   formatTMinus,
   remainingLobbyCountdownSec,
 } from '@/lib/session/lobbyCountdown';
+
+const LOBBY_HEARTBEAT_MS = 15_000;
 
 function formatTime(totalSec: number): string {
   const minutes = Math.floor(totalSec / 60);
@@ -68,12 +80,9 @@ function phaseLabel(phase: string): string {
 function WaitingTypewriterLabel() {
   const WORD = 'WAITING';
   const prefersReducedMotion =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const [chars, setChars] = useState(() =>
-    prefersReducedMotion ? WORD.length : 0
-  );
+  const [chars, setChars] = useState(() => (prefersReducedMotion ? WORD.length : 0));
   const [dots, setDots] = useState(() => (prefersReducedMotion ? 3 : 0));
 
   useEffect(() => {
@@ -107,11 +116,7 @@ function WaitingTypewriterLabel() {
   );
 }
 
-function formatExerciseLabel(exercise: {
-  name: string;
-  target?: number;
-  unit?: string;
-}): string {
+function formatExerciseLabel(exercise: { name: string; target?: number; unit?: string }): string {
   if (exercise.target === undefined) {
     return exercise.name;
   }
@@ -179,9 +184,7 @@ export default function SessionWaitingRoomPage() {
   const { isAuthenticated, isAuthLoading } = useAmrapAuth();
 
   const syncBootstrap =
-    sessionId && !isAuthLoading
-      ? readSyncIdentityBootstrap(sessionId, isAuthenticated)
-      : null;
+    sessionId && !isAuthLoading ? readSyncIdentityBootstrap(sessionId, isAuthenticated) : null;
   const needsResume = syncBootstrap?.kind === 'need-resume';
   const resumeKey = `${sessionId ?? ''}:${isAuthenticated}:${isAuthLoading}`;
 
@@ -191,6 +194,10 @@ export default function SessionWaitingRoomPage() {
     identity: RestoredSessionIdentity | null;
     error: string | null;
   }>({ key: '', settled: false, identity: null, error: null });
+  const [hostTokenSessionId, setHostTokenSessionId] = useState(sessionId ?? '');
+  const [hostTokenPresent, setHostTokenPresent] = useState(() =>
+    Boolean(sessionId && getStoredHostToken(sessionId))
+  );
 
   // Adjust resume bookkeeping when the session/auth inputs change (render-time pattern).
   if (needsResume && resumeState.key !== resumeKey) {
@@ -207,6 +214,11 @@ export default function SessionWaitingRoomPage() {
       identity: null,
       error: null,
     });
+  }
+
+  if ((sessionId ?? '') !== hostTokenSessionId) {
+    setHostTokenSessionId(sessionId ?? '');
+    setHostTokenPresent(Boolean(sessionId && getStoredHostToken(sessionId)));
   }
 
   useEffect(() => {
@@ -266,8 +278,7 @@ export default function SessionWaitingRoomPage() {
           key: resumeKey,
           settled: true,
           identity: null,
-          error:
-            'No participant identity found for this session. Join or create again.',
+          error: 'No participant identity found for this session. Join or create again.',
         });
         return;
       }
@@ -311,14 +322,15 @@ export default function SessionWaitingRoomPage() {
       : resumeState.key === resumeKey
         ? resumeState.identity
         : null;
-  const activeResumeError =
-    resumeState.key === resumeKey ? resumeState.error : null;
+  const activeResumeError = resumeState.key === resumeKey ? resumeState.error : null;
 
   if (!sessionId) {
     return (
       <main className="mx-auto max-w-lg space-y-4 p-6">
         <p className="text-error">Error: Missing session ID.</p>
-        <Link className="link-accent" to="/">Back home</Link>
+        <Link className="link-accent" to="/">
+          Back home
+        </Link>
       </main>
     );
   }
@@ -331,13 +343,8 @@ export default function SessionWaitingRoomPage() {
     );
   }
 
-  const participantId =
-    activeRestored?.participantId ?? getStoredParticipantId(sessionId);
-  const nickname =
-    activeRestored?.nickname ??
-    getStoredNickname(sessionId) ??
-    'Unknown';
-  const hostTokenPresent = Boolean(getStoredHostToken(sessionId));
+  const participantId = activeRestored?.participantId ?? getStoredParticipantId(sessionId);
+  const nickname = activeRestored?.nickname ?? getStoredNickname(sessionId) ?? 'Unknown';
 
   if (participantId) {
     return (
@@ -346,6 +353,7 @@ export default function SessionWaitingRoomPage() {
         sessionId={sessionId}
         participantId={participantId}
         nickname={nickname}
+        onHostAuthorityChange={() => setHostTokenPresent(Boolean(getStoredHostToken(sessionId)))}
       />
     );
   }
@@ -378,19 +386,24 @@ function LiveSessionView({
   sessionId,
   participantId,
   nickname,
+  onHostAuthorityChange,
 }: {
   sessionId: string;
   participantId: string;
   nickname: string;
+  onHostAuthorityChange?: () => void;
 }) {
   const claimToken = getStoredClaimToken(sessionId);
-  const { isAuthenticated, isAuthLoading } = useAmrapAuth();
+  const { isAuthenticated, isAuthLoading, user } = useAmrapAuth();
+  const [passBusy, setPassBusy] = useState(false);
+  const [passError, setPassError] = useState<string | null>(null);
+  const [forceNavError, setForceNavError] = useState<string | null>(null);
   const [isSubmittingPartialReps, setIsSubmittingPartialReps] = useState(false);
   const [scorecardDismissed, setScorecardDismissed] = useState(false);
   const [authOpenForSave, setAuthOpenForSave] = useState(false);
   const pendingSaveAfterAuth = useRef(false);
-  const [ghostSelection, setGhostSelection] = useState<StoredGhostSelection | null>(
-    () => getStoredGhostSelection(sessionId)
+  const [ghostSelection, setGhostSelection] = useState<StoredGhostSelection | null>(() =>
+    getStoredGhostSelection(sessionId)
   );
   // Copilot suggestion ignored: activeGhostSelection already gates stored selection on isAuthenticated.
   const activeGhostSelection = isAuthenticated ? ghostSelection : null;
@@ -406,8 +419,7 @@ function LiveSessionView({
   const live = useLiveAmrapSession(sessionId, channel);
   const { isHost, start: startSession, phase: livePhase } = live;
 
-  const lobbyId =
-    channel.session?.lobby_id ?? getStoredLobbyIdForSession(sessionId) ?? null;
+  const lobbyId = channel.session?.lobby_id ?? getStoredLobbyIdForSession(sessionId) ?? null;
 
   useEffect(() => {
     if (channel.session?.lobby_id) {
@@ -415,29 +427,59 @@ function LiveSessionView({
     }
   }, [channel.session?.lobby_id, sessionId]);
 
-  const [lobbyActiveSessionId, setLobbyActiveSessionId] = useState<string | null>(null);
+  const lobbyMemberId = lobbyId ? getStoredLobbyMemberId(lobbyId) : null;
+  const lobbyNickname = (lobbyId ? getStoredLobbyNickname(lobbyId) : null) ?? nickname;
+  const lobbyChannelPresence =
+    lobbyId && lobbyMemberId && lobbyNickname
+      ? { memberId: lobbyMemberId, nickname: lobbyNickname }
+      : null;
+  const lobbyChannel = useLobbyChannel(
+    lobbyId && (livePhase === 'waiting' || livePhase === 'setup' || livePhase === 'finished')
+      ? lobbyId
+      : undefined,
+    lobbyChannelPresence
+  );
+
+  useLobbyHostHandoff({
+    hostUserId: lobbyChannel.lobby?.hostUserId,
+    activeSessionId: lobbyChannel.lobby?.activeSessionId ?? sessionId,
+    userId: user?.id,
+    enabled: Boolean(lobbyId) && (livePhase === 'waiting' || livePhase === 'setup'),
+    onHostAuthorityChange,
+  });
+
+  const waitingOrSetup = livePhase === 'waiting' || livePhase === 'setup';
+
   useEffect(() => {
-    if (!lobbyId || livePhase !== 'finished') {
+    if (!lobbyId || !isAuthenticated || !waitingOrSetup) {
       return;
     }
-    let cancelled = false;
-    void getLobby(lobbyId).then((result) => {
-      if (!cancelled && result.data) {
-        setLobbyActiveSessionId(result.data.activeSessionId);
-      }
-    });
+    void touchLobbyPresence(lobbyId);
     const id = window.setInterval(() => {
-      void getLobby(lobbyId).then((result) => {
-        if (!cancelled && result.data) {
-          setLobbyActiveSessionId(result.data.activeSessionId);
-        }
-      });
-    }, 4000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(id);
-    };
-  }, [lobbyId, livePhase]);
+      void touchLobbyPresence(lobbyId);
+    }, LOBBY_HEARTBEAT_MS);
+    return () => window.clearInterval(id);
+  }, [lobbyId, isAuthenticated, waitingOrSetup]);
+
+  const waitingHostMemberId =
+    lobbyChannel.lobby?.members.find((member) => member.userId === lobbyChannel.lobby?.hostUserId)
+      ?.id ?? null;
+
+  useStaleLobbyHostClaim({
+    lobbyId,
+    hostUserId: lobbyChannel.lobby?.hostUserId,
+    userId: user?.id,
+    hostMemberId: waitingHostMemberId,
+    presenceByMemberId: lobbyChannel.presenceByMemberId,
+    enabled: Boolean(lobbyId && waitingOrSetup && user?.id),
+    onClaimed: (result) => {
+      if (result.hostToken && result.activeSessionId) {
+        setStoredHostToken(result.activeSessionId, result.hostToken);
+      }
+      onHostAuthorityChange?.();
+      void lobbyChannel.refresh();
+    },
+  });
 
   const walkthrough = useStagingWalkthrough({
     sessionId,
@@ -452,16 +494,13 @@ function LiveSessionView({
     workDurationSec: live.workDurationSec,
   });
   const claim = useParticipantClaim(sessionId);
-  const selfLeaderboardEntry =
-    live.leaderboard.find((entry) => entry.isSelf) ?? null;
+  const selfLeaderboardEntry = live.leaderboard.find((entry) => entry.isSelf) ?? null;
   const selfBaseScore = selfLeaderboardEntry?.baseScore ?? 0;
 
   const lobbyCountdownEndsAt = live.lobbyCountdownEndsAt;
   const lobbyRemaining = remainingLobbyCountdownSec(lobbyCountdownEndsAt, nowMs);
-  const lobbyCountdownArmed =
-    livePhase === 'waiting' && lobbyCountdownEndsAt !== null;
-  const lobbyTicking =
-    lobbyCountdownArmed && lobbyRemaining !== null && lobbyRemaining > 0;
+  const lobbyCountdownArmed = livePhase === 'waiting' && lobbyCountdownEndsAt !== null;
+  const lobbyTicking = lobbyCountdownArmed && lobbyRemaining !== null && lobbyRemaining > 0;
   const lobbyIgnited = lobbyCountdownArmed && lobbyRemaining === 0;
   const lobbyOvertimeSec = lobbyIgnited
     ? elapsedPastLobbyCountdownSec(lobbyCountdownEndsAt, nowMs)
@@ -487,9 +526,7 @@ function LiveSessionView({
   });
 
   const isSoloTemplated =
-    live.participantCount === 1 &&
-    live.templateId !== null &&
-    livePhase === 'waiting';
+    live.participantCount === 1 && live.templateId !== null && livePhase === 'waiting';
   const showGhostPicker = isSoloTemplated;
   // Copilot suggestion ignored: ghost pacer error display and strip suppression on load failure already exist.
   const showGhostPacerError =
@@ -508,20 +545,13 @@ function LiveSessionView({
     !live.isPractice &&
     safetyNoticesComplete;
   const showPractice =
-    livePhase === 'waiting' &&
-    !lobbyCountdownArmed &&
-    !live.isPractice &&
-    safetyNoticesComplete;
-  const showSafetyNotice =
-    livePhase === 'waiting' && activeSafetyNotice !== null;
+    livePhase === 'waiting' && !lobbyCountdownArmed && !live.isPractice && safetyNoticesComplete;
+  const showSafetyNotice = livePhase === 'waiting' && activeSafetyNotice !== null;
   const showWalkthrough = walkthrough.active;
   const showWalkthroughFinale = walkthrough.showingFinale;
   const waitingStartPracticeActions =
     showStart || showPractice ? (
-      <div
-        className="flex flex-wrap items-center gap-2"
-        data-walkthrough-id="actions"
-      >
+      <div className="flex flex-wrap items-center gap-2" data-walkthrough-id="actions">
         {showStart ? (
           <button
             type="button"
@@ -550,14 +580,8 @@ function LiveSessionView({
         ) : null}
       </div>
     ) : null;
-  const showPause =
-    livePhase === 'work' &&
-    !live.isPaused &&
-    (isHost || live.isPractice);
-  const showResume =
-    livePhase === 'work' &&
-    live.isPaused &&
-    (isHost || live.isPractice);
+  const showPause = livePhase === 'work' && !live.isPaused && (isHost || live.isPractice);
+  const showResume = livePhase === 'work' && live.isPaused && (isHost || live.isPractice);
   const showLogRound = livePhase === 'work' && !live.isPaused;
   const showEndPractice = live.isPractice && livePhase === 'finished';
   const showPartialRepsModal =
@@ -578,12 +602,39 @@ function LiveSessionView({
     !showPartialRepsModal &&
     !showScorecard;
 
-  useLobbyForceNav({
+  const forceNav = useLobbyForceNav({
     lobbyId,
-    activeSessionId: lobbyActiveSessionId,
+    activeSessionId: lobbyChannel.lobby?.activeSessionId,
+    activeSessionState: lobbyChannel.lobby?.activeSessionState,
     currentSessionId: sessionId,
     enabled: livePhase === 'finished' && !showPartialRepsModal,
+    onError: setForceNavError,
   });
+
+  async function handlePassCommand(toUserId: string) {
+    if (!lobbyId) {
+      return;
+    }
+    setPassError(null);
+    setPassBusy(true);
+    try {
+      const result = await passLobbyCommand({ lobbyId, toUserId });
+      if (result.error) {
+        setPassError(result.error.message);
+        return;
+      }
+      clearStoredHostToken(sessionId);
+      onHostAuthorityChange?.();
+    } finally {
+      setPassBusy(false);
+    }
+  }
+
+  const showLobbyPass =
+    isHost &&
+    Boolean(lobbyId) &&
+    (livePhase === 'waiting' || livePhase === 'setup') &&
+    Boolean(lobbyChannel.lobby?.members.length);
 
   const stagingHref = lobbyId ? `/lobby/${lobbyId}` : null;
   const exitHref = stagingHref ?? '/';
@@ -676,24 +727,33 @@ function LiveSessionView({
           undefined
         }
       >
-        <AppHeader
-          title="Staging area"
-          subtitle={hostStatusText}
-          desktopTitleAsPageHeading
-        />
+        <AppHeader title="Staging area" subtitle={hostStatusText} desktopTitleAsPageHeading />
 
-        <div className="space-y-6 px-6 pb-6 pt-0 lg:mx-auto lg:w-full lg:max-w-7xl lg:shrink-0 lg:space-y-4 lg:px-8 lg:pt-6 lg:pb-0">
-          {live.syncError && (
-            <p className="alert-error">{live.syncError}</p>
-          )}
+        <div className="space-y-6 px-6 pb-6 pt-0 lg:mx-auto lg:w-full lg:max-w-7xl lg:shrink-0 lg:space-y-4 lg:px-8 lg:pb-0 lg:pt-6">
+          {forceNav.pendingSessionId ? (
+            <div
+              className="border-accent/40 flex flex-wrap items-center justify-between gap-3 border bg-surface px-4 py-3"
+              role="status"
+            >
+              <p className="text-sm text-ink">
+                Next session starting
+                {forceNav.secondsLeft > 0 ? ` in ${forceNav.secondsLeft}s` : ''} —{' '}
+                <button
+                  type="button"
+                  className="link-accent font-semibold"
+                  onClick={() => forceNav.joinNow()}
+                >
+                  Join now
+                </button>
+              </p>
+            </div>
+          ) : null}
 
-          {claim.claimError && (
-            <p className="alert-error">{claim.claimError}</p>
-          )}
+          {live.syncError && <p className="alert-error">{live.syncError}</p>}
 
-          {claim.claimMessage && (
-            <p className="alert-success">{claim.claimMessage}</p>
-          )}
+          {claim.claimError && <p className="alert-error">{claim.claimError}</p>}
+
+          {claim.claimMessage && <p className="alert-success">{claim.claimMessage}</p>}
 
           {showFinishedClaimPrompt && (
             <section className="card space-y-2 bg-accent-tint p-4 text-sm">
@@ -728,8 +788,8 @@ function LiveSessionView({
           )}
         </div>
 
-        <div className="space-y-6 px-6 lg:mx-auto lg:grid lg:w-full lg:max-w-7xl lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:items-stretch lg:gap-6 lg:space-y-0 lg:overflow-hidden lg:px-8 lg:py-6">
-          <div className="space-y-6 lg:flex lg:min-h-0 lg:flex-col lg:gap-4 lg:overflow-hidden lg:space-y-0">
+        <div className="space-y-6 px-6 lg:mx-auto lg:grid lg:min-h-0 lg:w-full lg:max-w-7xl lg:flex-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:items-stretch lg:gap-6 lg:space-y-0 lg:overflow-hidden lg:px-8 lg:py-6">
+          <div className="space-y-6 lg:flex lg:min-h-0 lg:flex-col lg:gap-4 lg:space-y-0 lg:overflow-hidden">
             <div className="space-y-4 lg:flex lg:min-h-0 lg:shrink lg:flex-col lg:gap-3 lg:space-y-0 lg:overflow-y-auto lg:rounded-card lg:border lg:border-border lg:bg-surface lg:p-4 lg:shadow-card">
               <section
                 className="card space-y-1.5 p-3 text-center lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none"
@@ -743,11 +803,11 @@ function LiveSessionView({
                   </p>
                 )}
                 {live.phase === 'waiting' && (lobbyTicking || lobbyIgnited) ? (
-                  <p className="font-mono text-accent tabular-nums text-3xl tracking-widest lg:text-5xl">
+                  <p className="font-mono text-3xl tabular-nums tracking-widest text-accent lg:text-5xl">
                     {formatTMinus(lobbyRemaining ?? 0)}
                   </p>
                 ) : live.phase !== 'waiting' ? (
-                  <p className="text-display text-accent tabular-nums text-5xl lg:text-7xl xl:text-8xl">
+                  <p className="text-display text-5xl tabular-nums text-accent lg:text-7xl xl:text-8xl">
                     {formatTime(live.timeLeftSec)}
                   </p>
                 ) : null}
@@ -767,9 +827,7 @@ function LiveSessionView({
                   </div>
                 ) : null}
                 {live.phase === 'work' || live.phase === 'finished' ? (
-                  <p className="text-sm text-secondary">
-                    Elapsed: {formatTime(live.elapsedSec)}
-                  </p>
+                  <p className="text-sm text-secondary">Elapsed: {formatTime(live.elapsedSec)}</p>
                 ) : null}
                 <p className="text-xs text-muted">
                   Realtime:{' '}
@@ -804,9 +862,7 @@ function LiveSessionView({
                       })}
                     </p>
                     {waitingStartPracticeActions ? (
-                      <div className="flex justify-center">
-                        {waitingStartPracticeActions}
-                      </div>
+                      <div className="flex justify-center">{waitingStartPracticeActions}</div>
                     ) : null}
                   </div>
                 )
@@ -848,9 +904,7 @@ function LiveSessionView({
 
               <section
                 className="flex flex-wrap gap-2 lg:justify-center"
-                {...(waitingStartPracticeActions
-                  ? {}
-                  : { 'data-walkthrough-id': 'actions' })}
+                {...(waitingStartPracticeActions ? {} : { 'data-walkthrough-id': 'actions' })}
               >
                 {showPause && (
                   <button
@@ -894,7 +948,7 @@ function LiveSessionView({
                     className="btn-primary px-3 py-1.5 text-sm"
                     onClick={() => live.endPractice()}
                   >
-                    Back to staging
+                    End practice
                   </button>
                 )}
               </section>
@@ -916,10 +970,7 @@ function LiveSessionView({
             </div>
 
             {live.workout.length > 0 && (
-              <section
-                className="card shrink-0 space-y-2 p-4"
-                data-walkthrough-id="workout"
-              >
+              <section className="card shrink-0 space-y-2 p-4" data-walkthrough-id="workout">
                 <h2 className="text-display text-sm text-ink lg:text-lg">Workout</h2>
                 <ul className="space-y-1 text-sm lg:space-y-4">
                   {live.workout.map((exercise, index) => (
@@ -957,6 +1008,49 @@ function LiveSessionView({
             phase={live.phase}
             className="lg:min-h-0 lg:overflow-hidden"
           />
+
+          {showLobbyPass && lobbyChannel.lobby ? (
+            <section className="card space-y-3 p-4 lg:col-span-1">
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-secondary">
+                Pass Command
+              </h2>
+              <ul className="space-y-2">
+                {lobbyChannel.lobby.members.map((member) => {
+                  const canPass = canPassLobbyCommand(member, user?.id);
+                  const isMemberHost = member.userId === lobbyChannel.lobby?.hostUserId;
+                  if (!canPass && !isMemberHost) {
+                    return null;
+                  }
+                  return (
+                    <li
+                      key={member.id}
+                      className="flex flex-wrap items-center justify-between gap-2 border-b border-divider py-2 last:border-0"
+                    >
+                      <div>
+                        <span className="text-ink">{member.nickname}</span>
+                        {isMemberHost ? (
+                          <span className="ml-2 text-xs uppercase tracking-widest text-accent">
+                            Host
+                          </span>
+                        ) : null}
+                      </div>
+                      {canPass ? (
+                        <button
+                          type="button"
+                          className="text-xs uppercase tracking-widest text-muted hover:text-ink"
+                          disabled={passBusy || !member.userId}
+                          onClick={() => member.userId && void handlePassCommand(member.userId)}
+                        >
+                          Pass Command
+                        </button>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+              {passError ? <p className="text-error text-sm">{passError}</p> : null}
+            </section>
+          ) : null}
         </div>
 
         <section className="space-y-2 px-6 pb-6 text-sm text-secondary lg:hidden">
@@ -966,21 +1060,37 @@ function LiveSessionView({
           <p>
             <span className="font-semibold text-ink">Your nickname:</span> {live.nickname}
           </p>
-          <Link className="link-accent" to={exitHref}>
-            {exitLabel}
-          </Link>
+          {forceNavError ? <p className="text-error text-sm">{forceNavError}</p> : null}
+          <div className="flex flex-wrap gap-4">
+            <Link className="link-accent" to={exitHref}>
+              {exitLabel}
+            </Link>
+            {stagingHref ? (
+              <Link className="link-accent" to="/">
+                Back home
+              </Link>
+            ) : null}
+          </div>
         </section>
 
-        <footer className="hidden border-t border-divider bg-surface text-sm text-secondary lg:flex lg:shrink-0 lg:items-center lg:justify-between lg:px-8 lg:py-3">
+        <footer className="hidden border-t border-divider bg-surface text-sm text-secondary lg:flex lg:shrink-0 lg:items-center lg:justify-between lg:gap-4 lg:px-8 lg:py-3">
           <span>
             <span className="font-semibold text-ink">Session ID:</span> {live.sessionId}
           </span>
           <span>
             <span className="font-semibold text-ink">Your nickname:</span> {live.nickname}
           </span>
-          <Link className="link-accent" to={exitHref}>
-            {exitLabel}
-          </Link>
+          <span className="flex flex-wrap items-center gap-4">
+            {forceNavError ? <span className="text-error text-sm">{forceNavError}</span> : null}
+            <Link className="link-accent" to={exitHref}>
+              {exitLabel}
+            </Link>
+            {stagingHref ? (
+              <Link className="link-accent" to="/">
+                Back home
+              </Link>
+            ) : null}
+          </span>
         </footer>
       </div>
 
