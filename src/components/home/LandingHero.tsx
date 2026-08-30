@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
-import { HeroRouteGraphic } from '@/components/home/HeroRouteGraphic';
+import { HeroLogoDissolve } from '@/components/home/HeroLogoDissolve';
 import { HostScheduledSessionsPanel } from '@/components/session/HostScheduledSessionsPanel';
 
 interface LandingHeroProps {
@@ -23,7 +23,7 @@ export function LandingHero({ showHudAction }: LandingHeroProps) {
             AMRAP With Friends
           </h1>
           <p className="landing-headline mt-4 text-[clamp(1.35rem,3.2vw,2.05rem)] tracking-[0.02em] text-gold">
-            Find your North Star. Move as one.
+            Stronger Together. Move as one.
           </p>
           <p className="mt-6 max-w-[26rem] text-[15px] leading-[1.6] text-night-secondary">
             Training is hard. Showing up alone is harder. Bring your people, lock in a shared
@@ -61,7 +61,7 @@ export function LandingHero({ showHudAction }: LandingHeroProps) {
         </div>
 
         <div className="-mx-2 lg:mx-0">
-          <HeroRouteGraphic />
+          <HeroLogoDissolve />
         </div>
       </section>
 

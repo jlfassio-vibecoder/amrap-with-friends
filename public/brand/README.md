@@ -19,6 +19,8 @@ Prefer a square (or near-square) PNG, at least **1024×1024**.
 | `public/favicon-32.png` | PNG favicon |
 | `public/apple-touch-icon.png` | iOS home screen (180×180) |
 | `public/brand/logo.png` | In-app header emblem (512×512) |
+| `public/brand/logo-male.png` | Landing hero dissolve (male face) |
+| `public/brand/logo-female.png` | Landing hero dissolve (female face) |
 | `public/og-image.png` | Open Graph / Twitter share card (1200×630) |
 
-Wired in `index.html` (icons + `og:image` / `twitter:image`) and `AppHeader` (`/brand/logo.png`).
+Wired in `index.html` (icons + `og:image` / `twitter:image`), `AppHeader` (`/brand/logo.png`), and `HeroLogoDissolve` (male/female crossfade).

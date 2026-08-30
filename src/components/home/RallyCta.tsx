@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { HeroLogoDissolve } from '@/components/home/HeroLogoDissolve';
 
 const PROOF = [
   { figure: '01 minute', label: 'to launch a rally' },
@@ -12,39 +13,48 @@ export function RallyCta() {
       id="rally"
       className="night-panel relative isolate overflow-hidden bg-night text-night-ink"
     >
-      <div className="mx-auto w-full max-w-[1240px] px-6 py-16 lg:px-10 lg:py-24">
-        <p className="eyebrow text-gold">Rally command</p>
-        <h2 className="landing-headline mt-5 max-w-[45rem] text-[clamp(2.5rem,6vw,4.5rem)] text-night-ink">
-          Your next mission begins with one invitation.
-        </h2>
-        <p className="mt-6 max-w-[32rem] text-base leading-[1.6] text-night-secondary">
-          Set up the session in under a minute and share the rally link. When the timer starts, every
-          member of the squad is synced to the same timer and workout.
-        </p>
+      <div className="mx-auto grid w-full max-w-[1240px] items-end gap-10 px-6 py-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)] lg:items-center lg:gap-8 lg:px-10 lg:py-24">
+        <div>
+          <p className="eyebrow text-gold">Rally command</p>
+          <h2 className="landing-headline mt-5 max-w-[45rem] text-[clamp(2.5rem,6vw,4.5rem)] text-night-ink">
+            Your next mission begins with one invitation.
+          </h2>
+          <p className="mt-6 max-w-[32rem] text-base leading-[1.6] text-night-secondary">
+            Set up the session in under a minute and share the rally link. When the timer starts,
+            every member of the squad is synced to the same timer and workout.
+          </p>
 
-        <div className="mt-9 flex flex-wrap items-center gap-x-7 gap-y-4">
-          <Link
-            className="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
-            to="/create"
-          >
-            Create session
-          </Link>
-          <Link
-            className="border-b border-gold pb-1.5 text-xs font-bold uppercase tracking-[0.1em] text-night-ink hover:text-gold"
-            to="/join"
-          >
-            I have a session code
-          </Link>
+          <div className="mt-9 flex flex-wrap items-center gap-x-7 gap-y-4">
+            <Link
+              className="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
+              to="/create"
+            >
+              Create session
+            </Link>
+            <Link
+              className="border-b border-gold pb-1.5 text-xs font-bold uppercase tracking-[0.1em] text-night-ink hover:text-gold"
+              to="/join"
+            >
+              I have a session code
+            </Link>
+          </div>
+
+          <dl className="mt-12 flex flex-wrap gap-x-12 gap-y-6">
+            {PROOF.map(({ figure, label }) => (
+              <div key={figure}>
+                <dt className="text-display text-2xl text-night-ink">{figure}</dt>
+                <dd className="mt-1 text-xs text-night-secondary">{label}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
 
-        <dl className="mt-12 flex flex-wrap gap-x-12 gap-y-6">
-          {PROOF.map(({ figure, label }) => (
-            <div key={figure}>
-              <dt className="text-display text-2xl text-night-ink">{figure}</dt>
-              <dd className="mt-1 text-xs text-night-secondary">{label}</dd>
-            </div>
-          ))}
-        </dl>
+        <div className="flex justify-center lg:justify-end lg:self-end lg:pb-2">
+          <HeroLogoDissolve
+            decorative
+            className="w-full max-w-[18rem] sm:max-w-[22rem] lg:max-w-[min(100%,28rem)]"
+          />
+        </div>
       </div>
     </section>
   );

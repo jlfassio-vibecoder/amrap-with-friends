@@ -2,17 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="color-scheme" content="light dark" />
+    <meta name="color-scheme" content="only light" />
     <script>
       (function () {
         try {
-          var t = localStorage.getItem('theme');
-          document.documentElement.setAttribute(
-            'data-theme',
-            t === 'dark' ? 'dark' : 'light'
-          );
+          var t = localStorage.getItem('theme') === 'dark' ? 'dark' : 'light';
+          var scheme = t === 'dark' ? 'dark' : 'only light';
+          document.documentElement.setAttribute('data-theme', t);
+          document.documentElement.style.colorScheme = scheme;
+          var meta = document.querySelector('meta[name="color-scheme"]');
+          if (meta) meta.setAttribute('content', scheme);
         } catch (e) {
           document.documentElement.setAttribute('data-theme', 'light');
+          document.documentElement.style.colorScheme = 'only light';
         }
       })();
     </script>
