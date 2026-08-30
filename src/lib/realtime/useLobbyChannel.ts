@@ -53,16 +53,22 @@ export function useLobbyChannel(
   const [error, setError] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const cancelledRef = useRef(false);
+  const lobbyIdRef = useRef(lobbyId);
+  const fetchGenRef = useRef(0);
 
   const presenceMemberId = presence?.memberId;
   const presenceNickname = presence?.nickname;
 
   async function refresh() {
-    if (!lobbyId) {
+    const requestedLobbyId = lobbyIdRef.current;
+    if (!requestedLobbyId) {
       return;
     }
-    const result = await getLobby(lobbyId);
-    if (cancelledRef.current) {
+    const genAtStart = fetchGenRef.current;
+    const result = await getLobby(requestedLobbyId);
+    // Ignore late responses after unmount or lobbyId switch (cancelledRef alone
+    // is reset when the next lobby mounts, so also compare request generation).
+    if (cancelledRef.current || genAtStart !== fetchGenRef.current) {
       return;
     }
     if (result.error || !result.data) {
@@ -75,15 +81,16 @@ export function useLobbyChannel(
 
   useEffect(() => {
     if (!lobbyId) {
-      setLobby(null);
-      setPresenceByMemberId({});
-      setIsConnected(false);
+      fetchGenRef.current += 1;
       return;
     }
 
+    lobbyIdRef.current = lobbyId;
     const supabase = getSupabaseClient();
     cancelledRef.current = false;
 
+    // Snapshot load; setState only after await inside refresh (not sync in effect).
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- async getLobby then setState
     void refresh();
 
     const channel = supabase.channel(`lobby:${lobbyId}`, {
@@ -186,21 +193,20 @@ export function useLobbyChannel(
 
     return () => {
       cancelledRef.current = true;
+      fetchGenRef.current += 1;
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('focus', handleFocus);
       void supabase.removeChannel(channel);
       channelRef.current = null;
       setIsConnected(false);
     };
-    // refresh closes over lobbyId; intentional
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lobbyId, presenceMemberId, presenceNickname]);
 
   return {
-    lobby,
-    presenceByMemberId,
-    isConnected,
-    error,
+    lobby: lobbyId ? lobby : null,
+    presenceByMemberId: lobbyId ? presenceByMemberId : {},
+    isConnected: Boolean(lobbyId) && isConnected,
+    error: lobbyId ? error : null,
     refresh,
   };
 }
