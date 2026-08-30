@@ -15,11 +15,15 @@ export interface UseLobbyChannelResult {
 
 export function parseLobbyRow(record: Record<string, unknown>): Partial<LobbySnapshot> | null {
   const lobbyId = typeof record.id === 'string' ? record.id : null;
-  const hostUserId = typeof record.host_user_id === 'string' ? record.host_user_id : null;
   const status = record.status === 'open' || record.status === 'closed' ? record.status : null;
-  if (!lobbyId || !hostUserId || !status) {
+  if (!lobbyId || !status) {
     return null;
   }
+  // host_user_id is not in the anon SELECT grant, so a guest's payload carries
+  // everything except that column. Dropping the whole row when it is absent
+  // would cost guests every active_session_id change — and with it the forced
+  // launch into the next mission.
+  const hostUserId = typeof record.host_user_id === 'string' ? record.host_user_id : null;
   const activeSessionState =
     record.active_session_state === 'waiting' ||
     record.active_session_state === 'setup' ||
@@ -29,7 +33,7 @@ export function parseLobbyRow(record: Record<string, unknown>): Partial<LobbySna
       : undefined;
   return {
     lobbyId,
-    hostUserId,
+    ...(hostUserId !== null ? { hostUserId } : {}),
     activeSessionId: typeof record.active_session_id === 'string' ? record.active_session_id : null,
     ...(activeSessionState !== undefined ? { activeSessionState } : {}),
     status,
@@ -111,8 +115,11 @@ export function useLobbyChannel(
             return null;
           }
           const sessionChanged = parsed.activeSessionId !== prev.activeSessionId;
-          if (sessionChanged) {
-            // lobbies row has no session state; refetch so force-nav sees live state.
+          if (sessionChanged || parsed.hostUserId === undefined) {
+            // lobbies row has no session state; refetch so force-nav sees live
+            // state. Also refetch when the payload omitted host_user_id — a
+            // guest cannot read that column, and get_lobby is SECURITY DEFINER
+            // so it still returns who holds command.
             void refresh();
           }
           return {
