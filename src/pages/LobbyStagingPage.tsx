@@ -64,7 +64,7 @@ export default function LobbyStagingPage() {
     presence
   );
 
-  useLobbyForceNav({
+  const forceNav = useLobbyForceNav({
     lobbyId,
     activeSessionId: lobby?.activeSessionId,
     activeSessionState: lobby?.activeSessionState,
@@ -295,6 +295,24 @@ export default function LobbyStagingPage() {
     <main className="min-h-screen bg-page">
       <AppHeader title="Staging area" subtitle="Next mission with the crew" />
       <div className="mx-auto max-w-lg space-y-6 px-6 pb-10 pt-4">
+        {forceNav.pendingSessionId ? (
+          <div
+            className="border-accent/40 flex flex-wrap items-center justify-between gap-3 border bg-surface px-4 py-3"
+            role="status"
+          >
+            <p className="text-sm text-ink">
+              Next session starting
+              {forceNav.secondsLeft > 0 ? ` in ${forceNav.secondsLeft}s` : ''} —{' '}
+              <button
+                type="button"
+                className="link-accent font-semibold"
+                onClick={() => forceNav.joinNow()}
+              >
+                Join now
+              </button>
+            </p>
+          </div>
+        ) : null}
         <div className="flex flex-wrap items-center gap-3">
           <button type="button" className="btn-secondary" onClick={() => void handleCopyInvite()}>
             {copied ? 'LINK COPIED' : 'Copy rally link'}
@@ -351,9 +369,11 @@ export default function LobbyStagingPage() {
               })}
             </ul>
           )}
-          <p className="text-xs text-muted">
-            Save to your account to keep your spot between sessions.
-          </p>
+          {!isAuthenticated ? (
+            <p className="text-xs text-muted">
+              Save to your account to keep your spot between sessions.
+            </p>
+          ) : null}
         </section>
 
         {isHost ? (

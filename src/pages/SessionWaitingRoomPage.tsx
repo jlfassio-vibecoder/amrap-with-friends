@@ -602,7 +602,7 @@ function LiveSessionView({
     !showPartialRepsModal &&
     !showScorecard;
 
-  useLobbyForceNav({
+  const forceNav = useLobbyForceNav({
     lobbyId,
     activeSessionId: lobbyChannel.lobby?.activeSessionId,
     activeSessionState: lobbyChannel.lobby?.activeSessionState,
@@ -730,6 +730,25 @@ function LiveSessionView({
         <AppHeader title="Staging area" subtitle={hostStatusText} desktopTitleAsPageHeading />
 
         <div className="space-y-6 px-6 pb-6 pt-0 lg:mx-auto lg:w-full lg:max-w-7xl lg:shrink-0 lg:space-y-4 lg:px-8 lg:pb-0 lg:pt-6">
+          {forceNav.pendingSessionId ? (
+            <div
+              className="border-accent/40 flex flex-wrap items-center justify-between gap-3 border bg-surface px-4 py-3"
+              role="status"
+            >
+              <p className="text-sm text-ink">
+                Next session starting
+                {forceNav.secondsLeft > 0 ? ` in ${forceNav.secondsLeft}s` : ''} —{' '}
+                <button
+                  type="button"
+                  className="link-accent font-semibold"
+                  onClick={() => forceNav.joinNow()}
+                >
+                  Join now
+                </button>
+              </p>
+            </div>
+          ) : null}
+
           {live.syncError && <p className="alert-error">{live.syncError}</p>}
 
           {claim.claimError && <p className="alert-error">{claim.claimError}</p>}

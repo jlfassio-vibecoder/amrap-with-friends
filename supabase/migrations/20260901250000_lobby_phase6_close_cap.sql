@@ -1,140 +1,9 @@
--- Phase 1 lobby hardening: no host_token to the wrong caller, Pass Command
--- cannot soft-lock, refuse pass during live work, start_next TOCTOU after lock.
-
-CREATE INDEX IF NOT EXISTS idx_lobby_members_lobby_active
-  ON public.lobby_members (lobby_id)
-  WHERE status = 'active';
+-- Phase 6: finish orphan waiting/setup sessions when a lobby closes so they
+-- no longer count toward the host's 3-active cap; exclude closed-lobby seats
+-- from start_next's cap predicate as belt-and-suspenders.
 
 -- ---------------------------------------------------------------------------
--- pass_lobby_command
--- ---------------------------------------------------------------------------
-
-CREATE OR REPLACE FUNCTION public.pass_lobby_command(
-  p_lobby_id uuid,
-  p_to_user_id uuid
-)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = pg_catalog, public, extensions
-AS $$
-DECLARE
-  v_uid uuid;
-  v_lobby public.lobbies%ROWTYPE;
-  v_session_state text;
-  v_target_nickname text;
-  v_target_participant uuid;
-  v_claim_token text;
-  v_claim_hash text;
-  v_rotated text;
-BEGIN
-  v_uid := auth.uid();
-  IF v_uid IS NULL THEN
-    RAISE EXCEPTION 'Authentication required';
-  END IF;
-
-  IF p_lobby_id IS NULL OR p_to_user_id IS NULL THEN
-    RAISE EXCEPTION 'Lobby not found';
-  END IF;
-
-  IF p_to_user_id = v_uid THEN
-    RAISE EXCEPTION 'Cannot pass command to yourself';
-  END IF;
-
-  SELECT * INTO v_lobby
-  FROM public.lobbies
-  WHERE id = p_lobby_id
-  FOR UPDATE;
-
-  IF NOT FOUND OR v_lobby.status <> 'open' THEN
-    RAISE EXCEPTION 'Lobby not found';
-  END IF;
-
-  IF v_lobby.host_user_id IS DISTINCT FROM v_uid THEN
-    RAISE EXCEPTION 'Only the host can pass command';
-  END IF;
-
-  SELECT nickname INTO v_target_nickname
-  FROM public.lobby_members
-  WHERE lobby_id = p_lobby_id
-    AND user_id = p_to_user_id
-    AND status = 'active'
-  LIMIT 1;
-
-  IF v_target_nickname IS NULL THEN
-    RAISE EXCEPTION 'Target is not an active crew member';
-  END IF;
-
-  IF v_lobby.active_session_id IS NOT NULL THEN
-    SELECT state INTO v_session_state
-    FROM public.sessions
-    WHERE id = v_lobby.active_session_id
-    FOR UPDATE;
-
-    IF NOT FOUND THEN
-      v_session_state := NULL;
-    ELSIF v_session_state = 'work' THEN
-      RAISE EXCEPTION 'Cannot pass command during a live session';
-    ELSIF v_session_state IN ('waiting', 'setup') THEN
-      SELECT id INTO v_target_participant
-      FROM public.participants
-      WHERE session_id = v_lobby.active_session_id
-        AND user_id = p_to_user_id
-      ORDER BY joined_at ASC
-      LIMIT 1;
-
-      IF v_target_participant IS NULL THEN
-        v_claim_token :=
-          replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
-        v_claim_hash := encode(digest(v_claim_token, 'sha256'), 'hex');
-
-        INSERT INTO public.participants (session_id, nickname, role, claim_token_hash, user_id)
-        VALUES (
-          v_lobby.active_session_id,
-          v_target_nickname,
-          'joiner',
-          v_claim_hash,
-          p_to_user_id
-        );
-      END IF;
-
-      UPDATE public.lobbies
-      SET host_user_id = p_to_user_id
-      WHERE id = p_lobby_id;
-
-      v_rotated := public._lobby_rotate_waiting_host(v_lobby.active_session_id, p_to_user_id);
-      IF v_rotated IS NULL THEN
-        RAISE EXCEPTION 'Cannot pass command during a live session';
-      END IF;
-    ELSIF v_session_state = 'finished' THEN
-      UPDATE public.lobbies
-      SET host_user_id = p_to_user_id
-      WHERE id = p_lobby_id;
-    ELSE
-      RAISE EXCEPTION 'Cannot pass command during a live session';
-    END IF;
-  ELSE
-    UPDATE public.lobbies
-    SET host_user_id = p_to_user_id
-    WHERE id = p_lobby_id;
-  END IF;
-
-  -- Never return the rotated token to the outgoing host.
-  RETURN jsonb_build_object(
-    'ok', true,
-    'lobby_id', p_lobby_id,
-    'host_user_id', p_to_user_id,
-    'active_session_id', v_lobby.active_session_id,
-    'host_token', NULL
-  );
-END;
-$$;
-
-REVOKE EXECUTE ON FUNCTION public.pass_lobby_command(uuid, uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.pass_lobby_command(uuid, uuid) TO authenticated;
-
--- ---------------------------------------------------------------------------
--- leave_lobby — never return successor host_token to the leaver
+-- leave_lobby — finish waiting/setup orphans on auto-close
 -- ---------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION public.leave_lobby(p_lobby_id uuid)
@@ -223,7 +92,61 @@ REVOKE EXECUTE ON FUNCTION public.leave_lobby(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.leave_lobby(uuid) TO authenticated;
 
 -- ---------------------------------------------------------------------------
--- start_next_lobby_session — re-check host after lock (TOCTOU)
+-- close_lobby — finish waiting/setup orphans
+-- ---------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION public.close_lobby(p_lobby_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public, extensions
+AS $$
+DECLARE
+  v_uid uuid;
+  v_lobby public.lobbies%ROWTYPE;
+BEGIN
+  v_uid := auth.uid();
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'Authentication required';
+  END IF;
+
+  SELECT * INTO v_lobby
+  FROM public.lobbies
+  WHERE id = p_lobby_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Lobby not found';
+  END IF;
+
+  IF v_lobby.host_user_id IS DISTINCT FROM v_uid THEN
+    RAISE EXCEPTION 'Only the host can close the staging area';
+  END IF;
+
+  UPDATE public.sessions
+  SET state = 'finished', is_paused = false, time_left_sec = 0
+  WHERE lobby_id = p_lobby_id
+    AND state IN ('waiting', 'setup');
+
+  UPDATE public.lobbies
+  SET status = 'closed',
+      active_session_id = NULL
+  WHERE id = p_lobby_id;
+
+  UPDATE public.lobby_members
+  SET status = 'left'
+  WHERE lobby_id = p_lobby_id
+    AND status = 'active';
+
+  RETURN jsonb_build_object('ok', true, 'lobby_id', p_lobby_id, 'status', 'closed');
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.close_lobby(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.close_lobby(uuid) TO authenticated;
+
+-- ---------------------------------------------------------------------------
+-- start_next_lobby_session — exclude closed-lobby seats from host cap
 -- ---------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION public.start_next_lobby_session(
@@ -271,7 +194,6 @@ BEGIN
     RAISE EXCEPTION 'Lobby not found';
   END IF;
 
-  -- Re-check after lock so a concurrent Pass Command cannot lose the race.
   IF v_lobby.host_user_id IS DISTINCT FROM v_uid THEN
     RAISE EXCEPTION 'Only the host can start the next session';
   END IF;
@@ -311,7 +233,6 @@ BEGIN
     END IF;
   END IF;
 
-  -- Host may have changed under concurrent claim/pass; re-read.
   SELECT host_user_id INTO v_lobby.host_user_id
   FROM public.lobbies
   WHERE id = p_lobby_id;

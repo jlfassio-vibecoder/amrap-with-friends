@@ -426,8 +426,15 @@ export async function leaveLobby(
     return { data: null, error: { message: mapRpcError(error.message) } };
   }
   const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  const closed = raw.closed === true;
+  const wasHost = raw.was_host === true;
+  if (closed) {
+    track('lobby_closed', {});
+  } else if (wasHost) {
+    track('lobby_host_reassigned', {});
+  }
   return {
-    data: { left: raw.left === true, closed: raw.closed === true },
+    data: { left: raw.left === true, closed },
     error: null,
   };
 }

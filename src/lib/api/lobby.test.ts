@@ -1,8 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createLobbySession, joinLobby, passLobbyCommand, startNextLobbySession } from './lobby';
+import {
+  createLobbySession,
+  joinLobby,
+  leaveLobby,
+  passLobbyCommand,
+  startNextLobbySession,
+} from './lobby';
 import { supabase } from '@/lib/supabase';
 import * as sessionIdentity from '@/lib/sessionIdentity';
 import * as lobbyIdentity from '@/lib/lobbyIdentity';
+import { track } from '@/lib/analytics/track';
 
 vi.mock('@/lib/supabase', () => ({
   supabase: { rpc: vi.fn(), from: vi.fn() },
@@ -17,6 +24,8 @@ vi.mock('@/lib/lobbyIdentity', () => ({
   getStoredLobbyNickname: vi.fn(() => 'Host'),
 }));
 vi.mock('@/lib/analytics/track', () => ({ track: vi.fn() }));
+
+const trackMock = vi.mocked(track);
 
 const rpcMock = vi.mocked(supabase.rpc);
 
@@ -140,6 +149,44 @@ describe('lobby API', () => {
       activeSessionId: SESSION_ID,
     });
     expect(sessionIdentity.clearStoredHostToken).toHaveBeenCalledWith(SESSION_ID);
+  });
+
+  it('leaveLobby tracks lobby_closed when the last host leaves', async () => {
+    rpcMock.mockResolvedValue({
+      data: { ok: true, lobby_id: LOBBY_ID, left: true, closed: true },
+      error: null,
+      count: null,
+      status: 200,
+      statusText: 'OK',
+    } as never);
+
+    const result = await leaveLobby(LOBBY_ID);
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual({ left: true, closed: true });
+    expect(trackMock).toHaveBeenCalledWith('lobby_closed', {});
+    expect(trackMock).not.toHaveBeenCalledWith('lobby_host_reassigned', {});
+  });
+
+  it('leaveLobby tracks lobby_host_reassigned when host leaves a successor', async () => {
+    rpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        lobby_id: LOBBY_ID,
+        left: true,
+        was_host: true,
+        host_user_id: 'user-2',
+      },
+      error: null,
+      count: null,
+      status: 200,
+      statusText: 'OK',
+    } as never);
+
+    const result = await leaveLobby(LOBBY_ID);
+    expect(result.error).toBeNull();
+    expect(result.data?.left).toBe(true);
+    expect(trackMock).toHaveBeenCalledWith('lobby_host_reassigned', {});
+    expect(trackMock).not.toHaveBeenCalledWith('lobby_closed', {});
   });
 
   it('startNextLobbySession seeds the new session identity', async () => {

@@ -889,6 +889,15 @@ BEGIN
     AND s.campaign_occurrence_id IS NULL
     AND NOT EXISTS (
       SELECT 1 FROM public.campaign_makeups m WHERE m.session_id = s.id
+    )
+    AND (
+      s.lobby_id IS NULL
+      OR EXISTS (
+        SELECT 1
+        FROM public.lobbies l
+        WHERE l.id = s.lobby_id
+          AND l.status = 'open'
+      )
     );
 
   IF v_active >= 3 THEN
@@ -1029,6 +1038,11 @@ BEGIN
     v_successor := public._lobby_pick_successor(p_lobby_id, v_uid);
 
     IF v_successor IS NULL THEN
+      UPDATE public.sessions
+      SET state = 'finished', is_paused = false, time_left_sec = 0
+      WHERE lobby_id = p_lobby_id
+        AND state IN ('waiting', 'setup');
+
       UPDATE public.lobbies
       SET status = 'closed',
           active_session_id = NULL
@@ -1093,6 +1107,11 @@ BEGIN
   IF v_lobby.host_user_id IS DISTINCT FROM v_uid THEN
     RAISE EXCEPTION 'Only the host can close the staging area';
   END IF;
+
+  UPDATE public.sessions
+  SET state = 'finished', is_paused = false, time_left_sec = 0
+  WHERE lobby_id = p_lobby_id
+    AND state IN ('waiting', 'setup');
 
   UPDATE public.lobbies
   SET status = 'closed',
