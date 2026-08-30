@@ -55,6 +55,11 @@ export interface CampaignMemberEntry {
   joinedAt: string;
 }
 
+export interface CampaignMakeupEntry {
+  occurrenceId: string;
+  sessionId: string;
+}
+
 export interface CampaignDetail {
   campaignId: string;
   name: string;
@@ -68,6 +73,8 @@ export interface CampaignDetail {
   inviteCode: string | null;
   occurrences: CampaignOccurrenceEntry[];
   members: CampaignMemberEntry[];
+  /** Viewer's makeup rows for this campaign — feeds the owed queue. */
+  makeups: CampaignMakeupEntry[];
 }
 
 export interface CreateCampaignInput {
@@ -92,6 +99,20 @@ const ERROR_COPY: Record<string, string> = {
   'Campaign closed': 'This campaign has already finished.',
   'Campaign full': 'This campaign is full.',
   'Host cannot leave': 'You are running this campaign, so you cannot leave it.',
+  'Campaign already started':
+    'This campaign has already started, so it cannot be deleted. End it instead.',
+  'Campaign has other athletes':
+    'Other athletes have joined, so it cannot be deleted. End it instead — their finished sessions stay on their record.',
+  'Not next to make up': 'Make up the oldest session you owe first.',
+  'Host session limit reached':
+    'You already have three sessions open. Finish one before starting a makeup.',
+  'Name the campaign in 80 characters or fewer': 'Name the campaign in 80 characters or fewer.',
+  'Keep the goal to 280 characters or fewer': 'Keep the goal to 280 characters or fewer.',
+  'Session already scheduled': 'That session is already open, so its time cannot be changed now.',
+  'Pick a date and a time': 'Pick a date and a time.',
+  'Pick a time in the future': 'Pick a time that has not passed yet.',
+  'Move it after the session before it': 'Move it later than the session before it.',
+  'Move it before the session after it': 'Move it earlier than the session after it.',
   'Campaign not found': 'That campaign is not available.',
   invalid_timezone: 'We could not read your timezone. Try again from this device.',
 };
@@ -190,6 +211,16 @@ function parseMember(raw: unknown): CampaignMemberEntry | null {
   };
 }
 
+function parseMakeup(raw: unknown): CampaignMakeupEntry | null {
+  const row = readRecord(raw);
+  const occurrenceId = readString(row.occurrence_id);
+  const sessionId = readString(row.session_id);
+  if (!occurrenceId || !sessionId) {
+    return null;
+  }
+  return { occurrenceId, sessionId };
+}
+
 /**
  * The client builds the calendar (see `@/lib/campaign`) and sends it whole.
  * The workout library lives here, not in Postgres, so each occurrence carries
@@ -284,6 +315,7 @@ export async function fetchCampaignDetail(
 
   const occurrences = Array.isArray(root.occurrences) ? root.occurrences : [];
   const members = Array.isArray(root.members) ? root.members : [];
+  const makeups = Array.isArray(root.makeups) ? root.makeups : [];
 
   return {
     data: {
@@ -303,6 +335,9 @@ export async function fetchCampaignDetail(
       members: members
         .map(parseMember)
         .filter((entry): entry is CampaignMemberEntry => entry !== null),
+      makeups: makeups
+        .map(parseMakeup)
+        .filter((entry): entry is CampaignMakeupEntry => entry !== null),
     },
     error: null,
   };
@@ -410,6 +445,100 @@ export async function leaveCampaign(
   return { error: null };
 }
 
+/**
+ * Renames a campaign or rewrites its goal. Deliberately cannot touch the
+ * workouts: the benchmark is what every result is measured against, so it is
+ * not the host's to swap after the fact.
+ */
+export async function updateCampaign(
+  campaignId: string,
+  input: { name: string; goal: string }
+): Promise<{ error: CampaignApiError | null }> {
+  const name = input.name.trim();
+  if (!name) {
+    return { error: { message: 'Name the campaign.' } };
+  }
+  const { error } = await callRpc('update_campaign', {
+    p_campaign_id: campaignId,
+    p_name: name,
+    p_goal: input.goal.trim() || null,
+  });
+  if (error) {
+    return { error: { message: mapError(error.message) } };
+  }
+  return { error: null };
+}
+
+/**
+ * Moves one session that has not run yet. The new time has to stay between the
+ * sessions either side of it — the whole app reads a campaign in sequence
+ * order, so a session that jumped its neighbours would render out of order.
+ */
+export async function rescheduleCampaignOccurrence(
+  occurrenceId: string,
+  localDate: string,
+  localTime: string
+): Promise<{ error: CampaignApiError | null }> {
+  const { error } = await callRpc('reschedule_campaign_occurrence', {
+    p_occurrence_id: occurrenceId,
+    p_local_date: localDate,
+    p_local_time: localTime,
+  });
+  if (error) {
+    return { error: { message: mapError(error.message) } };
+  }
+  return { error: null };
+}
+
+/**
+ * Ends a campaign early. The row survives so members keep their finished
+ * sessions and can see why the calendar stopped; remaining planned sessions
+ * become skipped, and the host gets their campaign slot back.
+ */
+export async function endCampaign(campaignId: string): Promise<{ error: CampaignApiError | null }> {
+  const { error } = await callRpc('end_campaign', { p_campaign_id: campaignId });
+  if (error) {
+    return { error: { message: mapError(error.message) } };
+  }
+  return { error: null };
+}
+
+/**
+ * Deletes a campaign outright. Only possible while nothing has run and nobody
+ * else has joined, so there is no history to lose — anything further along
+ * ends instead.
+ */
+export async function deleteCampaign(
+  campaignId: string
+): Promise<{ error: CampaignApiError | null }> {
+  const { error } = await callRpc('delete_campaign', { p_campaign_id: campaignId });
+  if (error) {
+    return { error: { message: mapError(error.message) } };
+  }
+  return { error: null };
+}
+
+/**
+ * Starts (or resumes) a solo makeup session for the oldest owed occurrence.
+ * The session never sets campaign_occurrence_id — the link lives in
+ * campaign_makeups so the live-session unique index stays intact.
+ */
+export async function startCampaignMakeup(
+  occurrenceId: string
+): Promise<{ data: { sessionId: string } | null; error: CampaignApiError | null }> {
+  const { data, error } = await callRpc('start_campaign_makeup', {
+    p_occurrence_id: occurrenceId,
+  });
+  if (error) {
+    return { data: null, error: { message: mapError(error.message) } };
+  }
+  const sessionId = readString(readRecord(data).session_id);
+  if (!sessionId) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+  return { data: { sessionId }, error: null };
+}
+
 export type { CampaignStandingRow, CampaignStandingsMember, CampaignStandingsScore };
 
 export type CampaignStandingsPayload = {
@@ -478,7 +607,7 @@ export async function fetchCampaignStandings(
     .filter((entry): entry is CampaignStandingsOccurrence => entry !== null);
 
   const scores = scoresRaw
-    .map((raw) => {
+    .map((raw): CampaignStandingsScore | null => {
       const row = readRecord(raw);
       const occurrenceId = readString(row.occurrence_id);
       const userId = readString(row.user_id);
@@ -489,7 +618,12 @@ export async function fetchCampaignStandings(
         row.final_score === null || row.final_score === undefined
           ? null
           : readNumber(row.final_score);
-      return { occurrenceId, userId, finalScore };
+      return {
+        occurrenceId,
+        userId,
+        finalScore,
+        madeUp: row.made_up === true,
+      };
     })
     .filter((entry): entry is CampaignStandingsScore => entry !== null);
 

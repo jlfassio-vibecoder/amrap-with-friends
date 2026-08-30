@@ -24,6 +24,8 @@ export type CampaignStandingsScore = {
   occurrenceId: string;
   userId: string;
   finalScore: number | null;
+  /** True when the score came from a makeup session. Presentational until Phase 3. */
+  madeUp?: boolean;
 };
 
 export type CampaignStandingsInput = {
@@ -59,7 +61,9 @@ function scoreValue(finalScore: number | null | undefined): number | null {
 }
 
 function isCountableStatus(status: CampaignStandingsOccurrence['status']): boolean {
-  return status === 'generated' || status === 'done';
+  // Skipped sessions are still makeable; once settled they must count toward
+  // eligibility and attendance the same way a done session does.
+  return status === 'generated' || status === 'done' || status === 'skipped';
 }
 
 /**

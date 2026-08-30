@@ -7,12 +7,22 @@ import CampaignDetailPage from './CampaignDetailPage';
 const fetchDetailMock = vi.fn();
 const fetchStandingsMock = vi.fn();
 const leaveMock = vi.fn();
+const endMock = vi.fn();
+const deleteMock = vi.fn();
+const updateMock = vi.fn();
+const rescheduleMock = vi.fn();
+const startMakeupMock = vi.fn();
 const navigateMock = vi.fn();
 
 vi.mock('@/lib/api/campaigns', () => ({
   fetchCampaignDetail: (...args: unknown[]) => fetchDetailMock(...args),
   fetchCampaignStandings: (...args: unknown[]) => fetchStandingsMock(...args),
   leaveCampaign: (...args: unknown[]) => leaveMock(...args),
+  endCampaign: (...args: unknown[]) => endMock(...args),
+  deleteCampaign: (...args: unknown[]) => deleteMock(...args),
+  updateCampaign: (...args: unknown[]) => updateMock(...args),
+  rescheduleCampaignOccurrence: (...args: unknown[]) => rescheduleMock(...args),
+  startCampaignMakeup: (...args: unknown[]) => startMakeupMock(...args),
 }));
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
@@ -61,6 +71,7 @@ function detail(overrides = {}) {
     status: 'active',
     viewerRole: 'host',
     inviteCode: 'ABC123',
+    makeups: [],
     occurrences: [
       occurrence(1, 1, { status: 'done' }),
       occurrence(2, 1),
@@ -92,6 +103,11 @@ beforeEach(() => {
   fetchDetailMock.mockReset();
   fetchStandingsMock.mockReset();
   leaveMock.mockReset();
+  endMock.mockReset();
+  deleteMock.mockReset();
+  updateMock.mockReset();
+  rescheduleMock.mockReset();
+  startMakeupMock.mockReset();
   navigateMock.mockReset();
   fetchDetailMock.mockResolvedValue({ data: detail(), error: null });
   fetchStandingsMock.mockResolvedValue({
@@ -99,6 +115,11 @@ beforeEach(() => {
     error: null,
   });
   leaveMock.mockResolvedValue({ error: null });
+  endMock.mockResolvedValue({ error: null });
+  deleteMock.mockResolvedValue({ error: null });
+  updateMock.mockResolvedValue({ error: null });
+  rescheduleMock.mockResolvedValue({ error: null });
+  startMakeupMock.mockResolvedValue({ data: { sessionId: 'makeup-sess' }, error: null });
   Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
 });
 
@@ -304,5 +325,364 @@ describe('CampaignDetailPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Yes, leave' }));
     await waitFor(() => expect(screen.getByText('That campaign is not available.')).toBeTruthy());
     expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  describe('host controls', () => {
+    /** Nothing run, host alone — the state after creating one to look at it. */
+    function untouched(overrides = {}) {
+      return detail({
+        occurrences: [occurrence(1, 1), occurrence(2, 1), occurrence(3, 2), occurrence(4, 2)],
+        members: [
+          { userId: 'u1', role: 'host', nickname: 'Maya', joinedAt: '2026-09-01T00:00:00Z' },
+        ],
+        ...overrides,
+      });
+    }
+
+    it('offers the host both ways out of a campaign that never ran', async () => {
+      fetchDetailMock.mockResolvedValue({ data: untouched(), error: null });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('End campaign')).toBeTruthy());
+      expect(screen.getByText('Delete campaign')).toBeTruthy();
+    });
+
+    it('drops the delete option once a session has been generated', async () => {
+      fetchDetailMock.mockResolvedValue({
+        data: untouched({
+          occurrences: [
+            occurrence(1, 1, { status: 'generated', sessionId: 's1' }),
+            occurrence(2, 1),
+            occurrence(3, 2),
+            occurrence(4, 2),
+          ],
+        }),
+        error: null,
+      });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('End campaign')).toBeTruthy());
+      expect(screen.queryByText('Delete campaign')).toBeNull();
+    });
+
+    it('drops the delete option once someone else has joined', async () => {
+      fetchDetailMock.mockResolvedValue({ data: detail(), error: null });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('End campaign')).toBeTruthy());
+      expect(screen.queryByText('Delete campaign')).toBeNull();
+    });
+
+    it('offers neither to a member', async () => {
+      fetchDetailMock.mockResolvedValue({
+        data: untouched({ viewerRole: 'member', inviteCode: null }),
+        error: null,
+      });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('Leave campaign')).toBeTruthy());
+      expect(screen.queryByText('End campaign')).toBeNull();
+      expect(screen.queryByText('Delete campaign')).toBeNull();
+    });
+
+    it('offers neither once the campaign is over', async () => {
+      fetchDetailMock.mockResolvedValue({
+        data: untouched({ status: 'abandoned' }),
+        error: null,
+      });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('Ended early')).toBeTruthy());
+      expect(screen.queryByText('End campaign')).toBeNull();
+      expect(screen.queryByText('Delete campaign')).toBeNull();
+    });
+
+    it('confirms before ending, and reloads so the new state is visible', async () => {
+      fetchDetailMock.mockResolvedValue({ data: untouched(), error: null });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('End campaign')).toBeTruthy());
+
+      fireEvent.click(screen.getByText('End campaign'));
+      expect(endMock).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByText('Yes, end it'));
+      await waitFor(() => expect(endMock).toHaveBeenCalledWith('c1'));
+      // Two loads: the first render, then the refresh after ending.
+      await waitFor(() => expect(fetchDetailMock).toHaveBeenCalledTimes(2));
+      expect(navigateMock).not.toHaveBeenCalled();
+    });
+
+    it('backs out of the confirmation without calling anything', async () => {
+      fetchDetailMock.mockResolvedValue({ data: untouched(), error: null });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('End campaign')).toBeTruthy());
+
+      fireEvent.click(screen.getByText('End campaign'));
+      fireEvent.click(screen.getByText('Keep it'));
+      await waitFor(() => expect(screen.getByText('End campaign')).toBeTruthy());
+      expect(endMock).not.toHaveBeenCalled();
+      expect(deleteMock).not.toHaveBeenCalled();
+    });
+
+    it('sends the host home after a delete', async () => {
+      fetchDetailMock.mockResolvedValue({ data: untouched(), error: null });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('Delete campaign')).toBeTruthy());
+
+      fireEvent.click(screen.getByText('Delete campaign'));
+      fireEvent.click(screen.getByText('Yes, delete it'));
+      await waitFor(() => expect(deleteMock).toHaveBeenCalledWith('c1'));
+      await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/'));
+    });
+
+    it('keeps the campaign readable when the server refuses', async () => {
+      fetchDetailMock.mockResolvedValue({ data: untouched(), error: null });
+      deleteMock.mockResolvedValue({
+        error: {
+          message: 'This campaign has already started, so it cannot be deleted. End it instead.',
+        },
+      });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('Delete campaign')).toBeTruthy());
+
+      fireEvent.click(screen.getByText('Delete campaign'));
+      fireEvent.click(screen.getByText('Yes, delete it'));
+      await waitFor(() =>
+        expect(
+          screen.getByText(
+            'This campaign has already started, so it cannot be deleted. End it instead.'
+          )
+        ).toBeTruthy()
+      );
+      // The page is still the campaign, not an error screen.
+      expect(screen.getAllByText('Winter Engine Build').length).toBeGreaterThan(0);
+      expect(navigateMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('the test section on a campaign that is over', () => {
+    it('is hidden once the campaign ended without a benchmark score', async () => {
+      fetchDetailMock.mockResolvedValue({ data: detail({ status: 'abandoned' }), error: null });
+      fetchStandingsMock.mockResolvedValue({
+        data: {
+          standings: [],
+          members: [{ userId: 'u1', nickname: 'Maya', joinedLocalDate: '2026-09-01', left: false }],
+          scores: [],
+        },
+        error: null,
+      });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('Ended early')).toBeTruthy());
+      expect(screen.queryByText('The test')).toBeNull();
+      expect(screen.queryByText('Scores show up after the opening benchmark.')).toBeNull();
+    });
+
+    it('still shows the result when the finished campaign was scored', async () => {
+      fetchDetailMock.mockResolvedValue({
+        data: detail({
+          status: 'complete',
+          occurrences: [
+            occurrence(1, 1, { status: 'done', templateId: 'the-valve' }),
+            occurrence(2, 1, { templateId: 'other' }),
+            occurrence(3, 2, { templateId: 'other-2' }),
+            occurrence(4, 2, { status: 'done', templateId: 'the-valve' }),
+          ],
+        }),
+        error: null,
+      });
+      fetchStandingsMock.mockResolvedValue({
+        data: {
+          standings: [],
+          members: [{ userId: 'u1', nickname: 'Maya', joinedLocalDate: '2026-09-01', left: false }],
+          scores: [
+            { occurrenceId: 'o1', userId: 'u1', finalScore: 40 },
+            { occurrenceId: 'o4', userId: 'u1', finalScore: 48 },
+          ],
+        },
+        error: null,
+      });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('The test')).toBeTruthy());
+      expect(screen.getByText('+8 reps')).toBeTruthy();
+    });
+  });
+
+  describe('editing', () => {
+    it('lets the host rename the campaign and rewrite the goal', async () => {
+      renderPage();
+      await waitFor(() => expect(screen.getByText('Edit name and goal')).toBeTruthy());
+
+      fireEvent.click(screen.getByText('Edit name and goal'));
+      const name = screen.getByDisplayValue('Winter Engine Build');
+      fireEvent.change(name, { target: { value: 'Spring Engine Build' } });
+      fireEvent.change(screen.getByDisplayValue('Eight rounds by week four.'), {
+        target: { value: 'Ten rounds by week eight.' },
+      });
+      fireEvent.click(screen.getByText('Save changes'));
+
+      await waitFor(() =>
+        expect(updateMock).toHaveBeenCalledWith('c1', {
+          name: 'Spring Engine Build',
+          goal: 'Ten rounds by week eight.',
+        })
+      );
+      // Reloaded, so the page shows what the server actually stored.
+      await waitFor(() => expect(fetchDetailMock).toHaveBeenCalledTimes(2));
+    });
+
+    it('keeps the form open and shows why when the server refuses', async () => {
+      updateMock.mockResolvedValue({
+        error: { message: 'Name the campaign in 80 characters or fewer.' },
+      });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('Edit name and goal')).toBeTruthy());
+      fireEvent.click(screen.getByText('Edit name and goal'));
+      fireEvent.click(screen.getByText('Save changes'));
+
+      await waitFor(() =>
+        expect(screen.getByText('Name the campaign in 80 characters or fewer.')).toBeTruthy()
+      );
+      expect(screen.getByText('Save changes')).toBeTruthy();
+    });
+
+    it('offers no edit to a member or on a closed campaign', async () => {
+      fetchDetailMock.mockResolvedValue({
+        data: detail({ viewerRole: 'member', inviteCode: null }),
+        error: null,
+      });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('Leave campaign')).toBeTruthy());
+      expect(screen.queryByText('Edit name and goal')).toBeNull();
+
+      cleanup();
+      fetchDetailMock.mockResolvedValue({ data: detail({ status: 'complete' }), error: null });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('Complete')).toBeTruthy());
+      expect(screen.queryByText('Edit name and goal')).toBeNull();
+    });
+
+    it('moves a session that has not run yet', async () => {
+      renderPage();
+      // Session 1 is done, so only the three still planned can be moved.
+      await waitFor(() => expect(screen.getAllByText('Change time').length).toBe(3));
+
+      fireEvent.click(screen.getAllByText('Change time')[0]);
+      fireEvent.change(screen.getByDisplayValue('2026-10-05'), {
+        target: { value: '2026-10-06' },
+      });
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => expect(rescheduleMock).toHaveBeenCalledWith('o2', '2026-10-06', '06:30'));
+      await waitFor(() => expect(fetchDetailMock).toHaveBeenCalledTimes(2));
+    });
+
+    it('does not offer to move a session whose staging area is open', async () => {
+      fetchDetailMock.mockResolvedValue({
+        data: detail({
+          occurrences: [
+            occurrence(1, 1, { status: 'generated', sessionId: 's1' }),
+            occurrence(2, 1, { status: 'done', sessionId: 's2' }),
+            occurrence(3, 2, { status: 'skipped' }),
+            occurrence(4, 2),
+          ],
+        }),
+        error: null,
+      });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('The schedule')).toBeTruthy());
+      expect(screen.getAllByText('Change time').length).toBe(1);
+    });
+
+    it('keeps the row open and shows why when a move is refused', async () => {
+      rescheduleMock.mockResolvedValue({
+        error: { message: 'Move it before the session after it.' },
+      });
+      renderPage();
+      await waitFor(() => expect(screen.getAllByText('Change time').length).toBe(3));
+      fireEvent.click(screen.getAllByText('Change time')[0]);
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() =>
+        expect(screen.getByText('Move it before the session after it.')).toBeTruthy()
+      );
+      expect(screen.getByText('Save')).toBeTruthy();
+      expect(fetchDetailMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('makeup queue', () => {
+    it('shows You owe N and Make this up for the oldest missed session', async () => {
+      fetchDetailMock.mockResolvedValue({
+        data: detail({
+          members: [
+            {
+              userId: 'user-1',
+              role: 'host',
+              nickname: 'Maya',
+              joinedAt: '2026-09-01T00:00:00Z',
+            },
+          ],
+          occurrences: [
+            occurrence(1, 1, { status: 'done', localDate: '2026-10-05' }),
+            occurrence(2, 1, { status: 'skipped', localDate: '2026-10-07' }),
+            occurrence(3, 2, { status: 'planned', localDate: '2026-10-12' }),
+          ],
+        }),
+        error: null,
+      });
+
+      renderPage();
+
+      await waitFor(() => expect(screen.getByText('You owe 2 sessions')).toBeTruthy());
+      expect(screen.getByText(/Next up: Mon 5 Oct/)).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Make this up' })).toBeTruthy();
+    });
+
+    it('navigates to the makeup session when Make this up succeeds', async () => {
+      fetchDetailMock.mockResolvedValue({
+        data: detail({
+          members: [
+            {
+              userId: 'user-1',
+              role: 'host',
+              nickname: 'Maya',
+              joinedAt: '2026-09-01T00:00:00Z',
+            },
+          ],
+          occurrences: [occurrence(1, 1, { status: 'done' })],
+        }),
+        error: null,
+      });
+      startMakeupMock.mockResolvedValue({ data: { sessionId: 'makeup-sess' }, error: null });
+
+      renderPage();
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Make this up' })).toBeTruthy()
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Make this up' }));
+
+      await waitFor(() => {
+        expect(startMakeupMock).toHaveBeenCalledWith('o1');
+        expect(navigateMock).toHaveBeenCalledWith('/session/makeup-sess');
+      });
+    });
+
+    it('hides the owe card when the campaign is closed', async () => {
+      fetchDetailMock.mockResolvedValue({
+        data: detail({
+          status: 'abandoned',
+          members: [
+            {
+              userId: 'user-1',
+              role: 'host',
+              nickname: 'Maya',
+              joinedAt: '2026-09-01T00:00:00Z',
+            },
+          ],
+          occurrences: [occurrence(1, 1, { status: 'done' })],
+        }),
+        error: null,
+      });
+
+      renderPage();
+      await waitFor(() => expect(screen.getByText('Ended early')).toBeTruthy());
+      expect(screen.queryByText(/You owe/)).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Make this up' })).toBeNull();
+    });
   });
 });

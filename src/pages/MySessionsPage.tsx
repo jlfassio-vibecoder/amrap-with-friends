@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { MySessionScoreBreakdownModal } from '@/components/MySessionScoreBreakdownModal';
+import { MyCampaignsPanel } from '@/components/campaign/MyCampaignsPanel';
 import {
   canDeleteMySession,
   deleteIncompleteSession,
@@ -111,6 +112,17 @@ export default function MySessionsPage() {
           Sessions you saved to your account.
         </p>
       </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <Link className="btn-primary" to="/create">
+          Create session
+        </Link>
+        <Link className="btn-primary" to="/campaign/new">
+          New campaign
+        </Link>
+      </div>
+
+      <MyCampaignsPanel showCreateCta={false} />
 
       {loading ? <p className="text-sm text-secondary">Loading…</p> : null}
 

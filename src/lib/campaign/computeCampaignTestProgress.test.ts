@@ -328,6 +328,101 @@ describe('computeCampaignTestProgress', () => {
       delta: null,
     });
   });
+
+  describe('a campaign that is over', () => {
+    const occurrences = [
+      occurrence({
+        occurrenceId: 'bench',
+        templateId: 'flash-flood',
+        weekNumber: 1,
+        localDate: '2026-03-02',
+      }),
+      occurrence({
+        occurrenceId: 'build',
+        templateId: 'other',
+        weekNumber: 1,
+        localDate: '2026-03-04',
+      }),
+      occurrence({
+        occurrenceId: 'build2',
+        templateId: 'other-2',
+        weekNumber: 2,
+        localDate: '2026-03-09',
+      }),
+      occurrence({
+        occurrenceId: 'retest',
+        templateId: 'flash-flood',
+        weekNumber: 2,
+        localDate: '2026-03-11',
+      }),
+    ];
+    const members = [member({ userId: 'u1', nickname: 'Maya' })];
+
+    it('shows nothing once it is ended early with no benchmark score', () => {
+      // Nothing ran and nothing ever will, so "Scores show up after the
+      // opening benchmark" would be waiting for something that cannot arrive.
+      expect(
+        computeCampaignTestProgress({
+          occurrences,
+          members,
+          scores: [],
+          campaignStatus: 'abandoned',
+        })
+      ).toBeNull();
+    });
+
+    it('shows nothing once it is complete with no benchmark score', () => {
+      expect(
+        computeCampaignTestProgress({
+          occurrences,
+          members,
+          scores: [],
+          campaignStatus: 'complete',
+        })
+      ).toBeNull();
+    });
+
+    it('keeps the result of a campaign that finished and was scored', () => {
+      // The payoff of running the whole thing — hiding this on completion
+      // would throw away the number the campaign exists to produce.
+      const result = computeCampaignTestProgress({
+        occurrences,
+        members,
+        scores: [
+          { occurrenceId: 'bench', userId: 'u1', finalScore: 40 },
+          { occurrenceId: 'retest', userId: 'u1', finalScore: 48 },
+        ],
+        campaignStatus: 'complete',
+      });
+      expect(result?.rows[0].delta).toBe(8);
+    });
+
+    it('keeps the work done before an early ending', () => {
+      const result = computeCampaignTestProgress({
+        occurrences,
+        members,
+        scores: [{ occurrenceId: 'bench', userId: 'u1', finalScore: 40 }],
+        campaignStatus: 'abandoned',
+      });
+      expect(result?.hasBenchmarkScore).toBe(true);
+      expect(result?.rows[0].benchmarkScore).toBe(40);
+    });
+
+    it('still waits for the benchmark while the campaign is live', () => {
+      const result = computeCampaignTestProgress({
+        occurrences,
+        members,
+        scores: [],
+        campaignStatus: 'active',
+      });
+      expect(result).not.toBeNull();
+      expect(result?.hasBenchmarkScore).toBe(false);
+    });
+
+    it('shows the section when no status is given at all', () => {
+      expect(computeCampaignTestProgress({ occurrences, members, scores: [] })).not.toBeNull();
+    });
+  });
 });
 
 describe('formatCampaignRepScore / formatCampaignRepDelta', () => {

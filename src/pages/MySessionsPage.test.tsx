@@ -3,10 +3,12 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@/contexts/ThemeProvider';
 import MySessionsPage from './MySessionsPage';
+import type { CampaignSummary } from '@/lib/api/campaigns';
 import type { MySessionEntry } from '@/lib/api/mySessions';
 
 const fetchMySessionsMock = vi.fn();
 const deleteIncompleteSessionMock = vi.fn();
+const fetchMyCampaignsMock = vi.fn();
 const authUser = { id: 'user-1' };
 
 vi.mock('@/hooks/useAmrapAuth', () => ({
@@ -26,6 +28,16 @@ vi.mock('@/lib/api/mySessions', async () => {
     fetchMySessions: (...args: unknown[]) => fetchMySessionsMock(...args),
     deleteIncompleteSession: (...args: unknown[]) =>
       deleteIncompleteSessionMock(...args),
+  };
+});
+
+vi.mock('@/lib/api/campaigns', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/api/campaigns')>(
+    '@/lib/api/campaigns'
+  );
+  return {
+    ...actual,
+    fetchMyCampaigns: (...args: unknown[]) => fetchMyCampaignsMock(...args),
   };
 });
 
@@ -52,14 +64,35 @@ function entry(overrides: Partial<MySessionEntry> = {}): MySessionEntry {
   };
 }
 
+function campaign(overrides: Partial<CampaignSummary> = {}): CampaignSummary {
+  return {
+    campaignId: '33333333-3333-4333-8333-333333333333',
+    name: 'Spring Build',
+    goal: null,
+    weekCount: 8,
+    sessionsPerWeek: 3,
+    startDate: '2026-09-01',
+    timezone: 'America/Los_Angeles',
+    status: 'active',
+    role: 'host',
+    inviteCode: 'ABC123',
+    totalSessions: 24,
+    completedSessions: 2,
+    memberCount: 3,
+    ...overrides,
+  };
+}
+
 afterEach(() => {
   cleanup();
   fetchMySessionsMock.mockReset();
   deleteIncompleteSessionMock.mockReset();
+  fetchMyCampaignsMock.mockReset();
   vi.unstubAllGlobals();
 });
 
 function renderPage() {
+  fetchMyCampaignsMock.mockResolvedValue({ data: [], error: null });
   return render(
     <MemoryRouter>
       <ThemeProvider>
@@ -185,5 +218,46 @@ describe('MySessionsPage delete', () => {
     expect(confirmMock).toHaveBeenCalledWith(
       expect.stringMatching(/this date and time only/i)
     );
+  });
+});
+
+describe('MySessionsPage CTAs', () => {
+  it('links Create session and New campaign to their routes', async () => {
+    fetchMySessionsMock.mockResolvedValue({ data: [], error: null });
+    renderPage();
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('link', { name: 'Create session' }).getAttribute('href')
+      ).toBe('/create');
+      expect(
+        screen.getByRole('link', { name: 'New campaign' }).getAttribute('href')
+      ).toBe('/campaign/new');
+    });
+  });
+});
+
+describe('MySessionsPage campaigns', () => {
+  it('lists campaigns with a link to the campaign detail', async () => {
+    fetchMySessionsMock.mockResolvedValue({ data: [], error: null });
+    fetchMyCampaignsMock.mockResolvedValue({
+      data: [campaign()],
+      error: null,
+    });
+
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <MySessionsPage />
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Your campaigns')).toBeTruthy();
+      expect(
+        screen.getByRole('link', { name: /Spring Build/ }).getAttribute('href')
+      ).toBe('/campaign/33333333-3333-4333-8333-333333333333');
+    });
   });
 });
