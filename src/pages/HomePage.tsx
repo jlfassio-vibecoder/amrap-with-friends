@@ -3,6 +3,7 @@ import { FeaturedWodCard } from '@/components/home/FeaturedWodCard';
 import { HomeSeoContent } from '@/components/home/HomeSeoContent';
 import { LandingHero } from '@/components/home/LandingHero';
 import { RallyCta } from '@/components/home/RallyCta';
+import { MyCampaignsPanel } from '@/components/campaign/MyCampaignsPanel';
 import { HostScheduledSessionsPanel } from '@/components/session/HostScheduledSessionsPanel';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 
@@ -22,6 +23,7 @@ function HomePage() {
 
       <div className="mx-auto w-full max-w-[1080px] space-y-16 px-6 py-14 lg:px-10 lg:py-20">
         <FeaturedWodCard />
+        <MyCampaignsPanel />
         <HomeSeoContent />
         {/* Returning-host utility, so it sits after the pitch rather than
             ahead of it. */}

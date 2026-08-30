@@ -94,7 +94,8 @@ export function buildCampaignCalendar(input: CampaignScheduleInput): CampaignCal
     occurrences,
     sessionsPerWeek: orderedSlots.length,
     totalSessions: occurrences.length,
-    startDate: input.startDate,
-    endDate: occurrences[occurrences.length - 1].localDate,
+    anchorDate: input.startDate,
+    firstSessionDate: occurrences[0].localDate,
+    lastSessionDate: occurrences[occurrences.length - 1].localDate,
   };
 }

@@ -46,3 +46,12 @@ export function weekdayOf(ymd: string): number {
   const [year, month, day] = ymd.split('-').map(Number);
   return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
 }
+
+/**
+ * Today as a local calendar date. Uses local parts, not the UTC ones, because
+ * the host picks a start date in their own calendar — on the evening of the
+ * 5th in a negative offset, UTC is already the 6th.
+ */
+export function calendarDateToday(now: Date = new Date()): string {
+  return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+}
