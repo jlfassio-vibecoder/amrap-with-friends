@@ -4,6 +4,7 @@ import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { CampaignSchedulePreview } from '@/components/campaign/CampaignSchedulePreview';
 import { CampaignSlotPicker } from '@/components/campaign/CampaignSlotPicker';
 import { CampaignTrackPicker } from '@/components/campaign/CampaignTrackPicker';
+import { campaignTrackLabel } from '@/components/campaign/campaignTrackLabel';
 import { createCampaign } from '@/lib/api/campaigns';
 import {
   CAMPAIGN_WEEK_COUNTS,
@@ -33,9 +34,7 @@ export default function CreateCampaignPage() {
   const [name, setName] = useState('');
   const [goal, setGoal] = useState('');
   const [weekCount, setWeekCount] = useState<CampaignWeekCount>(8);
-  const [startDate, setStartDate] = useState(() =>
-    defaultCampaignStartDate(calendarDateToday())
-  );
+  const [startDate, setStartDate] = useState(() => defaultCampaignStartDate(calendarDateToday()));
   const [slots, setSlots] = useState<CampaignSlot[]>(() => suggestedSlots(3));
   const [tracks, setTracks] = useState<CampaignTrack[]>([
     { durationMinutes: 10, category: 'blood-shunt' },
@@ -189,15 +188,22 @@ export default function CreateCampaignPage() {
           <div className="space-y-1">
             <p className="text-sm font-semibold text-ink">The plan</p>
             {planned ? (
-              <p className="text-sm text-secondary">
-                {formatCampaignShape(weekCount, planned.calendar.sessionsPerWeek)} ·{' '}
-                {formatCampaignSpan(
-                  planned.calendar.firstSessionDate,
-                  planned.calendar.lastSessionDate
-                )}
-              </p>
+              <>
+                <p className="text-sm text-secondary">
+                  {formatCampaignShape(weekCount, planned.calendar.sessionsPerWeek)} ·{' '}
+                  {formatCampaignSpan(
+                    planned.calendar.firstSessionDate,
+                    planned.calendar.lastSessionDate
+                  )}
+                </p>
+                {tracks[0] ? (
+                  <p className="text-sm text-secondary">
+                    Measured on {campaignTrackLabel(tracks[0])}.
+                  </p>
+                ) : null}
+              </>
             ) : (
-              <p className="text-sm text-error">
+              <p className="text-error text-sm">
                 {previewProblem ?? 'Pick your training days and workout styles to see the plan.'}
               </p>
             )}
@@ -206,9 +212,9 @@ export default function CreateCampaignPage() {
           {planned ? (
             <>
               <p className="text-sm text-secondary">
-                The first session is your benchmark. You run it again at the end, so the
-                campaign finishes with a number rather than a feeling. Everything in
-                between gets steadily harder.
+                The first session is your benchmark. You run it again at the end, so the campaign
+                finishes with a number rather than a feeling. Everything in between gets steadily
+                harder.
               </p>
               <CampaignSchedulePreview occurrences={planned.occurrences} />
             </>

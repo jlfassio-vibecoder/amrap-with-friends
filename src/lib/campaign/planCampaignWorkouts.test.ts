@@ -296,4 +296,32 @@ describe('planCampaignWorkouts', () => {
       expect(volumes[volumes.length - 1]).toBeGreaterThan(volumes[0]);
     });
   });
+
+  it('uses tracks[0] as the measurement track — reordering changes the tests only', () => {
+    const calendar = occurrences(4, 2);
+    const bloodFirst = planCampaignWorkouts({
+      occurrences: calendar,
+      tracks: [BLOOD_SHUNT_TRACK, ENGINE_ROOM_TRACK],
+      templates: TEMPLATES,
+    });
+    const engineFirst = planCampaignWorkouts({
+      occurrences: calendar,
+      tracks: [ENGINE_ROOM_TRACK, BLOOD_SHUNT_TRACK],
+      templates: TEMPLATES,
+    });
+
+    expect(bloodFirst[0].templateId).toBe('flash-flood');
+    expect(bloodFirst[bloodFirst.length - 1].templateId).toBe('flash-flood');
+    expect(engineFirst[0].templateId).toBe('constant-current');
+    expect(engineFirst[engineFirst.length - 1].templateId).toBe('constant-current');
+
+    const bloodBuilds = bloodFirst.slice(1, -1).map((entry) => entry.templateId);
+    const engineBuilds = engineFirst.slice(1, -1).map((entry) => entry.templateId);
+    expect(bloodBuilds).not.toContain('flash-flood');
+    expect(engineBuilds).not.toContain('constant-current');
+    // The non-measurement track's full pool (including its own benchmark id)
+    // is still available for build days.
+    expect(bloodBuilds).toContain('constant-current');
+    expect(engineBuilds).toContain('flash-flood');
+  });
 });
