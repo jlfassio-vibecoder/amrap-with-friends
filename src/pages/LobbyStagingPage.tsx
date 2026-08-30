@@ -4,9 +4,9 @@ import { AppHeader } from '@/components/AppHeader';
 import { WorkoutTemplatePicker } from '@/components/createSession/WorkoutTemplatePicker';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useLobbyForceNav } from '@/hooks/useLobbyForceNav';
+import { useStaleLobbyHostClaim } from '@/hooks/useStaleLobbyHostClaim';
 import { useLobbyChannel } from '@/lib/realtime/useLobbyChannel';
 import {
-  claimLobbyCommandIfStale,
   closeLobby,
   joinLobby,
   leaveLobby,
@@ -36,7 +36,6 @@ import {
 } from '@/data/workoutTemplates';
 
 const HEARTBEAT_MS = 15_000;
-const STALE_CHECK_MS = 20_000;
 
 export default function LobbyStagingPage() {
   const { lobbyId = '' } = useParams<{ lobbyId: string }>();
@@ -129,21 +128,23 @@ export default function LobbyStagingPage() {
     return () => window.clearInterval(id);
   }, [lobbyId, memberId, isAuthenticated]);
 
-  useEffect(() => {
-    if (!lobby || !user?.id || lobby.hostUserId === user.id) {
-      return;
-    }
-    const id = window.setInterval(() => {
-      void (async () => {
-        const result = await claimLobbyCommandIfStale(lobby.lobbyId);
-        if (result.data?.claimed && result.data.hostToken && result.data.activeSessionId) {
-          setStoredHostToken(result.data.activeSessionId, result.data.hostToken);
-          await refresh();
-        }
-      })();
-    }, STALE_CHECK_MS);
-    return () => window.clearInterval(id);
-  }, [lobby, user?.id, refresh]);
+  const hostMemberId =
+    lobby?.members.find((member) => member.userId === lobby.hostUserId)?.id ?? null;
+
+  useStaleLobbyHostClaim({
+    lobbyId,
+    hostUserId: lobby?.hostUserId,
+    userId: user?.id,
+    hostMemberId,
+    presenceByMemberId,
+    enabled: Boolean(lobby && lobby.status === 'open' && user?.id),
+    onClaimed: (result) => {
+      if (result.hostToken && result.activeSessionId) {
+        setStoredHostToken(result.activeSessionId, result.hostToken);
+      }
+      void refresh();
+    },
+  });
 
   useEffect(() => {
     if (!lobby || !user?.id || lobby.hostUserId !== user.id || !lobby.activeSessionId) {

@@ -35,8 +35,9 @@ import { useGhostPacer } from '@/hooks/useGhostPacer';
 import { useTacticalAudio } from '@/hooks/useTacticalAudio';
 import { useLobbyForceNav } from '@/hooks/useLobbyForceNav';
 import { useLobbyHostHandoff } from '@/hooks/useLobbyHostHandoff';
+import { useStaleLobbyHostClaim } from '@/hooks/useStaleLobbyHostClaim';
 import { useLobbyChannel } from '@/lib/realtime/useLobbyChannel';
-import { passLobbyCommand } from '@/lib/api/lobby';
+import { passLobbyCommand, touchLobbyPresence } from '@/lib/api/lobby';
 import { canPassLobbyCommand } from '@/lib/lobby/canPassLobbyCommand';
 import {
   getStoredLobbyIdForSession,
@@ -45,12 +46,14 @@ import {
   setStoredLobbyIdForSession,
 } from '@/lib/lobbyIdentity';
 import type { StoredGhostSelection } from '@/lib/sessionIdentity';
-import { clearStoredHostToken } from '@/lib/sessionIdentity';
+import { clearStoredHostToken, setStoredHostToken } from '@/lib/sessionIdentity';
 import {
   elapsedPastLobbyCountdownSec,
   formatTMinus,
   remainingLobbyCountdownSec,
 } from '@/lib/session/lobbyCountdown';
+
+const LOBBY_HEARTBEAT_MS = 15_000;
 
 function formatTime(totalSec: number): string {
   const minutes = Math.floor(totalSec / 60);
@@ -443,6 +446,39 @@ function LiveSessionView({
     userId: user?.id,
     enabled: Boolean(lobbyId) && (livePhase === 'waiting' || livePhase === 'setup'),
     onHostAuthorityChange,
+  });
+
+  const waitingOrSetup = livePhase === 'waiting' || livePhase === 'setup';
+
+  useEffect(() => {
+    if (!lobbyId || !isAuthenticated || !waitingOrSetup) {
+      return;
+    }
+    void touchLobbyPresence(lobbyId);
+    const id = window.setInterval(() => {
+      void touchLobbyPresence(lobbyId);
+    }, LOBBY_HEARTBEAT_MS);
+    return () => window.clearInterval(id);
+  }, [lobbyId, isAuthenticated, waitingOrSetup]);
+
+  const waitingHostMemberId =
+    lobbyChannel.lobby?.members.find((member) => member.userId === lobbyChannel.lobby?.hostUserId)
+      ?.id ?? null;
+
+  useStaleLobbyHostClaim({
+    lobbyId,
+    hostUserId: lobbyChannel.lobby?.hostUserId,
+    userId: user?.id,
+    hostMemberId: waitingHostMemberId,
+    presenceByMemberId: lobbyChannel.presenceByMemberId,
+    enabled: Boolean(lobbyId && waitingOrSetup && user?.id),
+    onClaimed: (result) => {
+      if (result.hostToken && result.activeSessionId) {
+        setStoredHostToken(result.activeSessionId, result.hostToken);
+      }
+      onHostAuthorityChange?.();
+      void lobbyChannel.refresh();
+    },
   });
 
   const walkthrough = useStagingWalkthrough({

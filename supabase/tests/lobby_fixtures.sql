@@ -10,6 +10,9 @@
 --   4. start_next after finished → new session; guests not pre-inserted; claimed members present
 --   5. Pass during work raises
 --   6. Second start_next while waiting raises “still active”
+--   7. claim_lobby_command_if_stale after host last_seen aged past 45s → claimed
+--   8. claim during work raises
+--   9. stale first-successor skipped when a fresher later joiner exists
 
 -- Example (adjust ids / workout jsonb to match validate_workout):
 --
@@ -80,3 +83,32 @@
 --   NULL
 -- );
 -- -- Expect: EXCEPTION Current session is still active
+--
+-- -- AFK claim after host last_seen aged past grace
+-- UPDATE public.lobby_members
+-- SET last_seen_at = now() - interval '60 seconds'
+-- WHERE lobby_id = '<lobby_id>' AND user_id = '<host_uuid>';
+-- SET request.jwt.claim.sub = '<successor_uuid>';
+-- SELECT public.claim_lobby_command_if_stale('<lobby_id>');
+-- -- Expect: claimed true (and host_token when session waiting/setup)
+--
+-- -- Claim during live work
+-- UPDATE public.sessions SET state = 'work' WHERE id = '<active_session_id>';
+-- UPDATE public.lobby_members
+-- SET last_seen_at = now() - interval '60 seconds'
+-- WHERE lobby_id = '<lobby_id>' AND user_id = '<host_uuid>';
+-- SET request.jwt.claim.sub = '<successor_uuid>';
+-- SELECT public.claim_lobby_command_if_stale('<lobby_id>');
+-- -- Expect: EXCEPTION Cannot claim command during a live session
+--
+-- -- Stale first-successor skipped: age B, keep C fresh → C is elected
+-- -- (B joined before C; both active claimed members)
+-- UPDATE public.lobby_members
+-- SET last_seen_at = now() - interval '60 seconds'
+-- WHERE lobby_id = '<lobby_id>' AND user_id = '<uuid-b>';
+-- UPDATE public.lobby_members
+-- SET last_seen_at = now()
+-- WHERE lobby_id = '<lobby_id>' AND user_id = '<uuid-c>';
+-- SET request.jwt.claim.sub = '<uuid-c>';
+-- SELECT public.claim_lobby_command_if_stale('<lobby_id>');
+-- -- Expect: claimed true for C (B would get not_successor)

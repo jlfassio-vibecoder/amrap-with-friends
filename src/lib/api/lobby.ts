@@ -112,6 +112,12 @@ function mapRpcError(message: string | undefined): string {
   if (message.includes('Cannot pass command to yourself')) {
     return 'Pick someone else to pass command to.';
   }
+  if (
+    message.includes('Cannot pass command during a live session') ||
+    message.includes('Cannot claim command during a live session')
+  ) {
+    return 'Cannot change host during a live session.';
+  }
   if (message.includes('Current session is still active')) {
     return 'Finish the current session before starting the next one.';
   }
