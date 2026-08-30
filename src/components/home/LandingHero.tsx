@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
 import { HeroRouteGraphic } from '@/components/home/HeroRouteGraphic';
+import { HostScheduledSessionsPanel } from '@/components/session/HostScheduledSessionsPanel';
 
 interface LandingHeroProps {
   /** Signed-in athletes get a route into the HUD alongside the sign-up CTA. */
@@ -16,7 +17,7 @@ export function LandingHero({ showHudAction }: LandingHeroProps) {
     <div className="night-panel relative isolate overflow-hidden bg-night text-night-ink">
       <AppHeader title="AMRAP With Friends" hidePageTitle tone="night" />
 
-      <section className="mx-auto grid w-full max-w-[1240px] items-center gap-8 px-6 pb-14 pt-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:px-10 lg:pb-24 lg:pt-16">
+      <section className="mx-auto grid w-full max-w-[1240px] items-center gap-8 px-6 pb-10 pt-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:px-10 lg:pb-16 lg:pt-16">
         <div>
           <h1 className="landing-headline text-[clamp(3.5rem,10vw,8rem)] text-night-ink">
             AMRAP With Friends
@@ -63,6 +64,12 @@ export function LandingHero({ showHudAction }: LandingHeroProps) {
           <HeroRouteGraphic />
         </div>
       </section>
+
+      <div className="mx-auto w-full max-w-[1240px] px-6 pb-14 lg:px-10 lg:pb-20">
+        <div className="rounded-card border border-night-border bg-surface p-5 text-ink shadow-card">
+          <HostScheduledSessionsPanel />
+        </div>
+      </div>
     </div>
   );
 }

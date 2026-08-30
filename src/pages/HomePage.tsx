@@ -4,7 +4,6 @@ import { HomeSeoContent } from '@/components/home/HomeSeoContent';
 import { LandingHero } from '@/components/home/LandingHero';
 import { RallyCta } from '@/components/home/RallyCta';
 import { MyCampaignsPanel } from '@/components/campaign/MyCampaignsPanel';
-import { HostScheduledSessionsPanel } from '@/components/session/HostScheduledSessionsPanel';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 
 /**
@@ -25,9 +24,6 @@ function HomePage() {
         <FeaturedWodCard />
         <MyCampaignsPanel />
         <HomeSeoContent />
-        {/* Returning-host utility, so it sits after the pitch rather than
-            ahead of it. */}
-        <HostScheduledSessionsPanel />
       </div>
 
       <RallyCta />

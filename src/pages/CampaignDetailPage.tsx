@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
-import { fetchCampaignDetail, type CampaignDetail } from '@/lib/api/campaigns';
+import { CopyCampaignInvite } from '@/components/campaign/CopyCampaignInvite';
+import {
+  fetchCampaignDetail,
+  fetchCampaignStandings,
+  leaveCampaign,
+  type CampaignDetail,
+  type CampaignStandingRow,
+} from '@/lib/api/campaigns';
 import {
   campaignProgress,
   formatCampaignShape,
@@ -23,11 +30,22 @@ const OCCURRENCE_LABEL: Record<string, string> = {
   skipped: 'Skipped',
 };
 
+function formatNormalisedAverage(value: number | null): string {
+  if (value === null) {
+    return '—';
+  }
+  return `${Math.round(value * 100)}%`;
+}
+
 export default function CampaignDetailPage() {
   const { campaignId } = useParams<{ campaignId: string }>();
+  const navigate = useNavigate();
   const [detail, setDetail] = useState<CampaignDetail | null>(null);
+  const [standings, setStandings] = useState<CampaignStandingRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loadedId, setLoadedId] = useState<string | null>(null);
+  const [leaving, setLeaving] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
 
   useEffect(() => {
     // A missing id is a routing problem, not a load — it is rendered below
@@ -37,17 +55,20 @@ export default function CampaignDetailPage() {
     }
 
     let cancelled = false;
-    fetchCampaignDetail(campaignId)
-      .then((result) => {
+    Promise.all([fetchCampaignDetail(campaignId), fetchCampaignStandings(campaignId)])
+      .then(([detailResult, standingsResult]) => {
         if (cancelled) {
           return;
         }
-        if (result.error || !result.data) {
-          setError(result.error?.message ?? 'That campaign is not available.');
+        if (detailResult.error || !detailResult.data) {
+          setError(detailResult.error?.message ?? 'That campaign is not available.');
           setDetail(null);
+          setStandings([]);
         } else {
           setError(null);
-          setDetail(result.data);
+          setDetail(detailResult.data);
+          // Standings ACL mirrors detail; a soft failure leaves the rest of the page usable.
+          setStandings(standingsResult.error ? [] : standingsResult.data);
         }
         setLoadedId(campaignId);
       })
@@ -57,6 +78,7 @@ export default function CampaignDetailPage() {
         }
         setError('That campaign is not available.');
         setDetail(null);
+        setStandings([]);
         setLoadedId(campaignId);
       });
 
@@ -90,11 +112,29 @@ export default function CampaignDetailPage() {
     );
   }
 
+  async function handleLeave() {
+    if (!campaignId) {
+      return;
+    }
+    setLeaving(true);
+    const result = await leaveCampaign(campaignId);
+    setLeaving(false);
+    if (result.error) {
+      setError(result.error.message);
+      setConfirmLeave(false);
+      return;
+    }
+    navigate('/');
+  }
+
   const progress = campaignProgress(
     detail.occurrences.filter((occurrence) => occurrence.status === 'done').length,
     detail.occurrences.length
   );
   const weeks = groupOccurrencesByWeek(detail.occurrences);
+  const hasCountableSessions = detail.occurrences.some(
+    (occurrence) => occurrence.status === 'generated' || occurrence.status === 'done'
+  );
 
   return (
     <NarrowPageLayout
@@ -126,8 +166,57 @@ export default function CampaignDetailPage() {
         {detail.goal ? <p className="text-sm text-secondary">{detail.goal}</p> : null}
       </section>
 
-      <section className="card space-y-3 p-6">
-        <h2 className="text-display text-xl text-ink">The crew</h2>
+      <section className="card space-y-4 p-6">
+        <h2 className="text-display text-xl text-ink">Standings</h2>
+        {!hasCountableSessions ? (
+          <p className="text-sm text-secondary">
+            Standings show up once the first campaign session is generated.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[20rem] text-left text-sm">
+              <thead>
+                <tr className="border-b border-divider text-xs uppercase tracking-widest text-muted">
+                  <th className="pb-2 pr-3 font-semibold">Rank</th>
+                  <th className="pb-2 pr-3 font-semibold">Athlete</th>
+                  <th className="pb-2 pr-3 font-semibold">Average</th>
+                  <th className="pb-2 font-semibold">Sessions attended</th>
+                </tr>
+              </thead>
+              <tbody>
+                {standings.map((row) => (
+                  <tr key={row.userId} className="border-b border-divider last:border-0">
+                    <td className="py-2.5 pr-3 tabular-nums text-secondary">{row.rank}</td>
+                    <td className="py-2.5 pr-3 text-ink">
+                      {row.nickname ?? 'Athlete'}
+                      {row.left ? (
+                        <span className="ml-2 text-xs uppercase tracking-widest text-muted">
+                          Left
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="py-2.5 pr-3 tabular-nums text-ink">
+                      {formatNormalisedAverage(row.normalisedAverage)}
+                    </td>
+                    <td className="py-2.5 tabular-nums text-secondary">
+                      {row.attended} of {row.eligible}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section className="card space-y-4 p-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-display text-xl text-ink">The crew</h2>
+          <span className="text-xs text-muted">
+            {detail.members.length === 1 ? '1 athlete' : `${detail.members.length} athletes`}
+          </span>
+        </div>
+
         <ul className="flex flex-wrap gap-2">
           {detail.members.map((member) => (
             <li
@@ -141,6 +230,49 @@ export default function CampaignDetailPage() {
             </li>
           ))}
         </ul>
+
+        {detail.viewerRole === 'host' && detail.inviteCode ? (
+          <CopyCampaignInvite
+            inviteCode={detail.inviteCode}
+            campaignId={detail.campaignId}
+          />
+        ) : null}
+
+        {detail.viewerRole === 'member' ? (
+          confirmLeave ? (
+            <div className="space-y-2">
+              <p className="text-sm text-secondary">
+                Leave this campaign? Your finished sessions stay on your record,
+                and the host can invite you back.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={leaving}
+                  onClick={() => void handleLeave()}
+                >
+                  {leaving ? 'Leaving…' : 'Yes, leave'}
+                </button>
+                <button
+                  type="button"
+                  className="btn-outline"
+                  onClick={() => setConfirmLeave(false)}
+                >
+                  Stay
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="text-sm font-semibold text-accent"
+              onClick={() => setConfirmLeave(true)}
+            >
+              Leave campaign
+            </button>
+          )
+        ) : null}
       </section>
 
       <section className="space-y-4">

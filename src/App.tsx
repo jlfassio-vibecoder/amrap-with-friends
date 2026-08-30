@@ -12,6 +12,7 @@ const SessionWaitingRoomPage = lazy(() => import('./pages/SessionWaitingRoomPage
 const MySessionsPage = lazy(() => import('./pages/MySessionsPage'));
 const CreateCampaignPage = lazy(() => import('./pages/CreateCampaignPage'));
 const CampaignDetailPage = lazy(() => import('./pages/CampaignDetailPage'));
+const JoinCampaignPage = lazy(() => import('./pages/JoinCampaignPage'));
 const HUDPage = lazy(() => import('./pages/HUDPage'));
 const IntakePage = lazy(() => import('./pages/IntakePage'));
 const CoachPage = lazy(() => import('./pages/CoachPage'));
@@ -42,6 +43,9 @@ function App() {
             }
           />
           <Route path="/join" element={<JoinSessionPage />} />
+          {/* Public: the invite preview is what convinces someone to sign up,
+              so it must render before the auth gate. */}
+          <Route path="/campaign/join" element={<JoinCampaignPage />} />
           <Route
             path="/campaign/new"
             element={
