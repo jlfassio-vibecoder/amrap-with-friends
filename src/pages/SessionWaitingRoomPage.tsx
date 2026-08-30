@@ -394,6 +394,7 @@ function LiveSessionView({
   const { isAuthenticated, isAuthLoading, user } = useAmrapAuth();
   const [passBusy, setPassBusy] = useState(false);
   const [passError, setPassError] = useState<string | null>(null);
+  const [forceNavError, setForceNavError] = useState<string | null>(null);
   const [isSubmittingPartialReps, setIsSubmittingPartialReps] = useState(false);
   const [scorecardDismissed, setScorecardDismissed] = useState(false);
   const [authOpenForSave, setAuthOpenForSave] = useState(false);
@@ -571,6 +572,7 @@ function LiveSessionView({
     activeSessionState: lobbyChannel.lobby?.activeSessionState,
     currentSessionId: sessionId,
     enabled: livePhase === 'finished' && !showPartialRepsModal,
+    onError: setForceNavError,
   });
 
   async function handlePassCommand(toUserId: string) {
@@ -891,7 +893,7 @@ function LiveSessionView({
                     className="btn-primary px-3 py-1.5 text-sm"
                     onClick={() => live.endPractice()}
                   >
-                    Back to staging
+                    End practice
                   </button>
                 )}
               </section>
@@ -1003,21 +1005,37 @@ function LiveSessionView({
           <p>
             <span className="font-semibold text-ink">Your nickname:</span> {live.nickname}
           </p>
-          <Link className="link-accent" to={exitHref}>
-            {exitLabel}
-          </Link>
+          {forceNavError ? <p className="text-error text-sm">{forceNavError}</p> : null}
+          <div className="flex flex-wrap gap-4">
+            <Link className="link-accent" to={exitHref}>
+              {exitLabel}
+            </Link>
+            {stagingHref ? (
+              <Link className="link-accent" to="/">
+                Back home
+              </Link>
+            ) : null}
+          </div>
         </section>
 
-        <footer className="hidden border-t border-divider bg-surface text-sm text-secondary lg:flex lg:shrink-0 lg:items-center lg:justify-between lg:px-8 lg:py-3">
+        <footer className="hidden border-t border-divider bg-surface text-sm text-secondary lg:flex lg:shrink-0 lg:items-center lg:justify-between lg:gap-4 lg:px-8 lg:py-3">
           <span>
             <span className="font-semibold text-ink">Session ID:</span> {live.sessionId}
           </span>
           <span>
             <span className="font-semibold text-ink">Your nickname:</span> {live.nickname}
           </span>
-          <Link className="link-accent" to={exitHref}>
-            {exitLabel}
-          </Link>
+          <span className="flex flex-wrap items-center gap-4">
+            {forceNavError ? <span className="text-error text-sm">{forceNavError}</span> : null}
+            <Link className="link-accent" to={exitHref}>
+              {exitLabel}
+            </Link>
+            {stagingHref ? (
+              <Link className="link-accent" to="/">
+                Back home
+              </Link>
+            ) : null}
+          </span>
         </footer>
       </div>
 

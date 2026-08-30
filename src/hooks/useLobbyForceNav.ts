@@ -95,6 +95,17 @@ export function useLobbyForceNav(input: {
         scheduleRetry(state);
         return;
       }
+      if (!joined.data.participantId) {
+        onError?.('Could not join the next session. Try again.');
+        scheduleRetry(state);
+        return;
+      }
+      const nextSessionId = joined.data.sessionId ?? target!;
+      if (nextSessionId !== target) {
+        onError?.('Could not join the next session. Try again.');
+        scheduleRetry(state);
+        return;
+      }
 
       lastNavigatedRef.current = target!;
       navigate(`/session/${target}`, { replace: true });

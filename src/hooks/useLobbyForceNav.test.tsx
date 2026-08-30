@@ -50,6 +50,7 @@ describe('useLobbyForceNav', () => {
         lobbyMemberId: 'm1',
         sessionId: SESSION_B,
         sessionState: 'waiting',
+        participantId: 'p1',
       },
       error: null,
     });
@@ -130,7 +131,12 @@ describe('useLobbyForceNav', () => {
     expect(navigateMock).not.toHaveBeenCalled();
 
     joinLobbyMock.mockResolvedValue({
-      data: { lobbyId: LOBBY_ID, lobbyMemberId: 'm1', sessionId: SESSION_B },
+      data: {
+        lobbyId: LOBBY_ID,
+        lobbyMemberId: 'm1',
+        sessionId: SESSION_B,
+        participantId: 'p1',
+      },
       error: null,
     });
 
@@ -140,6 +146,58 @@ describe('useLobbyForceNav', () => {
     });
 
     expect(joinLobbyMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(navigateMock).toHaveBeenCalledWith(`/session/${SESSION_B}`, { replace: true });
+  });
+
+  it('does not navigate when join succeeds without a participant seat', async () => {
+    vi.useFakeTimers();
+    const onError = vi.fn();
+    joinLobbyMock.mockResolvedValue({
+      data: {
+        lobbyId: LOBBY_ID,
+        lobbyMemberId: 'm1',
+        sessionId: SESSION_B,
+        sessionState: 'waiting',
+        participantId: null,
+      },
+      error: null,
+    });
+
+    renderHook(
+      () =>
+        useLobbyForceNav({
+          lobbyId: LOBBY_ID,
+          activeSessionId: SESSION_B,
+          activeSessionState: 'waiting',
+          currentSessionId: SESSION_A,
+          enabled: true,
+          onError,
+        }),
+      { wrapper }
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(onError).toHaveBeenCalledWith('Could not join the next session. Try again.');
+    expect(navigateMock).not.toHaveBeenCalled();
+
+    joinLobbyMock.mockResolvedValue({
+      data: {
+        lobbyId: LOBBY_ID,
+        lobbyMemberId: 'm1',
+        sessionId: SESSION_B,
+        participantId: 'p1',
+      },
+      error: null,
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(2_500);
+      await Promise.resolve();
+    });
+
     expect(navigateMock).toHaveBeenCalledWith(`/session/${SESSION_B}`, { replace: true });
   });
 

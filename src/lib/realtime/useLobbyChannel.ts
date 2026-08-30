@@ -171,8 +171,23 @@ export function useLobbyChannel(
       }
     });
 
+    function handleVisibility() {
+      if (document.visibilityState === 'visible') {
+        void refresh();
+      }
+    }
+
+    function handleFocus() {
+      void refresh();
+    }
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleFocus);
+
     return () => {
       cancelledRef.current = true;
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleFocus);
       void supabase.removeChannel(channel);
       channelRef.current = null;
       setIsConnected(false);
