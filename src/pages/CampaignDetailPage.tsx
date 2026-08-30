@@ -5,6 +5,8 @@ import { CampaignRoleBadge } from '@/components/campaign/CampaignRoleBadge';
 import { CopyCampaignInvite } from '@/components/campaign/CopyCampaignInvite';
 import { WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
 import {
+  deleteCampaign,
+  endCampaign,
   fetchCampaignDetail,
   fetchCampaignStandings,
   leaveCampaign,
@@ -16,6 +18,8 @@ import {
 import {
   campaignProgress,
   campaignRoleDescription,
+  canDeleteCampaign,
+  canEndCampaign,
   computeCampaignTestProgress,
   deriveCampaignRoles,
   formatCampaignRepDelta,
@@ -61,6 +65,12 @@ export default function CampaignDetailPage() {
   const [loadedId, setLoadedId] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [confirmHostAction, setConfirmHostAction] = useState<'end' | 'delete' | null>(null);
+  const [hostActionBusy, setHostActionBusy] = useState(false);
+  // Kept apart from `error`, which blanks the whole page: a refused end or
+  // delete should leave the campaign readable.
+  const [hostActionError, setHostActionError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     // A missing id is a routing problem, not a load — it is rendered below
@@ -112,7 +122,7 @@ export default function CampaignDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [campaignId]);
+  }, [campaignId, reloadKey]);
 
   // Treat a mismatched loaded id as loading so a route change never flashes
   // the previous campaign while the next fetch is in flight.
@@ -154,6 +164,39 @@ export default function CampaignDetailPage() {
     navigate('/');
   }
 
+  async function handleEnd() {
+    if (!campaignId) {
+      return;
+    }
+    setHostActionBusy(true);
+    const result = await endCampaign(campaignId);
+    setHostActionBusy(false);
+    setConfirmHostAction(null);
+    if (result.error) {
+      setHostActionError(result.error.message);
+      return;
+    }
+    // Stay put and reload: seeing the campaign marked "Ended early" is better
+    // confirmation than being dropped back on the home page.
+    setHostActionError(null);
+    setReloadKey((key) => key + 1);
+  }
+
+  async function handleDelete() {
+    if (!campaignId) {
+      return;
+    }
+    setHostActionBusy(true);
+    const result = await deleteCampaign(campaignId);
+    setHostActionBusy(false);
+    if (result.error) {
+      setConfirmHostAction(null);
+      setHostActionError(result.error.message);
+      return;
+    }
+    navigate('/');
+  }
+
   const progress = campaignProgress(
     detail.occurrences.filter((occurrence) => occurrence.status === 'done').length,
     detail.occurrences.length
@@ -166,6 +209,18 @@ export default function CampaignDetailPage() {
   deriveCampaignRoles(detail.occurrences).forEach((role, index) => {
     roleBySequence.set(detail.occurrences[index].sequence, role);
   });
+  const lifecycle = {
+    viewerRole: detail.viewerRole,
+    status: detail.status,
+    occurrences: detail.occurrences.map((occurrence) => ({
+      status: occurrence.status,
+      sessionId: occurrence.sessionId,
+    })),
+    activeMemberCount: detail.members.length,
+  };
+  const showEnd = canEndCampaign(lifecycle);
+  const showDelete = canDeleteCampaign(lifecycle);
+
   const hasCountableSessions = detail.occurrences.some(
     (occurrence) => occurrence.status === 'generated' || occurrence.status === 'done'
   );
@@ -326,6 +381,72 @@ export default function CampaignDetailPage() {
 
         {detail.viewerRole === 'host' && detail.inviteCode ? (
           <CopyCampaignInvite inviteCode={detail.inviteCode} campaignId={detail.campaignId} />
+        ) : null}
+
+        {showEnd || showDelete ? (
+          <div className="space-y-3 border-t border-divider pt-4">
+            {confirmHostAction === null ? (
+              <div className="flex flex-wrap items-center gap-4">
+                {showEnd ? (
+                  <button
+                    type="button"
+                    className="text-sm font-semibold text-accent"
+                    onClick={() => {
+                      setHostActionError(null);
+                      setConfirmHostAction('end');
+                    }}
+                  >
+                    End campaign
+                  </button>
+                ) : null}
+                {showDelete ? (
+                  <button
+                    type="button"
+                    className="text-sm font-semibold text-secondary hover:text-ink"
+                    onClick={() => {
+                      setHostActionError(null);
+                      setConfirmHostAction('delete');
+                    }}
+                  >
+                    Delete campaign
+                  </button>
+                ) : null}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-secondary">
+                  {confirmHostAction === 'delete'
+                    ? 'Delete this campaign? Nothing has run yet, so there is nothing to keep. This cannot be undone.'
+                    : 'End this campaign? The sessions still to come are cancelled, everyone keeps the ones they finished, and you get the slot back to start something else.'}
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={hostActionBusy}
+                    onClick={() =>
+                      void (confirmHostAction === 'delete' ? handleDelete() : handleEnd())
+                    }
+                  >
+                    {hostActionBusy
+                      ? 'Working…'
+                      : confirmHostAction === 'delete'
+                        ? 'Yes, delete it'
+                        : 'Yes, end it'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-outline"
+                    disabled={hostActionBusy}
+                    onClick={() => setConfirmHostAction(null)}
+                  >
+                    Keep it
+                  </button>
+                </div>
+              </div>
+            )}
+            {hostActionError ? <p className="alert-error">{hostActionError}</p> : null}
+          </div>
         ) : null}
 
         {detail.viewerRole === 'member' ? (

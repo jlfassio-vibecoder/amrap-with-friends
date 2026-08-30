@@ -7,12 +7,16 @@ import CampaignDetailPage from './CampaignDetailPage';
 const fetchDetailMock = vi.fn();
 const fetchStandingsMock = vi.fn();
 const leaveMock = vi.fn();
+const endMock = vi.fn();
+const deleteMock = vi.fn();
 const navigateMock = vi.fn();
 
 vi.mock('@/lib/api/campaigns', () => ({
   fetchCampaignDetail: (...args: unknown[]) => fetchDetailMock(...args),
   fetchCampaignStandings: (...args: unknown[]) => fetchStandingsMock(...args),
   leaveCampaign: (...args: unknown[]) => leaveMock(...args),
+  endCampaign: (...args: unknown[]) => endMock(...args),
+  deleteCampaign: (...args: unknown[]) => deleteMock(...args),
 }));
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
@@ -92,6 +96,8 @@ beforeEach(() => {
   fetchDetailMock.mockReset();
   fetchStandingsMock.mockReset();
   leaveMock.mockReset();
+  endMock.mockReset();
+  deleteMock.mockReset();
   navigateMock.mockReset();
   fetchDetailMock.mockResolvedValue({ data: detail(), error: null });
   fetchStandingsMock.mockResolvedValue({
@@ -99,6 +105,8 @@ beforeEach(() => {
     error: null,
   });
   leaveMock.mockResolvedValue({ error: null });
+  endMock.mockResolvedValue({ error: null });
+  deleteMock.mockResolvedValue({ error: null });
   Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
 });
 
@@ -304,5 +312,133 @@ describe('CampaignDetailPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Yes, leave' }));
     await waitFor(() => expect(screen.getByText('That campaign is not available.')).toBeTruthy());
     expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  describe('host controls', () => {
+    /** Nothing run, host alone — the state after creating one to look at it. */
+    function untouched(overrides = {}) {
+      return detail({
+        occurrences: [occurrence(1, 1), occurrence(2, 1), occurrence(3, 2), occurrence(4, 2)],
+        members: [
+          { userId: 'u1', role: 'host', nickname: 'Maya', joinedAt: '2026-09-01T00:00:00Z' },
+        ],
+        ...overrides,
+      });
+    }
+
+    it('offers the host both ways out of a campaign that never ran', async () => {
+      fetchDetailMock.mockResolvedValue({ data: untouched(), error: null });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('End campaign')).toBeTruthy());
+      expect(screen.getByText('Delete campaign')).toBeTruthy();
+    });
+
+    it('drops the delete option once a session has been generated', async () => {
+      fetchDetailMock.mockResolvedValue({
+        data: untouched({
+          occurrences: [
+            occurrence(1, 1, { status: 'generated', sessionId: 's1' }),
+            occurrence(2, 1),
+            occurrence(3, 2),
+            occurrence(4, 2),
+          ],
+        }),
+        error: null,
+      });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('End campaign')).toBeTruthy());
+      expect(screen.queryByText('Delete campaign')).toBeNull();
+    });
+
+    it('drops the delete option once someone else has joined', async () => {
+      fetchDetailMock.mockResolvedValue({ data: detail(), error: null });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('End campaign')).toBeTruthy());
+      expect(screen.queryByText('Delete campaign')).toBeNull();
+    });
+
+    it('offers neither to a member', async () => {
+      fetchDetailMock.mockResolvedValue({
+        data: untouched({ viewerRole: 'member', inviteCode: null }),
+        error: null,
+      });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('Leave campaign')).toBeTruthy());
+      expect(screen.queryByText('End campaign')).toBeNull();
+      expect(screen.queryByText('Delete campaign')).toBeNull();
+    });
+
+    it('offers neither once the campaign is over', async () => {
+      fetchDetailMock.mockResolvedValue({
+        data: untouched({ status: 'abandoned' }),
+        error: null,
+      });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('Ended early')).toBeTruthy());
+      expect(screen.queryByText('End campaign')).toBeNull();
+      expect(screen.queryByText('Delete campaign')).toBeNull();
+    });
+
+    it('confirms before ending, and reloads so the new state is visible', async () => {
+      fetchDetailMock.mockResolvedValue({ data: untouched(), error: null });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('End campaign')).toBeTruthy());
+
+      fireEvent.click(screen.getByText('End campaign'));
+      expect(endMock).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByText('Yes, end it'));
+      await waitFor(() => expect(endMock).toHaveBeenCalledWith('c1'));
+      // Two loads: the first render, then the refresh after ending.
+      await waitFor(() => expect(fetchDetailMock).toHaveBeenCalledTimes(2));
+      expect(navigateMock).not.toHaveBeenCalled();
+    });
+
+    it('backs out of the confirmation without calling anything', async () => {
+      fetchDetailMock.mockResolvedValue({ data: untouched(), error: null });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('End campaign')).toBeTruthy());
+
+      fireEvent.click(screen.getByText('End campaign'));
+      fireEvent.click(screen.getByText('Keep it'));
+      await waitFor(() => expect(screen.getByText('End campaign')).toBeTruthy());
+      expect(endMock).not.toHaveBeenCalled();
+      expect(deleteMock).not.toHaveBeenCalled();
+    });
+
+    it('sends the host home after a delete', async () => {
+      fetchDetailMock.mockResolvedValue({ data: untouched(), error: null });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('Delete campaign')).toBeTruthy());
+
+      fireEvent.click(screen.getByText('Delete campaign'));
+      fireEvent.click(screen.getByText('Yes, delete it'));
+      await waitFor(() => expect(deleteMock).toHaveBeenCalledWith('c1'));
+      await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/'));
+    });
+
+    it('keeps the campaign readable when the server refuses', async () => {
+      fetchDetailMock.mockResolvedValue({ data: untouched(), error: null });
+      deleteMock.mockResolvedValue({
+        error: {
+          message: 'This campaign has already started, so it cannot be deleted. End it instead.',
+        },
+      });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('Delete campaign')).toBeTruthy());
+
+      fireEvent.click(screen.getByText('Delete campaign'));
+      fireEvent.click(screen.getByText('Yes, delete it'));
+      await waitFor(() =>
+        expect(
+          screen.getByText(
+            'This campaign has already started, so it cannot be deleted. End it instead.'
+          )
+        ).toBeTruthy()
+      );
+      // The page is still the campaign, not an error screen.
+      expect(screen.getAllByText('Winter Engine Build').length).toBeGreaterThan(0);
+      expect(navigateMock).not.toHaveBeenCalled();
+    });
   });
 });

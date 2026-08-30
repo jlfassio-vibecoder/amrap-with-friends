@@ -42,6 +42,8 @@ export {
 export { orderPoolByVolume, repsPerRound } from './campaignVolume';
 export { campaignRoleDescription, campaignRoleLabel, deriveCampaignRoles } from './campaignRoles';
 export type { CampaignOccurrenceRole, RoleReadableOccurrence } from './campaignRoles';
+export { canDeleteCampaign, canEndCampaign, hasCampaignStarted } from './campaignLifecycle';
+export type { CampaignLifecycleInput, LifecycleOccurrence } from './campaignLifecycle';
 export { computeCampaignStandings } from './computeCampaignStandings';
 export type {
   CampaignStandingRow,

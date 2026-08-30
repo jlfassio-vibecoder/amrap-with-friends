@@ -5,6 +5,16 @@ import { campaignProgress, formatCampaignShape } from '@/lib/campaign';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 
 /**
+ * A campaign that is over still belongs in the list — it is the host's record
+ * of it — but it must not read as live. Only the finished states get a chip;
+ * an "Active" badge on every row would label nothing.
+ */
+const CLOSED_STATUS_LABEL: Record<string, string> = {
+  complete: 'Complete',
+  abandoned: 'Ended early',
+};
+
+/**
  * Home-page entry point into campaigns. Renders nothing for signed-out
  * visitors — campaigns need an account, and the landing page already has its
  * own pitch; a sign-in prompt here would just be noise above it.
@@ -71,29 +81,32 @@ export function MyCampaignsPanel() {
 
       {loading ? <p className="text-sm text-secondary">Loading campaigns…</p> : null}
 
-      {!loading && error ? <p className="text-sm text-error">{error}</p> : null}
+      {!loading && error ? <p className="text-error text-sm">{error}</p> : null}
 
       {!loading && !error && campaigns.length === 0 ? (
         <p className="text-sm text-secondary">
-          No campaigns yet. Pick a length, a few training days, and the styles you
-          want to train.
+          No campaigns yet. Pick a length, a few training days, and the styles you want to train.
         </p>
       ) : null}
 
       {!loading && !error && campaigns.length > 0 ? (
         <ul className="divide-y divide-divider">
           {campaigns.map((campaign) => {
-            const progress = campaignProgress(
-              campaign.completedSessions,
-              campaign.totalSessions
-            );
+            const progress = campaignProgress(campaign.completedSessions, campaign.totalSessions);
             return (
               <li key={campaign.campaignId} className="py-3 first:pt-0 last:pb-0">
                 <Link
                   className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
                   to={`/campaign/${campaign.campaignId}`}
                 >
-                  <span className="text-sm font-semibold text-ink">{campaign.name}</span>
+                  <span className="flex flex-wrap items-baseline gap-2 text-sm font-semibold text-ink">
+                    {campaign.name}
+                    {CLOSED_STATUS_LABEL[campaign.status] ? (
+                      <span className="rounded-full border border-border px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-widest text-muted">
+                        {CLOSED_STATUS_LABEL[campaign.status]}
+                      </span>
+                    ) : null}
+                  </span>
                   <span className="text-xs text-secondary">
                     {formatCampaignShape(campaign.weekCount, campaign.sessionsPerWeek)} ·{' '}
                     {progress.done}/{progress.total} done

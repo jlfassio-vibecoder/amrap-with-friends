@@ -92,6 +92,10 @@ const ERROR_COPY: Record<string, string> = {
   'Campaign closed': 'This campaign has already finished.',
   'Campaign full': 'This campaign is full.',
   'Host cannot leave': 'You are running this campaign, so you cannot leave it.',
+  'Campaign already started':
+    'This campaign has already started, so it cannot be deleted. End it instead.',
+  'Campaign has other athletes':
+    'Other athletes have joined, so it cannot be deleted. End it instead — their finished sessions stay on their record.',
   'Campaign not found': 'That campaign is not available.',
   invalid_timezone: 'We could not read your timezone. Try again from this device.',
 };
@@ -404,6 +408,34 @@ export async function leaveCampaign(
   campaignId: string
 ): Promise<{ error: CampaignApiError | null }> {
   const { error } = await callRpc('leave_campaign', { p_campaign_id: campaignId });
+  if (error) {
+    return { error: { message: mapError(error.message) } };
+  }
+  return { error: null };
+}
+
+/**
+ * Ends a campaign early. The row survives so members keep their finished
+ * sessions and can see why the calendar stopped; remaining planned sessions
+ * become skipped, and the host gets their campaign slot back.
+ */
+export async function endCampaign(campaignId: string): Promise<{ error: CampaignApiError | null }> {
+  const { error } = await callRpc('end_campaign', { p_campaign_id: campaignId });
+  if (error) {
+    return { error: { message: mapError(error.message) } };
+  }
+  return { error: null };
+}
+
+/**
+ * Deletes a campaign outright. Only possible while nothing has run and nobody
+ * else has joined, so there is no history to lose — anything further along
+ * ends instead.
+ */
+export async function deleteCampaign(
+  campaignId: string
+): Promise<{ error: CampaignApiError | null }> {
+  const { error } = await callRpc('delete_campaign', { p_campaign_id: campaignId });
   if (error) {
     return { error: { message: mapError(error.message) } };
   }
