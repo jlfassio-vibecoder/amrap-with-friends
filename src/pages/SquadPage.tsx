@@ -42,7 +42,7 @@ export default function SquadPage() {
   const reload = useCallback(async () => {
     const result = await fetchMySquad();
     if (result.error || !result.data) {
-      setError(result.error?.message ?? 'That invite is not available.');
+      setError(result.error?.message ?? 'Something went wrong. Please try again.');
       setSquad(null);
       return;
     }
@@ -57,7 +57,7 @@ export default function SquadPage() {
         return;
       }
       if (result.error || !result.data) {
-        setError(result.error?.message ?? 'That invite is not available.');
+        setError(result.error?.message ?? 'Something went wrong. Please try again.');
         setSquad(null);
       } else {
         setError(null);

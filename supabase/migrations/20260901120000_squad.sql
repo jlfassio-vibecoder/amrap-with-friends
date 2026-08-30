@@ -113,7 +113,44 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = pg_catalog, public, extensions
 AS $$
+DECLARE
+  v_a_count int;
+  v_b_count int;
 BEGIN
+  -- Serialize accepts involving either user so concurrent accepts cannot
+  -- slip past the friend cap (callers check first for UX only).
+  PERFORM 1
+  FROM public.athlete_profiles
+  WHERE user_id = LEAST(p_a, p_b)
+  FOR UPDATE;
+  PERFORM 1
+  FROM public.athlete_profiles
+  WHERE user_id = GREATEST(p_a, p_b)
+  FOR UPDATE;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.squad_friends
+    WHERE user_id = p_a AND friend_user_id = p_b
+  ) THEN
+    UPDATE public.squad_requests
+    SET status = 'accepted', updated_at = now()
+    WHERE status = 'pending'
+      AND (
+        (from_user_id = p_a AND to_user_id = p_b)
+        OR (from_user_id = p_b AND to_user_id = p_a)
+      );
+    RETURN;
+  END IF;
+
+  SELECT count(*)::int INTO v_a_count FROM public.squad_friends WHERE user_id = p_a;
+  SELECT count(*)::int INTO v_b_count FROM public.squad_friends WHERE user_id = p_b;
+
+  IF v_a_count >= public.squad_friend_limit()
+     OR v_b_count >= public.squad_friend_limit() THEN
+    RAISE EXCEPTION 'Squad full';
+  END IF;
+
   INSERT INTO public.squad_friends (user_id, friend_user_id)
   VALUES (p_a, p_b)
   ON CONFLICT DO NOTHING;
@@ -485,7 +522,7 @@ BEGIN
   END IF;
 
   IF p_user_id IS NULL THEN
-    RAISE EXCEPTION 'Invite not found';
+    RAISE EXCEPTION 'Friend not found';
   END IF;
 
   DELETE FROM public.squad_friends
@@ -493,7 +530,7 @@ BEGIN
      OR (user_id = p_user_id AND friend_user_id = v_uid);
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'Invite not found';
+    RAISE EXCEPTION 'Friend not found';
   END IF;
 
   RETURN jsonb_build_object('ok', true);

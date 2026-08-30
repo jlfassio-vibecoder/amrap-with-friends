@@ -16,7 +16,7 @@ export default function JoinSquadPage() {
   const { isAuthenticated, isAuthLoading } = useAmrapAuth();
 
   const [preview, setPreview] = useState<SquadInvitePreview | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loadedCode, setLoadedCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [accepting, setAccepting] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
@@ -33,10 +33,12 @@ export default function JoinSquadPage() {
       }
       if (result.error || !result.data) {
         setError(result.error?.message ?? 'That invite is not available.');
+        setPreview(null);
       } else {
+        setError(null);
         setPreview(result.data);
       }
-      setLoading(false);
+      setLoadedCode(inviteCode);
     });
 
     return () => {
@@ -68,6 +70,10 @@ export default function JoinSquadPage() {
       </NarrowPageLayout>
     );
   }
+
+  // Treat a mismatched loaded code as loading so a new ?c= never flashes the
+  // previous inviter while the next preview is in flight.
+  const loading = loadedCode !== inviteCode;
 
   if (loading) {
     return (

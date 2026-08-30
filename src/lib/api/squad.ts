@@ -37,6 +37,7 @@ const ERROR_COPY: Record<string, string> = {
   'Already friends': "You are already on each other's squad.",
   'Squad full': 'That squad is full.',
   'Invite not found': 'That invite is not available.',
+  'Friend not found': 'That person is not on your squad.',
 };
 
 function mapError(message: string | undefined): string {
