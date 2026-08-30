@@ -9,6 +9,11 @@
 /** Terminal statuses: nothing further can be done to the campaign. */
 const CLOSED_STATUSES = new Set(['complete', 'abandoned']);
 
+/** True once a campaign is over, whether it ran out or was ended early. */
+export function isCampaignClosed(status: string): boolean {
+  return CLOSED_STATUSES.has(status);
+}
+
 export interface LifecycleOccurrence {
   status: string;
   sessionId: string | null;
@@ -35,7 +40,7 @@ export function hasCampaignStarted(occurrences: LifecycleOccurrence[]): boolean 
  * given up on is exactly the thing you need to be able to close.
  */
 export function canEndCampaign(input: CampaignLifecycleInput): boolean {
-  return input.viewerRole === 'host' && !CLOSED_STATUSES.has(input.status);
+  return input.viewerRole === 'host' && !isCampaignClosed(input.status);
 }
 
 /**
@@ -46,7 +51,7 @@ export function canEndCampaign(input: CampaignLifecycleInput): boolean {
 export function canDeleteCampaign(input: CampaignLifecycleInput): boolean {
   return (
     input.viewerRole === 'host' &&
-    !CLOSED_STATUSES.has(input.status) &&
+    !isCampaignClosed(input.status) &&
     !hasCampaignStarted(input.occurrences) &&
     input.activeMemberCount <= 1
   );
