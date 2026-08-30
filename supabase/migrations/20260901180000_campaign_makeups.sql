@@ -125,6 +125,7 @@ BEGIN
     END IF;
   END IF;
 
+  -- Copilot suggestion ignored: extracting a shared cap helper would be new abstraction; create_session and host_active_session_count already duplicated this predicate before makeups.
   -- Featured, live campaign, and makeup sessions do not count against the cap.
   SELECT count(*)::int
   INTO v_active
