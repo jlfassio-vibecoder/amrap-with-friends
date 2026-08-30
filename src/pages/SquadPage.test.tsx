@@ -10,6 +10,7 @@ const sendMock = vi.fn();
 const respondMock = vi.fn();
 const cancelMock = vi.fn();
 const removeMock = vi.fn();
+const rotateMock = vi.fn();
 
 vi.mock('@/lib/api/squad', () => ({
   fetchMySquad: (...args: unknown[]) => fetchMock(...args),
@@ -18,6 +19,7 @@ vi.mock('@/lib/api/squad', () => ({
   respondSquadInvite: (...args: unknown[]) => respondMock(...args),
   cancelSquadInvite: (...args: unknown[]) => cancelMock(...args),
   removeSquadFriend: (...args: unknown[]) => removeMock(...args),
+  rotateSquadInviteCode: (...args: unknown[]) => rotateMock(...args),
 }));
 vi.mock('@/hooks/useAmrapAuth', () => ({
   useAmrapAuth: () => ({
@@ -60,12 +62,14 @@ beforeEach(() => {
   respondMock.mockReset();
   cancelMock.mockReset();
   removeMock.mockReset();
+  rotateMock.mockReset();
   fetchMock.mockResolvedValue({ data: squad(), error: null });
   searchMock.mockResolvedValue({ data: [], error: null });
   sendMock.mockResolvedValue({ error: null });
   respondMock.mockResolvedValue({ error: null });
   cancelMock.mockResolvedValue({ error: null });
   removeMock.mockResolvedValue({ error: null });
+  rotateMock.mockResolvedValue({ data: 'NEWCODE123', error: null });
   Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
 });
 
@@ -117,5 +121,59 @@ describe('SquadPage', () => {
     await waitFor(() => expect(screen.getByText('Jules')).toBeTruthy());
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
     await waitFor(() => expect(removeMock).toHaveBeenCalledWith('u2'));
+  });
+
+  it('resets the invite link behind a confirmation, and copies the new one', async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Reset link' })).toBeTruthy());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset link' }));
+    expect(rotateMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, reset it' }));
+    await waitFor(() => expect(rotateMock).toHaveBeenCalledTimes(1));
+
+    // The copy button must hand out the new link, not the retired one.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'COPY INVITE LINK' })).toBeTruthy()
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'COPY INVITE LINK' }));
+    await waitFor(() =>
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        expect.stringContaining('NEWCODE123')
+      )
+    );
+  });
+
+  it('lets the athlete back out of resetting the link', async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Reset link' })).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Reset link' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Keep it' }));
+    expect(screen.getByRole('button', { name: 'Reset link' })).toBeTruthy();
+    expect(rotateMock).not.toHaveBeenCalled();
+  });
+
+  it('accepts an incoming invite straight from the search result', async () => {
+    searchMock.mockResolvedValue({
+      data: [
+        {
+          userId: 'u9',
+          username: 'rico',
+          nickname: 'Rico',
+          status: 'pending_in',
+          requestId: 'req-9',
+        },
+      ],
+      error: null,
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByLabelText('Username or email')).toBeTruthy());
+    fireEvent.change(screen.getByLabelText('Username or email'), { target: { value: 'rico' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Accept' })).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Accept' }));
+    await waitFor(() => expect(respondMock).toHaveBeenCalledWith('req-9', true));
   });
 });

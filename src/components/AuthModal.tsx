@@ -11,6 +11,11 @@ interface AuthModalProps {
   onClose: () => void;
   /** Open on password Sign in or Create account. Defaults to sign-in. */
   initialPasswordMode?: PasswordMode;
+  /**
+   * False where an account is genuinely required (squad, campaigns), so the
+   * modal stops telling people signing in that it was optional.
+   */
+  guestAllowed?: boolean;
 }
 
 function authMethodButtonClass(isActive: boolean): string {
@@ -22,6 +27,7 @@ function authMethodButtonClass(isActive: boolean): string {
 export function AuthModal({
   onClose,
   initialPasswordMode = 'sign-in',
+  guestAllowed = true,
 }: AuthModalProps) {
   const magicLinkEnabled = isMagicLinkAuthEnabled();
   const {
@@ -150,9 +156,12 @@ export function AuthModal({
           </button>
         </div>
 
-        <p className="text-sm text-secondary">
-          Optional — play as a guest without signing in. Use an account to save sessions to your profile.
-        </p>
+        {guestAllowed ? (
+          <p className="text-sm text-secondary">
+            Optional — play as a guest without signing in. Use an account to save sessions to your
+            profile.
+          </p>
+        ) : null}
 
         {magicLinkEnabled ? (
           <div

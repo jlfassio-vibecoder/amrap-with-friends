@@ -80,6 +80,7 @@ function App() {
                 guestMode="sign-in"
                 gateTitle="Your squad"
                 gateMessage="Sign in and set up your profile to invite people to your squad."
+                gateAllowsGuest={false}
               >
                 <SquadPage />
               </RequireIntake>
