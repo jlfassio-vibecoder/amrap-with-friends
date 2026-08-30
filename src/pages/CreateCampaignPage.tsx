@@ -8,12 +8,12 @@ import { createCampaign } from '@/lib/api/campaigns';
 import {
   CAMPAIGN_WEEK_COUNTS,
   CampaignValidationError,
-  assignCampaignWorkouts,
   buildCampaignCalendar,
   calendarDateToday,
   defaultCampaignStartDate,
   formatCampaignShape,
   formatCampaignSpan,
+  planCampaignWorkouts,
   suggestedSlots,
   type CampaignSlot,
   type CampaignTrack,
@@ -55,7 +55,7 @@ export default function CreateCampaignPage() {
       return {
         kind: 'ready',
         calendar,
-        occurrences: assignCampaignWorkouts({
+        occurrences: planCampaignWorkouts({
           occurrences: calendar.occurrences,
           tracks,
         }),
@@ -203,7 +203,16 @@ export default function CreateCampaignPage() {
             )}
           </div>
 
-          {planned ? <CampaignSchedulePreview occurrences={planned.occurrences} /> : null}
+          {planned ? (
+            <>
+              <p className="text-sm text-secondary">
+                The first session is your benchmark. You run it again at the end, so the
+                campaign finishes with a number rather than a feeling. Everything in
+                between gets steadily harder.
+              </p>
+              <CampaignSchedulePreview occurrences={planned.occurrences} />
+            </>
+          ) : null}
         </div>
 
         {error ? <p className="alert-error">{error}</p> : null}

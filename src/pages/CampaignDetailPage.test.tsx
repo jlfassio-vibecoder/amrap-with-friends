@@ -94,7 +94,10 @@ beforeEach(() => {
   leaveMock.mockReset();
   navigateMock.mockReset();
   fetchDetailMock.mockResolvedValue({ data: detail(), error: null });
-  fetchStandingsMock.mockResolvedValue({ data: [], error: null });
+  fetchStandingsMock.mockResolvedValue({
+    data: { standings: [], members: [], scores: [] },
+    error: null,
+  });
   leaveMock.mockResolvedValue({ error: null });
   Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
 });
@@ -138,26 +141,43 @@ describe('CampaignDetailPage', () => {
       error: null,
     });
     fetchStandingsMock.mockResolvedValue({
-      data: [
-        {
-          userId: 'u1',
-          nickname: 'Maya',
-          normalisedAverage: 1,
-          attended: 2,
-          eligible: 2,
-          left: false,
-          rank: 1,
-        },
-        {
-          userId: 'u2',
-          nickname: 'Jules',
-          normalisedAverage: 0.5,
-          attended: 1,
-          eligible: 2,
-          left: true,
-          rank: 2,
-        },
-      ],
+      data: {
+        standings: [
+          {
+            userId: 'u1',
+            nickname: 'Maya',
+            normalisedAverage: 1,
+            attended: 2,
+            eligible: 2,
+            left: false,
+            rank: 1,
+          },
+          {
+            userId: 'u2',
+            nickname: 'Jules',
+            normalisedAverage: 0.5,
+            attended: 1,
+            eligible: 2,
+            left: true,
+            rank: 2,
+          },
+        ],
+        members: [
+          {
+            userId: 'u1',
+            nickname: 'Maya',
+            joinedLocalDate: '2026-09-01',
+            left: false,
+          },
+          {
+            userId: 'u2',
+            nickname: 'Jules',
+            joinedLocalDate: '2026-09-02',
+            left: true,
+          },
+        ],
+        scores: [],
+      },
       error: null,
     });
     renderPage();
@@ -165,7 +185,7 @@ describe('CampaignDetailPage', () => {
     expect(screen.getByText('50%')).toBeTruthy();
     expect(screen.getByText('2 of 2')).toBeTruthy();
     expect(screen.getByText('1 of 2')).toBeTruthy();
-    expect(screen.getByText('Left')).toBeTruthy();
+    expect(screen.getAllByText('Left').length).toBeGreaterThan(0);
   });
 
   it('groups the schedule into weeks', async () => {
@@ -184,18 +204,17 @@ describe('CampaignDetailPage', () => {
   it('links a generated session to its staging area and leaves planned ones inert', async () => {
     fetchDetailMock.mockResolvedValue({
       data: detail({
-        occurrences: [
-          occurrence(1, 1, { status: 'generated', sessionId: 's1' }),
-          occurrence(2, 1),
-        ],
+        occurrences: [occurrence(1, 1, { status: 'generated', sessionId: 's1' }), occurrence(2, 1)],
       }),
       error: null,
     });
     renderPage();
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Staging area open' })).toBeTruthy());
-    expect(
-      screen.getByRole('link', { name: 'Staging area open' }).getAttribute('href')
-    ).toBe('/session/s1');
+    await waitFor(() =>
+      expect(screen.getByRole('link', { name: 'Staging area open' })).toBeTruthy()
+    );
+    expect(screen.getByRole('link', { name: 'Staging area open' }).getAttribute('href')).toBe(
+      '/session/s1'
+    );
     expect(screen.queryByRole('link', { name: 'Planned' })).toBeNull();
   });
 
@@ -205,9 +224,7 @@ describe('CampaignDetailPage', () => {
       error: { message: 'That campaign is not available.' },
     });
     renderPage();
-    await waitFor(() =>
-      expect(screen.getByText('That campaign is not available.')).toBeTruthy()
-    );
+    await waitFor(() => expect(screen.getByText('That campaign is not available.')).toBeTruthy());
   });
 
   it('gives the host a rally link to share, without printing the raw code', async () => {
@@ -285,9 +302,7 @@ describe('CampaignDetailPage', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Leave campaign' }));
     fireEvent.click(screen.getByRole('button', { name: 'Yes, leave' }));
-    await waitFor(() =>
-      expect(screen.getByText('That campaign is not available.')).toBeTruthy()
-    );
+    await waitFor(() => expect(screen.getByText('That campaign is not available.')).toBeTruthy());
     expect(navigateMock).not.toHaveBeenCalled();
   });
 });

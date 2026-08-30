@@ -8,6 +8,7 @@ import {
   formatOccurrenceDate,
   formatSlotLabel,
   groupOccurrencesByWeek,
+  selectCampaignPreviewWeekNumbers,
   suggestedSlots,
 } from './campaignPresentation';
 import type { CampaignOccurrence } from './types';
@@ -143,5 +144,47 @@ describe('formatCampaignShape', () => {
 
   it('does not say "1 a week" ungrammatically', () => {
     expect(formatCampaignShape(4, 1)).toBe('4 sessions · 1 a week · 4 weeks');
+  });
+});
+
+describe('selectCampaignPreviewWeekNumbers', () => {
+  it('keeps opening weeks and the finale when there is no mid retest', () => {
+    expect(
+      selectCampaignPreviewWeekNumbers({
+        weekNumbers: [1, 2, 3, 4],
+        retestWeekNumbers: [4],
+        openingWeeks: 2,
+      })
+    ).toEqual([1, 2, 4]);
+  });
+
+  it('pulls mid-retest weeks into the preview', () => {
+    expect(
+      selectCampaignPreviewWeekNumbers({
+        weekNumbers: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        retestWeekNumbers: [6, 12],
+        openingWeeks: 2,
+      })
+    ).toEqual([1, 2, 6, 12]);
+  });
+
+  it('does not duplicate weeks that are already opening or finale', () => {
+    expect(
+      selectCampaignPreviewWeekNumbers({
+        weekNumbers: [1, 2],
+        retestWeekNumbers: [1, 2],
+        openingWeeks: 2,
+      })
+    ).toEqual([1, 2]);
+  });
+
+  it('returns an empty list for an empty calendar', () => {
+    expect(
+      selectCampaignPreviewWeekNumbers({
+        weekNumbers: [],
+        retestWeekNumbers: [3],
+        openingWeeks: 2,
+      })
+    ).toEqual([]);
   });
 });

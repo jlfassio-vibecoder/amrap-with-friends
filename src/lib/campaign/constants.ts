@@ -7,3 +7,12 @@ export const MAX_SESSIONS_PER_WEEK = 5;
 
 /** 12 weeks x 5 sessions — the largest calendar a host can build. */
 export const MAX_CAMPAIGN_OCCURRENCES = 60;
+
+/**
+ * Below this length a campaign is too short to spend a session going easy —
+ * a 6-week campaign that deloads twice has given up a sixth of its training.
+ */
+export const MIN_WEEKS_FOR_DELOAD = 8;
+
+/** The most tests any campaign length schedules — see TEST_WEEKS. */
+export const MAX_CAMPAIGN_TESTS = 3;
