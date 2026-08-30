@@ -14,12 +14,17 @@ const CLOSED_STATUS_LABEL: Record<string, string> = {
   abandoned: 'Ended early',
 };
 
+interface MyCampaignsPanelProps {
+  /** When false, omit the header New campaign button (e.g. My Sessions already has page CTAs). */
+  showCreateCta?: boolean;
+}
+
 /**
- * Home-page entry point into campaigns. Renders nothing for signed-out
- * visitors — campaigns need an account, and the landing page already has its
- * own pitch; a sign-in prompt here would just be noise above it.
+ * Account-gated campaign list. Used on Home and My Sessions. Renders nothing
+ * for signed-out visitors — campaigns need an account, and a sign-in prompt
+ * here would just be noise.
  */
-export function MyCampaignsPanel() {
+export function MyCampaignsPanel({ showCreateCta = true }: MyCampaignsPanelProps) {
   const { isAuthenticated, isAuthLoading } = useAmrapAuth();
   const [campaigns, setCampaigns] = useState<CampaignSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -74,9 +79,11 @@ export function MyCampaignsPanel() {
             A shared plan your crew works through together, week by week.
           </p>
         </div>
-        <Link className="btn-primary" to="/campaign/new">
-          New campaign
-        </Link>
+        {showCreateCta ? (
+          <Link className="btn-primary" to="/campaign/new">
+            New campaign
+          </Link>
+        ) : null}
       </div>
 
       {loading ? <p className="text-sm text-secondary">Loading campaigns…</p> : null}

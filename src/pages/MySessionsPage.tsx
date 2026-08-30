@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { MySessionScoreBreakdownModal } from '@/components/MySessionScoreBreakdownModal';
+import { MyCampaignsPanel } from '@/components/campaign/MyCampaignsPanel';
 import {
   canDeleteMySession,
   deleteIncompleteSession,
@@ -120,6 +121,8 @@ export default function MySessionsPage() {
           New campaign
         </Link>
       </div>
+
+      <MyCampaignsPanel showCreateCta={false} />
 
       {loading ? <p className="text-sm text-secondary">Loading…</p> : null}
 
