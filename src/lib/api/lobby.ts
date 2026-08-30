@@ -234,8 +234,11 @@ export async function joinLobby(input: {
     return { data: null, error: { message: 'Staging area not found.' } };
   }
 
-  // Guest reclaim needs member id + seat_claim (secret). Member ids alone are
-  // visible in get_lobby and are not proof of ownership.
+  // A guest has no user_id for the server to match on, so hand back the member
+  // id + seat_claim we were given the first time. Without the member id every
+  // re-join minted a new seat, and start_next_lobby_session makes the force-nav
+  // hook re-join on every chained mission. Member ids alone are visible in
+  // get_lobby and are not proof of ownership — seat_claim is the secret.
   const knownMemberId =
     input.lobbyMemberId === undefined
       ? getStoredLobbyMemberId(requestLobbyId)
@@ -433,8 +436,8 @@ export async function leaveLobby(
   lobbyId: string,
   options?: { lobbyMemberId?: string | null }
 ): Promise<{ data: { left: boolean; closed?: boolean } | null; error: LobbyApiError | null }> {
-  // Guest leave requires member id + seat_claim (secret). Member id alone is not
-  // proof — it is visible in get_lobby for the roster.
+  // As with joinLobby: a guest leaves with the member id + seat_claim it was
+  // handed. Member id alone is not proof — it is visible in get_lobby.
   const lobbyMemberId =
     options?.lobbyMemberId === undefined ? getStoredLobbyMemberId(lobbyId) : options.lobbyMemberId;
   const seatClaim = lobbyMemberId ? getStoredLobbySeatClaim(lobbyId) : null;

@@ -130,7 +130,9 @@ export function useLobbyChannel(
             const sessionChanged = parsed.activeSessionId !== prev.activeSessionId;
             if (sessionChanged || parsed.hostUserId === undefined) {
               // lobbies row has no session state; refetch so force-nav sees live
-              // state. Also refetch when the payload omitted host_user_id.
+              // state. Also refetch when the payload omitted host_user_id — a
+              // guest cannot read that column, and get_lobby is SECURITY DEFINER
+              // so it still returns who holds command.
               void refresh();
             }
             return {
