@@ -178,15 +178,26 @@ export default function SquadPage() {
           Share this link. After they create an account they can accept and join your squad. For a
           workout tonight, send a rally link from the session instead.
         </p>
-        <button
-          type="button"
-          className="btn-primary text-xs uppercase tracking-widest"
-          onClick={() =>
-            void copy(inviteUrl, `Could not copy. Share this link manually: ${inviteUrl}`)
-          }
-        >
-          {copied ? 'LINK COPIED' : 'COPY INVITE LINK'}
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            className="btn-primary text-xs uppercase tracking-widest"
+            onClick={() =>
+              void copy(inviteUrl, `Could not copy. Share this link manually: ${inviteUrl}`)
+            }
+          >
+            {copied ? 'LINK COPIED' : 'COPY INVITE LINK'}
+          </button>
+          {confirmReset ? null : (
+            <button
+              type="button"
+              className="text-sm font-semibold text-accent"
+              onClick={() => setConfirmReset(true)}
+            >
+              Reset link
+            </button>
+          )}
+        </div>
         {copyError ? <p className="text-error text-sm">{copyError}</p> : null}
 
         {confirmReset ? (
@@ -213,15 +224,7 @@ export default function SquadPage() {
               </button>
             </div>
           </div>
-        ) : (
-          <button
-            type="button"
-            className="text-sm font-semibold text-accent"
-            onClick={() => setConfirmReset(true)}
-          >
-            Reset link
-          </button>
-        )}
+        ) : null}
       </section>
 
       <section className="card space-y-4 p-6">
