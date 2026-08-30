@@ -228,4 +228,118 @@ describe('lobby API', () => {
       })
     );
   });
+
+  describe('joinLobby guest seat', () => {
+    function joinOk() {
+      rpcMock.mockResolvedValue({
+        data: {
+          lobby_id: LOBBY_ID,
+          lobby_member_id: MEMBER_ID,
+          host_user_id: 'user-1',
+          status: 'open',
+          active_session_id: SESSION_ID,
+          session_id: SESSION_ID,
+          session_state: 'waiting',
+          participant_id: PARTICIPANT_ID,
+          nickname: 'Guesty',
+          role: 'joiner',
+          claim_token: 'claim',
+          host_token: null,
+        },
+        error: null,
+        count: null,
+        status: 200,
+        statusText: 'OK',
+      } as never);
+    }
+
+    it('hands the stored member id back so a guest reclaims its seat', async () => {
+      vi.mocked(lobbyIdentity.getStoredLobbyMemberId).mockReturnValue(MEMBER_ID);
+      joinOk();
+
+      await joinLobby({ lobbyId: LOBBY_ID, nickname: 'Guesty' });
+
+      expect(rpcMock).toHaveBeenCalledWith('join_lobby', {
+        p_lobby_id: LOBBY_ID,
+        p_nickname: 'Guesty',
+        p_lobby_member_id: MEMBER_ID,
+      });
+    });
+
+    it('sends null on a first visit, so a new guest gets a fresh seat', async () => {
+      vi.mocked(lobbyIdentity.getStoredLobbyMemberId).mockReturnValue(null);
+      joinOk();
+
+      await joinLobby({ lobbyId: LOBBY_ID, nickname: 'Newcomer' });
+
+      expect(rpcMock).toHaveBeenCalledWith('join_lobby', {
+        p_lobby_id: LOBBY_ID,
+        p_nickname: 'Newcomer',
+        p_lobby_member_id: null,
+      });
+    });
+
+    it('lets an explicit null override the stored id', async () => {
+      vi.mocked(lobbyIdentity.getStoredLobbyMemberId).mockReturnValue(MEMBER_ID);
+      joinOk();
+
+      await joinLobby({ lobbyId: LOBBY_ID, nickname: 'Guesty', lobbyMemberId: null });
+
+      expect(rpcMock).toHaveBeenCalledWith(
+        'join_lobby',
+        expect.objectContaining({ p_lobby_member_id: null })
+      );
+    });
+  });
+
+  describe('leaveLobby guest seat', () => {
+    function leaveOk() {
+      rpcMock.mockResolvedValue({
+        data: { ok: true, lobby_id: LOBBY_ID, left: true },
+        error: null,
+        count: null,
+        status: 200,
+        statusText: 'OK',
+      } as never);
+    }
+
+    it('hands the stored member id back so a guest can leave', async () => {
+      vi.mocked(lobbyIdentity.getStoredLobbyMemberId).mockReturnValue(MEMBER_ID);
+      leaveOk();
+
+      await leaveLobby(LOBBY_ID);
+
+      expect(rpcMock).toHaveBeenCalledWith('leave_lobby', {
+        p_lobby_id: LOBBY_ID,
+        p_lobby_member_id: MEMBER_ID,
+      });
+    });
+
+    it('sends null when there is no stored seat', async () => {
+      vi.mocked(lobbyIdentity.getStoredLobbyMemberId).mockReturnValue(null);
+      leaveOk();
+
+      await leaveLobby(LOBBY_ID);
+
+      expect(rpcMock).toHaveBeenCalledWith(
+        'leave_lobby',
+        expect.objectContaining({ p_lobby_member_id: null })
+      );
+    });
+
+    it('reports a refusal instead of pretending the seat was released', async () => {
+      rpcMock.mockResolvedValue({
+        data: null,
+        error: { message: 'Lobby not found' },
+        count: null,
+        status: 400,
+        statusText: 'Bad Request',
+      } as never);
+
+      const result = await leaveLobby(LOBBY_ID);
+
+      expect(result.data).toBeNull();
+      expect(result.error).not.toBeNull();
+    });
+  });
 });

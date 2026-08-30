@@ -58,3 +58,16 @@ export function persistLobbyIdentity(
     setStoredLobbyIdForSession(input.sessionId, lobbyId);
   }
 }
+
+/**
+ * Forgets a lobby seat. Called on a successful leave so a later visit joins as
+ * someone new rather than trying to reclaim a seat that is no longer active.
+ */
+export function clearStoredLobbyIdentity(lobbyId: string): void {
+  try {
+    sessionStorage.removeItem(storageKey(STORAGE_PREFIX.lobbyMemberId, lobbyId));
+    sessionStorage.removeItem(storageKey(STORAGE_PREFIX.lobbyNickname, lobbyId));
+  } catch {
+    /* sessionStorage unavailable */
+  }
+}
