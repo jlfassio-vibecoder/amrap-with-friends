@@ -62,7 +62,8 @@ export default function LobbyStagingPage() {
   const presence = memberId ? { memberId, nickname } : null;
   const { lobby, presenceByMemberId, error, refresh } = useLobbyChannel(
     lobbyId || undefined,
-    presence
+    presence,
+    { realtimeTables: isAuthenticated }
   );
 
   const forceNav = useLobbyForceNav({

@@ -13,6 +13,9 @@
 --   7. claim_lobby_command_if_stale after host last_seen aged past 45s → claimed
 --   8. claim during work raises
 --   9. stale first-successor skipped when a fresher later joiner exists
+--  10. anon SELECT on lobbies / lobby_members returns 0 rows (no grant / no policy)
+--  11. authenticated non-member SELECT on another crew's lobby returns 0 rows
+--  12. authenticated active member SELECT sees own lobby row
 
 -- Example (adjust ids / workout jsonb to match validate_workout):
 --
@@ -112,3 +115,20 @@
 -- SET request.jwt.claim.sub = '<uuid-c>';
 -- SELECT public.claim_lobby_command_if_stale('<lobby_id>');
 -- -- Expect: claimed true for C (B would get not_successor)
+--
+-- -- Anon cannot enumerate lobby rows (no SELECT grant / no policy)
+-- SET ROLE anon;
+-- SELECT count(*) FROM public.lobbies;
+-- SELECT count(*) FROM public.lobby_members;
+-- -- Expect: 0 (or permission denied on column/table SELECT)
+-- RESET ROLE;
+--
+-- -- Authenticated non-member cannot read another crew's lobby
+-- SET request.jwt.claim.sub = '<uuid-outsider>';
+-- SELECT id FROM public.lobbies WHERE id = '<lobby_id>';
+-- -- Expect: 0 rows
+--
+-- -- Authenticated active member can read own lobby
+-- SET request.jwt.claim.sub = '<uuid-a>';
+-- SELECT id FROM public.lobbies WHERE id = '<lobby_id>';
+-- -- Expect: 1 row

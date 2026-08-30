@@ -437,7 +437,8 @@ function LiveSessionView({
     lobbyId && (livePhase === 'waiting' || livePhase === 'setup' || livePhase === 'finished')
       ? lobbyId
       : undefined,
-    lobbyChannelPresence
+    lobbyChannelPresence,
+    { realtimeTables: isAuthenticated }
   );
 
   useLobbyHostHandoff({
