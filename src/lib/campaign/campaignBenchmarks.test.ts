@@ -7,6 +7,7 @@ import {
   benchmarkTemplateIdFor,
   campaignTrackKey,
 } from './campaignBenchmarks';
+import { BENCHMARK_FINGERPRINTS, fingerprintWorkoutTemplate } from './benchmarkFingerprints';
 
 /** Every (duration, category) pair the library actually has workouts for. */
 const VALID_TRACKS = TIME_DOMAINS.flatMap((durationMinutes) =>
@@ -60,5 +61,29 @@ describe('campaignBenchmarks', () => {
     );
     const orphans = allBenchmarkTrackKeys().filter((key) => !valid.has(key));
     expect(orphans).toEqual([]);
+  });
+
+  it('freezes the score-affecting content of every benchmark workout', () => {
+    const ids = allBenchmarkTemplateIds();
+    expect(Object.keys(BENCHMARK_FINGERPRINTS).sort()).toEqual([...ids].sort());
+
+    for (const id of ids) {
+      const template = WORKOUT_TEMPLATES.find((entry) => entry.id === id);
+      expect(template, `missing library entry for ${id}`).toBeDefined();
+      if (!template) {
+        continue;
+      }
+      const actual = fingerprintWorkoutTemplate(template);
+      const expected = BENCHMARK_FINGERPRINTS[id];
+      expect(
+        actual,
+        `${id} has changed. Results recorded against it are no longer comparable. ` +
+          `To change a benchmark workout, add a new template with a new id and point ` +
+          `the benchmark table at it — do not edit this one. If that is what you meant, ` +
+          `update benchmarkFingerprints.ts in the same commit.\n` +
+          `expected: ${expected}\n` +
+          `actual:   ${actual}`
+      ).toBe(expected);
+    }
   });
 });

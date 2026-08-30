@@ -32,6 +32,7 @@ export {
 export type { CampaignProgress, CampaignWeekGroup, WeekGroupable } from './campaignPresentation';
 export { planCampaignWorkouts } from './planCampaignWorkouts';
 export type { PlanCampaignWorkoutsInput } from './planCampaignWorkouts';
+export { BENCHMARK_FINGERPRINTS, fingerprintWorkoutTemplate } from './benchmarkFingerprints';
 export {
   allBenchmarkTemplateIds,
   allBenchmarkTrackKeys,

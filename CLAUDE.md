@@ -24,17 +24,17 @@ opaque verb for one action. Same brand, opposite sides of the line.
 
 ### The nouns
 
-| Term             | Means                                                                      | Where it belongs                                                        |
-| ---------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| **Session**      | One AMRAP workout, start to finish. The structural noun.                   | Buttons, page titles, routes — "Create session", `/session/:id`         |
-| **Mission**      | That same workout's objective. The editorial noun.                         | Prose and headings only — "Today's mission", "Mission in progress"      |
-| **Campaign**     | A multi-week programme (2–12 weeks, 1–5 sessions a week) with an end goal. | Buttons, page titles, routes. Always with its length: "8-week campaign" |
-| **Squad**        | A persistent friends list for inviting people to train together. Not a session. | Buttons, page titles, routes, nav — "Your squad", `/squad`         |
-| **Staging area** | The pre-workout screen where the crew gathers before the clock starts.     | Page title and any prose about that screen                              |
-| **Rally link**   | The shared invite URL for a session. Never a squad invite.                 | The copy button, and prose about sharing                                |
-| **Benchmark**    | A campaign's opening session. Its score is the number the campaign is measured against. | The badge on that session, and prose about it            |
-| **Retest**       | The same workout as the benchmark, run again later in the campaign.       | The badge on those sessions                                             |
-| **Easy day**     | The light session before a retest, so the test measures fitness not fatigue. | The badge on that session                                             |
+| Term             | Means                                                                                   | Where it belongs                                                        |
+| ---------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| **Session**      | One AMRAP workout, start to finish. The structural noun.                                | Buttons, page titles, routes — "Create session", `/session/:id`         |
+| **Mission**      | That same workout's objective. The editorial noun.                                      | Prose and headings only — "Today's mission", "Mission in progress"      |
+| **Campaign**     | A multi-week programme (2–12 weeks, 1–5 sessions a week) with an end goal.              | Buttons, page titles, routes. Always with its length: "8-week campaign" |
+| **Squad**        | A persistent friends list for inviting people to train together. Not a session.         | Buttons, page titles, routes, nav — "Your squad", `/squad`              |
+| **Staging area** | The pre-workout screen where the crew gathers before the clock starts.                  | Page title and any prose about that screen                              |
+| **Rally link**   | The shared invite URL for a session. Never a squad invite.                              | The copy button, and prose about sharing                                |
+| **Benchmark**    | A campaign's opening session. Its score is the number the campaign is measured against. | The badge on that session, and prose about it                           |
+| **Retest**       | The same workout as the benchmark, run again later in the campaign.                     | The badge on those sessions                                             |
+| **Easy day**     | The light session before a retest, so the test measures fitness not fatigue.            | The badge on that session                                               |
 
 **Benchmark, retest and easy day are the only session badges.** Everything else
 in a campaign is just a session and gets no label — a badge on every row labels
@@ -72,22 +72,22 @@ names. Keep it out of anything a first-time visitor reads.
 
 Kept here so they don't creep back in.
 
-| Was                                       | Now                                     |
-| ----------------------------------------- | --------------------------------------- |
-| Engage staging area countdown timer       | Start countdown                         |
-| LINK SECURED / ID SECURED                 | LINK COPIED / ID COPIED                 |
-| Breach lobby / Breaching lobby            | Join session / Joining                  |
-| Callsign (as a field label)               | Your name                               |
-| Rally point                               | You've been invited                     |
-| Featured WOD (on the landing card)        | Today's mission                         |
-| Lobby opens shortly before start          | Staging area opens shortly before start |
-| File the dossier / Your dossier was saved | Save profile / Your profile was saved   |
-| Intake / Dossier (page titles)            | Your profile / Athlete details          |
-| Enter temporary callsign (field label)    | Your name                               |
-| Scheduled rallies                         | Scheduled sessions                      |
+| Was                                       | Now                                         |
+| ----------------------------------------- | ------------------------------------------- |
+| Engage staging area countdown timer       | Start countdown                             |
+| LINK SECURED / ID SECURED                 | LINK COPIED / ID COPIED                     |
+| Breach lobby / Breaching lobby            | Join session / Joining                      |
+| Callsign (as a field label)               | Your name                                   |
+| Rally point                               | You've been invited                         |
+| Featured WOD (on the landing card)        | Today's mission                             |
+| Lobby opens shortly before start          | Staging area opens shortly before start     |
+| File the dossier / Your dossier was saved | Save profile / Your profile was saved       |
+| Intake / Dossier (page titles)            | Your profile / Athlete details              |
+| Enter temporary callsign (field label)    | Your name                                   |
+| Scheduled rallies                         | Scheduled sessions                          |
 | Return to a lobby you scheduled for later | Return to a session you scheduled for later |
-| T-Minus console                           | Set the countdown                       |
-| Work (phase label)                        | Live                                    |
+| T-Minus console                           | Set the countdown                           |
+| Work (phase label)                        | Live                                        |
 
 Workout and classification names are content, not chrome, and are untouched:
 "The Hull Breach", "Blood Shunt", "Armor Protocol", "Crucible", "Tier 1".
@@ -114,6 +114,14 @@ Workout and classification names are content, not chrome, and are untouched:
   actually scheduled. The benchmark ids in `campaignBenchmarks.ts` are the one
   thing that must never change: editing one invalidates every result recorded
   against it.
+- **Changing a benchmark workout.** The score-affecting content of every
+  benchmark id is frozen in `benchmarkFingerprints.ts` and asserted in CI.
+  Fingerprints cover duration, category, and each movement's name / reps / unit
+  — not display copy. To change a benchmark workout, add a new template with a
+  new id, point the table in `campaignBenchmarks.ts` at it, and update
+  `benchmarkFingerprints.ts` in the same commit. Do not edit the existing
+  template in place: in-flight campaigns keep their stored workout jsonb, but
+  comparisons across the edit would silently mix two different tests.
 - **Scheduled sessions are generated, not pre-created.** A recurring rule lives
   in its own table and a per-minute `pg_cron` job materialises `sessions` rows in
   a tight window around each occurrence (see `run_featured_wod_scheduler()`).

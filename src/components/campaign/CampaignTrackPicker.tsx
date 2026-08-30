@@ -22,7 +22,8 @@ function trackKey(track: CampaignTrack): string {
   return `${track.durationMinutes}:${track.category}`;
 }
 
-function labelFor(track: CampaignTrack): string {
+/** Display label for a track chip — also used on the create page “Measured on” line. */
+export function campaignTrackLabel(track: CampaignTrack): string {
   const meta = WORKOUT_CATEGORIES.find((category) => category.id === track.category);
   const display = meta
     ? categoryDisplayForDuration(meta, track.durationMinutes).label
@@ -52,13 +53,23 @@ export function CampaignTrackPicker({ tracks, onChange }: CampaignTrackPickerPro
     onChange([...tracks, track]);
   }
 
+  function measureOn(index: number) {
+    if (index <= 0 || index >= tracks.length) {
+      return;
+    }
+    const next = [...tracks];
+    const [picked] = next.splice(index, 1);
+    next.unshift(picked);
+    onChange(next);
+  }
+
   return (
     <div className="space-y-3">
       <div>
         <p className="text-sm font-semibold text-ink">Workout styles</p>
         <p className="text-xs text-secondary">
-          Pick the styles this campaign trains. Sessions rotate through them, so
-          two or three keeps the work varied.
+          Pick the styles this campaign trains. Sessions rotate through them, so two or three keeps
+          the work varied. The first style is what week one measures.
         </p>
       </div>
 
@@ -92,7 +103,7 @@ export function CampaignTrackPicker({ tracks, onChange }: CampaignTrackPickerPro
               className={
                 isChosen
                   ? 'rounded-full bg-accent px-4 py-2 text-sm font-semibold text-on-accent'
-                  : 'rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold text-secondary hover:border-accent/40 hover:text-ink'
+                  : 'hover:border-accent/40 rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold text-secondary hover:text-ink'
               }
               onClick={() => toggle(category.id)}
             >
@@ -108,27 +119,43 @@ export function CampaignTrackPicker({ tracks, onChange }: CampaignTrackPickerPro
             In this campaign
           </p>
           <ul className="flex flex-wrap gap-2">
-            {tracks.map((track) => (
-              <li key={trackKey(track)}>
-                <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-muted px-3 py-1.5 text-xs font-semibold text-ink">
-                  {labelFor(track)}
-                  <button
-                    type="button"
-                    className="text-accent"
-                    aria-label={`Remove ${labelFor(track)}`}
-                    onClick={() =>
-                      onChange(tracks.filter((entry) => trackKey(entry) !== trackKey(track)))
-                    }
-                  >
-                    ×
-                  </button>
-                </span>
-              </li>
-            ))}
+            {tracks.map((track, index) => {
+              const isMeasured = index === 0;
+              return (
+                <li key={trackKey(track)}>
+                  <span className="inline-flex flex-wrap items-center gap-2 rounded-full border border-border bg-surface-muted px-3 py-1.5 text-xs font-semibold text-ink">
+                    {campaignTrackLabel(track)}
+                    {isMeasured ? (
+                      <span className="text-[0.65rem] font-bold uppercase tracking-widest text-accent">
+                        Measured on this
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="text-[0.65rem] font-bold uppercase tracking-widest text-accent"
+                        onClick={() => measureOn(index)}
+                      >
+                        Measure on this
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="text-accent"
+                      aria-label={`Remove ${campaignTrackLabel(track)}`}
+                      onClick={() =>
+                        onChange(tracks.filter((entry) => trackKey(entry) !== trackKey(track)))
+                      }
+                    >
+                      ×
+                    </button>
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </div>
       ) : (
-        <p className="text-sm text-error">Pick at least one workout style.</p>
+        <p className="text-error text-sm">Pick at least one workout style.</p>
       )}
     </div>
   );

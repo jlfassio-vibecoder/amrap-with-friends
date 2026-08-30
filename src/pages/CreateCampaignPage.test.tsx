@@ -60,6 +60,7 @@ describe('CreateCampaignPage', () => {
     renderPage();
     // 8 weeks x the 3 suggested days.
     expect(screen.getByText(/24 sessions · 3 a week · 8 weeks/)).toBeTruthy();
+    expect(screen.getByText(/Measured on Aerobic Blood Shunt · 10 min/)).toBeTruthy();
   });
 
   it('re-previews when the campaign length changes', () => {
