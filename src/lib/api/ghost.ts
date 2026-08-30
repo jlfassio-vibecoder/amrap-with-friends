@@ -48,7 +48,7 @@ function readNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
-function parseGhostRunRef(raw: unknown): GhostRunRef | null {
+export function parseGhostRunRef(raw: unknown): GhostRunRef | null {
   if (!raw || typeof raw !== 'object') {
     return null;
   }
@@ -100,11 +100,13 @@ function parseGhostCurveRound(raw: unknown): GhostCurveRound | null {
 
 export async function fetchAvailableGhosts(
   templateId: string,
-  durationMinutes: number
+  durationMinutes: number,
+  forSessionId?: string | null
 ): Promise<{ data: AvailableGhosts | null; error: GhostApiError | null }> {
   const { data, error } = await callRpc('available_ghosts', {
     p_template_id: templateId,
     p_duration_minutes: durationMinutes,
+    p_for_session_id: forSessionId ?? null,
   });
 
   if (error) {

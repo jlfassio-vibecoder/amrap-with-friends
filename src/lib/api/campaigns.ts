@@ -1,4 +1,5 @@
 import { callRpc } from '@/lib/api/callRpc';
+import { parseGhostRunRef } from '@/lib/api/ghost';
 import type { WorkoutExercise } from '@/lib/api/sessionTypes';
 import {
   computeCampaignStandings,
@@ -9,6 +10,7 @@ import {
   type CampaignWeekCount,
   type PlannedCampaignOccurrence,
 } from '@/lib/campaign';
+import { persistSessionIdentity, setStoredGhostSelection } from '@/lib/sessionIdentity';
 
 export type CampaignApiError = { message: string };
 
@@ -522,6 +524,8 @@ export async function deleteCampaign(
  * Starts (or resumes) a solo makeup session for the oldest owed occurrence.
  * The session never sets campaign_occurrence_id — the link lives in
  * campaign_makeups so the live-session unique index stays intact.
+ * When a crewmate recording is available, seeds the ghost pacer selection
+ * before navigation so the strip is armed in staging.
  */
 export async function startCampaignMakeup(
   occurrenceId: string
@@ -532,10 +536,43 @@ export async function startCampaignMakeup(
   if (error) {
     return { data: null, error: { message: mapError(error.message) } };
   }
-  const sessionId = readString(readRecord(data).session_id);
-  if (!sessionId) {
+  const row = readRecord(data);
+  const sessionId = readString(row.session_id);
+  const hostToken = readString(row.host_token);
+  const participantId = readString(row.participant_id);
+  const claimToken = readString(row.claim_token);
+  const nickname = readString(row.nickname) ?? 'Athlete';
+  if (!sessionId || !participantId) {
     return { data: null, error: { message: 'Something went wrong. Please try again.' } };
   }
+
+  persistSessionIdentity(sessionId, {
+    nickname,
+    participantId,
+    hostToken: hostToken ?? undefined,
+    claimToken: claimToken ?? undefined,
+  });
+
+  const pacer = parseGhostRunRef(row.pacer);
+  if (pacer) {
+    const date = new Date(pacer.createdAt);
+    const dateLabel = Number.isNaN(date.getTime())
+      ? ''
+      : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const label = dateLabel
+      ? `${pacer.nickname} · ${pacer.finalScore} reps · ${dateLabel}`
+      : `${pacer.nickname} · ${pacer.finalScore} reps`;
+    setStoredGhostSelection(sessionId, {
+      sessionId: pacer.sessionId,
+      participantId: pacer.participantId,
+      label,
+      nickname: pacer.nickname,
+      finalScore: pacer.finalScore,
+      baseScore: pacer.baseScore,
+      createdAt: pacer.createdAt,
+    });
+  }
+
   return { data: { sessionId }, error: null };
 }
 
