@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
 import { WorkoutTemplatePicker } from '@/components/createSession/WorkoutTemplatePicker';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
+import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { useLobbyForceNav } from '@/hooks/useLobbyForceNav';
 import { useStaleLobbyHostClaim } from '@/hooks/useStaleLobbyHostClaim';
 import { useLobbyChannel } from '@/lib/realtime/useLobbyChannel';
@@ -23,6 +24,7 @@ import {
 import { canPassLobbyCommand } from '@/lib/lobby/canPassLobbyCommand';
 import { setStoredHostToken } from '@/lib/sessionIdentity';
 import { buildLobbyInviteUrl } from '@/lib/session/buildLobbyInviteUrl';
+import { ogCardFromSex } from '@/lib/share/ogCard';
 import { parseWorkoutText } from '@/lib/workout/parseWorkoutLines';
 import { applyTemplate } from '@/lib/workout/templateToExercises';
 import { firstAvailableCategoryForDuration } from '@/lib/workout/filterWorkoutTemplates';
@@ -42,6 +44,7 @@ export default function LobbyStagingPage() {
   const { lobbyId = '' } = useParams<{ lobbyId: string }>();
   const navigate = useNavigate();
   const { user, isAuthenticated, isAuthLoading } = useAmrapAuth();
+  const { profile } = useAthleteProfile();
 
   const [memberId, setMemberId] = useState(() => getStoredLobbyMemberId(lobbyId) ?? '');
   const [nickname, setNickname] = useState(
@@ -62,7 +65,8 @@ export default function LobbyStagingPage() {
   const presence = memberId ? { memberId, nickname } : null;
   const { lobby, presenceByMemberId, error, refresh } = useLobbyChannel(
     lobbyId || undefined,
-    presence
+    presence,
+    { realtimeTables: isAuthenticated }
   );
 
   const forceNav = useLobbyForceNav({
@@ -130,7 +134,8 @@ export default function LobbyStagingPage() {
   }, [lobbyId, memberId, isAuthenticated]);
 
   const hostMemberId =
-    lobby?.members.find((member) => member.userId === lobby.hostUserId)?.id ?? null;
+    lobby?.members.find((member) => Boolean(lobby.hostUserId) && member.userId === lobby.hostUserId)
+      ?.id ?? null;
 
   useStaleLobbyHostClaim({
     lobbyId,
@@ -270,7 +275,11 @@ export default function LobbyStagingPage() {
   }
 
   async function handleCopyInvite() {
-    const url = buildLobbyInviteUrl(lobbyId, window.location.origin);
+    const url = buildLobbyInviteUrl(
+      lobbyId,
+      window.location.origin,
+      ogCardFromSex(profile?.biologicalSex)
+    );
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
@@ -341,7 +350,9 @@ export default function LobbyStagingPage() {
             <ul className="space-y-2">
               {lobby.members.map((member) => {
                 const online = Boolean(presenceByMemberId[member.id]);
-                const isMemberHost = member.userId === lobby.hostUserId;
+                const isMemberHost = Boolean(
+                  lobby.hostUserId && member.userId === lobby.hostUserId
+                );
                 const canPass = isHost && canPassLobbyCommand(member, user?.id);
                 return (
                   <li

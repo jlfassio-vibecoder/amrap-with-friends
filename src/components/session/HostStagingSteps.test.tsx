@@ -25,6 +25,15 @@ vi.mock('@/components/GhostPicker', () => ({
   GhostPicker: () => <div data-testid="ghost-picker">Ghost picker</div>,
 }));
 
+vi.mock('@/hooks/useAthleteProfile', () => ({
+  useAthleteProfile: () => ({
+    profile: null,
+    missing: false,
+    loading: false,
+    error: null,
+  }),
+}));
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -128,7 +137,7 @@ describe('HostStagingSteps', () => {
     });
 
     expect(writeText).toHaveBeenCalledWith(
-      `https://amrap.example/join?s=${SESSION_ID}`
+      `https://amrap.example/join?s=${SESSION_ID}&card=f`
     );
     expect(shareHeader.getAttribute('aria-expanded')).toBe('false');
   });

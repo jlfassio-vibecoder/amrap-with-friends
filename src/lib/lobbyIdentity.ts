@@ -2,6 +2,7 @@ const STORAGE_PREFIX = {
   lobbyIdForSession: 'amrap_lobby_id',
   lobbyMemberId: 'amrap_lobby_member_id',
   lobbyNickname: 'amrap_lobby_nickname',
+  lobbySeatClaim: 'amrap_lobby_seat_claim',
 } as const;
 
 function storageKey(prefix: string, id: string): string {
@@ -40,6 +41,14 @@ export function setStoredLobbyMemberId(lobbyId: string, memberId: string): void 
   writeItem(storageKey(STORAGE_PREFIX.lobbyMemberId, lobbyId), memberId);
 }
 
+export function getStoredLobbySeatClaim(lobbyId: string): string | null {
+  return readItem(storageKey(STORAGE_PREFIX.lobbySeatClaim, lobbyId));
+}
+
+export function setStoredLobbySeatClaim(lobbyId: string, seatClaim: string): void {
+  writeItem(storageKey(STORAGE_PREFIX.lobbySeatClaim, lobbyId), seatClaim);
+}
+
 export function getStoredLobbyNickname(lobbyId: string): string | null {
   return readItem(storageKey(STORAGE_PREFIX.lobbyNickname, lobbyId));
 }
@@ -50,10 +59,18 @@ export function setStoredLobbyNickname(lobbyId: string, nickname: string): void 
 
 export function persistLobbyIdentity(
   lobbyId: string,
-  input: { memberId: string; nickname: string; sessionId?: string | null }
+  input: {
+    memberId: string;
+    nickname: string;
+    sessionId?: string | null;
+    seatClaim?: string | null;
+  }
 ): void {
   setStoredLobbyMemberId(lobbyId, input.memberId);
   setStoredLobbyNickname(lobbyId, input.nickname);
+  if (input.seatClaim) {
+    setStoredLobbySeatClaim(lobbyId, input.seatClaim);
+  }
   if (input.sessionId) {
     setStoredLobbyIdForSession(input.sessionId, lobbyId);
   }
@@ -67,6 +84,7 @@ export function clearStoredLobbyIdentity(lobbyId: string): void {
   try {
     sessionStorage.removeItem(storageKey(STORAGE_PREFIX.lobbyMemberId, lobbyId));
     sessionStorage.removeItem(storageKey(STORAGE_PREFIX.lobbyNickname, lobbyId));
+    sessionStorage.removeItem(storageKey(STORAGE_PREFIX.lobbySeatClaim, lobbyId));
   } catch {
     /* sessionStorage unavailable */
   }

@@ -437,7 +437,8 @@ function LiveSessionView({
     lobbyId && (livePhase === 'waiting' || livePhase === 'setup' || livePhase === 'finished')
       ? lobbyId
       : undefined,
-    lobbyChannelPresence
+    lobbyChannelPresence,
+    { realtimeTables: isAuthenticated }
   );
 
   useLobbyHostHandoff({
@@ -462,8 +463,10 @@ function LiveSessionView({
   }, [lobbyId, isAuthenticated, waitingOrSetup]);
 
   const waitingHostMemberId =
-    lobbyChannel.lobby?.members.find((member) => member.userId === lobbyChannel.lobby?.hostUserId)
-      ?.id ?? null;
+    lobbyChannel.lobby?.members.find(
+      (member) =>
+        Boolean(lobbyChannel.lobby?.hostUserId) && member.userId === lobbyChannel.lobby?.hostUserId
+    )?.id ?? null;
 
   useStaleLobbyHostClaim({
     lobbyId,
@@ -1017,7 +1020,10 @@ function LiveSessionView({
               <ul className="space-y-2">
                 {lobbyChannel.lobby.members.map((member) => {
                   const canPass = canPassLobbyCommand(member, user?.id);
-                  const isMemberHost = member.userId === lobbyChannel.lobby?.hostUserId;
+                  const isMemberHost = Boolean(
+                    lobbyChannel.lobby?.hostUserId &&
+                    member.userId === lobbyChannel.lobby.hostUserId
+                  );
                   if (!canPass && !isMemberHost) {
                     return null;
                   }

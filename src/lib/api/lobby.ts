@@ -3,6 +3,7 @@ import type { WorkoutExercise } from '@/lib/api/sessionTypes';
 import {
   getStoredLobbyMemberId,
   getStoredLobbyNickname,
+  getStoredLobbySeatClaim,
   persistLobbyIdentity,
 } from '@/lib/lobbyIdentity';
 import { clearStoredHostToken, persistSessionIdentity } from '@/lib/sessionIdentity';
@@ -23,7 +24,8 @@ export type LobbySessionState = 'waiting' | 'setup' | 'work' | 'finished';
 
 export type LobbySnapshot = {
   lobbyId: string;
-  hostUserId: string;
+  /** Null for anonymous get_lobby responses (auth UUIDs redacted). */
+  hostUserId: string | null;
   activeSessionId: string | null;
   activeSessionState: LobbySessionState | null;
   status: 'open' | 'closed';
@@ -233,19 +235,21 @@ export async function joinLobby(input: {
   }
 
   // A guest has no user_id for the server to match on, so hand back the member
-  // id we were given the first time. Without it every re-join minted a new seat,
-  // and start_next_lobby_session makes the force-nav hook re-join on every
-  // chained mission. The server ignores an id that is not an active guest seat
-  // in this lobby, so a stale or borrowed one is harmless.
+  // id + seat_claim we were given the first time. Without the member id every
+  // re-join minted a new seat, and start_next_lobby_session makes the force-nav
+  // hook re-join on every chained mission. Member ids alone are visible in
+  // get_lobby and are not proof of ownership — seat_claim is the secret.
   const knownMemberId =
     input.lobbyMemberId === undefined
       ? getStoredLobbyMemberId(requestLobbyId)
       : input.lobbyMemberId;
+  const seatClaim = knownMemberId ? getStoredLobbySeatClaim(requestLobbyId) : null;
 
   const { data, error } = await callRpc('join_lobby', {
     p_lobby_id: requestLobbyId,
     p_nickname: nickname,
     p_lobby_member_id: knownMemberId,
+    p_seat_claim: seatClaim,
   });
 
   if (error) {
@@ -264,6 +268,7 @@ export async function joinLobby(input: {
   const role = roleRaw === 'host' || roleRaw === 'joiner' ? roleRaw : null;
   const claimToken = readString(raw.claim_token);
   const hostToken = readString(raw.host_token);
+  const seatClaimOut = readString(raw.seat_claim);
   const sessionState = parseLobbySessionState(raw.session_state);
 
   if (!lobbyId || !lobbyMemberId || !hostUserId) {
@@ -274,6 +279,7 @@ export async function joinLobby(input: {
     memberId: lobbyMemberId,
     nickname: readString(raw.nickname) ?? nickname,
     sessionId,
+    seatClaim: seatClaimOut,
   });
 
   if (sessionId && participantId) {
@@ -320,13 +326,7 @@ export async function getLobby(
   const status = readString(raw.status);
   const createdAt = readString(raw.created_at);
   const updatedAt = readString(raw.updated_at);
-  if (
-    !id ||
-    !hostUserId ||
-    (status !== 'open' && status !== 'closed') ||
-    !createdAt ||
-    !updatedAt
-  ) {
+  if (!id || (status !== 'open' && status !== 'closed') || !createdAt || !updatedAt) {
     return { data: null, error: { message: 'Something went wrong. Please try again.' } };
   }
 
@@ -436,15 +436,16 @@ export async function leaveLobby(
   lobbyId: string,
   options?: { lobbyMemberId?: string | null }
 ): Promise<{ data: { left: boolean; closed?: boolean } | null; error: LobbyApiError | null }> {
-  // As with joinLobby: a guest has no user_id for the server to match on, so it
-  // leaves with the member id it was handed. The server only accepts an active
-  // guest seat in this lobby, so a stale id simply reports left: false.
+  // As with joinLobby: a guest leaves with the member id + seat_claim it was
+  // handed. Member id alone is not proof — it is visible in get_lobby.
   const lobbyMemberId =
     options?.lobbyMemberId === undefined ? getStoredLobbyMemberId(lobbyId) : options.lobbyMemberId;
+  const seatClaim = lobbyMemberId ? getStoredLobbySeatClaim(lobbyId) : null;
 
   const { data, error } = await callRpc('leave_lobby', {
     p_lobby_id: lobbyId,
     p_lobby_member_id: lobbyMemberId,
+    p_seat_claim: seatClaim,
   });
   if (error) {
     return { data: null, error: { message: mapRpcError(error.message) } };

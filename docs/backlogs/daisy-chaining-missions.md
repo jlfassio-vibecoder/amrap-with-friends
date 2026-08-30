@@ -48,7 +48,7 @@ the earlier epic note of 6 was superseded by the soft abuse/cost raise).
 | Force-nav while typing partials | Done — gated while partials open; soft banner + 5s then auto-nav                               |
 | Realtime miss                   | Done — lobby visibility/focus refetch; force-nav on active session change                      |
 | Host cap (3 active)             | Done — close/leave auto-close finishes waiting/setup orphans; closed lobbies excluded from cap |
-| RLS / Realtime leak             | Done — no `host_token` in SELECT grants                                                        |
+| RLS / Realtime leak             | Done — membership RLS for authenticated; anon has no table SELECT; guests poll `get_lobby`     |
 | Squad vocabulary bleed          | Done — staging uses crew / Staging area / Rally link                                           |
 
 ## Out of scope (this epic)
@@ -59,3 +59,9 @@ the earlier epic note of 6 was superseded by the soft abuse/cost raise).
 - Guest-as-host
 - Mid-workout host failover
 - Empty-lobby / idle TTL `pg_cron` (manual close + last-host leave already close the room)
+
+## Manual exit criteria
+
+Run the two-browser checklist in
+[daisy-chaining-manual-verification.md](./daisy-chaining-manual-verification.md)
+before calling the epic done.

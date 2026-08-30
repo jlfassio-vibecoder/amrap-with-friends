@@ -5,6 +5,9 @@ import { getLobby, type LobbySessionState, type LobbySnapshot } from '@/lib/api/
 
 export type LobbyPresenceByMemberId = Record<string, { nickname: string }>;
 
+/** Guests cannot SELECT lobby tables (membership RLS); poll get_lobby instead. */
+export const GUEST_LOBBY_POLL_MS = 5_000;
+
 export interface UseLobbyChannelResult {
   lobby: LobbySnapshot | null;
   presenceByMemberId: LobbyPresenceByMemberId;
@@ -43,14 +46,16 @@ export function parseLobbyRow(record: Record<string, unknown>): Partial<LobbySna
 }
 
 /**
- * Subscribe to lobby:{lobbyId} for postgres_changes + optional presence.
- * Snapshot load and lobbies/members filters run whenever lobbyId is set;
- * presence track only when memberId + nickname are provided.
+ * Subscribe to lobby:{lobbyId} for optional postgres_changes + presence.
+ * Snapshot load always uses get_lobby. Table Realtime is only for authenticated
+ * members (membership RLS); guests poll get_lobby.
  */
 export function useLobbyChannel(
   lobbyId: string | undefined,
-  presence: { memberId: string; nickname: string } | null
+  presence: { memberId: string; nickname: string } | null,
+  options?: { realtimeTables?: boolean }
 ): UseLobbyChannelResult {
+  const realtimeTables = options?.realtimeTables === true;
   const [lobby, setLobby] = useState<LobbySnapshot | null>(null);
   const [presenceByMemberId, setPresenceByMemberId] = useState<LobbyPresenceByMemberId>({});
   const [isConnected, setIsConnected] = useState(false);
@@ -97,57 +102,66 @@ export function useLobbyChannel(
     // eslint-disable-next-line react-hooks/set-state-in-effect -- async getLobby then setState
     void refresh();
 
+    let pollTimer: number | null = null;
+    if (!realtimeTables) {
+      pollTimer = window.setInterval(() => {
+        void refresh();
+      }, GUEST_LOBBY_POLL_MS);
+    }
+
     const channel = supabase.channel(`lobby:${lobbyId}`, {
       config: presenceMemberId ? { presence: { key: presenceMemberId } } : {},
     });
     channelRef.current = channel;
 
-    channel.on(
-      'postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'lobbies', filter: `id=eq.${lobbyId}` },
-      (payload) => {
-        const parsed = parseLobbyRow(payload.new as Record<string, unknown>);
-        if (!parsed) {
-          return;
+    if (realtimeTables) {
+      channel.on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'lobbies', filter: `id=eq.${lobbyId}` },
+        (payload) => {
+          const parsed = parseLobbyRow(payload.new as Record<string, unknown>);
+          if (!parsed) {
+            return;
+          }
+          setLobby((prev) => {
+            if (!prev) {
+              return null;
+            }
+            const sessionChanged = parsed.activeSessionId !== prev.activeSessionId;
+            if (sessionChanged || parsed.hostUserId === undefined) {
+              // lobbies row has no session state; refetch so force-nav sees live
+              // state. Also refetch when the payload omitted host_user_id — a
+              // guest cannot read that column, and get_lobby is SECURITY DEFINER
+              // so it still returns who holds command.
+              void refresh();
+            }
+            return {
+              ...prev,
+              ...parsed,
+              members: prev.members,
+              activeSessionState: sessionChanged
+                ? null
+                : parsed.activeSessionState !== undefined
+                  ? parsed.activeSessionState
+                  : prev.activeSessionState,
+            };
+          });
         }
-        setLobby((prev) => {
-          if (!prev) {
-            return null;
-          }
-          const sessionChanged = parsed.activeSessionId !== prev.activeSessionId;
-          if (sessionChanged || parsed.hostUserId === undefined) {
-            // lobbies row has no session state; refetch so force-nav sees live
-            // state. Also refetch when the payload omitted host_user_id — a
-            // guest cannot read that column, and get_lobby is SECURITY DEFINER
-            // so it still returns who holds command.
-            void refresh();
-          }
-          return {
-            ...prev,
-            ...parsed,
-            members: prev.members,
-            activeSessionState: sessionChanged
-              ? null
-              : parsed.activeSessionState !== undefined
-                ? parsed.activeSessionState
-                : prev.activeSessionState,
-          };
-        });
-      }
-    );
+      );
 
-    channel.on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'lobby_members',
-        filter: `lobby_id=eq.${lobbyId}`,
-      },
-      () => {
-        void refresh();
-      }
-    );
+      channel.on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'lobby_members',
+          filter: `lobby_id=eq.${lobbyId}`,
+        },
+        () => {
+          void refresh();
+        }
+      );
+    }
 
     channel.on('presence', { event: 'sync' }, () => {
       const state = channel.presenceState<{ member_id?: string; nickname?: string }>();
@@ -201,13 +215,16 @@ export function useLobbyChannel(
     return () => {
       cancelledRef.current = true;
       fetchGenRef.current += 1;
+      if (pollTimer !== null) {
+        window.clearInterval(pollTimer);
+      }
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('focus', handleFocus);
       void supabase.removeChannel(channel);
       channelRef.current = null;
       setIsConnected(false);
     };
-  }, [lobbyId, presenceMemberId, presenceNickname]);
+  }, [lobbyId, presenceMemberId, presenceNickname, realtimeTables]);
 
   return {
     lobby: lobbyId ? lobby : null,

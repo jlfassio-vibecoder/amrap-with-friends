@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  fetchCurrentFeaturedWod,
-  type FeaturedWod,
-} from '@/lib/api/featuredWod';
+import { fetchCurrentFeaturedWod, type FeaturedWod } from '@/lib/api/featuredWod';
 import { getFeaturedWodCardPresentation } from '@/lib/session/featuredWodCardPresentation';
 import { track } from '@/lib/analytics/track';
 import { buildGoogleCalendarUrl, buildIcsFileContent } from '@/lib/calendar/buildCalendarEvent';
+import { useAthleteProfile } from '@/hooks/useAthleteProfile';
+import { buildRallyInviteUrl } from '@/lib/session/buildRallyInviteUrl';
+import { ogCardFromSex } from '@/lib/share/ogCard';
 
 const INTENSITY_LABEL: Record<number, string> = {
   1: 'Active Recovery',
@@ -16,9 +16,9 @@ const INTENSITY_LABEL: Record<number, string> = {
   5: 'Tier 1',
 };
 
-function calendarEventInputFor(featured: FeaturedWod) {
+function calendarEventInputFor(featured: FeaturedWod, card: ReturnType<typeof ogCardFromSex>) {
   const joinLine = featured.sessionId
-    ? `Join: ${window.location.origin}/join?s=${featured.sessionId}`
+    ? `Join: ${buildRallyInviteUrl(featured.sessionId, window.location.origin, card)}`
     : null;
   return {
     // Once the session is generated the UID switches from the workout+time
@@ -32,8 +32,8 @@ function calendarEventInputFor(featured: FeaturedWod) {
   };
 }
 
-function downloadIcsFile(featured: FeaturedWod) {
-  const ics = buildIcsFileContent(calendarEventInputFor(featured));
+function downloadIcsFile(featured: FeaturedWod, card: ReturnType<typeof ogCardFromSex>) {
+  const ics = buildIcsFileContent(calendarEventInputFor(featured, card));
   const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -55,6 +55,8 @@ function downloadIcsFile(featured: FeaturedWod) {
 const POLL_INTERVAL_MS = 20_000;
 
 export function FeaturedWodCard() {
+  const { profile } = useAthleteProfile();
+  const ogCard = ogCardFromSex(profile?.biologicalSex);
   const [featured, setFeatured] = useState<FeaturedWod | null>(null);
   const [loading, setLoading] = useState(true);
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -118,7 +120,7 @@ export function FeaturedWodCard() {
   const presentation = getFeaturedWodCardPresentation(featured, nowMs);
 
   return (
-    <div className="card space-y-2 border-2 border-accent bg-accent-tint/40 p-4 text-left">
+    <div className="card bg-accent-tint/40 space-y-2 border-2 border-accent p-4 text-left">
       <p className="text-xs font-semibold uppercase tracking-widest text-accent">Today’s mission</p>
       <p className="text-display text-lg text-ink">{featured.workoutName}</p>
       {featured.focus ? <p className="text-sm text-secondary">{featured.focus}</p> : null}
@@ -133,7 +135,7 @@ export function FeaturedWodCard() {
           type="button"
           className="link-accent"
           onClick={() => {
-            downloadIcsFile(featured);
+            downloadIcsFile(featured, ogCard);
             track(
               'featured_wod_calendar_saved',
               { method: 'ics' },
@@ -145,7 +147,7 @@ export function FeaturedWodCard() {
         </button>
         <a
           className="link-accent"
-          href={buildGoogleCalendarUrl(calendarEventInputFor(featured))}
+          href={buildGoogleCalendarUrl(calendarEventInputFor(featured, ogCard))}
           target="_blank"
           rel="noreferrer"
           onClick={() =>

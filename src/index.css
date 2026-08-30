@@ -5,7 +5,7 @@
  */
 
 :root {
-  color-scheme: light;
+  color-scheme: only light;
 
   --color-page: #f7f2ea;
   --color-surface: #fffdf8;

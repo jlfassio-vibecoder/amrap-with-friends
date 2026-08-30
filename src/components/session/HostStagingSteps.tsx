@@ -4,7 +4,9 @@ import { setLobbyCountdown } from '@/lib/api/sessionSync';
 import { getStoredHostToken } from '@/lib/sessionIdentity';
 import { GhostPicker } from '@/components/GhostPicker';
 import { useCopySessionInvite } from '@/components/session/useCopySessionInvite';
+import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import type { StoredGhostSelection } from '@/lib/sessionIdentity';
+import { ogCardFromSex } from '@/lib/share/ogCard';
 
 const PRESET_SECONDS = [
   { label: '2 MIN', seconds: 120 },
@@ -52,13 +54,14 @@ export function HostStagingSteps({
   const [customSeconds, setCustomSeconds] = useState('300');
   const [busy, setBusy] = useState(false);
   const [engageError, setEngageError] = useState<string | null>(null);
+  const { profile } = useAthleteProfile();
   const {
     secured,
     idSecured,
     error: copyError,
     copyInvite,
     copySessionId,
-  } = useCopySessionInvite(sessionId, lobbyId);
+  } = useCopySessionInvite(sessionId, lobbyId, ogCardFromSex(profile?.biologicalSex));
 
   useEffect(() => {
     if (countdownArmed) {
