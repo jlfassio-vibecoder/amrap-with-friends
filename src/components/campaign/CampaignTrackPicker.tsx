@@ -12,6 +12,7 @@ import {
   isCategoryAvailable,
 } from '@/lib/workout/filterWorkoutTemplates';
 import type { CampaignTrack } from '@/lib/campaign';
+import { campaignTrackLabel } from './campaignTrackLabel';
 
 interface CampaignTrackPickerProps {
   tracks: CampaignTrack[];
@@ -20,15 +21,6 @@ interface CampaignTrackPickerProps {
 
 function trackKey(track: CampaignTrack): string {
   return `${track.durationMinutes}:${track.category}`;
-}
-
-/** Display label for a track chip — also used on the create page “Measured on” line. */
-export function campaignTrackLabel(track: CampaignTrack): string {
-  const meta = WORKOUT_CATEGORIES.find((category) => category.id === track.category);
-  const display = meta
-    ? categoryDisplayForDuration(meta, track.durationMinutes).label
-    : track.category;
-  return `${display} · ${track.durationMinutes} min`;
 }
 
 export function CampaignTrackPicker({ tracks, onChange }: CampaignTrackPickerProps) {

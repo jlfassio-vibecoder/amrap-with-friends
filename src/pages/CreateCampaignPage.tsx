@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { CampaignSchedulePreview } from '@/components/campaign/CampaignSchedulePreview';
 import { CampaignSlotPicker } from '@/components/campaign/CampaignSlotPicker';
-import { CampaignTrackPicker, campaignTrackLabel } from '@/components/campaign/CampaignTrackPicker';
+import { CampaignTrackPicker } from '@/components/campaign/CampaignTrackPicker';
+import { campaignTrackLabel } from '@/components/campaign/campaignTrackLabel';
 import { createCampaign } from '@/lib/api/campaigns';
 import {
   CAMPAIGN_WEEK_COUNTS,
