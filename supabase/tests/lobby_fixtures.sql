@@ -1,0 +1,82 @@
+-- Local fixtures for lobby RPCs (run after replaying migrations).
+-- Requires two auth.users (+ optional athlete_profiles), then:
+--   SET request.jwt.claim.sub = '<uuid-a>' so auth.uid() resolves.
+--
+-- Evidence targets:
+--   1. create_lobby_session returns lobby + session + host_token to creator only
+--   2. Second user join_lobby → joiner, no host_token
+--   3. pass_lobby_command → host_token null; old host update_session_state with
+--      old token fails; new host resume_session_identity gets token and can set countdown
+--   4. start_next after finished → new session; guests not pre-inserted; claimed members present
+--   5. Pass during work raises
+--   6. Second start_next while waiting raises “still active”
+
+-- Example (adjust ids / workout jsonb to match validate_workout):
+--
+-- -- As host A
+-- SET request.jwt.claim.sub = '<uuid-a>';
+-- SELECT public.create_lobby_session(
+--   12,
+--   'HostA',
+--   '[{"name":"Burpees","target":10}]'::jsonb,
+--   NULL,
+--   NULL,
+--   NULL,
+--   NULL
+-- );
+-- -- Expect: lobby_id, session_id, host_token, participant_id, claim_token
+--
+-- -- As joiner B
+-- SET request.jwt.claim.sub = '<uuid-b>';
+-- SELECT public.join_lobby('<lobby_id>', 'HostB');
+-- -- Expect: role joiner, host_token null
+--
+-- -- Pass command (as A, session waiting/setup)
+-- SET request.jwt.claim.sub = '<uuid-a>';
+-- SELECT public.pass_lobby_command('<lobby_id>', '<uuid-b>');
+-- -- Expect: host_token IS NULL, host_user_id = <uuid-b>
+--
+-- -- Old host cannot drive session with stale token
+-- SELECT public.update_session_state(
+--   '<session_id>',
+--   '<old_host_token>',
+--   'setup',
+--   NULL,
+--   NULL,
+--   NULL
+-- );
+-- -- Expect: ok false / invalid_host_token (or equivalent)
+--
+-- -- New host reclaim
+-- SET request.jwt.claim.sub = '<uuid-b>';
+-- SELECT public.resume_session_identity('<session_id>');
+-- -- Expect: hostToken present; then countdown / update_session_state succeeds
+--
+-- -- Finish active session, then start_next
+-- -- (host finishes via normal host path, then:)
+-- SELECT public.start_next_lobby_session(
+--   '<lobby_id>',
+--   10,
+--   '[{"name":"Air Squats","target":15}]'::jsonb,
+--   NULL,
+--   NULL
+-- );
+-- -- Expect: new session_id; participants only for claimed members (user_id NOT NULL);
+-- -- guests absent until they join_lobby again
+--
+-- -- Pass during live work
+-- UPDATE public.sessions SET state = 'work' WHERE id = '<active_session_id>';
+-- SET request.jwt.claim.sub = '<host_uuid>';
+-- SELECT public.pass_lobby_command('<lobby_id>', '<other_uuid>');
+-- -- Expect: EXCEPTION Cannot pass command during a live session
+--
+-- -- Concurrent start_next while waiting
+-- -- (after a successful start_next that left state waiting:)
+-- SELECT public.start_next_lobby_session(
+--   '<lobby_id>',
+--   10,
+--   '[{"name":"Air Squats","target":15}]'::jsonb,
+--   NULL,
+--   NULL
+-- );
+-- -- Expect: EXCEPTION Current session is still active

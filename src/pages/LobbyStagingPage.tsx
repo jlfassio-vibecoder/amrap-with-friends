@@ -126,9 +126,8 @@ export default function LobbyStagingPage() {
         setActionError(result.error.message);
         return;
       }
-      if (result.data?.hostToken && result.data.activeSessionId && user?.id === toUserId) {
-        setStoredHostToken(result.data.activeSessionId, result.data.hostToken);
-      }
+      // Outgoing host token is cleared in passLobbyCommand. New host picks up via
+      // resumeSessionIdentity when host_user_id matches after refresh/realtime.
       await refresh();
     } finally {
       setBusy(false);
@@ -212,7 +211,7 @@ export default function LobbyStagingPage() {
     return (
       <main className="min-h-screen bg-page p-6">
         <AppHeader title="Staging area" />
-        <p className="mt-6 text-error">{error}</p>
+        <p className="text-error mt-6">{error}</p>
         <Link className="link-accent mt-4 inline-block" to="/">
           Back home
         </Link>
@@ -328,9 +327,7 @@ export default function LobbyStagingPage() {
           </section>
         ) : (
           <section className="card space-y-2 p-5">
-            <p className="text-sm text-secondary">
-              Waiting for host to pick the next session.
-            </p>
+            <p className="text-sm text-secondary">Waiting for host to pick the next session.</p>
             {actionError ? <p className="text-error text-sm">{actionError}</p> : null}
           </section>
         )}

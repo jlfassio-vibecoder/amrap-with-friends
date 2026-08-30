@@ -40,6 +40,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS lobby_members_active_user_uidx
 CREATE INDEX IF NOT EXISTS idx_lobby_members_lobby_id
   ON public.lobby_members (lobby_id);
 
+CREATE INDEX IF NOT EXISTS idx_lobby_members_lobby_active
+  ON public.lobby_members (lobby_id)
+  WHERE status = 'active';
+
 CREATE INDEX IF NOT EXISTS idx_lobbies_host_user_id
   ON public.lobbies (host_user_id);
 
@@ -630,7 +634,12 @@ AS $$
 DECLARE
   v_uid uuid;
   v_lobby public.lobbies%ROWTYPE;
-  v_host_token text;
+  v_session_state text;
+  v_target_nickname text;
+  v_target_participant uuid;
+  v_claim_token text;
+  v_claim_hash text;
+  v_rotated text;
 BEGIN
   v_uid := auth.uid();
   IF v_uid IS NULL THEN
@@ -658,28 +667,78 @@ BEGIN
     RAISE EXCEPTION 'Only the host can pass command';
   END IF;
 
-  IF NOT EXISTS (
-    SELECT 1
-    FROM public.lobby_members
-    WHERE lobby_id = p_lobby_id
-      AND user_id = p_to_user_id
-      AND status = 'active'
-  ) THEN
+  SELECT nickname INTO v_target_nickname
+  FROM public.lobby_members
+  WHERE lobby_id = p_lobby_id
+    AND user_id = p_to_user_id
+    AND status = 'active'
+  LIMIT 1;
+
+  IF v_target_nickname IS NULL THEN
     RAISE EXCEPTION 'Target is not an active crew member';
   END IF;
 
-  UPDATE public.lobbies
-  SET host_user_id = p_to_user_id
-  WHERE id = p_lobby_id;
+  IF v_lobby.active_session_id IS NOT NULL THEN
+    SELECT state INTO v_session_state
+    FROM public.sessions
+    WHERE id = v_lobby.active_session_id
+    FOR UPDATE;
 
-  v_host_token := public._lobby_rotate_waiting_host(v_lobby.active_session_id, p_to_user_id);
+    IF NOT FOUND THEN
+      v_session_state := NULL;
+    ELSIF v_session_state = 'work' THEN
+      RAISE EXCEPTION 'Cannot pass command during a live session';
+    ELSIF v_session_state IN ('waiting', 'setup') THEN
+      SELECT id INTO v_target_participant
+      FROM public.participants
+      WHERE session_id = v_lobby.active_session_id
+        AND user_id = p_to_user_id
+      ORDER BY joined_at ASC
+      LIMIT 1;
 
+      IF v_target_participant IS NULL THEN
+        v_claim_token :=
+          replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
+        v_claim_hash := encode(digest(v_claim_token, 'sha256'), 'hex');
+
+        INSERT INTO public.participants (session_id, nickname, role, claim_token_hash, user_id)
+        VALUES (
+          v_lobby.active_session_id,
+          v_target_nickname,
+          'joiner',
+          v_claim_hash,
+          p_to_user_id
+        );
+      END IF;
+
+      UPDATE public.lobbies
+      SET host_user_id = p_to_user_id
+      WHERE id = p_lobby_id;
+
+      v_rotated := public._lobby_rotate_waiting_host(v_lobby.active_session_id, p_to_user_id);
+      IF v_rotated IS NULL THEN
+        RAISE EXCEPTION 'Cannot pass command during a live session';
+      END IF;
+    ELSIF v_session_state = 'finished' THEN
+      UPDATE public.lobbies
+      SET host_user_id = p_to_user_id
+      WHERE id = p_lobby_id;
+    ELSE
+      RAISE EXCEPTION 'Cannot pass command during a live session';
+    END IF;
+  ELSE
+    UPDATE public.lobbies
+    SET host_user_id = p_to_user_id
+    WHERE id = p_lobby_id;
+  END IF;
+
+  -- Never return the rotated token to the outgoing host.
   RETURN jsonb_build_object(
     'ok', true,
     'lobby_id', p_lobby_id,
     'host_user_id', p_to_user_id,
     'active_session_id', v_lobby.active_session_id,
-    'host_token', v_host_token
+    'host_token', NULL
   );
 END;
 $$;
@@ -767,11 +826,21 @@ BEGIN
   IF v_lobby.active_session_id IS NOT NULL THEN
     SELECT state INTO v_prior_state
     FROM public.sessions
-    WHERE id = v_lobby.active_session_id;
+    WHERE id = v_lobby.active_session_id
+    FOR UPDATE;
 
     IF FOUND AND v_prior_state IS DISTINCT FROM 'finished' THEN
       RAISE EXCEPTION 'Current session is still active';
     END IF;
+  END IF;
+
+  -- Host may have changed under concurrent claim/pass; re-read.
+  SELECT host_user_id INTO v_lobby.host_user_id
+  FROM public.lobbies
+  WHERE id = p_lobby_id;
+
+  IF v_lobby.host_user_id IS DISTINCT FROM v_uid THEN
+    RAISE EXCEPTION 'Only the host can start the next session';
   END IF;
 
   SELECT count(*)::int
@@ -889,7 +958,6 @@ DECLARE
   v_uid uuid;
   v_lobby public.lobbies%ROWTYPE;
   v_successor uuid;
-  v_host_token text;
   v_was_host boolean := false;
   v_updated int;
 BEGIN
@@ -944,7 +1012,7 @@ BEGIN
     SET host_user_id = v_successor
     WHERE id = p_lobby_id;
 
-    v_host_token := public._lobby_rotate_waiting_host(v_lobby.active_session_id, v_successor);
+    PERFORM public._lobby_rotate_waiting_host(v_lobby.active_session_id, v_successor);
   END IF;
 
   RETURN jsonb_build_object(
@@ -952,8 +1020,7 @@ BEGIN
     'lobby_id', p_lobby_id,
     'left', true,
     'was_host', v_was_host,
-    'host_user_id', coalesce(v_successor, v_lobby.host_user_id),
-    'host_token', v_host_token
+    'host_user_id', coalesce(v_successor, v_lobby.host_user_id)
   );
 END;
 $$;

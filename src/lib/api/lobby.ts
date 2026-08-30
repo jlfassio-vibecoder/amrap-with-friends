@@ -5,7 +5,7 @@ import {
   getStoredLobbyNickname,
   persistLobbyIdentity,
 } from '@/lib/lobbyIdentity';
-import { persistSessionIdentity } from '@/lib/sessionIdentity';
+import { clearStoredHostToken, persistSessionIdentity } from '@/lib/sessionIdentity';
 import { track } from '@/lib/analytics/track';
 
 export type LobbyApiError = { message: string };
@@ -247,11 +247,7 @@ export async function joinLobby(input: {
     });
   }
 
-  track(
-    'lobby_joined',
-    { has_session: Boolean(sessionId), role },
-    { sessionId, participantId }
-  );
+  track('lobby_joined', { has_session: Boolean(sessionId), role }, { sessionId, participantId });
 
   return {
     data: {
@@ -285,7 +281,13 @@ export async function getLobby(
   const status = readString(raw.status);
   const createdAt = readString(raw.created_at);
   const updatedAt = readString(raw.updated_at);
-  if (!id || !hostUserId || (status !== 'open' && status !== 'closed') || !createdAt || !updatedAt) {
+  if (
+    !id ||
+    !hostUserId ||
+    (status !== 'open' && status !== 'closed') ||
+    !createdAt ||
+    !updatedAt
+  ) {
     return { data: null, error: { message: 'Something went wrong. Please try again.' } };
   }
 
@@ -310,10 +312,7 @@ export async function getLobby(
   };
 }
 
-export async function passLobbyCommand(input: {
-  lobbyId: string;
-  toUserId: string;
-}): Promise<{
+export async function passLobbyCommand(input: { lobbyId: string; toUserId: string }): Promise<{
   data: { hostUserId: string; hostToken: string | null; activeSessionId: string | null } | null;
   error: LobbyApiError | null;
 }> {
@@ -329,12 +328,17 @@ export async function passLobbyCommand(input: {
   if (!hostUserId) {
     return { data: null, error: { message: 'Something went wrong. Please try again.' } };
   }
+  const activeSessionId = readString(raw.active_session_id);
+  // Rotated token is never returned to the outgoing host; clear any stale local copy.
+  if (activeSessionId) {
+    clearStoredHostToken(activeSessionId);
+  }
   track('command_passed', { to_user_id: input.toUserId });
   return {
     data: {
       hostUserId,
       hostToken: readString(raw.host_token),
-      activeSessionId: readString(raw.active_session_id),
+      activeSessionId,
     },
     error: null,
   };

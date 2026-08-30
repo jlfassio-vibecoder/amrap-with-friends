@@ -1,10 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  createLobbySession,
-  joinLobby,
-  passLobbyCommand,
-  startNextLobbySession,
-} from './lobby';
+import { createLobbySession, joinLobby, passLobbyCommand, startNextLobbySession } from './lobby';
 import { supabase } from '@/lib/supabase';
 import * as sessionIdentity from '@/lib/sessionIdentity';
 import * as lobbyIdentity from '@/lib/lobbyIdentity';
@@ -14,6 +9,7 @@ vi.mock('@/lib/supabase', () => ({
 }));
 vi.mock('@/lib/sessionIdentity', () => ({
   persistSessionIdentity: vi.fn(),
+  clearStoredHostToken: vi.fn(),
 }));
 vi.mock('@/lib/lobbyIdentity', () => ({
   persistLobbyIdentity: vi.fn(),
@@ -87,12 +83,12 @@ describe('lobby API', () => {
     expect(result.error?.message).toBe('Staging area not found.');
   });
 
-  it('passLobbyCommand returns the new host token', async () => {
+  it('passLobbyCommand returns null host_token and clears the old host token', async () => {
     rpcMock.mockResolvedValue({
       data: {
         ok: true,
         host_user_id: 'user-2',
-        host_token: 'rotated',
+        host_token: null,
         active_session_id: SESSION_ID,
       },
       error: null,
@@ -105,9 +101,10 @@ describe('lobby API', () => {
     expect(result.error).toBeNull();
     expect(result.data).toEqual({
       hostUserId: 'user-2',
-      hostToken: 'rotated',
+      hostToken: null,
       activeSessionId: SESSION_ID,
     });
+    expect(sessionIdentity.clearStoredHostToken).toHaveBeenCalledWith(SESSION_ID);
   });
 
   it('startNextLobbySession seeds the new session identity', async () => {
