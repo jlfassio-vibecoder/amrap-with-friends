@@ -441,4 +441,51 @@ describe('CampaignDetailPage', () => {
       expect(navigateMock).not.toHaveBeenCalled();
     });
   });
+
+  describe('the test section on a campaign that is over', () => {
+    it('is hidden once the campaign ended without a benchmark score', async () => {
+      fetchDetailMock.mockResolvedValue({ data: detail({ status: 'abandoned' }), error: null });
+      fetchStandingsMock.mockResolvedValue({
+        data: {
+          standings: [],
+          members: [{ userId: 'u1', nickname: 'Maya', joinedLocalDate: '2026-09-01', left: false }],
+          scores: [],
+        },
+        error: null,
+      });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('Ended early')).toBeTruthy());
+      expect(screen.queryByText('The test')).toBeNull();
+      expect(screen.queryByText('Scores show up after the opening benchmark.')).toBeNull();
+    });
+
+    it('still shows the result when the finished campaign was scored', async () => {
+      fetchDetailMock.mockResolvedValue({
+        data: detail({
+          status: 'complete',
+          occurrences: [
+            occurrence(1, 1, { status: 'done', templateId: 'the-valve' }),
+            occurrence(2, 1, { templateId: 'other' }),
+            occurrence(3, 2, { templateId: 'other-2' }),
+            occurrence(4, 2, { status: 'done', templateId: 'the-valve' }),
+          ],
+        }),
+        error: null,
+      });
+      fetchStandingsMock.mockResolvedValue({
+        data: {
+          standings: [],
+          members: [{ userId: 'u1', nickname: 'Maya', joinedLocalDate: '2026-09-01', left: false }],
+          scores: [
+            { occurrenceId: 'o1', userId: 'u1', finalScore: 40 },
+            { occurrenceId: 'o4', userId: 'u1', finalScore: 48 },
+          ],
+        },
+        error: null,
+      });
+      renderPage();
+      await waitFor(() => expect(screen.getByText('The test')).toBeTruthy());
+      expect(screen.getByText('+8 reps')).toBeTruthy();
+    });
+  });
 });

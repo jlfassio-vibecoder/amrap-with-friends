@@ -234,6 +234,7 @@ export default function CampaignDetailPage() {
     })),
     members: standingsMembers,
     scores: standingsScores,
+    campaignStatus: detail.status,
   });
 
   return (

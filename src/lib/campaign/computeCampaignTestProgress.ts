@@ -1,3 +1,4 @@
+import { isCampaignClosed } from './campaignLifecycle';
 import { deriveCampaignRoles, type RoleReadableOccurrence } from './campaignRoles';
 import type { CampaignStandingsMember, CampaignStandingsScore } from './computeCampaignStandings';
 
@@ -30,6 +31,11 @@ export type CampaignTestProgressInput = {
   occurrences: TestProgressOccurrence[];
   members: CampaignStandingsMember[];
   scores: CampaignStandingsScore[];
+  /**
+   * The campaign's status. Only used to tell a test that has not happened yet
+   * from one that never will — omit it and the section always shows.
+   */
+  campaignStatus?: string;
 };
 
 function scoreValue(finalScore: number | null | undefined): number | null {
@@ -44,11 +50,17 @@ function scoreValue(finalScore: number | null | undefined): number | null {
  *
  * Returns null when the schedule has no recoverable benchmark — the detail
  * page then omits the section rather than promising a comparison it cannot make.
+ *
+ * Same reason, second case: a campaign that is over with no benchmark score is
+ * never going to get one, so "Scores show up after the opening benchmark" would
+ * be waiting for something that cannot arrive. A closed campaign that *does*
+ * have a score keeps the section — a finished campaign's numbers are the whole
+ * point of having run it, and an early ending does not make the work unreal.
  */
 export function computeCampaignTestProgress(
   input: CampaignTestProgressInput
 ): CampaignTestProgress | null {
-  const { occurrences, members, scores } = input;
+  const { occurrences, members, scores, campaignStatus } = input;
   if (occurrences.length === 0 || members.length === 0) {
     return null;
   }
@@ -129,10 +141,13 @@ export function computeCampaignTestProgress(
     return (a.nickname ?? a.userId).localeCompare(b.nickname ?? b.userId);
   });
 
-  return {
-    rows,
-    hasBenchmarkScore: rows.some((row) => row.benchmarkScore !== null),
-  };
+  const hasBenchmarkScore = rows.some((row) => row.benchmarkScore !== null);
+
+  if (!hasBenchmarkScore && campaignStatus !== undefined && isCampaignClosed(campaignStatus)) {
+    return null;
+  }
+
+  return { rows, hasBenchmarkScore };
 }
 
 /** "42 reps" or an em dash when there is nothing to show. */
