@@ -1,0 +1,21 @@
+-- Local fixtures for squad RPCs (run after replaying migrations).
+-- Requires two auth.users + athlete_profiles rows, then:
+--   SET request.jwt.claim.sub = '<uuid-a>' so auth.uid() resolves.
+--
+-- Evidence targets:
+--   1. Username search hits; email matches only on exact address
+--   2. Cannot invite self
+--   3. Accept writes both squad_friends rows
+--   4. accept_squad_invite_code is idempotent
+--   5. Cap at squad_friend_limit()
+
+-- Example (adjust ids):
+-- SELECT public.search_athletes('jul');          -- username ILIKE
+-- SELECT public.search_athletes('not-an-email'); -- no email scan
+-- SELECT public.search_athletes('jules@example.com'); -- exact email only
+-- SELECT public.send_squad_invite('<self>');     -- Invite not found
+-- SELECT public.send_squad_invite('<other>');
+-- SET request.jwt.claim.sub = '<other>';
+-- SELECT public.respond_squad_invite('<request>', true);
+-- SELECT count(*) FROM public.squad_friends;     -- expect 2
+-- SELECT public.accept_squad_invite_code('<code>'); -- already_friends

@@ -16,17 +16,13 @@ import { useHudTelemetry } from '@/hooks/useHudTelemetry';
 import { usePhysicalActivityLog } from '@/hooks/usePhysicalActivityLog';
 
 export default function HUDPage() {
-  const { telemetry, error, loading, isAuthenticated, isAuthLoading } =
-    useHudTelemetry();
+  const { telemetry, error, loading, isAuthenticated, isAuthLoading } = useHudTelemetry();
   const { profile, loading: profileLoading } = useAthleteProfile();
   const quotas = quotasFromProfile(profile);
-  const showTelemetry =
-    !loading && !profileLoading && isAuthenticated && telemetry;
+  const showTelemetry = !loading && !profileLoading && isAuthenticated && telemetry;
 
   const activityLog = usePhysicalActivityLog();
-  const overtrainingRisk = telemetry
-    ? evaluateOvertrainingRisk(telemetry.overtraining)
-    : null;
+  const overtrainingRisk = telemetry ? evaluateOvertrainingRisk(telemetry.overtraining) : null;
   const showOvertrainingWarning =
     overtrainingRisk !== null && overtrainingRisk.riskLevel !== 'normal';
 
@@ -53,12 +49,12 @@ export default function HUDPage() {
           >
             Create session
           </Link>
-          <a
+          <Link
             className="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
-            href="/#rally"
+            to="/squad"
           >
             Invite your squad →
-          </a>
+          </Link>
           <Link
             className="border-b border-accent pb-1.5 text-xs font-bold uppercase tracking-[0.1em] text-ink hover:text-accent"
             to="/join"
@@ -67,14 +63,11 @@ export default function HUDPage() {
           </Link>
         </div>
 
-        {loading || profileLoading ? (
-          <p className="text-sm text-secondary">Loading…</p>
-        ) : null}
+        {loading || profileLoading ? <p className="text-sm text-secondary">Loading…</p> : null}
 
         {!isAuthLoading && !isAuthenticated ? (
           <p className="text-sm text-secondary">
-            Sign in to view your HUD. Only sessions saved to your account with a locked
-            score count.
+            Sign in to view your HUD. Only sessions saved to your account with a locked score count.
           </p>
         ) : null}
 
@@ -105,10 +98,7 @@ export default function HUDPage() {
               />
             </div>
 
-            <AttritionGrid
-              attrition={telemetry.attrition}
-              weekEndsAt={telemetry.weekEndsAt}
-            />
+            <AttritionGrid attrition={telemetry.attrition} weekEndsAt={telemetry.weekEndsAt} />
             <DomainMatrixChart domainMinutes30d={telemetry.domainMinutes30d} />
           </div>
         ) : null}
@@ -117,8 +107,8 @@ export default function HUDPage() {
           <section className="space-y-3">
             <h2 className="text-lg font-semibold text-ink">Physical activity</h2>
             <p className="text-sm text-secondary">
-              Outside training you log here does not count toward weekly
-              classification minutes — verified rank stays locked-AMRAP-only.
+              Outside training you log here does not count toward weekly classification minutes —
+              verified rank stays locked-AMRAP-only.
             </p>
             <div className="grid gap-4 lg:grid-cols-2">
               <PhysicalActivityLogForm
@@ -135,9 +125,7 @@ export default function HUDPage() {
                   }}
                 />
               )}
-              {activityLog.error ? (
-                <p className="text-error text-sm">{activityLog.error}</p>
-              ) : null}
+              {activityLog.error ? <p className="text-error text-sm">{activityLog.error}</p> : null}
             </div>
           </section>
         ) : null}

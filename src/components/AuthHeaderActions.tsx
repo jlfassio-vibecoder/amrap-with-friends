@@ -27,6 +27,9 @@ export function AuthHeaderActions({ tone = 'default' }: { tone?: HeaderTone }) {
             <Link className={toneClasses.link} to="/hud">
               HUD
             </Link>
+            <Link className={toneClasses.link} to="/squad">
+              Squad
+            </Link>
             <Link className={toneClasses.link} to="/my-sessions">
               My sessions
             </Link>

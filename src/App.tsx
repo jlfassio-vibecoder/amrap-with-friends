@@ -13,6 +13,8 @@ const MySessionsPage = lazy(() => import('./pages/MySessionsPage'));
 const CreateCampaignPage = lazy(() => import('./pages/CreateCampaignPage'));
 const CampaignDetailPage = lazy(() => import('./pages/CampaignDetailPage'));
 const JoinCampaignPage = lazy(() => import('./pages/JoinCampaignPage'));
+const SquadPage = lazy(() => import('./pages/SquadPage'));
+const JoinSquadPage = lazy(() => import('./pages/JoinSquadPage'));
 const HUDPage = lazy(() => import('./pages/HUDPage'));
 const IntakePage = lazy(() => import('./pages/IntakePage'));
 const CoachPage = lazy(() => import('./pages/CoachPage'));
@@ -67,6 +69,19 @@ function App() {
                 gateMessage="Sign in to see this campaign. Campaigns are only visible to the crew training them."
               >
                 <CampaignDetailPage />
+              </RequireIntake>
+            }
+          />
+          <Route path="/squad/join" element={<JoinSquadPage />} />
+          <Route
+            path="/squad"
+            element={
+              <RequireIntake
+                guestMode="sign-in"
+                gateTitle="Your squad"
+                gateMessage="Sign in and set up your profile to invite people to your squad."
+              >
+                <SquadPage />
               </RequireIntake>
             }
           />

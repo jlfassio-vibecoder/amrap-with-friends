@@ -37,12 +37,12 @@ export function LandingHero({ showHudAction }: LandingHeroProps) {
             >
               Create session
             </Link>
-            <a
+            <Link
               className="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
-              href="#rally"
+              to="/squad"
             >
               Invite your squad →
-            </a>
+            </Link>
             <Link
               className="border-b border-gold pb-1.5 text-xs font-bold uppercase tracking-[0.1em] text-night-ink hover:text-gold"
               to="/join"
