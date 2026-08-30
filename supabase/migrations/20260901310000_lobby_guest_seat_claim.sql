@@ -83,8 +83,10 @@ BEGIN
     LIMIT 1;
 
     IF FOUND THEN
+      -- Keep the roster nickname on reclaim; return that same value to the client.
+      v_nickname := coalesce(nullif(v_existing_nickname, ''), v_nickname);
       UPDATE public.lobby_members
-      SET last_seen_at = now(), nickname = coalesce(nullif(v_existing_nickname, ''), v_nickname)
+      SET last_seen_at = now(), nickname = v_nickname
       WHERE id = v_member_id;
     ELSE
       -- Reactivate a prior left row when present.
