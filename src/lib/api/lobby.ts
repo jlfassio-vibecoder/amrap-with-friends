@@ -220,18 +220,32 @@ export async function createLobbySession(input: {
 export async function joinLobby(input: {
   lobbyId: string;
   nickname: string;
+  /** Overrides the stored member id; tests and explicit re-joins use it. */
+  lobbyMemberId?: string | null;
 }): Promise<{ data: JoinLobbyResult | null; error: LobbyApiError | null }> {
   const nickname = input.nickname.trim();
   if (!nickname) {
     return { data: null, error: { message: 'Enter your name or a nickname.' } };
   }
-  if (!isLobbyIdUuid(input.lobbyId.trim())) {
+  const requestLobbyId = input.lobbyId.trim();
+  if (!isLobbyIdUuid(requestLobbyId)) {
     return { data: null, error: { message: 'Staging area not found.' } };
   }
 
+  // A guest has no user_id for the server to match on, so hand back the member
+  // id we were given the first time. Without it every re-join minted a new seat,
+  // and start_next_lobby_session makes the force-nav hook re-join on every
+  // chained mission. The server ignores an id that is not an active guest seat
+  // in this lobby, so a stale or borrowed one is harmless.
+  const knownMemberId =
+    input.lobbyMemberId === undefined
+      ? getStoredLobbyMemberId(requestLobbyId)
+      : input.lobbyMemberId;
+
   const { data, error } = await callRpc('join_lobby', {
-    p_lobby_id: input.lobbyId.trim(),
+    p_lobby_id: requestLobbyId,
     p_nickname: nickname,
+    p_lobby_member_id: knownMemberId,
   });
 
   if (error) {
