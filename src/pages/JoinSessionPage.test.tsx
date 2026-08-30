@@ -3,12 +3,10 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ThemeProvider } from '@/contexts/ThemeProvider';
 import JoinSessionPage from './JoinSessionPage';
-import {
-  SESSION_LOCKED_OR_INVALID,
-  SESSION_RALLY_DEPARTED,
-} from '@/lib/api/sessions';
+import { SESSION_LOCKED_OR_INVALID, SESSION_RALLY_DEPARTED } from '@/lib/api/sessions';
 
 const joinSessionMock = vi.fn();
+const joinLobbyMock = vi.fn();
 const resumeSessionIdentityMock = vi.fn();
 const authState = vi.hoisted(() => ({
   isAuthenticated: false,
@@ -17,12 +15,18 @@ const authState = vi.hoisted(() => ({
 }));
 
 vi.mock('@/lib/api/sessions', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/api/sessions')>(
-    '@/lib/api/sessions'
-  );
+  const actual = await vi.importActual<typeof import('@/lib/api/sessions')>('@/lib/api/sessions');
   return {
     ...actual,
     joinSession: (...args: unknown[]) => joinSessionMock(...args),
+  };
+});
+
+vi.mock('@/lib/api/lobby', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/api/lobby')>('@/lib/api/lobby');
+  return {
+    ...actual,
+    joinLobby: (...args: unknown[]) => joinLobbyMock(...args),
   };
 });
 
@@ -44,17 +48,18 @@ vi.mock('@/lib/supabase', () => ({
 
 vi.mock('@/lib/api/hostScheduledSessions', () => ({
   fetchHostScheduledSessions: vi.fn().mockResolvedValue({ data: [], error: null }),
-  formatHostScheduledSessionWorkout: (workout: { name: string }[]) =>
-    workout[0]?.name ?? 'Workout',
+  formatHostScheduledSessionWorkout: (workout: { name: string }[]) => workout[0]?.name ?? 'Workout',
   formatHostScheduledSessionRallyTime: () => 'Rally time',
   formatHostScheduledSessionState: (state: string) => state,
 }));
 
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
+const LOBBY_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
 afterEach(() => {
   cleanup();
   joinSessionMock.mockReset();
+  joinLobbyMock.mockReset();
   resumeSessionIdentityMock.mockReset();
   authState.isAuthenticated = false;
   authState.isAuthLoading = false;
@@ -68,6 +73,7 @@ function renderJoin(path: string) {
         <Routes>
           <Route path="/join" element={<JoinSessionPage />} />
           <Route path="/session/:sessionId" element={<p>In lobby</p>} />
+          <Route path="/lobby/:lobbyId" element={<p>In staging</p>} />
         </Routes>
       </ThemeProvider>
     </MemoryRouter>
@@ -177,5 +183,57 @@ describe('JoinSessionPage deep link', () => {
     fireEvent.click(screen.getByRole('button', { name: /Join session/i }));
 
     expect(await screen.findByText(SESSION_RALLY_DEPARTED)).toBeTruthy();
+  });
+
+  it('routes ?l= to staging when the active session is finished', async () => {
+    joinLobbyMock.mockResolvedValue({
+      data: {
+        lobbyId: LOBBY_ID,
+        lobbyMemberId: 'm1',
+        sessionId: SESSION_ID,
+        sessionState: 'finished',
+        participantId: 'p1',
+        claimToken: null,
+        hostToken: null,
+      },
+      error: null,
+    });
+    renderJoin(`/join?l=${LOBBY_ID}`);
+
+    fireEvent.change(screen.getByLabelText(/Your name/i), {
+      target: { value: 'Jules' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Join session/i }));
+
+    await waitFor(() => {
+      expect(joinLobbyMock).toHaveBeenCalledWith({
+        lobbyId: LOBBY_ID,
+        nickname: 'Jules',
+      });
+    });
+    expect(await screen.findByText('In staging')).toBeTruthy();
+  });
+
+  it('routes ?l= to the session when the active session is live', async () => {
+    joinLobbyMock.mockResolvedValue({
+      data: {
+        lobbyId: LOBBY_ID,
+        lobbyMemberId: 'm1',
+        sessionId: SESSION_ID,
+        sessionState: 'waiting',
+        participantId: 'p1',
+        claimToken: 'c1',
+        hostToken: null,
+      },
+      error: null,
+    });
+    renderJoin(`/join?l=${LOBBY_ID}`);
+
+    fireEvent.change(screen.getByLabelText(/Your name/i), {
+      target: { value: 'Jules' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Join session/i }));
+
+    expect(await screen.findByText('In lobby')).toBeTruthy();
   });
 });

@@ -530,6 +530,7 @@ BEGIN
   v_role := NULL;
   v_claim_token := NULL;
   v_host_token := NULL;
+  v_session_state := NULL;
 
   IF v_session_id IS NOT NULL THEN
     SELECT state INTO v_session_state
@@ -552,6 +553,17 @@ BEGIN
           WHERE session_id = v_session_id
             AND user_id = v_uid
             AND id <> v_participant_id;
+
+          IF v_session_state IN ('waiting', 'setup', 'work') THEN
+            v_claim_token :=
+              replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
+            v_claim_hash := encode(digest(v_claim_token, 'sha256'), 'hex');
+
+            UPDATE public.participants
+            SET claim_token_hash = v_claim_hash,
+                nickname = coalesce(nullif(nickname, ''), v_nickname)
+            WHERE id = v_participant_id;
+          END IF;
 
           IF v_role = 'host' THEN
             SELECT host_token INTO v_host_token
@@ -596,6 +608,8 @@ BEGIN
 
         v_role := 'joiner';
       END IF;
+    ELSE
+      v_session_state := NULL;
     END IF;
   END IF;
 
@@ -606,6 +620,7 @@ BEGIN
     'status', v_lobby.status,
     'active_session_id', v_session_id,
     'session_id', v_session_id,
+    'session_state', v_session_state,
     'participant_id', v_participant_id,
     'nickname', v_nickname,
     'role', v_role,
@@ -1090,6 +1105,7 @@ AS $$
 DECLARE
   v_lobby public.lobbies%ROWTYPE;
   v_members jsonb;
+  v_active_session_state text;
 BEGIN
   IF p_lobby_id IS NULL THEN
     RAISE EXCEPTION 'Lobby not found';
@@ -1098,6 +1114,13 @@ BEGIN
   SELECT * INTO v_lobby FROM public.lobbies WHERE id = p_lobby_id;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Lobby not found';
+  END IF;
+
+  v_active_session_state := NULL;
+  IF v_lobby.active_session_id IS NOT NULL THEN
+    SELECT state INTO v_active_session_state
+    FROM public.sessions
+    WHERE id = v_lobby.active_session_id;
   END IF;
 
   SELECT coalesce(
@@ -1124,6 +1147,7 @@ BEGIN
     'lobby_id', v_lobby.id,
     'host_user_id', v_lobby.host_user_id,
     'active_session_id', v_lobby.active_session_id,
+    'active_session_state', v_active_session_state,
     'status', v_lobby.status,
     'created_at', v_lobby.created_at,
     'updated_at', v_lobby.updated_at,

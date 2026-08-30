@@ -19,10 +19,13 @@ export type LobbyMember = {
   joinedAt: string;
 };
 
+export type LobbySessionState = 'waiting' | 'setup' | 'work' | 'finished';
+
 export type LobbySnapshot = {
   lobbyId: string;
   hostUserId: string;
   activeSessionId: string | null;
+  activeSessionState: LobbySessionState | null;
   status: 'open' | 'closed';
   createdAt: string;
   updatedAt: string;
@@ -45,12 +48,26 @@ export type JoinLobbyResult = {
   status: string;
   activeSessionId: string | null;
   sessionId: string | null;
+  sessionState: LobbySessionState | null;
   participantId: string | null;
   nickname: string;
   role: 'host' | 'joiner' | null;
   claimToken: string | null;
   hostToken: string | null;
 };
+
+export function isLiveLobbySessionState(
+  state: string | null | undefined
+): state is 'waiting' | 'setup' | 'work' {
+  return state === 'waiting' || state === 'setup' || state === 'work';
+}
+
+function parseLobbySessionState(value: unknown): LobbySessionState | null {
+  if (value === 'waiting' || value === 'setup' || value === 'work' || value === 'finished') {
+    return value;
+  }
+  return null;
+}
 
 const LOBBY_ID_UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -227,6 +244,7 @@ export async function joinLobby(input: {
   const role = roleRaw === 'host' || roleRaw === 'joiner' ? roleRaw : null;
   const claimToken = readString(raw.claim_token);
   const hostToken = readString(raw.host_token);
+  const sessionState = parseLobbySessionState(raw.session_state);
 
   if (!lobbyId || !lobbyMemberId || !hostUserId) {
     return { data: null, error: { message: 'Something went wrong. Please try again.' } };
@@ -257,6 +275,7 @@ export async function joinLobby(input: {
       status,
       activeSessionId,
       sessionId,
+      sessionState,
       participantId,
       nickname: readString(raw.nickname) ?? nickname,
       role,
@@ -303,6 +322,7 @@ export async function getLobby(
       lobbyId: id,
       hostUserId,
       activeSessionId: readString(raw.active_session_id),
+      activeSessionState: parseLobbySessionState(raw.active_session_state),
       status,
       createdAt,
       updatedAt,

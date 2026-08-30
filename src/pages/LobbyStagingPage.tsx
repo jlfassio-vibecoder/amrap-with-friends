@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
@@ -7,6 +7,7 @@ import { useLobbyChannel } from '@/lib/realtime/useLobbyChannel';
 import {
   claimLobbyCommandIfStale,
   closeLobby,
+  joinLobby,
   leaveLobby,
   passLobbyCommand,
   startNextLobbySession,
@@ -29,7 +30,7 @@ const STALE_CHECK_MS = 20_000;
 export default function LobbyStagingPage() {
   const { lobbyId = '' } = useParams<{ lobbyId: string }>();
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAmrapAuth();
+  const { user, isAuthenticated, isAuthLoading } = useAmrapAuth();
 
   const [memberId, setMemberId] = useState(() => getStoredLobbyMemberId(lobbyId) ?? '');
   const [nickname, setNickname] = useState(
@@ -40,6 +41,7 @@ export default function LobbyStagingPage() {
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const rejoinAttemptedRef = useRef(false);
 
   const presence = memberId ? { memberId, nickname } : null;
   const { lobby, presenceByMemberId, error, refresh } = useLobbyChannel(
@@ -50,8 +52,10 @@ export default function LobbyStagingPage() {
   useLobbyForceNav({
     lobbyId,
     activeSessionId: lobby?.activeSessionId,
+    activeSessionState: lobby?.activeSessionState,
     currentSessionId: null,
     enabled: Boolean(lobby && lobby.status === 'open'),
+    onError: setActionError,
   });
 
   useEffect(() => {
@@ -67,6 +71,36 @@ export default function LobbyStagingPage() {
       setNickname(storedNick);
     }
   }, [lobbyId, isAuthenticated]);
+
+  // Deep link / new tab: rejoin so memberId exists for presence + force-nav.
+  useEffect(() => {
+    if (!lobbyId || isAuthLoading || rejoinAttemptedRef.current) {
+      return;
+    }
+    if (getStoredLobbyMemberId(lobbyId)) {
+      return;
+    }
+    const callsign = getStoredLobbyNickname(lobbyId) ?? callsignFromEmail(user?.email) ?? nickname;
+    if (!callsign.trim()) {
+      return;
+    }
+    // Guests need a prior nickname; authenticated users rejoin with callsign.
+    if (!isAuthenticated && !getStoredLobbyNickname(lobbyId)) {
+      return;
+    }
+    rejoinAttemptedRef.current = true;
+    void (async () => {
+      const result = await joinLobby({ lobbyId, nickname: callsign });
+      if (result.error || !result.data) {
+        setActionError(result.error?.message ?? 'Could not rejoin staging.');
+        rejoinAttemptedRef.current = false;
+        return;
+      }
+      setMemberId(result.data.lobbyMemberId);
+      setNickname(result.data.nickname);
+      await refresh();
+    })();
+  }, [lobbyId, isAuthenticated, isAuthLoading, user?.email, nickname, refresh]);
 
   useEffect(() => {
     if (!lobbyId || !memberId || !isAuthenticated) {
@@ -95,15 +129,6 @@ export default function LobbyStagingPage() {
     return () => window.clearInterval(id);
   }, [lobby, user?.id, refresh]);
 
-  // If the active session is still waiting, drop into it (first mission / resume).
-  useEffect(() => {
-    if (!lobby?.activeSessionId) {
-      return;
-    }
-    // Force-nav hook handles navigation when session id is set; first paint into
-    // waiting is the same path. Keep a soft link below for manual entry.
-  }, [lobby?.activeSessionId]);
-
   useEffect(() => {
     if (!lobby || !user?.id || lobby.hostUserId !== user.id || !lobby.activeSessionId) {
       return;
@@ -116,6 +141,7 @@ export default function LobbyStagingPage() {
   }, [lobby, user?.id]);
 
   const isHost = Boolean(user?.id && lobby && lobby.hostUserId === user.id);
+  const displayError = actionError ?? error;
 
   async function handlePassCommand(toUserId: string) {
     setActionError(null);
@@ -211,7 +237,7 @@ export default function LobbyStagingPage() {
     return (
       <main className="min-h-screen bg-page p-6">
         <AppHeader title="Staging area" />
-        <p className="text-error mt-6">{error}</p>
+        <p className="text-error mt-6">{displayError}</p>
         <Link className="link-accent mt-4 inline-block" to="/">
           Back home
         </Link>
@@ -311,7 +337,7 @@ export default function LobbyStagingPage() {
                   onChange={(e) => setWorkoutText(e.target.value)}
                 />
               </label>
-              {actionError ? <p className="text-error text-sm">{actionError}</p> : null}
+              {displayError ? <p className="text-error text-sm">{displayError}</p> : null}
               <button type="submit" className="btn-primary w-full" disabled={busy}>
                 {busy ? 'Starting…' : 'Start next session'}
               </button>
@@ -328,7 +354,7 @@ export default function LobbyStagingPage() {
         ) : (
           <section className="card space-y-2 p-5">
             <p className="text-sm text-secondary">Waiting for host to pick the next session.</p>
-            {actionError ? <p className="text-error text-sm">{actionError}</p> : null}
+            {displayError ? <p className="text-error text-sm">{displayError}</p> : null}
           </section>
         )}
 

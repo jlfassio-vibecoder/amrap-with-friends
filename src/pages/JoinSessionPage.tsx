@@ -10,7 +10,7 @@ import {
   mapDeepLinkJoinError,
   SESSION_LOCKED_OR_INVALID,
 } from '@/lib/api/sessions';
-import { isLobbyIdUuid, joinLobby } from '@/lib/api/lobby';
+import { isLobbyIdUuid, joinLobby, isLiveLobbySessionState } from '@/lib/api/lobby';
 import { callsignFromEmail } from '@/lib/sessionIdentity';
 import { getSupabaseConfigError } from '@/lib/supabase';
 import { unlockTacticalAudio } from '@/lib/audio/tacticalSynthesis';
@@ -31,10 +31,8 @@ export default function JoinSessionPage() {
 
   const { user, isAuthenticated, isAuthLoading } = useAmrapAuth();
   const authCallsign = callsignFromEmail(user?.email);
-  const canAutoJoinSession =
-    rallyDeepLink && rallyUuidValid && isAuthenticated && !!authCallsign;
-  const canAutoJoinLobby =
-    lobbyDeepLink && lobbyUuidValid && isAuthenticated && !!authCallsign;
+  const canAutoJoinSession = rallyDeepLink && rallyUuidValid && isAuthenticated && !!authCallsign;
+  const canAutoJoinLobby = lobbyDeepLink && lobbyUuidValid && isAuthenticated && !!authCallsign;
 
   const [sessionId, setSessionId] = useState('');
   const [nickname, setNickname] = useState('');
@@ -61,7 +59,7 @@ export default function JoinSessionPage() {
         setError(result.error.message);
         return;
       }
-      if (result.data?.sessionId) {
+      if (result.data?.sessionId && isLiveLobbySessionState(result.data.sessionState)) {
         navigate(`/session/${result.data.sessionId}`);
         return;
       }
@@ -102,11 +100,7 @@ export default function JoinSessionPage() {
           return;
         }
         if (resumed.error) {
-          setError(
-            deep
-              ? mapDeepLinkJoinError(resumed.error.message)
-              : resumed.error.message
-          );
+          setError(deep ? mapDeepLinkJoinError(resumed.error.message) : resumed.error.message);
           return;
         }
       }
@@ -117,9 +111,7 @@ export default function JoinSessionPage() {
       });
 
       if (result.error) {
-        setError(
-          deep ? mapDeepLinkJoinError(result.error.message) : result.error.message
-        );
+        setError(deep ? mapDeepLinkJoinError(result.error.message) : result.error.message);
         return;
       }
 
@@ -141,8 +133,7 @@ export default function JoinSessionPage() {
         navigate(`/session/${targetSessionId.trim()}`);
       }
     } catch (e) {
-      const message =
-        e instanceof Error ? e.message : 'Something went wrong. Please try again.';
+      const message = e instanceof Error ? e.message : 'Something went wrong. Please try again.';
       setError(deep ? mapDeepLinkJoinError(message) : message);
     } finally {
       setLoading(false);
@@ -219,9 +210,7 @@ export default function JoinSessionPage() {
   if (deepLink && (canAutoJoinSession || canAutoJoinLobby) && !error) {
     return (
       <NarrowPageLayout title="Join session" subtitle="You’ve been invited">
-        <p className="text-sm text-secondary">
-          Welcome, {authCallsign}. Joining…
-        </p>
+        <p className="text-sm text-secondary">Welcome, {authCallsign}. Joining…</p>
         {loading ? <p className="text-sm text-secondary">Joining…</p> : null}
       </NarrowPageLayout>
     );
@@ -235,16 +224,12 @@ export default function JoinSessionPage() {
         </p>
         <div className="hidden space-y-2 lg:block">
           <h1 className="text-display text-5xl text-ink">You’ve been invited</h1>
-          <p className="text-sm text-secondary">
-            Enter a name to join. No account required.
-          </p>
+          <p className="text-sm text-secondary">Enter a name to join. No account required.</p>
         </div>
 
         <form className="card space-y-4 p-6" onSubmit={handleSubmit}>
           <label className="block space-y-1">
-            <span className="text-sm font-semibold uppercase tracking-wide">
-              Your name
-            </span>
+            <span className="text-sm font-semibold uppercase tracking-wide">Your name</span>
             <input
               className="input-field"
               value={nickname}
@@ -258,7 +243,11 @@ export default function JoinSessionPage() {
 
           {error ? <p className="text-error">{error}</p> : null}
 
-          <button type="submit" className="btn-primary w-full uppercase tracking-widest" disabled={loading}>
+          <button
+            type="submit"
+            className="btn-primary w-full uppercase tracking-widest"
+            disabled={loading}
+          >
             {loading ? 'Joining…' : 'Join session'}
           </button>
         </form>
@@ -276,15 +265,11 @@ export default function JoinSessionPage() {
 
   return (
     <NarrowPageLayout title="Join session" subtitle="Enter a session ID">
-      <p className="text-sm text-secondary lg:hidden">
-        Enter the session ID shared by your host.
-      </p>
+      <p className="text-sm text-secondary lg:hidden">Enter the session ID shared by your host.</p>
 
       <div className="hidden space-y-2 lg:block">
         <h1 className="text-display text-5xl text-ink">Join session</h1>
-        <p className="text-sm text-secondary">
-          Enter the session ID shared by your host.
-        </p>
+        <p className="text-sm text-secondary">Enter the session ID shared by your host.</p>
       </div>
 
       <form className="card space-y-4 p-6" onSubmit={handleSubmit}>
@@ -321,7 +306,9 @@ export default function JoinSessionPage() {
       <HostScheduledSessionsPanel />
 
       <p className="text-center text-sm">
-        <Link className="link-accent" to="/create">Create a new session</Link>
+        <Link className="link-accent" to="/create">
+          Create a new session
+        </Link>
       </p>
     </NarrowPageLayout>
   );

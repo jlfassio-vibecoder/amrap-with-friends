@@ -34,8 +34,13 @@ import { useStagingWalkthrough } from '@/components/walkthrough/useStagingWalkth
 import { useGhostPacer } from '@/hooks/useGhostPacer';
 import { useTacticalAudio } from '@/hooks/useTacticalAudio';
 import { useLobbyForceNav } from '@/hooks/useLobbyForceNav';
-import { getLobby } from '@/lib/api/lobby';
-import { setStoredLobbyIdForSession, getStoredLobbyIdForSession } from '@/lib/lobbyIdentity';
+import { useLobbyChannel } from '@/lib/realtime/useLobbyChannel';
+import {
+  getStoredLobbyIdForSession,
+  getStoredLobbyMemberId,
+  getStoredLobbyNickname,
+  setStoredLobbyIdForSession,
+} from '@/lib/lobbyIdentity';
 import type { StoredGhostSelection } from '@/lib/sessionIdentity';
 import {
   elapsedPastLobbyCountdownSec,
@@ -68,12 +73,9 @@ function phaseLabel(phase: string): string {
 function WaitingTypewriterLabel() {
   const WORD = 'WAITING';
   const prefersReducedMotion =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const [chars, setChars] = useState(() =>
-    prefersReducedMotion ? WORD.length : 0
-  );
+  const [chars, setChars] = useState(() => (prefersReducedMotion ? WORD.length : 0));
   const [dots, setDots] = useState(() => (prefersReducedMotion ? 3 : 0));
 
   useEffect(() => {
@@ -107,11 +109,7 @@ function WaitingTypewriterLabel() {
   );
 }
 
-function formatExerciseLabel(exercise: {
-  name: string;
-  target?: number;
-  unit?: string;
-}): string {
+function formatExerciseLabel(exercise: { name: string; target?: number; unit?: string }): string {
   if (exercise.target === undefined) {
     return exercise.name;
   }
@@ -179,9 +177,7 @@ export default function SessionWaitingRoomPage() {
   const { isAuthenticated, isAuthLoading } = useAmrapAuth();
 
   const syncBootstrap =
-    sessionId && !isAuthLoading
-      ? readSyncIdentityBootstrap(sessionId, isAuthenticated)
-      : null;
+    sessionId && !isAuthLoading ? readSyncIdentityBootstrap(sessionId, isAuthenticated) : null;
   const needsResume = syncBootstrap?.kind === 'need-resume';
   const resumeKey = `${sessionId ?? ''}:${isAuthenticated}:${isAuthLoading}`;
 
@@ -266,8 +262,7 @@ export default function SessionWaitingRoomPage() {
           key: resumeKey,
           settled: true,
           identity: null,
-          error:
-            'No participant identity found for this session. Join or create again.',
+          error: 'No participant identity found for this session. Join or create again.',
         });
         return;
       }
@@ -311,14 +306,15 @@ export default function SessionWaitingRoomPage() {
       : resumeState.key === resumeKey
         ? resumeState.identity
         : null;
-  const activeResumeError =
-    resumeState.key === resumeKey ? resumeState.error : null;
+  const activeResumeError = resumeState.key === resumeKey ? resumeState.error : null;
 
   if (!sessionId) {
     return (
       <main className="mx-auto max-w-lg space-y-4 p-6">
         <p className="text-error">Error: Missing session ID.</p>
-        <Link className="link-accent" to="/">Back home</Link>
+        <Link className="link-accent" to="/">
+          Back home
+        </Link>
       </main>
     );
   }
@@ -331,12 +327,8 @@ export default function SessionWaitingRoomPage() {
     );
   }
 
-  const participantId =
-    activeRestored?.participantId ?? getStoredParticipantId(sessionId);
-  const nickname =
-    activeRestored?.nickname ??
-    getStoredNickname(sessionId) ??
-    'Unknown';
+  const participantId = activeRestored?.participantId ?? getStoredParticipantId(sessionId);
+  const nickname = activeRestored?.nickname ?? getStoredNickname(sessionId) ?? 'Unknown';
   const hostTokenPresent = Boolean(getStoredHostToken(sessionId));
 
   if (participantId) {
@@ -389,8 +381,8 @@ function LiveSessionView({
   const [scorecardDismissed, setScorecardDismissed] = useState(false);
   const [authOpenForSave, setAuthOpenForSave] = useState(false);
   const pendingSaveAfterAuth = useRef(false);
-  const [ghostSelection, setGhostSelection] = useState<StoredGhostSelection | null>(
-    () => getStoredGhostSelection(sessionId)
+  const [ghostSelection, setGhostSelection] = useState<StoredGhostSelection | null>(() =>
+    getStoredGhostSelection(sessionId)
   );
   // Copilot suggestion ignored: activeGhostSelection already gates stored selection on isAuthenticated.
   const activeGhostSelection = isAuthenticated ? ghostSelection : null;
@@ -406,8 +398,7 @@ function LiveSessionView({
   const live = useLiveAmrapSession(sessionId, channel);
   const { isHost, start: startSession, phase: livePhase } = live;
 
-  const lobbyId =
-    channel.session?.lobby_id ?? getStoredLobbyIdForSession(sessionId) ?? null;
+  const lobbyId = channel.session?.lobby_id ?? getStoredLobbyIdForSession(sessionId) ?? null;
 
   useEffect(() => {
     if (channel.session?.lobby_id) {
@@ -415,29 +406,16 @@ function LiveSessionView({
     }
   }, [channel.session?.lobby_id, sessionId]);
 
-  const [lobbyActiveSessionId, setLobbyActiveSessionId] = useState<string | null>(null);
-  useEffect(() => {
-    if (!lobbyId || livePhase !== 'finished') {
-      return;
-    }
-    let cancelled = false;
-    void getLobby(lobbyId).then((result) => {
-      if (!cancelled && result.data) {
-        setLobbyActiveSessionId(result.data.activeSessionId);
-      }
-    });
-    const id = window.setInterval(() => {
-      void getLobby(lobbyId).then((result) => {
-        if (!cancelled && result.data) {
-          setLobbyActiveSessionId(result.data.activeSessionId);
-        }
-      });
-    }, 4000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(id);
-    };
-  }, [lobbyId, livePhase]);
+  const lobbyMemberId = lobbyId ? getStoredLobbyMemberId(lobbyId) : null;
+  const lobbyNickname = (lobbyId ? getStoredLobbyNickname(lobbyId) : null) ?? nickname;
+  const lobbyChannelPresence =
+    lobbyId && lobbyMemberId && lobbyNickname
+      ? { memberId: lobbyMemberId, nickname: lobbyNickname }
+      : null;
+  const lobbyChannel = useLobbyChannel(
+    livePhase === 'finished' && lobbyId ? lobbyId : undefined,
+    lobbyChannelPresence
+  );
 
   const walkthrough = useStagingWalkthrough({
     sessionId,
@@ -452,16 +430,13 @@ function LiveSessionView({
     workDurationSec: live.workDurationSec,
   });
   const claim = useParticipantClaim(sessionId);
-  const selfLeaderboardEntry =
-    live.leaderboard.find((entry) => entry.isSelf) ?? null;
+  const selfLeaderboardEntry = live.leaderboard.find((entry) => entry.isSelf) ?? null;
   const selfBaseScore = selfLeaderboardEntry?.baseScore ?? 0;
 
   const lobbyCountdownEndsAt = live.lobbyCountdownEndsAt;
   const lobbyRemaining = remainingLobbyCountdownSec(lobbyCountdownEndsAt, nowMs);
-  const lobbyCountdownArmed =
-    livePhase === 'waiting' && lobbyCountdownEndsAt !== null;
-  const lobbyTicking =
-    lobbyCountdownArmed && lobbyRemaining !== null && lobbyRemaining > 0;
+  const lobbyCountdownArmed = livePhase === 'waiting' && lobbyCountdownEndsAt !== null;
+  const lobbyTicking = lobbyCountdownArmed && lobbyRemaining !== null && lobbyRemaining > 0;
   const lobbyIgnited = lobbyCountdownArmed && lobbyRemaining === 0;
   const lobbyOvertimeSec = lobbyIgnited
     ? elapsedPastLobbyCountdownSec(lobbyCountdownEndsAt, nowMs)
@@ -487,9 +462,7 @@ function LiveSessionView({
   });
 
   const isSoloTemplated =
-    live.participantCount === 1 &&
-    live.templateId !== null &&
-    livePhase === 'waiting';
+    live.participantCount === 1 && live.templateId !== null && livePhase === 'waiting';
   const showGhostPicker = isSoloTemplated;
   // Copilot suggestion ignored: ghost pacer error display and strip suppression on load failure already exist.
   const showGhostPacerError =
@@ -508,20 +481,13 @@ function LiveSessionView({
     !live.isPractice &&
     safetyNoticesComplete;
   const showPractice =
-    livePhase === 'waiting' &&
-    !lobbyCountdownArmed &&
-    !live.isPractice &&
-    safetyNoticesComplete;
-  const showSafetyNotice =
-    livePhase === 'waiting' && activeSafetyNotice !== null;
+    livePhase === 'waiting' && !lobbyCountdownArmed && !live.isPractice && safetyNoticesComplete;
+  const showSafetyNotice = livePhase === 'waiting' && activeSafetyNotice !== null;
   const showWalkthrough = walkthrough.active;
   const showWalkthroughFinale = walkthrough.showingFinale;
   const waitingStartPracticeActions =
     showStart || showPractice ? (
-      <div
-        className="flex flex-wrap items-center gap-2"
-        data-walkthrough-id="actions"
-      >
+      <div className="flex flex-wrap items-center gap-2" data-walkthrough-id="actions">
         {showStart ? (
           <button
             type="button"
@@ -550,14 +516,8 @@ function LiveSessionView({
         ) : null}
       </div>
     ) : null;
-  const showPause =
-    livePhase === 'work' &&
-    !live.isPaused &&
-    (isHost || live.isPractice);
-  const showResume =
-    livePhase === 'work' &&
-    live.isPaused &&
-    (isHost || live.isPractice);
+  const showPause = livePhase === 'work' && !live.isPaused && (isHost || live.isPractice);
+  const showResume = livePhase === 'work' && live.isPaused && (isHost || live.isPractice);
   const showLogRound = livePhase === 'work' && !live.isPaused;
   const showEndPractice = live.isPractice && livePhase === 'finished';
   const showPartialRepsModal =
@@ -580,7 +540,8 @@ function LiveSessionView({
 
   useLobbyForceNav({
     lobbyId,
-    activeSessionId: lobbyActiveSessionId,
+    activeSessionId: lobbyChannel.lobby?.activeSessionId,
+    activeSessionState: lobbyChannel.lobby?.activeSessionState,
     currentSessionId: sessionId,
     enabled: livePhase === 'finished' && !showPartialRepsModal,
   });
@@ -676,24 +637,14 @@ function LiveSessionView({
           undefined
         }
       >
-        <AppHeader
-          title="Staging area"
-          subtitle={hostStatusText}
-          desktopTitleAsPageHeading
-        />
+        <AppHeader title="Staging area" subtitle={hostStatusText} desktopTitleAsPageHeading />
 
-        <div className="space-y-6 px-6 pb-6 pt-0 lg:mx-auto lg:w-full lg:max-w-7xl lg:shrink-0 lg:space-y-4 lg:px-8 lg:pt-6 lg:pb-0">
-          {live.syncError && (
-            <p className="alert-error">{live.syncError}</p>
-          )}
+        <div className="space-y-6 px-6 pb-6 pt-0 lg:mx-auto lg:w-full lg:max-w-7xl lg:shrink-0 lg:space-y-4 lg:px-8 lg:pb-0 lg:pt-6">
+          {live.syncError && <p className="alert-error">{live.syncError}</p>}
 
-          {claim.claimError && (
-            <p className="alert-error">{claim.claimError}</p>
-          )}
+          {claim.claimError && <p className="alert-error">{claim.claimError}</p>}
 
-          {claim.claimMessage && (
-            <p className="alert-success">{claim.claimMessage}</p>
-          )}
+          {claim.claimMessage && <p className="alert-success">{claim.claimMessage}</p>}
 
           {showFinishedClaimPrompt && (
             <section className="card space-y-2 bg-accent-tint p-4 text-sm">
@@ -728,8 +679,8 @@ function LiveSessionView({
           )}
         </div>
 
-        <div className="space-y-6 px-6 lg:mx-auto lg:grid lg:w-full lg:max-w-7xl lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:items-stretch lg:gap-6 lg:space-y-0 lg:overflow-hidden lg:px-8 lg:py-6">
-          <div className="space-y-6 lg:flex lg:min-h-0 lg:flex-col lg:gap-4 lg:overflow-hidden lg:space-y-0">
+        <div className="space-y-6 px-6 lg:mx-auto lg:grid lg:min-h-0 lg:w-full lg:max-w-7xl lg:flex-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:items-stretch lg:gap-6 lg:space-y-0 lg:overflow-hidden lg:px-8 lg:py-6">
+          <div className="space-y-6 lg:flex lg:min-h-0 lg:flex-col lg:gap-4 lg:space-y-0 lg:overflow-hidden">
             <div className="space-y-4 lg:flex lg:min-h-0 lg:shrink lg:flex-col lg:gap-3 lg:space-y-0 lg:overflow-y-auto lg:rounded-card lg:border lg:border-border lg:bg-surface lg:p-4 lg:shadow-card">
               <section
                 className="card space-y-1.5 p-3 text-center lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none"
@@ -743,11 +694,11 @@ function LiveSessionView({
                   </p>
                 )}
                 {live.phase === 'waiting' && (lobbyTicking || lobbyIgnited) ? (
-                  <p className="font-mono text-accent tabular-nums text-3xl tracking-widest lg:text-5xl">
+                  <p className="font-mono text-3xl tabular-nums tracking-widest text-accent lg:text-5xl">
                     {formatTMinus(lobbyRemaining ?? 0)}
                   </p>
                 ) : live.phase !== 'waiting' ? (
-                  <p className="text-display text-accent tabular-nums text-5xl lg:text-7xl xl:text-8xl">
+                  <p className="text-display text-5xl tabular-nums text-accent lg:text-7xl xl:text-8xl">
                     {formatTime(live.timeLeftSec)}
                   </p>
                 ) : null}
@@ -767,9 +718,7 @@ function LiveSessionView({
                   </div>
                 ) : null}
                 {live.phase === 'work' || live.phase === 'finished' ? (
-                  <p className="text-sm text-secondary">
-                    Elapsed: {formatTime(live.elapsedSec)}
-                  </p>
+                  <p className="text-sm text-secondary">Elapsed: {formatTime(live.elapsedSec)}</p>
                 ) : null}
                 <p className="text-xs text-muted">
                   Realtime:{' '}
@@ -804,9 +753,7 @@ function LiveSessionView({
                       })}
                     </p>
                     {waitingStartPracticeActions ? (
-                      <div className="flex justify-center">
-                        {waitingStartPracticeActions}
-                      </div>
+                      <div className="flex justify-center">{waitingStartPracticeActions}</div>
                     ) : null}
                   </div>
                 )
@@ -848,9 +795,7 @@ function LiveSessionView({
 
               <section
                 className="flex flex-wrap gap-2 lg:justify-center"
-                {...(waitingStartPracticeActions
-                  ? {}
-                  : { 'data-walkthrough-id': 'actions' })}
+                {...(waitingStartPracticeActions ? {} : { 'data-walkthrough-id': 'actions' })}
               >
                 {showPause && (
                   <button
@@ -916,10 +861,7 @@ function LiveSessionView({
             </div>
 
             {live.workout.length > 0 && (
-              <section
-                className="card shrink-0 space-y-2 p-4"
-                data-walkthrough-id="workout"
-              >
+              <section className="card shrink-0 space-y-2 p-4" data-walkthrough-id="workout">
                 <h2 className="text-display text-sm text-ink lg:text-lg">Workout</h2>
                 <ul className="space-y-1 text-sm lg:space-y-4">
                   {live.workout.map((exercise, index) => (

@@ -83,6 +83,41 @@ describe('lobby API', () => {
     expect(result.error?.message).toBe('Staging area not found.');
   });
 
+  it('joinLobby persists rotated claim_token and session_state on reclaim', async () => {
+    rpcMock.mockResolvedValue({
+      data: {
+        lobby_id: LOBBY_ID,
+        lobby_member_id: MEMBER_ID,
+        host_user_id: 'user-1',
+        status: 'open',
+        active_session_id: SESSION_ID,
+        session_id: SESSION_ID,
+        session_state: 'waiting',
+        participant_id: PARTICIPANT_ID,
+        nickname: 'Jules',
+        role: 'joiner',
+        claim_token: 'rotated-claim',
+        host_token: null,
+      },
+      error: null,
+      count: null,
+      status: 200,
+      statusText: 'OK',
+    } as never);
+
+    const result = await joinLobby({ lobbyId: LOBBY_ID, nickname: 'Jules' });
+    expect(result.error).toBeNull();
+    expect(result.data?.sessionState).toBe('waiting');
+    expect(result.data?.claimToken).toBe('rotated-claim');
+    expect(sessionIdentity.persistSessionIdentity).toHaveBeenCalledWith(
+      SESSION_ID,
+      expect.objectContaining({
+        participantId: PARTICIPANT_ID,
+        claimToken: 'rotated-claim',
+      })
+    );
+  });
+
   it('passLobbyCommand returns null host_token and clears the old host token', async () => {
     rpcMock.mockResolvedValue({
       data: {
