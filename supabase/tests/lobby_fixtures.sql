@@ -16,6 +16,10 @@
 --  10. anon SELECT on lobbies / lobby_members returns 0 rows (no grant / no policy)
 --  11. authenticated non-member SELECT on another crew's lobby returns 0 rows
 --  12. authenticated active member SELECT sees own lobby row
+--  13. guest join_lobby returns seat_claim; reclaim with wrong/missing claim does not
+--      take another guest's seat (new seat or left:false)
+--  14. guest leave_lobby without matching seat_claim cannot mark another seat left
+--  15. anon get_lobby redacts host_user_id and member user_id (nulls)
 
 -- Example (adjust ids / workout jsonb to match validate_workout):
 --
@@ -132,3 +136,19 @@
 -- SET request.jwt.claim.sub = '<uuid-a>';
 -- SELECT id FROM public.lobbies WHERE id = '<lobby_id>';
 -- -- Expect: 1 row
+--
+-- -- Guest seat claim: join as anon, reclaim requires seat_claim
+-- RESET ROLE;
+-- SELECT set_config('request.jwt.claim.sub', '', true);
+-- SELECT public.join_lobby('<lobby_id>', 'Guest');
+-- -- Expect: lobby_member_id + seat_claim
+-- -- Reclaim with member id alone (null claim) must not touch that seat
+-- SELECT public.join_lobby('<lobby_id>', 'Guest', '<member_id>', NULL);
+-- -- Expect: new lobby_member_id (or Lobby is full), original seat still active
+-- -- Leave with wrong claim must not mark seat left
+-- SELECT public.leave_lobby('<lobby_id>', '<member_id>', 'wrong');
+-- -- Expect: left false
+--
+-- -- Anon get_lobby redacts auth UUIDs
+-- SELECT public.get_lobby('<lobby_id>');
+-- -- Expect: host_user_id null; members[].user_id null

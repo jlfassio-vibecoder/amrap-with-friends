@@ -131,7 +131,8 @@ export default function LobbyStagingPage() {
   }, [lobbyId, memberId, isAuthenticated]);
 
   const hostMemberId =
-    lobby?.members.find((member) => member.userId === lobby.hostUserId)?.id ?? null;
+    lobby?.members.find((member) => Boolean(lobby.hostUserId) && member.userId === lobby.hostUserId)
+      ?.id ?? null;
 
   useStaleLobbyHostClaim({
     lobbyId,
@@ -342,7 +343,9 @@ export default function LobbyStagingPage() {
             <ul className="space-y-2">
               {lobby.members.map((member) => {
                 const online = Boolean(presenceByMemberId[member.id]);
-                const isMemberHost = member.userId === lobby.hostUserId;
+                const isMemberHost = Boolean(
+                  lobby.hostUserId && member.userId === lobby.hostUserId
+                );
                 const canPass = isHost && canPassLobbyCommand(member, user?.id);
                 return (
                   <li

@@ -22,6 +22,7 @@ vi.mock('@/lib/lobbyIdentity', () => ({
   persistLobbyIdentity: vi.fn(),
   getStoredLobbyMemberId: vi.fn(() => 'member-1'),
   getStoredLobbyNickname: vi.fn(() => 'Host'),
+  getStoredLobbySeatClaim: vi.fn(() => 'seat-secret'),
 }));
 vi.mock('@/lib/analytics/track', () => ({ track: vi.fn() }));
 
@@ -255,6 +256,7 @@ describe('lobby API', () => {
 
     it('hands the stored member id back so a guest reclaims its seat', async () => {
       vi.mocked(lobbyIdentity.getStoredLobbyMemberId).mockReturnValue(MEMBER_ID);
+      vi.mocked(lobbyIdentity.getStoredLobbySeatClaim).mockReturnValue('seat-secret');
       joinOk();
 
       await joinLobby({ lobbyId: LOBBY_ID, nickname: 'Guesty' });
@@ -263,11 +265,13 @@ describe('lobby API', () => {
         p_lobby_id: LOBBY_ID,
         p_nickname: 'Guesty',
         p_lobby_member_id: MEMBER_ID,
+        p_seat_claim: 'seat-secret',
       });
     });
 
     it('sends null on a first visit, so a new guest gets a fresh seat', async () => {
       vi.mocked(lobbyIdentity.getStoredLobbyMemberId).mockReturnValue(null);
+      vi.mocked(lobbyIdentity.getStoredLobbySeatClaim).mockReturnValue(null);
       joinOk();
 
       await joinLobby({ lobbyId: LOBBY_ID, nickname: 'Newcomer' });
@@ -276,6 +280,7 @@ describe('lobby API', () => {
         p_lobby_id: LOBBY_ID,
         p_nickname: 'Newcomer',
         p_lobby_member_id: null,
+        p_seat_claim: null,
       });
     });
 
@@ -287,7 +292,7 @@ describe('lobby API', () => {
 
       expect(rpcMock).toHaveBeenCalledWith(
         'join_lobby',
-        expect.objectContaining({ p_lobby_member_id: null })
+        expect.objectContaining({ p_lobby_member_id: null, p_seat_claim: null })
       );
     });
   });
@@ -305,6 +310,7 @@ describe('lobby API', () => {
 
     it('hands the stored member id back so a guest can leave', async () => {
       vi.mocked(lobbyIdentity.getStoredLobbyMemberId).mockReturnValue(MEMBER_ID);
+      vi.mocked(lobbyIdentity.getStoredLobbySeatClaim).mockReturnValue('seat-secret');
       leaveOk();
 
       await leaveLobby(LOBBY_ID);
@@ -312,18 +318,20 @@ describe('lobby API', () => {
       expect(rpcMock).toHaveBeenCalledWith('leave_lobby', {
         p_lobby_id: LOBBY_ID,
         p_lobby_member_id: MEMBER_ID,
+        p_seat_claim: 'seat-secret',
       });
     });
 
     it('sends null when there is no stored seat', async () => {
       vi.mocked(lobbyIdentity.getStoredLobbyMemberId).mockReturnValue(null);
+      vi.mocked(lobbyIdentity.getStoredLobbySeatClaim).mockReturnValue(null);
       leaveOk();
 
       await leaveLobby(LOBBY_ID);
 
       expect(rpcMock).toHaveBeenCalledWith(
         'leave_lobby',
-        expect.objectContaining({ p_lobby_member_id: null })
+        expect.objectContaining({ p_lobby_member_id: null, p_seat_claim: null })
       );
     });
 
