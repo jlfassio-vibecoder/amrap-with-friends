@@ -175,6 +175,16 @@
   }
 
   .landing-headline {
-    @apply font-display uppercase leading-[0.82] tracking-[0.01em];
+    font-family: Rubik, system-ui, sans-serif;
+    @apply font-bold uppercase leading-[0.9] tracking-[0.02em];
+  }
+
+  .home-marketing {
+    font-family: 'DM Sans', system-ui, sans-serif;
+  }
+
+  .home-marketing .text-display {
+    font-family: Rubik, system-ui, sans-serif;
+    @apply font-extrabold;
   }
 }
