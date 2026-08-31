@@ -1,8 +1,9 @@
 # Epic: Mission read + Realtime scoping
 
-**Status:** Draft  
+**Status:** Phase 0 complete — ADR locked; Phases 1–2 pending  
 **Last updated:** 2026-08-31  
 **Follows:** Close policy + Rally point / Next Mission vocabulary pass  
+**Phase 0 ADR:** [`adr-mission-read-realtime-scoping.md`](./adr-mission-read-realtime-scoping.md)  
 **Related surfaces:** [`useMissionChannel.ts`](../../src/lib/realtime/useMissionChannel.ts), mission waiting room (`/mission/:id`), guest-first live sync
 
 ---
@@ -89,7 +90,7 @@ Entitlement (participant row or verified claim)
 useMissionChannel (same consumer API)
 ```
 
-### Design spike (do first)
+### Design spike (complete — see ADR)
 
 Lock one entitlement model before writing migrations:
 
@@ -99,7 +100,7 @@ Lock one entitlement model before writing migrations:
 | **B. RPC snapshot + narrow Realtime** | `get_mission_live_state(mission_id, claim)` for bootstrap; Realtime only after join | Clear security boundary | Two code paths; claim must still authorize Realtime |
 | **C. Mission-scoped views** | Views with `security_barrier` + grants; Realtime on views if supported | Cleaner filters | Supabase Realtime + view quirks; verify before committing |
 
-**Recommendation to start:** Spike **A vs B** against current guest claim storage (`sessionStorage` claim token, not a DB session variable). If anon cannot safely prove claim to PostgREST, prefer **B** for bootstrap and keep Realtime filters on `mission_id` for tables that already have that column; for `participant_segment_results`, add `mission_id` (denormalized) or subscribe per `participant_id` once the roster is known.
+**Locked by Phase 0 ADR:** **B** (RPC snapshot + narrow Realtime). **A** rejected (claim not in PostgREST/RLS context). **C** skipped unless B is blocked. Segment results: **denorm `mission_id`** (not `in.(participant_ids)`). See [`adr-mission-read-realtime-scoping.md`](./adr-mission-read-realtime-scoping.md).
 
 ### `participant_segment_results` specifically
 
@@ -108,24 +109,18 @@ Today ([`useMissionChannel.ts`](../../src/lib/realtime/useMissionChannel.ts) ~22
 - No filter on subscribe.
 - Handler drops events whose `participant_id` ∉ local roster.
 
-**Required outcome:** either
-
-1. Denormalize `mission_id` onto `participant_segment_results` (trigger/backfill) and filter `mission_id=eq.…`, or  
-2. After participants load, subscribe with `participant_id=in.(…)` (Supabase filter limits — document max roster size), or  
-3. Deliver score updates via mission channel broadcast / RPC poll for that table only.
-
-Pick one in the spike; (1) is usually the cleanest for Realtime at scale.
+**Chosen (Phase 0):** Denormalize `mission_id` onto `participant_segment_results` (trigger/backfill) and filter `mission_id=eq.…`. Rejected as primary path: `participant_id=in.(…)` (roster churn + filter length at cap 100).
 
 ---
 
 ## Suggested phases
 
-### Phase 0 — Spike + threat model (1–2 days)
+### Phase 0 — Spike + threat model (1–2 days) — **complete**
 
-- Document who may read: host, claimed user, anon with claim, spectator? (product: **no spectators** unless explicit).
-- Prove anon entitlement against PostgREST/Realtime.
-- Choose A/B/C and segment-results approach.
-- Acceptance: short ADR in this folder or a subsection below; no production cutover yet.
+- Documented who may read: host, claimed user, anon with claim; product **no spectators**.
+- Proved anon SELECT without claim (200 + rows) on hosted preview project; recorded in ADR.
+- Locked **B** + denorm `mission_id`; rejected A/C.
+- Deliverable: [`adr-mission-read-realtime-scoping.md`](./adr-mission-read-realtime-scoping.md). **No** production RLS revoke or live RPC cutover in this phase.
 
 ### Phase 1 — Segment-results Realtime scoping (P0)
 
@@ -149,7 +144,7 @@ Pick one in the spike; (1) is usually the cleanest for Realtime at scale.
 
 ## Acceptance criteria (epic done)
 
-- [ ] Design spike ADR recorded (entitlement + segment-results approach).
+- [x] Design spike ADR recorded (entitlement + segment-results approach) — [`adr-mission-read-realtime-scoping.md`](./adr-mission-read-realtime-scoping.md).
 - [ ] No unfiltered Realtime subscription on `participant_segment_results` (or successor path).
 - [ ] Mission table reads are entitlement-scoped; UUID alone is insufficient.
 - [ ] Guest join → live waiting room → work still works without sign-in.
