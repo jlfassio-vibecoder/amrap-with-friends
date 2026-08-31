@@ -66,7 +66,17 @@ describe('HostRallyPointSteps', () => {
     renderSteps();
     const durationHeader = screen.getByRole('button', { name: /Set duration/i });
     expect(durationHeader.getAttribute('aria-expanded')).toBe('true');
-    expect(screen.getByRole('button', { name: 'Start countdown' })).toBeTruthy();
+    const startCountdown = screen.getByRole('button', { name: 'Start countdown' });
+    expect(startCountdown).toBeTruthy();
+    expect(startCountdown).toHaveProperty('disabled', true);
+  });
+
+  it('enables Start countdown only after a duration is chosen', () => {
+    renderSteps();
+    const startCountdown = screen.getByRole('button', { name: 'Start countdown' });
+    expect(startCountdown).toHaveProperty('disabled', true);
+    fireEvent.click(screen.getByRole('button', { name: '5 MIN' }));
+    expect(startCountdown).toHaveProperty('disabled', false);
   });
 
   it('starts with all steps collapsed when the clock is armed', () => {

@@ -1,12 +1,32 @@
 import { describe, expect, it } from 'vitest';
 import {
+  effectiveRallyPointCountdownEndsAt,
   elapsedPastRallyPointCountdownSec,
   formatPlusElapsed,
   formatTMinus,
+  isPlausibleRallyPointCountdownEndsAt,
   remainingRallyPointCountdownSec,
+  RALLY_POINT_COUNTDOWN_MAX_SECONDS,
 } from './rallyPointCountdown';
 
 describe('rallyPointCountdown', () => {
+  it('rejects far-future ends_at that could not come from set_rally_point_countdown', () => {
+    const now = Date.parse('2026-08-25T12:00:00.000Z');
+    const scheduledHourOut = '2026-08-25T13:00:00.000Z';
+    expect(isPlausibleRallyPointCountdownEndsAt(scheduledHourOut, now)).toBe(false);
+    expect(effectiveRallyPointCountdownEndsAt(scheduledHourOut, now)).toBeNull();
+
+    const armedFiveMin = '2026-08-25T12:05:00.000Z';
+    expect(isPlausibleRallyPointCountdownEndsAt(armedFiveMin, now)).toBe(true);
+    expect(effectiveRallyPointCountdownEndsAt(armedFiveMin, now)).toBe(armedFiveMin);
+
+    const maxArmed = new Date(now + RALLY_POINT_COUNTDOWN_MAX_SECONDS * 1000).toISOString();
+    expect(isPlausibleRallyPointCountdownEndsAt(maxArmed, now)).toBe(true);
+
+    const pastEnd = '2026-08-25T11:59:00.000Z';
+    expect(isPlausibleRallyPointCountdownEndsAt(pastEnd, now)).toBe(true);
+  });
+
   it('returns null when endsAt is missing or invalid', () => {
     expect(remainingRallyPointCountdownSec(null, Date.now())).toBeNull();
     expect(remainingRallyPointCountdownSec(undefined, Date.now())).toBeNull();
