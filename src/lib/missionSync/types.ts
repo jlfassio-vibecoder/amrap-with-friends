@@ -35,6 +35,8 @@ export interface RoundRow {
   round_index: number;
   elapsed_sec_at_round: number;
   segment_index: number;
+  /** Reps into the next round when the athlete noticed; null when logged live. */
+  missed_log_reps: number | null;
   created_at: string;
 }
 
@@ -81,6 +83,12 @@ export interface LogRoundInput {
   roundIndex: number;
   elapsedSecAtRound: number;
   segmentIndex: number;
+  /**
+   * Set only when reconstructing a missed log: how many reps of the next round
+   * the athlete had done when they noticed. Flags the round as corrected and
+   * makes the server bound the back-dating.
+   */
+  missedLogReps?: number | null;
 }
 
 export interface LogRoundSuccess {

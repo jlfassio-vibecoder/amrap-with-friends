@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { updateMissionState, logRound, submitParticipantResult } from '@/lib/api/missionSync';
 import { computeElapsedSecForLogRound } from '@/lib/amrapTimer/computeElapsedSecForLogRound';
+import {
+  computeMissedRoundElapsedSec,
+  type MissedRoundEstimate,
+} from '@/lib/amrapTimer/computeMissedRoundElapsedSec';
 import { PRACTICE_WORK_DURATION_SEC } from '@/lib/amrapTimer/constants';
 import { selectElapsedSec } from '@/lib/amrapTimer/reducer';
 import type { AmrapRoundLog, AmrapTimerPhase } from '@/lib/amrapTimer/types';
@@ -65,6 +69,13 @@ export interface UseLiveAmrapMissionReturn {
   resume: () => Promise<void>;
   finish: () => Promise<void>;
   logRound: () => Promise<void>;
+  /** What a missed-log correction would do, for the confirm step. Never commits. */
+  previewMissedRound: (repsIntoNextRound: number) => MissedRoundEstimate;
+  logMissedRound: (repsIntoNextRound: number) => Promise<void>;
+  /** False when the workout has no countable reps, so no correction can be inferred. */
+  canLogMissedRound: boolean;
+  /** Rounds this athlete has logged in the current segment. */
+  myRoundCount: number;
   submitPartialReps: (partialReps: number) => Promise<void>;
 }
 
@@ -398,11 +409,25 @@ export function useLiveAmrapMission(
     );
   }, [localPartialSubmitted, channel.segmentResults, participantId, segmentIndex]);
 
-  const myRoundCount = useMemo(() => {
-    return channel.rounds.filter(
-      (round) => round.participant_id === participantId && round.segment_index === segmentIndex
-    ).length;
+  const myRounds = useMemo(() => {
+    return channel.rounds
+      .filter(
+        (round) => round.participant_id === participantId && round.segment_index === segmentIndex
+      )
+      .sort((a, b) => a.round_index - b.round_index);
   }, [channel.rounds, participantId, segmentIndex]);
+
+  const myRoundCount = myRounds.length;
+
+  /** Where the last logged round landed — the floor a correction interpolates from. */
+  const lastLoggedElapsedSec = useMemo(() => {
+    if (isPractice) {
+      const last = timer.rounds[timer.rounds.length - 1];
+      return last ? last.elapsedSecAtRound : 0;
+    }
+    const last = myRounds[myRounds.length - 1];
+    return last ? last.elapsed_sec_at_round : 0;
+  }, [isPractice, timer.rounds, myRounds]);
 
   const leaderboard = useMemo(
     () =>
@@ -537,6 +562,100 @@ export function useLiveAmrapMission(
     timer.finish();
   }, [isPractice, isHost, timer]);
 
+  const elapsedSecNow = useCallback(
+    () =>
+      computeElapsedSecForLogRound({
+        workDurationSec: effectiveWorkDurationSec,
+        timeLeftSec: displayTimeLeftSec,
+        phase: 'work',
+        isPaused: displayIsPaused,
+        workStartedAtMs: displayWorkStartedAtMs,
+        roundCountInWork: myRoundCount,
+        nowMs: Date.now(),
+      }),
+    [
+      effectiveWorkDurationSec,
+      displayTimeLeftSec,
+      displayIsPaused,
+      displayWorkStartedAtMs,
+      myRoundCount,
+    ]
+  );
+
+  const previewMissedRound = useCallback(
+    (repsIntoNextRound: number) =>
+      computeMissedRoundElapsedSec({
+        previousElapsedSec: lastLoggedElapsedSec,
+        nowElapsedSec: elapsedSecNow(),
+        repsPerRound,
+        repsIntoNextRound,
+      }),
+    [lastLoggedElapsedSec, elapsedSecNow, repsPerRound]
+  );
+
+  const logMissedRoundAction = useCallback(
+    async (repsIntoNextRound: number) => {
+      if (displayPhase !== 'work' || displayIsPaused) {
+        return;
+      }
+
+      const estimate = computeMissedRoundElapsedSec({
+        previousElapsedSec: lastLoggedElapsedSec,
+        nowElapsedSec: elapsedSecNow(),
+        repsPerRound,
+        repsIntoNextRound,
+      });
+
+      if (isPractice) {
+        timer.logRound({
+          elapsedSecOverride: estimate.elapsedSecAtRound,
+          missedLogReps: repsIntoNextRound,
+        });
+        return;
+      }
+
+      if (!participantId) {
+        return;
+      }
+
+      const tokenForRpc = claimToken ?? '';
+      if (!tokenForRpc && !isAuthenticated) {
+        return;
+      }
+
+      const result = await logRound({
+        missionId,
+        participantId,
+        claimToken: tokenForRpc,
+        roundIndex: myRoundCount,
+        elapsedSecAtRound: estimate.elapsedSecAtRound,
+        segmentIndex,
+        missedLogReps: repsIntoNextRound,
+      });
+
+      if (result.error) {
+        setSyncError(result.error.message);
+      } else if (result.data?.ok === false && result.data.reason !== 'duplicate_round') {
+        setSyncError(`Could not log the missed round: ${result.data.reason}`);
+      }
+    },
+    [
+      displayPhase,
+      displayIsPaused,
+      lastLoggedElapsedSec,
+      elapsedSecNow,
+      repsPerRound,
+      isPractice,
+      timer,
+      participantId,
+      claimToken,
+      isAuthenticated,
+      missionId,
+      myRoundCount,
+      segmentIndex,
+    ]
+  );
+
   const logRoundAction = useCallback(async () => {
     if (displayPhase !== 'work' || displayIsPaused) {
       return;
@@ -556,15 +675,7 @@ export function useLiveAmrapMission(
       return;
     }
 
-    const elapsedSecAtRound = computeElapsedSecForLogRound({
-      workDurationSec: effectiveWorkDurationSec,
-      timeLeftSec: displayTimeLeftSec,
-      phase: 'work',
-      isPaused: displayIsPaused,
-      workStartedAtMs: displayWorkStartedAtMs,
-      roundCountInWork: myRoundCount,
-      nowMs: Date.now(),
-    });
+    const elapsedSecAtRound = elapsedSecNow();
 
     const result = await logRound({
       missionId,
@@ -588,9 +699,7 @@ export function useLiveAmrapMission(
     claimToken,
     isAuthenticated,
     participantId,
-    effectiveWorkDurationSec,
-    displayTimeLeftSec,
-    displayWorkStartedAtMs,
+    elapsedSecNow,
     myRoundCount,
     missionId,
     segmentIndex,
@@ -674,6 +783,10 @@ export function useLiveAmrapMission(
     resume,
     finish,
     logRound: logRoundAction,
+    previewMissedRound,
+    logMissedRound: logMissedRoundAction,
+    canLogMissedRound: repsPerRound > 0,
+    myRoundCount: isPractice ? timer.rounds.length : myRoundCount,
     submitPartialReps: submitPartialRepsAction,
   };
 }

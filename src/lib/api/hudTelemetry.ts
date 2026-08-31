@@ -2,6 +2,7 @@ import { callRpc } from '@/lib/api/callRpc';
 import type {
   ClassificationProgress,
   ClassificationRank,
+  HudActivity7d,
   HudClassification,
   HudDomainMinutes,
   HudOvertraining,
@@ -75,13 +76,7 @@ function readDomainMinutes(value: unknown): HudDomainMinutes | null {
   const twenty = readNonNegativeInt(row['20']);
   const other = readNonNegativeInt(row.other);
 
-  if (
-    five === null ||
-    ten === null ||
-    fifteen === null ||
-    twenty === null ||
-    other === null
-  ) {
+  if (five === null || ten === null || fifteen === null || twenty === null || other === null) {
     return null;
   }
 
@@ -98,9 +93,7 @@ function readClassificationRank(value: unknown): ClassificationRank | null {
   return value as ClassificationRank;
 }
 
-function readClassificationProgress(
-  value: unknown
-): ClassificationProgress | null {
+function readClassificationProgress(value: unknown): ClassificationProgress | null {
   if (!value || typeof value !== 'object') {
     return null;
   }
@@ -136,9 +129,7 @@ function readOvertraining(value: unknown): HudOvertraining | null {
   const row = value as Record<string, unknown>;
   const acuteLoad7d = readNonNegativeNumber(row.acuteLoad7d);
   const chronicWeeklyLoad28d = readNonNegativeNumber(row.chronicWeeklyLoad28d);
-  const consecutiveHighIntensityDays = readNonNegativeInt(
-    row.consecutiveHighIntensityDays
-  );
+  const consecutiveHighIntensityDays = readNonNegativeInt(row.consecutiveHighIntensityDays);
 
   if (
     acuteLoad7d === null ||
@@ -149,6 +140,37 @@ function readOvertraining(value: unknown): HudOvertraining | null {
   }
 
   return { acuteLoad7d, chronicWeeklyLoad28d, consecutiveHighIntensityDays };
+}
+
+function readActivity7d(value: unknown): HudActivity7d | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const row = value as Record<string, unknown>;
+  const missionCount = readNonNegativeInt(row.missionCount);
+  const minutes = readNonNegativeInt(row.minutes);
+  const avgRaw = row.avgIntensity;
+
+  if (missionCount === null || minutes === null) {
+    return null;
+  }
+
+  let avgIntensity: number | null;
+  if (avgRaw === null || avgRaw === undefined) {
+    avgIntensity = null;
+  } else {
+    avgIntensity = readNonNegativeNumber(avgRaw);
+    if (avgIntensity === null) {
+      return null;
+    }
+  }
+
+  if (missionCount === 0 && avgIntensity !== null) {
+    return null;
+  }
+
+  return { missionCount, minutes, avgIntensity };
 }
 
 function readClassification(value: unknown): HudClassification | null {
@@ -168,9 +190,7 @@ function readClassification(value: unknown): HudClassification | null {
   return { current, previous, progress };
 }
 
-export function parseHudTelemetryPayload(
-  value: unknown
-): HUDTelemetryPayload | null {
+export function parseHudTelemetryPayload(value: unknown): HUDTelemetryPayload | null {
   if (!value || typeof value !== 'object') {
     return null;
   }
@@ -183,6 +203,7 @@ export function parseHudTelemetryPayload(
   const attrition = readAttrition(row.attrition);
   const domainMinutes30d = readDomainMinutes(row.domainMinutes30d);
   const classification = readClassification(row.classification);
+  const activity7d = readActivity7d(row.activity7d);
   const overtraining = readOvertraining(row.overtraining);
 
   if (
@@ -192,13 +213,13 @@ export function parseHudTelemetryPayload(
     attrition === null ||
     domainMinutes30d === null ||
     classification === null ||
+    activity7d === null ||
     overtraining === null
   ) {
     return null;
   }
 
-  const weekPviAverage =
-    pviRaw === null || pviRaw === undefined ? null : readNumber(pviRaw);
+  const weekPviAverage = pviRaw === null || pviRaw === undefined ? null : readNumber(pviRaw);
 
   if (pviRaw !== null && pviRaw !== undefined && weekPviAverage === null) {
     return null;
@@ -222,6 +243,7 @@ export function parseHudTelemetryPayload(
     attrition,
     domainMinutes30d,
     classification,
+    activity7d,
     overtraining,
   };
 }
@@ -252,8 +274,7 @@ export async function fetchHudTelemetry(): Promise<{
     return { data: null, error: { message: mapHudTelemetryError(error.message) } };
   }
 
-  const raw =
-    data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
 
   if (raw.ok === false && raw.reason === 'invalid_timezone') {
     return {

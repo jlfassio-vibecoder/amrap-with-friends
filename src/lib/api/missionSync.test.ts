@@ -165,6 +165,7 @@ describe('missionSync API', () => {
       p_round_index: 2,
       p_elapsed_sec_at_round: 45,
       p_segment_index: 0,
+      p_missed_log_reps: null,
     });
     expect(result.error).toBeNull();
     expect(result.data).toEqual({

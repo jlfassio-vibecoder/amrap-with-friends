@@ -178,6 +178,7 @@ export async function logRound(
     p_round_index: input.roundIndex,
     p_elapsed_sec_at_round: input.elapsedSecAtRound,
     p_segment_index: input.segmentIndex,
+    p_missed_log_reps: input.missedLogReps ?? null,
   });
 
   if (error) {

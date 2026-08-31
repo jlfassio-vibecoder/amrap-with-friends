@@ -13,11 +13,7 @@ export type HudDomainMinutes = {
   other: number;
 };
 
-export type ClassificationRank =
-  | 'unclassified'
-  | 'civilian'
-  | 'operator'
-  | 'special_ops';
+export type ClassificationRank = 'unclassified' | 'civilian' | 'operator' | 'special_ops';
 
 export type ClassificationProgress = {
   weekMinutes: number;
@@ -38,6 +34,13 @@ export type HudOvertraining = {
   consecutiveHighIntensityDays: number;
 };
 
+/** Rolling 7-day locked-mission rollup for the In-App Activity HUD card. */
+export type HudActivity7d = {
+  missionCount: number;
+  minutes: number;
+  avgIntensity: number | null;
+};
+
 export interface HUDTelemetryPayload {
   weekMinutes: number;
   weekPviAverage: number | null;
@@ -46,5 +49,6 @@ export interface HUDTelemetryPayload {
   attrition: boolean[];
   domainMinutes30d: HudDomainMinutes;
   classification: HudClassification;
+  activity7d: HudActivity7d;
   overtraining: HudOvertraining;
 }

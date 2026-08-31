@@ -153,6 +153,19 @@ Workout and classification names are content, not chrome, and are untouched:
   `benchmarkFingerprints.ts` in the same commit. Do not edit the existing
   template in place: in-flight campaigns keep their stored workout jsonb, but
   comparisons across the edit would silently mix two different tests.
+- **A missed Log round is recoverable, and the correction is recorded.**
+  Forgetting the button is not a scoring event, but it read as one: a late log
+  inflates one split and deflates the next, and PVI is
+  `(slowest - fastest) / average`, so one miss hits both ends of that ratio and
+  can drop a mission from Elite Pacing to System Failure.
+  `computeMissedRoundElapsedSec` puts the boundary back by splitting the window
+  since the last logged round in proportion to reps — the athlete supplies the
+  only thing they know mid-workout, how far into the next round they already
+  were. `rounds.missed_log_reps` stores that number: null means logged live, a
+  number means reconstructed, so the estimate stays auditable and the splits can
+  show it. `log_round` bounds a correction by the round before it, so it can
+  only ever shrink an inflated split, never rewrite banked ones.
+
 - **Scheduled missions are generated, not pre-created.** A recurring rule lives
   in its own table and a per-minute `pg_cron` job materialises `missions` rows in
   a tight window around each occurrence (see `run_featured_wod_scheduler()`).

@@ -8,6 +8,8 @@ export interface AmrapRoundLog {
   elapsedSecAtRound: number;
   /** Wall-clock ms when the round was logged (for display/debug) */
   loggedAtMs: number;
+  /** Reps into the next round when a missed log was reconstructed; null when logged live. */
+  missedLogReps: number | null;
 }
 
 export interface AmrapTimerState {
@@ -42,5 +44,11 @@ export type AmrapTimerAction =
   | { type: 'pause' }
   | { type: 'resume' }
   | { type: 'finish' }
-  | { type: 'logRound'; nowMs: number }
+  | {
+      type: 'logRound';
+      nowMs: number;
+      /** Reconstructed boundary for a missed log; omitted for an ordinary log. */
+      elapsedSecOverride?: number;
+      missedLogReps?: number | null;
+    }
   | { type: 'reset' };

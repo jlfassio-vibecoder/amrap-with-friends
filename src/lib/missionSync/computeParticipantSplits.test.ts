@@ -14,12 +14,25 @@ function makeRound(
     mission_id: MISSION_ID,
     participant_id: PARTICIPANT_ID,
     segment_index: 0,
+    missed_log_reps: null,
     created_at: '2026-08-22T12:00:00.000Z',
     ...overrides,
   };
 }
 
 describe('computeParticipantSplits', () => {
+  it('marks a round whose boundary was reconstructed from a missed log', () => {
+    const rounds = [
+      makeRound({ round_index: 0, elapsed_sec_at_round: 120 }),
+      makeRound({ round_index: 1, elapsed_sec_at_round: 240, missed_log_reps: 6 }),
+    ];
+
+    expect(computeParticipantSplits(rounds, PARTICIPANT_ID, 0)).toEqual([
+      { roundNumber: 1, durationSec: 120, wasMissedLog: false },
+      { roundNumber: 2, durationSec: 120, wasMissedLog: true },
+    ]);
+  });
+
   it('returns an empty array when no rounds are logged', () => {
     expect(computeParticipantSplits([], PARTICIPANT_ID, 0)).toEqual([]);
   });
@@ -28,7 +41,7 @@ describe('computeParticipantSplits', () => {
     const rounds = [makeRound({ round_index: 0, elapsed_sec_at_round: 45 })];
 
     expect(computeParticipantSplits(rounds, PARTICIPANT_ID, 0)).toEqual([
-      { roundNumber: 1, durationSec: 45 },
+      { roundNumber: 1, durationSec: 45, wasMissedLog: false },
     ]);
   });
 
@@ -43,8 +56,8 @@ describe('computeParticipantSplits', () => {
     ];
 
     expect(computeParticipantSplits(rounds, PARTICIPANT_ID, 0)).toEqual([
-      { roundNumber: 1, durationSec: 12 },
-      { roundNumber: 2, durationSec: 18 },
+      { roundNumber: 1, durationSec: 12, wasMissedLog: false },
+      { roundNumber: 2, durationSec: 18, wasMissedLog: false },
     ]);
   });
 
@@ -66,7 +79,7 @@ describe('computeParticipantSplits', () => {
     ];
 
     expect(computeParticipantSplits(rounds, PARTICIPANT_ID, 0)).toEqual([
-      { roundNumber: 1, durationSec: 10 },
+      { roundNumber: 1, durationSec: 10, wasMissedLog: false },
     ]);
   });
 });
