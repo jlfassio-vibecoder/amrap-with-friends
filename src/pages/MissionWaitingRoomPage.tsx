@@ -6,6 +6,8 @@ import {
   getStoredNickname,
   getStoredGhostSelection,
   getStoredHostToken,
+  clearStoredHostToken,
+  setStoredHostToken,
   persistMissionIdentity,
 } from '@/lib/missionIdentity';
 import { useLiveAmrapMission } from '@/hooks/useLiveAmrapMission';
@@ -54,10 +56,12 @@ import {
   setStoredRallyPointIdForMission,
 } from '@/lib/rallyPointIdentity';
 import type { StoredGhostSelection } from '@/lib/missionIdentity';
-import { clearStoredHostToken, setStoredHostToken } from '@/lib/missionIdentity';
+import { cancelRallyPointCountdown } from '@/lib/api/missionSync';
 import {
+  effectiveRallyPointCountdownEndsAt,
   elapsedPastRallyPointCountdownSec,
   formatTMinus,
+  isPlausibleRallyPointCountdownEndsAt,
   remainingRallyPointCountdownSec,
 } from '@/lib/mission/rallyPointCountdown';
 
@@ -514,7 +518,10 @@ function LiveMissionView({
   const selfLeaderboardEntry = live.leaderboard.find((entry) => entry.isSelf) ?? null;
   const selfBaseScore = selfLeaderboardEntry?.baseScore ?? 0;
 
-  const rallyPointCountdownEndsAt = live.rallyPointCountdownEndsAt;
+  const rallyPointCountdownEndsAt = effectiveRallyPointCountdownEndsAt(
+    live.rallyPointCountdownEndsAt,
+    nowMs
+  );
   const rallyPointRemaining = remainingRallyPointCountdownSec(rallyPointCountdownEndsAt, nowMs);
   const rallyPointCountdownArmed = livePhase === 'waiting' && rallyPointCountdownEndsAt !== null;
   const rallyPointTicking =
@@ -523,6 +530,23 @@ function LiveMissionView({
   const rallyPointOvertimeSec = rallyPointIgnited
     ? elapsedPastRallyPointCountdownSec(rallyPointCountdownEndsAt, nowMs)
     : null;
+
+  // Far-future ends_at cannot come from Start countdown (max 10 min). Clear it so
+  // scheduled rallies keep Set duration / Start countdown until the host arms.
+  useEffect(() => {
+    if (!isHost || livePhase !== 'waiting') {
+      return;
+    }
+    const rawEndsAt = live.rallyPointCountdownEndsAt;
+    if (!rawEndsAt || isPlausibleRallyPointCountdownEndsAt(rawEndsAt, Date.now())) {
+      return;
+    }
+    const hostToken = getStoredHostToken(missionId);
+    if (!hostToken) {
+      return;
+    }
+    void cancelRallyPointCountdown({ missionId, hostToken });
+  }, [isHost, live.rallyPointCountdownEndsAt, livePhase, missionId]);
 
   useEffect(() => {
     if (!rallyPointCountdownArmed) {
@@ -908,6 +932,21 @@ function LiveMissionView({
                 </p>
               </section>
 
+              {isHost && live.phase === 'waiting' ? (
+                <HostRallyPointSteps
+                  missionId={missionId}
+                  rallyPointId={rallyPointId}
+                  countdownArmed={rallyPointCountdownArmed}
+                  actionsEnabled={missionReady}
+                  onAudioUnlock={handleAudioUnlock}
+                  showPacer={showGhostPicker}
+                  templateId={live.templateId}
+                  durationMinutes={live.workDurationSec / 60}
+                  ghostSelection={ghostSelection}
+                  onGhostChange={setGhostSelection}
+                />
+              ) : null}
+
               {live.phase === 'waiting' && live.scheduledAt ? (
                 isHost ? (
                   <EditRallyScheduleForm
@@ -935,21 +974,6 @@ function LiveMissionView({
                 )
               ) : live.phase === 'waiting' && waitingStartPracticeActions ? (
                 <div className="flex justify-center">{waitingStartPracticeActions}</div>
-              ) : null}
-
-              {isHost && live.phase === 'waiting' ? (
-                <HostRallyPointSteps
-                  missionId={missionId}
-                  rallyPointId={rallyPointId}
-                  countdownArmed={rallyPointCountdownArmed}
-                  actionsEnabled={missionReady}
-                  onAudioUnlock={handleAudioUnlock}
-                  showPacer={showGhostPicker}
-                  templateId={live.templateId}
-                  durationMinutes={live.workDurationSec / 60}
-                  ghostSelection={ghostSelection}
-                  onGhostChange={setGhostSelection}
-                />
               ) : null}
 
               {!isHost && live.phase === 'waiting' ? (

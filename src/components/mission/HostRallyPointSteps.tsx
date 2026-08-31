@@ -29,7 +29,10 @@ export interface HostRallyPointStepsProps {
   onGhostChange: (selection: StoredGhostSelection | null) => void;
 }
 
-function durationSummaryLabel(seconds: number): string {
+function durationSummaryLabel(seconds: number | null): string {
+  if (seconds === null) {
+    return 'Choose ›';
+  }
   const preset = PRESET_SECONDS.find((entry) => entry.seconds === seconds);
   return preset ? preset.label : `${seconds} sec`;
 }
@@ -48,8 +51,10 @@ export function HostRallyPointSteps({
 }: HostRallyPointStepsProps) {
   const baseId = useId();
   const [expandedStep, setExpandedStep] = useState<ExpandedStep>(() => (countdownArmed ? null : 0));
-  const [selectedSeconds, setSelectedSeconds] = useState(300);
-  const [customSeconds, setCustomSeconds] = useState('300');
+  // No default duration — a pre-selected 5 MIN made a single tap arm a clock that
+  // often ends at the scheduled rally time, which looked like an auto T-minus.
+  const [selectedSeconds, setSelectedSeconds] = useState<number | null>(null);
+  const [customSeconds, setCustomSeconds] = useState('');
   const [busy, setBusy] = useState(false);
   const [engageError, setEngageError] = useState<string | null>(null);
   const { profile } = useAthleteProfile();
@@ -86,6 +91,15 @@ export function HostRallyPointSteps({
 
   async function engageClock() {
     onAudioUnlock?.();
+    if (
+      selectedSeconds === null ||
+      !Number.isInteger(selectedSeconds) ||
+      selectedSeconds <= 0 ||
+      selectedSeconds > RALLY_POINT_COUNTDOWN_MAX_SECONDS
+    ) {
+      setEngageError('Choose a countdown length first.');
+      return;
+    }
     const hostToken = getStoredHostToken(missionId);
     if (!hostToken) {
       setEngageError('Host credentials are missing. Reopen the mission as host.');
@@ -164,6 +178,7 @@ export function HostRallyPointSteps({
             disabled={
               busy ||
               !actionsEnabled ||
+              selectedSeconds === null ||
               !Number.isInteger(selectedSeconds) ||
               selectedSeconds <= 0 ||
               selectedSeconds > RALLY_POINT_COUNTDOWN_MAX_SECONDS

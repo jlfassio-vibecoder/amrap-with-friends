@@ -1,5 +1,48 @@
 export const RALLY_POINT_COUNTDOWN_MAX_SECONDS = 600;
 
+/**
+ * Client/server skew allowance when judging whether an ends_at could have
+ * come from set_rally_point_countdown (which only permits ≤ max seconds ahead).
+ */
+export const RALLY_POINT_COUNTDOWN_CLOCK_SKEW_MS = 30_000;
+
+/**
+ * `set_rally_point_countdown` only writes `now() + [1, max]` seconds. A far-future
+ * ends_at (e.g. accidentally equal to `scheduled_at`) is not a host-armed clock —
+ * treat it as unset so Start countdown stays available until the host arms it.
+ * Past ends_at (overtime after T-0) remains plausible.
+ */
+export function isPlausibleRallyPointCountdownEndsAt(
+  endsAtIso: string | null | undefined,
+  nowMs: number
+): boolean {
+  if (!endsAtIso) {
+    return false;
+  }
+  const endsAtMs = Date.parse(endsAtIso);
+  if (!Number.isFinite(endsAtMs)) {
+    return false;
+  }
+  if (endsAtMs <= nowMs) {
+    return true;
+  }
+  return (
+    endsAtMs <=
+    nowMs + RALLY_POINT_COUNTDOWN_MAX_SECONDS * 1000 + RALLY_POINT_COUNTDOWN_CLOCK_SKEW_MS
+  );
+}
+
+/** Returns ends_at only when it could be a host-armed T-minus clock. */
+export function effectiveRallyPointCountdownEndsAt(
+  endsAtIso: string | null | undefined,
+  nowMs: number
+): string | null {
+  if (!isPlausibleRallyPointCountdownEndsAt(endsAtIso, nowMs)) {
+    return null;
+  }
+  return endsAtIso ?? null;
+}
+
 export function remainingRallyPointCountdownSec(
   endsAtIso: string | null | undefined,
   nowMs: number

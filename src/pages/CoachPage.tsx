@@ -11,6 +11,7 @@ import { CoachUserDetailPanel } from '@/components/coach/CoachUserDetailPanel';
 import { CoachUserPicker } from '@/components/coach/CoachUserPicker';
 import { fetchCoachDashboard, type CoachDashboard, type CoachUserListRow } from '@/lib/api/coach';
 import { formatCoachLabel } from '@/lib/coach/formatCoachLabel';
+import { useOnlineAnonIds } from '@/hooks/useOnlineUserIds';
 
 function pct(value: number | null): string {
   return value === null ? '—' : `${value}%`;
@@ -21,6 +22,7 @@ export default function CoachPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<CoachUserListRow | null>(null);
+  const onlineAnonIds = useOnlineAnonIds();
 
   useEffect(() => {
     let cancelled = false;
@@ -84,6 +86,7 @@ export default function CoachPage() {
                     value: dashboard.topStrip.missionsFinished30d,
                   },
                   { label: 'Unique visitors (anon)', value: dashboard.topStrip.uniqueAnonIds },
+                  { label: 'Anonymous now', value: onlineAnonIds.size },
                   { label: 'Registered users', value: dashboard.topStrip.registeredUsers },
                   { label: 'Live missions created', value: dashboard.topStrip.liveMissionsCreated },
                   {
