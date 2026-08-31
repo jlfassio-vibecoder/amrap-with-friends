@@ -41,8 +41,15 @@ export function AddSquadFriendToCampaign({
       if (cancelled) {
         return;
       }
+      if (result.error) {
+        setError(result.error.message);
+        setFriends([]);
+        setLoadedSquad(true);
+        return;
+      }
       if (result.data) {
         setFriends(result.data.friends);
+        setError(null);
       }
       setLoadedSquad(true);
     });
@@ -124,7 +131,7 @@ export function AddSquadFriendToCampaign({
         </select>
       </label>
 
-      {loadedSquad && friends.length === 0 ? (
+      {loadedSquad && friends.length === 0 && !error ? (
         <p className="text-xs text-muted">
           Your squad is empty. Add someone on the Squad page first.
         </p>
