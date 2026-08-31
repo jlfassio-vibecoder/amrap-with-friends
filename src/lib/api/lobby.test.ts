@@ -199,6 +199,7 @@ describe('lobby API', () => {
         session_id: SESSION_ID,
         host_token: 'next-host',
         participant_id: PARTICIPANT_ID,
+        claim_token: 'next-claim',
       },
       error: null,
       count: null,
@@ -228,6 +229,7 @@ describe('lobby API', () => {
       expect.objectContaining({
         hostToken: 'next-host',
         participantId: PARTICIPANT_ID,
+        claimToken: 'next-claim',
       })
     );
   });
