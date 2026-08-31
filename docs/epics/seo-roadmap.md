@@ -1,8 +1,8 @@
 # Epic: SEO & AI-Search Roadmap
 
 **Branch:** `claude/amrap-seo-roadmap-xwf1sk`
-**Status:** Draft — strategy for discussion, not yet approved
-**Last updated:** 2026-08-31 (Phase 0 shipped)
+**Status:** Approved — Astro content site + existing SPA (option A, Part 2)
+**Last updated:** 2026-08-31 (Phase 0 shipped; Phase 1 mostly shipped)
 
 ---
 
@@ -328,21 +328,67 @@ policy cannot disagree between what a browser sees and what a crawler sees.
 _Exit criteria: no self-inflicted penalties, and we can measure._ Code half met;
 the measurement half needs the account work above.
 
-### Phase 1 — Content layer _(weeks 2–4)_
+### Phase 1 — Content layer _(weeks 2–4)_ — **mostly shipped**
 
-- [ ] Astro app in the monorepo; Vercel routing by path prefix
-- [ ] Shared design tokens (`src/index.css`) — imported, not duplicated
-- [ ] Homepage moves to Astro; islands for `FeaturedWodCard` /
-      `LiveLeaderboardPreview`
-- [ ] Per-page title/description/canonical/OG as an Astro layout prop
-- [ ] Generated sitemap (build step), replacing the hand-written file
-- [ ] Structured data helpers
-- [ ] `/amrap-timer/` — free, no signup, static, fast. Utility cluster's landing pad
-- [ ] `/about/`, `/privacy/`, `/terms/`
-- [ ] `llms.txt` (30 min, then forget about it)
+Architecture decision taken: **option A, Astro content site + existing SPA.**
 
-_Exit criteria: static HTML on every content URL; per-page meta; AI bots
-recorded fetching real content._
+**Done:**
+
+- [x] Astro in the repo (`astro.config.mjs`, `site/`), single package so there is
+      one dependency tree and one Tailwind config
+- [x] Two builds, one output. Vite → `dist-app`, Astro → `dist-site`,
+      `scripts/merge-build.ts` assembles `dist/`. The SPA's entry HTML lands at
+      `_app-shell/index.html` and `vercel.json` rewrites app routes to it, so
+      **no existing app URL moved**
+- [x] Shared design tokens — the Astro layout imports `src/index.css` and
+      Tailwind runs through the repo's existing postcss config. Nothing duplicated
+- [x] Per-page title/description/canonical/OG, resolved by the layout from
+      `src/lib/seo/routes.ts` — the same table the SPA and the middleware read
+- [x] Generated `sitemap.xml` and `llms.txt` (build step, from that table).
+      `public/sitemap.xml` is deleted: a hand-written sitemap drifts silently
+- [x] Structured data helpers — Organization, WebApplication, BreadcrumbList,
+      FAQPage, with JSON-LD escaping
+- [x] `/amrap-timer/` — free, no signup, static, answer-first FAQ. The timer is
+      the only thing on the page that ships JavaScript, hydrated as one island
+- [x] `/about/`, `/privacy/`, `/terms/`
+- [x] `npm run build` added to CI — type errors inside `.astro` frontmatter only
+      surface at build time
+
+**Verified in the build output:** every content page emits its own title,
+description, canonical and robots; `/about` ships zero JavaScript; the CSS bundle
+carries the shared `--color-*` tokens.
+
+**Not done — needs a decision (see below):**
+
+- [ ] Homepage moves to Astro
+
+**Needs a human:** `/privacy` and `/terms` describe what the app actually does
+and are accurate, but they have not had legal review. They are drafts.
+
+### The homepage question
+
+Moving `/` is not like the other pages, for one concrete reason: **every dynamic
+component on it navigates with react-router `<Link>`** — `FeaturedWodCard`,
+`LiveLeaderboardPreview`, `MyCampaignsPanel`, `HostScheduledMissionsPanel`,
+`AppHeader`. On an Astro page there is no Router, so an island containing one of
+these either crashes or, with a `BrowserRouter` wrapped around it, pushes a
+history entry that renders nothing — a dead click.
+
+Three ways out:
+
+| Option                                       | What it costs                                                                                                                                                                               | What it buys                                                                                           |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| **A. Router-agnostic links** _(recommended)_ | An `AppLink` that renders `<Link>` inside a Router and `<a href>` outside (`useInRouterContext`), swapped into ~5 shared components. Signed-in links on the homepage become full page loads | Static HTML homepage, **nothing removed** for signed-in users, SPA behaviour unchanged everywhere else |
+| **B. Static marketing homepage only**        | The signed-in panels (scheduled missions, campaigns) come off `/`. That is a product change, not an SEO one                                                                                 | Simplest build, zero JS on `/`                                                                         |
+| **C. Leave `/` on the SPA for now**          | The most valuable URL stays invisible to AI crawlers                                                                                                                                        | Phase 2's ~90 content URLs land sooner                                                                 |
+
+Recommendation: **A**. It removes nothing, and the only real cost is that a
+signed-in athlete clicking "My missions" from the homepage does a full page load
+instead of a client-side transition — a fair trade for making the site's most
+valuable URL readable by every crawler.
+
+Worth weighing against C: `/` is one URL and Phase 2 is roughly ninety. If
+capacity is the constraint, doing Phase 2 first is defensible.
 
 ### Phase 2 — Programmatic content _(weeks 4–8)_
 
