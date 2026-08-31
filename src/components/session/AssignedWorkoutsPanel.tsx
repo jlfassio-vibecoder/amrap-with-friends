@@ -7,7 +7,6 @@ import {
   type AssignedWorkout,
 } from '@/lib/api/assignedWorkouts';
 import { createSession } from '@/lib/api/sessions';
-import { persistSessionIdentity } from '@/lib/sessionIdentity';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 
@@ -79,15 +78,9 @@ export function AssignedWorkoutsPanel() {
         return;
       }
 
-      persistSessionIdentity(created.data.sessionId, {
-        nickname: profile?.nickname?.trim() || 'Athlete',
-        participantId: created.data.participantId,
-        hostToken: created.data.hostToken,
-        claimToken: created.data.claimToken,
-      });
-
       // Best effort: the session is real either way, and leaving the row
       // pending is better than blocking the athlete from training.
+      // createSession already persists identity (nickname, tokens, claim).
       await startAssignedWorkout(entry.assignedWorkoutId, created.data.sessionId);
       navigate(`/session/${created.data.sessionId}`);
     } finally {
