@@ -1,23 +1,30 @@
 import { useEffect } from 'react';
-import { startGlobalPresenceBroadcast } from '@/lib/realtime/globalPresenceChannel';
+import { getOrCreateAnonId } from '@/lib/analytics/identity';
+import {
+  anonPresenceKey,
+  startGlobalPresenceBroadcast,
+} from '@/lib/realtime/globalPresenceChannel';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 
-/** Marks the current user as "online" on the shared presence channel for as
- * long as they're signed in and have a tab open. Mounted once, app-wide. */
+/** Marks this tab as "online" on the shared presence channel: signed-in users
+ * under their auth id, guests under `anon:${amrap_anon_id}`. Mounted once,
+ * app-wide. */
 export function useGlobalPresenceBroadcast() {
-  const { user, isAuthenticated } = useAmrapAuth();
+  const { user, isAuthenticated, isAuthLoading } = useAmrapAuth();
   const userId = user?.id ?? null;
 
   useEffect(() => {
-    if (!isAuthenticated || !userId) {
+    if (isAuthLoading) {
       return;
     }
 
+    const presenceKey = isAuthenticated && userId ? userId : anonPresenceKey(getOrCreateAnonId());
+
     try {
-      return startGlobalPresenceBroadcast(userId);
+      return startGlobalPresenceBroadcast(presenceKey);
     } catch (error) {
       console.error('Failed to start global presence broadcast', error);
       return undefined;
     }
-  }, [isAuthenticated, userId]);
+  }, [isAuthLoading, isAuthenticated, userId]);
 }
