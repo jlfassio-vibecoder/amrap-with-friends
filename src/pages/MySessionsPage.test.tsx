@@ -207,7 +207,7 @@ describe('MySessionsPage delete', () => {
         '22222222-2222-4222-8222-222222222222'
       );
       expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
-      expect(screen.getByText(/No saved sessions yet/)).toBeTruthy();
+      expect(screen.getByText(/No saved missions yet/)).toBeTruthy();
     });
   });
 

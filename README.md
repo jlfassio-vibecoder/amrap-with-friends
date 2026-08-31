@@ -91,7 +91,7 @@ Enable Supabase Auth **email** provider and redirect URLs for your dev origin (e
 After `supabase db push` for `20260822140000_auth_claim.sql`:
 
 1. Play a session as guest, finish, sign in (magic link or password), click **Save this session to my account**.
-2. Open **My sessions** — saved session appears with round count.
+2. Open **My missions** — saved session appears with round count.
 3. Optional: sign in mid-session, save, then **Log round** still works after claim.
 4. Password sign-up: if email confirmation is enabled on hosted, UI should prompt to check email; local dev may sign in immediately.
 

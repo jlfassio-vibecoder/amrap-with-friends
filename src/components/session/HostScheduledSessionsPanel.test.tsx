@@ -117,7 +117,7 @@ describe('HostScheduledSessionsPanel', () => {
     expect(screen.getByRole('link', { name: 'Enter rally point' }).getAttribute('href')).toBe(
       '/session/22222222-2222-4222-8222-222222222222'
     );
-    expect(screen.getByRole('link', { name: 'All my sessions' }).getAttribute('href')).toBe(
+    expect(screen.getByRole('link', { name: 'All my missions' }).getAttribute('href')).toBe(
       '/my-sessions'
     );
   });

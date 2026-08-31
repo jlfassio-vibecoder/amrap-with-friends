@@ -134,7 +134,7 @@ export function HostScheduledSessionsPanel() {
       {isAuthenticated && !loading ? (
         <p className="text-sm">
           <Link className="link-accent" to="/my-sessions">
-            All my sessions
+            All my missions
           </Link>
         </p>
       ) : null}

@@ -114,12 +114,12 @@ export default function MySessionsPage() {
   }
 
   return (
-    <NarrowPageLayout title="My sessions" subtitle="Saved to your account">
-      <p className="text-sm text-secondary lg:hidden">Sessions you saved to your account.</p>
+    <NarrowPageLayout title="My missions" subtitle="Saved to your account">
+      <p className="text-sm text-secondary lg:hidden">Missions you saved to your account.</p>
 
       <div className="hidden space-y-2 lg:block">
-        <h1 className="text-display text-5xl text-ink">My sessions</h1>
-        <p className="text-sm text-secondary">Sessions you saved to your account.</p>
+        <h1 className="text-display text-5xl text-ink">My missions</h1>
+        <p className="text-sm text-secondary">Missions you saved to your account.</p>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -138,14 +138,14 @@ export default function MySessionsPage() {
       {loading ? <p className="text-sm text-secondary">Loading…</p> : null}
 
       {!isAuthLoading && !isAuthenticated ? (
-        <p className="text-sm text-secondary">Sign in to see sessions saved to your account.</p>
+        <p className="text-sm text-secondary">Sign in to see missions saved to your account.</p>
       ) : null}
 
       {error && <p className="text-error">Error: {error}</p>}
 
       {!loading && isAuthenticated && entries.length === 0 ? (
         <p className="text-sm text-secondary">
-          No saved sessions yet. Finish a session and use “Save this session to my account”.
+          No saved missions yet. Finish a session and use “Save this session to my account”.
         </p>
       ) : null}
 

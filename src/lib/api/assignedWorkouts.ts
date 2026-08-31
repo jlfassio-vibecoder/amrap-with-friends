@@ -70,7 +70,7 @@ function parseAssignedWorkout(raw: unknown): AssignedWorkout | null {
 }
 
 /**
- * Puts a workout on a squad friend's My sessions page. Reach is enforced in
+ * Puts a workout on a squad friend's My missions page. Reach is enforced in
  * Postgres against squad_friends — this only shapes the call.
  */
 export async function assignWorkout(input: {

@@ -17,7 +17,7 @@ interface SendWorkoutToSquadProps {
 }
 
 /**
- * Puts the workout the host has configured on a squad friend's My sessions
+ * Puts the workout the host has configured on a squad friend's My missions
  * page instead of running it now. Reach is enforced in Postgres against
  * squad_friends; this only offers the people it will accept.
  */
@@ -92,7 +92,7 @@ export function SendWorkoutToSquad({
   if (sentTo) {
     return (
       <p className="w-full text-sm text-secondary">
-        Sent to {sentTo}. It is on their My sessions page now.{' '}
+        Sent to {sentTo}. It is on their My missions page now.{' '}
         <button
           type="button"
           className="link-accent"

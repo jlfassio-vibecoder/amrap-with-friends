@@ -24,17 +24,17 @@ opaque verb for one action. Same brand, opposite sides of the line.
 
 ### The nouns
 
-| Term            | Means                                                                                              | Where it belongs                                                        |
-| --------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| **Session**     | One AMRAP workout, start to finish. The structural noun.                                           | Buttons, page titles, routes — "Create session", `/session/:id`         |
-| **Mission**     | That same workout's objective. The editorial noun.                                                 | Prose and headings only — "Today's mission", "Mission in progress"      |
-| **Campaign**    | A multi-week programme (2–12 weeks, 1–5 sessions a week) with an end goal.                         | Buttons, page titles, routes. Always with its length: "8-week campaign" |
-| **Squad**       | A persistent friends list for inviting people to train together. Not a session.                    | Buttons, page titles, routes, nav — "Your squad", `/squad`              |
-| **Rally point** | The pre-workout screen the rally link opens to, where the crew gathers and the mission is started. | Page title, buttons, routes — "Rally point", `/rally-point/:id`         |
-| **Rally link**  | The shared invite URL that opens a rally point. Never a squad invite.                              | The copy button, and prose about sharing                                |
-| **Benchmark**   | A campaign's opening session. Its score is the number the campaign is measured against.            | The badge on that session, and prose about it                           |
-| **Retest**      | The same workout as the benchmark, run again later in the campaign.                                | The badge on those sessions                                             |
-| **Easy day**    | The light session before a retest, so the test measures fitness not fatigue.                       | The badge on that session                                               |
+| Term            | Means                                                                                              | Where it belongs                                                                         |
+| --------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| **Session**     | One AMRAP workout, start to finish. The structural noun.                                           | Buttons, page titles, routes — "Create session", `/session/:id`                          |
+| **Mission**     | That same workout's objective. Also the athlete's saved history list.                              | Prose, headings, and the account page — "Today's mission", "My missions", `/my-sessions` |
+| **Campaign**    | A multi-week programme (2–12 weeks, 1–5 sessions a week) with an end goal.                         | Buttons, page titles, routes. Always with its length: "8-week campaign"                  |
+| **Squad**       | A persistent friends list for inviting people to train together. Not a session.                    | Buttons, page titles, routes, nav — "Your squad", `/squad`                               |
+| **Rally point** | The pre-workout screen the rally link opens to, where the crew gathers and the mission is started. | Page title, buttons, routes — "Rally point", `/rally-point/:id`                          |
+| **Rally link**  | The shared invite URL that opens a rally point. Never a squad invite.                              | The copy button, and prose about sharing                                                 |
+| **Benchmark**   | A campaign's opening session. Its score is the number the campaign is measured against.            | The badge on that session, and prose about it                                            |
+| **Retest**      | The same workout as the benchmark, run again later in the campaign.                                | The badge on those sessions                                                              |
+| **Easy day**    | The light session before a retest, so the test measures fitness not fatigue.                       | The badge on that session                                                                |
 
 **Benchmark, retest and easy day are the only session badges.** Everything else
 in a campaign is just a session and gets no label — a badge on every row labels
@@ -43,10 +43,11 @@ should do that day: go hard and record it, compare it, or hold back. Internally
 the fourth role is `build`, which is deliberately never shown.
 
 **Session vs. mission.** Both name one workout, so each has a job. Session is
-what the user creates, joins, and navigates to, so it owns the buttons and the
-routes. Mission names the objective, so it owns the prose. "Today's mission is a
-15-minute Blood Shunt" reads well; "Create mission" on a button does not,
-because what the user is making is a session.
+what the user creates, joins, and navigates to for a live workout, so it owns
+those buttons and routes ("Create session", `/session/:id`). Mission names the
+objective in prose, and also the saved-history page ("My missions") — that list
+is what you look back on, not what you are about to start. "Create mission" on a
+button still does not work, because what the user is making is a session.
 
 **Campaign and mission both need their duration attached.** Neither word
 carries a sense of length on its own. Write "8-week campaign", never a bare
@@ -57,7 +58,7 @@ three: `lobby` in the data layer, "Staging area" in the UI, and "Rally point"
 for the invite you had already been told to call a rally link. The rally link
 now opens the rally point, and the schema says `rally_points` — so there is no
 translation step left to get wrong. "Staging" is retired: staging is what the
-My sessions page does, not what this screen is.
+My missions page does, not what this screen is.
 
 ### UI names that deliberately differ from the data layer
 
@@ -112,6 +113,7 @@ Kept here so they don't creep back in.
 | Staging area not found                    | Rally point not found                       |
 | T-Minus console                           | Set the countdown                           |
 | Work (phase label)                        | Live                                        |
+| My sessions (page title / nav)            | My missions                                 |
 
 Workout and classification names are content, not chrome, and are untouched:
 "The Hull Breach", "Blood Shunt", "Armor Protocol", "Crucible", "Tier 1".

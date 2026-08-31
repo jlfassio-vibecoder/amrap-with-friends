@@ -379,7 +379,7 @@ export default function SessionWaitingRoomPage() {
           </Link>
         ) : null}
         <Link className="link-accent" to="/my-sessions">
-          My sessions
+          My missions
         </Link>
         <Link className="link-accent" to="/create">
           Create session

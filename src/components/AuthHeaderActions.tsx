@@ -31,7 +31,7 @@ export function AuthHeaderActions({ tone = 'default' }: { tone?: HeaderTone }) {
               Squad
             </Link>
             <Link className={toneClasses.link} to="/my-sessions">
-              My sessions
+              My missions
             </Link>
             {accountLabel ? (
               <Link className={toneClasses.mutedLink} to="/intake">
