@@ -18,6 +18,7 @@ AS $$
 DECLARE
   v_uid uuid;
   v_lobby public.lobbies%ROWTYPE;
+  v_pending_at timestamptz;
 BEGIN
   v_uid := auth.uid();
   IF v_uid IS NULL THEN
@@ -41,14 +42,16 @@ BEGIN
     RAISE EXCEPTION 'Only the host can start the next session';
   END IF;
 
+  v_pending_at := now();
+
   UPDATE public.lobbies
-  SET next_mission_pending_at = now()
+  SET next_mission_pending_at = v_pending_at
   WHERE id = p_lobby_id;
 
   RETURN jsonb_build_object(
     'ok', true,
     'lobby_id', p_lobby_id,
-    'next_mission_pending_at', now()
+    'next_mission_pending_at', v_pending_at
   );
 END;
 $$;
