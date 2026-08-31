@@ -1,4 +1,4 @@
-import type { WorkoutExercise } from '@/lib/api/sessionTypes';
+import type { WorkoutExercise } from '@/lib/api/missionTypes';
 import { ScoringValidationError } from '@/lib/scoring/types';
 
 function isScorableUnit(unit: string | undefined): boolean {
@@ -13,7 +13,11 @@ export function computeRepsPerRound(workout: WorkoutExercise[]): number {
   let total = 0;
 
   for (const exercise of workout) {
-    if (exercise.target === undefined || !Number.isInteger(exercise.target) || exercise.target <= 0) {
+    if (
+      exercise.target === undefined ||
+      !Number.isInteger(exercise.target) ||
+      exercise.target <= 0
+    ) {
       throw new ScoringValidationError(
         `Movement "${exercise.name}" is missing a valid rep or duration target.`
       );

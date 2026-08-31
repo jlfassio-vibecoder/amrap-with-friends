@@ -20,7 +20,7 @@ export function RallyCta() {
             Your next mission begins with one invitation.
           </h2>
           <p className="mt-6 max-w-[32rem] text-base leading-[1.6] text-night-secondary">
-            Set up the session in under a minute and share the rally link. When the timer starts,
+            Set up the mission in under a minute and share the rally link. When the timer starts,
             every member of the squad is synced to the same timer and workout.
           </p>
 
@@ -29,13 +29,13 @@ export function RallyCta() {
               className="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
               to="/create"
             >
-              Create session
+              Create mission
             </Link>
             <Link
               className="border-b border-gold pb-1.5 text-xs font-bold uppercase tracking-[0.1em] text-night-ink hover:text-gold"
               to="/join"
             >
-              I have a session code
+              I have a mission code
             </Link>
           </div>
 

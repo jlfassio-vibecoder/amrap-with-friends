@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { CoachWalkthrough } from './CoachWalkthrough';
-import { STAGING_WALKTHROUGH_STEPS } from './stagingWalkthrough';
+import { RALLY_POINT_WALKTHROUGH_STEPS } from './rallyPointWalkthrough';
 
 afterEach(() => {
   cleanup();
 });
 
-const statusStep = STAGING_WALKTHROUGH_STEPS[0];
+const statusStep = RALLY_POINT_WALKTHROUGH_STEPS[0];
 
 function renderWalkthrough(
   onNext: () => void = () => undefined,
@@ -16,11 +16,7 @@ function renderWalkthrough(
   return render(
     <>
       <div data-walkthrough-id="status">Waiting status</div>
-      <CoachWalkthrough
-        step={statusStep}
-        onNext={onNext}
-        onSkip={onSkip}
-      />
+      <CoachWalkthrough step={statusStep} onNext={onNext} onSkip={onSkip} />
     </>
   );
 }

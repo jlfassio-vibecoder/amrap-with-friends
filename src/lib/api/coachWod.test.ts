@@ -224,7 +224,7 @@ describe('fetchCoachWorkout', () => {
     expect(result.data?.isLocked).toBe(false);
   });
 
-  it('parses isLocked: true when the RPC reports a completed session', async () => {
+  it('parses isLocked: true when the RPC reports a completed mission', async () => {
     callRpcMock.mockResolvedValue({
       data: { ok: true, workout: { ...VALID_WORKOUT, isLocked: true } },
       error: null,
@@ -278,7 +278,7 @@ describe('upsertCoachWorkout', () => {
     callRpcMock.mockResolvedValue({
       data: null,
       error: {
-        message: 'Workout is locked — it has a completed session. Clone it to make changes.',
+        message: 'Workout is locked — it has a completed mission. Clone it to make changes.',
       },
     });
 
@@ -320,7 +320,10 @@ describe('deleteCoachWorkout', () => {
 describe('cloneCoachWorkout', () => {
   it('wires the id and returns an unlocked draft copy', async () => {
     callRpcMock.mockResolvedValue({
-      data: { ok: true, workout: { ...VALID_WORKOUT, name: 'Crimp Conditioning (Copy)', isLocked: false } },
+      data: {
+        ok: true,
+        workout: { ...VALID_WORKOUT, name: 'Crimp Conditioning (Copy)', isLocked: false },
+      },
       error: null,
     });
 
@@ -430,13 +433,13 @@ describe('fetchPublishedCoachWorkouts', () => {
 });
 
 describe('fetchCoachWorkoutHistory', () => {
-  it('wires the id and parses session rows', async () => {
+  it('wires the id and parses mission rows', async () => {
     callRpcMock.mockResolvedValue({
       data: {
         ok: true,
-        sessions: [
+        missions: [
           {
-            session_id: '33333333-3333-4333-8333-333333333333',
+            mission_id: '33333333-3333-4333-8333-333333333333',
             nickname: 'Athlete',
             role: 'host',
             state: 'finished',

@@ -1,5 +1,5 @@
 import type { ScoreBreakdown } from '@/lib/scoring/types';
-import type { LeaderboardRoundEntry } from '@/lib/sessionSync/types';
+import type { LeaderboardRoundEntry } from '@/lib/missionSync/types';
 
 export interface ResolvePacingDataInput {
   breakdown?: ScoreBreakdown | null;
@@ -14,9 +14,7 @@ export interface ResolvedPacingData {
   roundSplits: number[];
 }
 
-export function resolvePacingData(
-  input: ResolvePacingDataInput
-): ResolvedPacingData | null {
+export function resolvePacingData(input: ResolvePacingDataInput): ResolvedPacingData | null {
   const partialReps = input.partialReps ?? 0;
 
   if (

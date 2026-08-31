@@ -66,7 +66,7 @@ describe('formatSlotLabel', () => {
 });
 
 describe('groupOccurrencesByWeek', () => {
-  it('groups and orders weeks and sessions', () => {
+  it('groups and orders weeks and missions', () => {
     const groups = groupOccurrencesByWeek([
       occurrence(4, 2),
       occurrence(1, 1),
@@ -105,7 +105,7 @@ describe('campaignProgress', () => {
 });
 
 describe('defaultCampaignStartDate', () => {
-  it('starts tomorrow so the first session is still actionable', () => {
+  it('starts tomorrow so the first mission is still actionable', () => {
     expect(defaultCampaignStartDate('2026-10-05')).toBe('2026-10-06');
   });
 
@@ -120,7 +120,7 @@ describe('suggestedSlots', () => {
     expect(suggestedSlots(2).map((slot) => slot.weekday)).toEqual([1, 4]);
   });
 
-  it('returns one slot per session and never repeats a weekday', () => {
+  it('returns one slot per mission and never repeats a weekday', () => {
     for (let count = 1; count <= 5; count += 1) {
       const slots = suggestedSlots(count);
       expect(slots).toHaveLength(count);
@@ -139,11 +139,11 @@ describe('suggestedSlots', () => {
 
 describe('formatCampaignShape', () => {
   it('summarises the campaign in one line', () => {
-    expect(formatCampaignShape(8, 3)).toBe('24 sessions · 3 a week · 8 weeks');
+    expect(formatCampaignShape(8, 3)).toBe('24 missions · 3 a week · 8 weeks');
   });
 
   it('does not say "1 a week" ungrammatically', () => {
-    expect(formatCampaignShape(4, 1)).toBe('4 sessions · 1 a week · 4 weeks');
+    expect(formatCampaignShape(4, 1)).toBe('4 missions · 1 a week · 4 weeks');
   });
 });
 

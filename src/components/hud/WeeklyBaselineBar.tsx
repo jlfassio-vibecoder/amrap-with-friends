@@ -17,10 +17,7 @@ export function WeeklyBaselineBar({
   baselineMinutes = WEEKLY_BASELINE_MINUTES,
 }: WeeklyBaselineBarProps) {
   const [nowMs, setNowMs] = useState(() => Date.now());
-  const fillPercent = Math.min(
-    100,
-    (weekMinutes / baselineMinutes) * 100
-  );
+  const fillPercent = Math.min(100, (weekMinutes / baselineMinutes) * 100);
   const pviTier = getPviMultiplier(weekPviAverage);
   const countdown = formatWeekCountdown(weekEndsAt, nowMs);
 
@@ -37,9 +34,7 @@ export function WeeklyBaselineBar({
   return (
     <section className="card space-y-4 p-4" aria-label="Weekly baseline">
       <div className="flex items-baseline justify-between gap-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted">
-          Weekly baseline
-        </p>
+        <p className="text-xs font-medium uppercase tracking-wide text-muted">Weekly baseline</p>
         <p className="text-display text-2xl tabular-nums text-ink">
           {weekMinutes} / {baselineMinutes} Min
         </p>
@@ -62,8 +57,8 @@ export function WeeklyBaselineBar({
 
       {weekMinutes === 0 ? (
         <p className="text-sm text-secondary">
-          No locked sessions this week. Finish a workout and save it to your account —
-          only locked scores count.
+          No locked missions this week. Finish a workout and save it to your account — only locked
+          scores count.
         </p>
       ) : null}
 
@@ -80,9 +75,7 @@ export function WeeklyBaselineBar({
           </p>
         </div>
         <div className="text-right">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">
-            Reset in
-          </p>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">Reset in</p>
           <p className="text-display text-lg tabular-nums text-ink">{countdown}</p>
         </div>
       </div>

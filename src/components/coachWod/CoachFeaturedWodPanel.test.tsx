@@ -25,9 +25,8 @@ vi.mock('@/lib/api/featuredWodSchedule', async () => {
 });
 
 vi.mock('@/lib/api/featuredWod', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/api/featuredWod')>(
-    '@/lib/api/featuredWod'
-  );
+  const actual =
+    await vi.importActual<typeof import('@/lib/api/featuredWod')>('@/lib/api/featuredWod');
   return {
     ...actual,
     fetchCurrentFeaturedWod: (...args: unknown[]) => fetchCurrentFeaturedWodMock(...args),
@@ -65,13 +64,13 @@ afterEach(() => {
   fetchCoachFeaturedWodAttendeesMock.mockReset();
   fetchCurrentFeaturedWodMock.mockReset();
   fetchCoachFeaturedWodAttendeesMock.mockResolvedValue({
-    data: { sessionId: null, attendees: [] },
+    data: { missionId: null, attendees: [] },
     error: null,
   });
   fetchCurrentFeaturedWodMock.mockResolvedValue({ data: null, error: null });
 });
 fetchCoachFeaturedWodAttendeesMock.mockResolvedValue({
-  data: { sessionId: null, attendees: [] },
+  data: { missionId: null, attendees: [] },
   error: null,
 });
 fetchCurrentFeaturedWodMock.mockResolvedValue({ data: null, error: null });
@@ -123,9 +122,9 @@ async function renderWithExistingSchedule() {
 }
 
 describe('CoachFeaturedWodPanel attendee list', () => {
-  it('renders nothing while no live session exists', async () => {
+  it('renders nothing while no live mission exists', async () => {
     fetchCoachFeaturedWodAttendeesMock.mockResolvedValue({
-      data: { sessionId: null, attendees: [] },
+      data: { missionId: null, attendees: [] },
       error: null,
     });
 
@@ -137,10 +136,10 @@ describe('CoachFeaturedWodPanel attendee list', () => {
     expect(screen.queryByText(/Who's coming/)).toBeNull();
   });
 
-  it('shows the attendee list for a live session, host first', async () => {
+  it('shows the attendee list for a live mission, host first', async () => {
     fetchCoachFeaturedWodAttendeesMock.mockResolvedValue({
       data: {
-        sessionId: 'session-1',
+        missionId: 'mission-1',
         attendees: [
           { nickname: 'Coach', role: 'host', joinedAt: '2026-08-29T00:00:00.000Z' },
           { nickname: 'Alice', role: 'joiner', joinedAt: '2026-08-29T00:01:00.000Z' },
@@ -158,9 +157,9 @@ describe('CoachFeaturedWodPanel attendee list', () => {
     expect(screen.getByText('Alice')).toBeTruthy();
   });
 
-  it('shows an empty-state message when the live session has no joiners', async () => {
+  it('shows an empty-state message when the live mission has no joiners', async () => {
     fetchCoachFeaturedWodAttendeesMock.mockResolvedValue({
-      data: { sessionId: 'session-1', attendees: [] },
+      data: { missionId: 'mission-1', attendees: [] },
       error: null,
     });
 
@@ -172,8 +171,8 @@ describe('CoachFeaturedWodPanel attendee list', () => {
   });
 });
 
-describe('CoachFeaturedWodPanel join staging', () => {
-  it('hides Join staging more than 15 minutes before start', async () => {
+describe('CoachFeaturedWodPanel join rally point', () => {
+  it('hides Join rally point more than 15 minutes before start', async () => {
     fetchCurrentFeaturedWodMock.mockResolvedValue({
       data: {
         workoutName: 'Sunrise AMRAP',
@@ -182,7 +181,7 @@ describe('CoachFeaturedWodPanel join staging', () => {
         intensityTier: 3,
         tags: [],
         scheduledAt: new Date(Date.now() + 2 * 60 * 60_000).toISOString(),
-        sessionId: 'session-1',
+        missionId: 'mission-1',
         state: 'waiting',
         startedAt: null,
         attendeeCount: 1,
@@ -195,10 +194,10 @@ describe('CoachFeaturedWodPanel join staging', () => {
     await waitFor(() => {
       expect(fetchCurrentFeaturedWodMock).toHaveBeenCalled();
     });
-    expect(screen.queryByRole('link', { name: /Join staging/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Join rally point/i })).toBeNull();
   });
 
-  it('shows Join staging within 15 minutes of start', async () => {
+  it('shows Join rally point within 15 minutes of start', async () => {
     fetchCurrentFeaturedWodMock.mockResolvedValue({
       data: {
         workoutName: 'Sunrise AMRAP',
@@ -207,7 +206,7 @@ describe('CoachFeaturedWodPanel join staging', () => {
         intensityTier: 3,
         tags: [],
         scheduledAt: new Date(Date.now() + 5 * 60_000).toISOString(),
-        sessionId: 'session-1',
+        missionId: 'mission-1',
         state: 'waiting',
         startedAt: null,
         attendeeCount: 1,
@@ -218,10 +217,10 @@ describe('CoachFeaturedWodPanel join staging', () => {
     await renderWithExistingSchedule();
 
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: /Join staging/i })).toBeTruthy();
+      expect(screen.getByRole('link', { name: /Join rally point/i })).toBeTruthy();
     });
-    expect(screen.getByRole('link', { name: /Join staging/i }).getAttribute('href')).toBe(
-      '/session/session-1'
+    expect(screen.getByRole('link', { name: /Join rally point/i }).getAttribute('href')).toBe(
+      '/mission/mission-1'
     );
   });
 });

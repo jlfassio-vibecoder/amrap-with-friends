@@ -60,12 +60,12 @@ export function CampaignTrackPicker({ tracks, onChange }: CampaignTrackPickerPro
       <div>
         <p className="text-sm font-semibold text-ink">Workout styles</p>
         <p className="text-xs text-secondary">
-          Pick the styles this campaign trains. Sessions rotate through them, so two or three keeps
+          Pick the styles this campaign trains. Missions rotate through them, so two or three keeps
           the work varied. The first style is what week one measures.
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Session length">
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Mission length">
         {TIME_DOMAINS.map((option) => (
           <button
             key={option}

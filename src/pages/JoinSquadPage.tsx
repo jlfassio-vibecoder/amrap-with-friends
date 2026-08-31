@@ -105,7 +105,7 @@ export default function JoinSquadPage() {
         <h2 className="text-display text-3xl text-ink">{inviter} invited you</h2>
         <p className="text-sm text-secondary">
           Accept to add them to your squad. You will need an account — a squad tracks people, not
-          one session.
+          one mission.
         </p>
 
         {signedIn ? (

@@ -6,11 +6,11 @@ import {
   playTacticalCue,
   unlockTacticalAudio,
 } from '@/lib/audio/tacticalSynthesis';
-import type { LiveSessionPhase } from '@/lib/sessionSync/types';
+import type { LiveMissionPhase } from '@/lib/missionSync/types';
 import { track } from '@/lib/analytics/track';
 
 interface UseTacticalAudioInput {
-  phase: LiveSessionPhase;
+  phase: LiveMissionPhase;
   timeLeftSec: number;
   isPaused: boolean;
   workDurationSec: number;

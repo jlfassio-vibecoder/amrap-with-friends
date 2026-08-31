@@ -8,8 +8,8 @@ const ROLE_CLASSES: Record<CampaignOccurrenceRole, string> = {
 };
 
 /**
- * Marks the three sessions in a campaign that are not just another workout.
- * Ordinary sessions get no badge — a label on every row labels nothing.
+ * Marks the three missions in a campaign that are not just another workout.
+ * Ordinary missions get no badge — a label on every row labels nothing.
  */
 export function CampaignRoleBadge({ role }: { role: CampaignOccurrenceRole }) {
   const label = campaignRoleLabel(role);

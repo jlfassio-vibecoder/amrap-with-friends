@@ -1,4 +1,4 @@
-// "Save to Calendar" for a single scheduled session (e.g. the Featured
+// "Save to Calendar" for a single scheduled mission (e.g. the Featured
 // WOD's next occurrence). Two independent outputs from the same input:
 // a downloadable .ics file (RFC 5545 — works with Apple/Outlook/Google via
 // import) and a direct "Add to Google Calendar" URL (no auth, no API key —
@@ -7,7 +7,7 @@
 export interface CalendarEventInput {
   /** Stable identifier for the UID, so re-saving the same occurrence
    * doesn't create a duplicate in calendars that dedupe by UID. Typically
-   * the session id once generated, or the workout id + ISO time when it
+   * the mission id once generated, or the workout id + ISO time when it
    * isn't yet. */
   uid: string;
   title: string;
@@ -37,7 +37,11 @@ function toIcsUtc(date: Date): string {
  * descriptions (a join link plus workout detail) will otherwise corrupt
  * some calendar parsers. */
 function icsEscape(text: string): string {
-  return text.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+  return text
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r?\n/g, '\\n');
 }
 
 function foldLine(line: string): string {

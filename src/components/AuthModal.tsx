@@ -30,12 +30,8 @@ export function AuthModal({
   guestAllowed = true,
 }: AuthModalProps) {
   const magicLinkEnabled = isMagicLinkAuthEnabled();
-  const {
-    signInWithMagicLink,
-    signUpWithPassword,
-    signInWithPassword,
-    isAuthenticated,
-  } = useAmrapAuth();
+  const { signInWithMagicLink, signUpWithPassword, signInWithPassword, isAuthenticated } =
+    useAmrapAuth();
 
   const [authMethod, setAuthMethod] = useState<AuthMethod>(() => {
     if (initialPasswordMode === 'sign-up') {
@@ -127,8 +123,7 @@ export function AuthModal({
   const isBusy = status === 'submitting';
   const isSuccessLocked = status === 'success' && authMethod === 'magic-link';
   const showingPasswordForm = !(magicLinkEnabled && authMethod === 'magic-link');
-  const title =
-    showingPasswordForm && passwordMode === 'sign-up' ? 'Create account' : 'Sign in';
+  const title = showingPasswordForm && passwordMode === 'sign-up' ? 'Create account' : 'Sign in';
 
   return (
     <div
@@ -158,7 +153,7 @@ export function AuthModal({
 
         {guestAllowed ? (
           <p className="text-sm text-secondary">
-            Optional — play as a guest without signing in. Use an account to save sessions to your
+            Optional — play as a guest without signing in. Use an account to save missions to your
             profile.
           </p>
         ) : null}
@@ -231,9 +226,7 @@ export function AuthModal({
               <button
                 type="button"
                 className={
-                  passwordMode === 'sign-in'
-                    ? 'font-semibold text-ink underline'
-                    : 'link-accent'
+                  passwordMode === 'sign-in' ? 'font-semibold text-ink underline' : 'link-accent'
                 }
                 onClick={() => switchPasswordMode('sign-in')}
               >
@@ -242,9 +235,7 @@ export function AuthModal({
               <button
                 type="button"
                 className={
-                  passwordMode === 'sign-up'
-                    ? 'font-semibold text-ink underline'
-                    : 'link-accent'
+                  passwordMode === 'sign-up' ? 'font-semibold text-ink underline' : 'link-accent'
                 }
                 onClick={() => switchPasswordMode('sign-up')}
               >
@@ -272,9 +263,7 @@ export function AuthModal({
                   type={showPassword ? 'text' : 'password'}
                   required
                   minLength={AUTH_MIN_PASSWORD_LENGTH}
-                  autoComplete={
-                    passwordMode === 'sign-up' ? 'new-password' : 'current-password'
-                  }
+                  autoComplete={passwordMode === 'sign-up' ? 'new-password' : 'current-password'}
                   className="input-field pr-10"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
@@ -334,11 +323,7 @@ export function AuthModal({
               className="btn-neutral w-full text-sm"
               disabled={isBusy || status === 'success'}
             >
-              {isBusy
-                ? 'Submitting…'
-                : passwordMode === 'sign-up'
-                  ? 'Create account'
-                  : 'Sign in'}
+              {isBusy ? 'Submitting…' : passwordMode === 'sign-up' ? 'Create account' : 'Sign in'}
             </button>
           </form>
         )}

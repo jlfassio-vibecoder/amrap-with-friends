@@ -1,5 +1,5 @@
 import { callRpc } from '@/lib/api/callRpc';
-import type { WorkoutExercise } from '@/lib/api/sessionTypes';
+import type { WorkoutExercise } from '@/lib/api/missionTypes';
 
 export type AssignedWorkoutApiError = { message: string };
 
@@ -70,7 +70,7 @@ function parseAssignedWorkout(raw: unknown): AssignedWorkout | null {
 }
 
 /**
- * Puts a workout on a squad friend's My sessions page. Reach is enforced in
+ * Puts a workout on a squad friend's My missions page. Reach is enforced in
  * Postgres against squad_friends — this only shapes the call.
  */
 export async function assignWorkout(input: {
@@ -127,16 +127,16 @@ export async function dismissAssignedWorkout(
 }
 
 /**
- * Marks one started once the athlete has created the session from it. Called
- * after create_session so the row can link to what they actually ran.
+ * Marks one started once the athlete has created the mission from it. Called
+ * after create_mission so the row can link to what they actually ran.
  */
 export async function startAssignedWorkout(
   assignedWorkoutId: string,
-  sessionId: string
+  missionId: string
 ): Promise<{ error: AssignedWorkoutApiError | null }> {
   const { error } = await callRpc('start_assigned_workout', {
     p_assigned_workout_id: assignedWorkoutId,
-    p_session_id: sessionId,
+    p_mission_id: missionId,
   });
   if (error) {
     return { error: { message: mapError(error.message) } };

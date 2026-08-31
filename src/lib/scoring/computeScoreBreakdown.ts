@@ -3,15 +3,15 @@ import { computeFinalScore } from '@/lib/scoring/computeFinalScore';
 import { getDomainWeight } from '@/lib/scoring/getDomainWeight';
 import { getPviMultiplier } from '@/lib/scoring/getPviMultiplier';
 import type { ScoreBreakdown } from '@/lib/scoring/types';
-import type { LiveSessionPhase } from '@/lib/sessionSync/types';
+import type { LiveMissionPhase } from '@/lib/missionSync/types';
 
 export function computeScoreBreakdown(
   roundDurationsSec: number[],
   durationMinutes: number,
-  sessionPhase: LiveSessionPhase,
+  missionPhase: LiveMissionPhase,
   baseScore: number
 ): ScoreBreakdown {
-  if (sessionPhase !== 'finished') {
+  if (missionPhase !== 'finished') {
     return {
       baseScore,
       pvi: null,

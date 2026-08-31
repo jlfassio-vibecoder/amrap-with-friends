@@ -6,8 +6,7 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 export type UploadCoachExerciseImageResult =
-  | { path: string; error: null }
-  | { path: null; error: string };
+  { path: string; error: null } | { path: null; error: string };
 
 /** Resolve a relative path in the coach-exercise-media bucket to a public URL. */
 export function getCoachExerciseMediaUrl(relativePath: string): string {
@@ -16,9 +15,7 @@ export function getCoachExerciseMediaUrl(relativePath: string): string {
     return '';
   }
 
-  const { data } = getSupabaseClient()
-    .storage.from(COACH_EXERCISE_MEDIA_BUCKET)
-    .getPublicUrl(path);
+  const { data } = getSupabaseClient().storage.from(COACH_EXERCISE_MEDIA_BUCKET).getPublicUrl(path);
 
   return data.publicUrl;
 }
@@ -79,7 +76,7 @@ function mapUploadError(message: string | undefined): string {
  *
  * Sends the file as an ArrayBuffer (not multipart FormData) so Storage uses a
  * raw binary POST — more reliable with nested paths and flaky TLS middleboxes.
- * Path owner is taken from the live auth session so RLS folder checks match. */
+ * Path owner is taken from the live auth mission so RLS folder checks match. */
 export async function uploadCoachExercisePhoto(
   ownerId: string,
   exerciseId: string,
@@ -125,8 +122,7 @@ export async function uploadCoachExercisePhoto(
     let { error } = await attemptUpload();
     if (error) {
       const retryable =
-        /failed to fetch|network|ssl|mac alert/i.test(error.message) ||
-        error.message.length === 0;
+        /failed to fetch|network|ssl|mac alert/i.test(error.message) || error.message.length === 0;
       if (retryable) {
         ({ error } = await attemptUpload());
       }

@@ -44,7 +44,7 @@ export function CoachWorkoutHistory({ workoutId }: CoachWorkoutHistoryProps) {
       {!loading && !error ? (
         <CoachDataTable
           rows={entries}
-          rowKey={(row) => row.sessionId}
+          rowKey={(row) => row.missionId}
           emptyLabel="No one has run this workout yet."
           columns={[
             { header: 'Athlete', render: (row) => row.nickname },

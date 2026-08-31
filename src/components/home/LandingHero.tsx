@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
 import { HeroLogoDissolve } from '@/components/home/HeroLogoDissolve';
-import { HostScheduledSessionsPanel } from '@/components/session/HostScheduledSessionsPanel';
+import { HostScheduledMissionsPanel } from '@/components/mission/HostScheduledMissionsPanel';
 
 interface LandingHeroProps {
   /** Signed-in athletes get a route into the HUD alongside the sign-up CTA. */
@@ -35,7 +35,7 @@ export function LandingHero({ showHudAction }: LandingHeroProps) {
               className="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
               to="/create"
             >
-              Create session
+              Create mission
             </Link>
             <Link
               className="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
@@ -47,7 +47,7 @@ export function LandingHero({ showHudAction }: LandingHeroProps) {
               className="border-b border-gold pb-1.5 text-xs font-bold uppercase tracking-[0.1em] text-night-ink hover:text-gold"
               to="/join"
             >
-              Join a session
+              Join a mission
             </Link>
             {showHudAction ? (
               <Link
@@ -67,7 +67,7 @@ export function LandingHero({ showHudAction }: LandingHeroProps) {
 
       <div className="mx-auto w-full max-w-[1240px] px-6 pb-14 lg:px-10 lg:pb-20">
         <div className="rounded-card border border-night-border bg-surface p-5 text-ink shadow-card">
-          <HostScheduledSessionsPanel />
+          <HostScheduledMissionsPanel />
         </div>
       </div>
     </div>

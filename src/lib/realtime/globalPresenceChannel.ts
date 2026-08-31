@@ -1,40 +1,77 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
-/** Shared Realtime Presence channel every authenticated client joins so the
- * Coach dashboard can see who currently has the app open. Presence state is
- * ephemeral (not persisted), so this is only ever read live, never queried
- * from SQL. */
+/** Shared Realtime Presence channel so the Coach dashboard can see who
+ * currently has the app open. Signed-in clients track with their auth user
+ * id; guests track with `anon:${amrap_anon_id}`. Presence is ephemeral (not
+ * persisted), so this is only ever read live, never queried from SQL. */
 export const GLOBAL_PRESENCE_CHANNEL = 'presence:global';
+
+export const ANON_PRESENCE_PREFIX = 'anon:';
 
 type OnlineIdsListener = (ids: Set<string>) => void;
 
-const onlineListeners = new Set<OnlineIdsListener>();
+export type GlobalPresenceSnapshot = {
+  userIds: Set<string>;
+  /** Raw anon uuids without the `anon:` prefix. */
+  anonIds: Set<string>;
+};
+
+const userListeners = new Set<OnlineIdsListener>();
+const anonListeners = new Set<OnlineIdsListener>();
 let channel: RealtimeChannel | null = null;
 let channelPresenceKey: string | null = null;
-let broadcastUserId: string | null = null;
+let broadcastPresenceKey: string | null = null;
 let channelJoined = false;
 
-function currentOnlineIds(): Set<string> {
+export function isAnonPresenceKey(key: string): boolean {
+  return key.startsWith(ANON_PRESENCE_PREFIX);
+}
+
+export function anonPresenceKey(anonId: string): string {
+  return `${ANON_PRESENCE_PREFIX}${anonId}`;
+}
+
+export function partitionPresenceKeys(keys: Iterable<string>): GlobalPresenceSnapshot {
+  const userIds = new Set<string>();
+  const anonIds = new Set<string>();
+  for (const key of keys) {
+    if (isAnonPresenceKey(key)) {
+      anonIds.add(key.slice(ANON_PRESENCE_PREFIX.length));
+    } else {
+      userIds.add(key);
+    }
+  }
+  return { userIds, anonIds };
+}
+
+function currentPresenceSnapshot(): GlobalPresenceSnapshot {
   if (!channel) {
-    return new Set();
+    return { userIds: new Set(), anonIds: new Set() };
   }
-  return new Set(Object.keys(channel.presenceState()));
+  return partitionPresenceKeys(Object.keys(channel.presenceState()));
 }
 
-function emitOnlineIds() {
-  const ids = currentOnlineIds();
-  for (const listener of onlineListeners) {
-    listener(ids);
+function emitPresence() {
+  const snapshot = currentPresenceSnapshot();
+  for (const listener of userListeners) {
+    listener(snapshot.userIds);
+  }
+  for (const listener of anonListeners) {
+    listener(snapshot.anonIds);
   }
 }
 
-async function trackBroadcastUser() {
-  if (!channel || !broadcastUserId || !channelJoined) {
+async function trackBroadcastPresence() {
+  if (!channel || !broadcastPresenceKey || !channelJoined) {
     return;
   }
-  await channel.track({ online_at: new Date().toISOString() });
-  emitOnlineIds();
+  const kind = isAnonPresenceKey(broadcastPresenceKey) ? 'anon' : 'user';
+  await channel.track({
+    online_at: new Date().toISOString(),
+    kind,
+  });
+  emitPresence();
 }
 
 /** Creates the shared channel once, registering presence callbacks before
@@ -47,8 +84,7 @@ function ensureChannel(presenceKey?: string): RealtimeChannel {
   // HMR / prior mounts can leave a subscribed channel in the Supabase client
   // while this module's `channel` ref is null. Reusing it and calling `.on()`
   // throws and can break the Coach cohorts mount.
-  const existingChannels =
-    typeof supabase.getChannels === 'function' ? supabase.getChannels() : [];
+  const existingChannels = typeof supabase.getChannels === 'function' ? supabase.getChannels() : [];
   for (const existing of existingChannels) {
     if (existing.topic.includes(GLOBAL_PRESENCE_CHANNEL)) {
       supabase.removeChannel(existing);
@@ -59,19 +95,17 @@ function ensureChannel(presenceKey?: string): RealtimeChannel {
   channelJoined = false;
   channel = supabase.channel(
     GLOBAL_PRESENCE_CHANNEL,
-    presenceKey
-      ? { config: { presence: { key: presenceKey } } }
-      : undefined
+    presenceKey ? { config: { presence: { key: presenceKey } } } : undefined
   );
 
   channel
-    .on('presence', { event: 'sync' }, emitOnlineIds)
-    .on('presence', { event: 'join' }, emitOnlineIds)
-    .on('presence', { event: 'leave' }, emitOnlineIds)
+    .on('presence', { event: 'sync' }, emitPresence)
+    .on('presence', { event: 'join' }, emitPresence)
+    .on('presence', { event: 'leave' }, emitPresence)
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         channelJoined = true;
-        void trackBroadcastUser();
+        void trackBroadcastPresence();
       }
     });
 
@@ -89,43 +123,54 @@ function resetChannel() {
 }
 
 function maybeTeardownChannel() {
-  if (onlineListeners.size > 0 || broadcastUserId) {
+  if (userListeners.size > 0 || anonListeners.size > 0 || broadcastPresenceKey) {
     return;
   }
   resetChannel();
 }
 
-/** App-level listeners for the online user-id set. Safe to call after the
- * shared channel has already subscribed. */
-export function subscribeOnlineUserIds(listener: OnlineIdsListener): () => void {
-  onlineListeners.add(listener);
-  ensureChannel(broadcastUserId ?? undefined);
-  listener(currentOnlineIds());
+function subscribeIds(
+  listeners: Set<OnlineIdsListener>,
+  pick: (snapshot: GlobalPresenceSnapshot) => Set<string>,
+  listener: OnlineIdsListener
+): () => void {
+  listeners.add(listener);
+  ensureChannel(broadcastPresenceKey ?? undefined);
+  listener(pick(currentPresenceSnapshot()));
 
   return () => {
-    onlineListeners.delete(listener);
+    listeners.delete(listener);
     maybeTeardownChannel();
   };
 }
 
-/** Track the signed-in user on the shared presence channel for as long as the
- * returned disposer runs. */
-export function startGlobalPresenceBroadcast(userId: string): () => void {
-  broadcastUserId = userId;
+/** App-level listeners for signed-in user ids currently online. */
+export function subscribeOnlineUserIds(listener: OnlineIdsListener): () => void {
+  return subscribeIds(userListeners, (s) => s.userIds, listener);
+}
+
+/** App-level listeners for guest anon ids currently online (no `anon:` prefix). */
+export function subscribeOnlineAnonIds(listener: OnlineIdsListener): () => void {
+  return subscribeIds(anonListeners, (s) => s.anonIds, listener);
+}
+
+/** Track this tab on the shared presence channel for as long as the returned
+ * disposer runs. Pass an auth user id or `anon:${anonId}`. */
+export function startGlobalPresenceBroadcast(presenceKey: string): () => void {
+  broadcastPresenceKey = presenceKey;
 
   // Presence keys are fixed at channel creation. If an observer opened the
-  // channel first without this user id, recreate so presenceState keys stay
-  // real user ids.
-  if (channel && channelPresenceKey !== userId) {
+  // channel first without this key, recreate so our track uses the right key.
+  if (channel && channelPresenceKey !== presenceKey) {
     resetChannel();
   }
 
-  ensureChannel(userId);
-  void trackBroadcastUser();
+  ensureChannel(presenceKey);
+  void trackBroadcastPresence();
 
   return () => {
-    if (broadcastUserId === userId) {
-      broadcastUserId = null;
+    if (broadcastPresenceKey === presenceKey) {
+      broadcastPresenceKey = null;
     }
     if (channel) {
       void channel.untrack();

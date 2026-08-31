@@ -15,7 +15,7 @@ import type { CampaignTrack } from './types';
  * adding a benchmark here; retiring one means leaving the entry in place.
  *
  * Each was chosen as the median-volume workout of its pool, so the test is
- * representative of the track rather than its easiest or hardest session.
+ * representative of the track rather than its easiest or hardest mission.
  */
 const BENCHMARK_TEMPLATE_IDS: Record<string, string> = {
   '5:blood-shunt': 'flash-flood',

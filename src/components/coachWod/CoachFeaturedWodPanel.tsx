@@ -11,8 +11,8 @@ import {
   type CoachFeaturedSchedule,
   type FeaturedWodAttendee,
 } from '@/lib/api/featuredWodSchedule';
-import { FEATURED_WOD_LOBBY_LEAD_MS } from '@/lib/session/featuredWodCardPresentation';
-import { computeNextFeaturedOccurrences } from '@/lib/session/featuredWodOccurrencePreview';
+import { FEATURED_WOD_RALLY_POINT_LEAD_MS } from '@/lib/mission/featuredWodCardPresentation';
+import { computeNextFeaturedOccurrences } from '@/lib/mission/featuredWodOccurrencePreview';
 
 const PREVIEW_COUNT = 3;
 
@@ -166,9 +166,7 @@ function ScheduleForm({ workouts, schedule, onSaved, onCancel }: ScheduleFormPro
       </label>
 
       <div className="space-y-1">
-        <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
-          Days
-        </span>
+        <span className="text-xs font-semibold uppercase tracking-wide text-secondary">Days</span>
         <div className="flex flex-wrap gap-2" role="group" aria-label="Days of week">
           {DAY_LABELS.map((label, day) => {
             const selected = days.includes(day);
@@ -207,7 +205,7 @@ function ScheduleForm({ workouts, schedule, onSaved, onCancel }: ScheduleFormPro
               {times.length > 1 ? (
                 <button
                   type="button"
-                  className="text-xs uppercase tracking-wide text-error hover:underline"
+                  className="text-error text-xs uppercase tracking-wide hover:underline"
                   onClick={() => removeTime(index)}
                 >
                   Remove
@@ -216,11 +214,7 @@ function ScheduleForm({ workouts, schedule, onSaved, onCancel }: ScheduleFormPro
             </div>
           ))}
           {times.length < MAX_TIMES ? (
-            <button
-              type="button"
-              className="btn-outline text-xs"
-              onClick={addTime}
-            >
+            <button type="button" className="btn-outline text-xs" onClick={addTime}>
               Add another time
             </button>
           ) : null}
@@ -293,9 +287,9 @@ function ScheduleForm({ workouts, schedule, onSaved, onCancel }: ScheduleFormPro
   );
 }
 
-/** Join staging appears in the same lead window as the public Join session CTA. */
-function JoinStagingLink({ scheduleActive }: { scheduleActive: boolean }) {
-  const [sessionId, setSessionId] = useState<string | null>(null);
+/** Join rally point appears in the same lead window as the public Join mission CTA. */
+function JoinRallyPointLink({ scheduleActive }: { scheduleActive: boolean }) {
+  const [missionId, setMissionId] = useState<string | null>(null);
   const [scheduledAt, setScheduledAt] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
@@ -313,11 +307,11 @@ function JoinStagingLink({ scheduleActive }: { scheduleActive: boolean }) {
             return;
           }
           if (result.error || !result.data) {
-            setSessionId(null);
+            setMissionId(null);
             setScheduledAt(null);
             return;
           }
-          setSessionId(result.data.sessionId);
+          setMissionId(result.data.missionId);
           setScheduledAt(result.data.scheduledAt);
           setNowMs(Date.now());
         })
@@ -325,7 +319,7 @@ function JoinStagingLink({ scheduleActive }: { scheduleActive: boolean }) {
           if (cancelled) {
             return;
           }
-          setSessionId(null);
+          setMissionId(null);
           setScheduledAt(null);
         });
     }
@@ -344,37 +338,34 @@ function JoinStagingLink({ scheduleActive }: { scheduleActive: boolean }) {
     };
   }, [scheduleActive]);
 
-  const activeSessionId = scheduleActive ? sessionId : null;
+  const activeMissionId = scheduleActive ? missionId : null;
   const activeScheduledAt = scheduleActive ? scheduledAt : null;
 
-  if (!activeSessionId || !activeScheduledAt) {
+  if (!activeMissionId || !activeScheduledAt) {
     return null;
   }
 
   const scheduledAtMs = Date.parse(activeScheduledAt);
-  if (
-    !Number.isFinite(scheduledAtMs) ||
-    nowMs < scheduledAtMs - FEATURED_WOD_LOBBY_LEAD_MS
-  ) {
+  if (!Number.isFinite(scheduledAtMs) || nowMs < scheduledAtMs - FEATURED_WOD_RALLY_POINT_LEAD_MS) {
     return null;
   }
 
   return (
     <Link
       className="text-xs uppercase tracking-wide text-accent hover:underline"
-      to={`/session/${activeSessionId}`}
+      to={`/mission/${activeMissionId}`}
     >
-      Join staging
+      Join rally point
     </Link>
   );
 }
 
 /** "Who's coming" — the specific athletes who've joined the coach's own
- * live Featured WOD session, not just the bare count already shown on the
- * public card. Only renders once a live session exists (sessionId !=
+ * live Featured WOD mission, not just the bare count already shown on the
+ * public card. Only renders once a live mission exists (missionId !=
  * null); polls while mounted so new joiners show up without a refresh. */
 function AttendeeList() {
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [missionId, setMissionId] = useState<string | null>(null);
   const [attendees, setAttendees] = useState<FeaturedWodAttendee[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -386,7 +377,7 @@ function AttendeeList() {
         if (cancelled || result.error || !result.data) {
           return;
         }
-        setSessionId(result.data.sessionId);
+        setMissionId(result.data.missionId);
         setAttendees(result.data.attendees);
         setLoaded(true);
       });
@@ -403,7 +394,7 @@ function AttendeeList() {
     };
   }, []);
 
-  if (!loaded || !sessionId) {
+  if (!loaded || !missionId) {
     return null;
   }
 
@@ -537,8 +528,8 @@ export function CoachFeaturedWodPanel() {
       </div>
 
       <p className="text-xs text-secondary">
-        Only one featured WOD can be live app-wide at a time. It publishes to the landing page
-        and Create session; the coach starts the AMRAP from staging.
+        Only one featured WOD can be live app-wide at a time. It publishes to the landing page and
+        Create mission; the coach starts the AMRAP from the rally point.
       </p>
 
       {error ? <p className="text-error text-sm">{error}</p> : null}
@@ -562,7 +553,7 @@ export function CoachFeaturedWodPanel() {
             {schedule.timezone})
           </p>
           <div className="flex flex-wrap gap-3 pt-1">
-            <JoinStagingLink scheduleActive={schedule.active} />
+            <JoinRallyPointLink scheduleActive={schedule.active} />
             <button
               type="button"
               className="text-xs uppercase tracking-wide text-accent hover:underline"
@@ -592,7 +583,7 @@ export function CoachFeaturedWodPanel() {
             )}
             <button
               type="button"
-              className="text-xs uppercase tracking-wide text-error hover:underline"
+              className="text-error text-xs uppercase tracking-wide hover:underline"
               onClick={() => void handleDelete()}
               disabled={busy}
             >

@@ -3,7 +3,7 @@ import { computeBaseScore } from '@/lib/scoring/computeBaseScore';
 import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
 
 export interface GhostRunRef {
-  sessionId: string;
+  missionId: string;
   participantId: string;
   nickname: string;
   finalScore: number;
@@ -22,7 +22,7 @@ export interface GhostCurveRound {
 }
 
 export interface GhostCurveData {
-  sessionId: string;
+  missionId: string;
   participantId: string;
   segmentIndex: number;
   durationSec: number;
@@ -54,7 +54,7 @@ export function parseGhostRunRef(raw: unknown): GhostRunRef | null {
   }
 
   const row = raw as Record<string, unknown>;
-  const sessionId = readString(row.session_id);
+  const missionId = readString(row.mission_id);
   const participantId = readString(row.participant_id);
   const nickname = readString(row.nickname);
   const finalScore = readNumber(row.final_score);
@@ -62,7 +62,7 @@ export function parseGhostRunRef(raw: unknown): GhostRunRef | null {
   const createdAt = readString(row.created_at);
 
   if (
-    !sessionId ||
+    !missionId ||
     !participantId ||
     !nickname ||
     finalScore === null ||
@@ -73,7 +73,7 @@ export function parseGhostRunRef(raw: unknown): GhostRunRef | null {
   }
 
   return {
-    sessionId,
+    missionId,
     participantId,
     nickname,
     finalScore,
@@ -101,12 +101,12 @@ function parseGhostCurveRound(raw: unknown): GhostCurveRound | null {
 export async function fetchAvailableGhosts(
   templateId: string,
   durationMinutes: number,
-  forSessionId?: string | null
+  forMissionId?: string | null
 ): Promise<{ data: AvailableGhosts | null; error: GhostApiError | null }> {
   const { data, error } = await callRpc('available_ghosts', {
     p_template_id: templateId,
     p_duration_minutes: durationMinutes,
-    p_for_session_id: forSessionId ?? null,
+    p_for_mission_id: forMissionId ?? null,
   });
 
   if (error) {
@@ -141,11 +141,11 @@ export async function fetchAvailableGhosts(
 }
 
 export async function fetchGhostCurveData(
-  sessionId: string,
+  missionId: string,
   participantId: string
 ): Promise<{ data: GhostCurveData | null; error: GhostApiError | null }> {
   const { data, error } = await callRpc('ghost_curve_data', {
-    p_session_id: sessionId,
+    p_mission_id: missionId,
     p_participant_id: participantId,
   });
 
@@ -166,7 +166,7 @@ export async function fetchGhostCurveData(
     if (reason === 'forbidden') {
       return { data: null, error: { message: 'You cannot access this ghost run.' } };
     }
-    if (reason === 'participant_not_found' || reason === 'session_not_found') {
+    if (reason === 'participant_not_found' || reason === 'mission_not_found') {
       return { data: null, error: { message: 'Ghost run not found.' } };
     }
     return {
@@ -175,14 +175,14 @@ export async function fetchGhostCurveData(
     };
   }
 
-  const parsedSessionId = readString(raw.session_id);
+  const parsedMissionId = readString(raw.mission_id);
   const parsedParticipantId = readString(raw.participant_id);
   const segmentIndex = readNumber(raw.segment_index) ?? 0;
   const durationMinutes = readNumber(raw.duration_minutes);
   const partialReps = readNumber(raw.partial_reps) ?? 0;
   const workout = raw.workout;
 
-  if (!parsedSessionId || !parsedParticipantId || durationMinutes === null) {
+  if (!parsedMissionId || !parsedParticipantId || durationMinutes === null) {
     return {
       data: null,
       error: { message: 'Something went wrong. Please try again.' },
@@ -215,7 +215,7 @@ export async function fetchGhostCurveData(
 
   return {
     data: {
-      sessionId: parsedSessionId,
+      missionId: parsedMissionId,
       participantId: parsedParticipantId,
       segmentIndex,
       durationSec: durationMinutes * 60,

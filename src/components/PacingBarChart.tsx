@@ -4,7 +4,7 @@ import {
   shouldExcludeBuyInRound,
 } from '@/lib/scoring/getPacingDurations';
 import { getPviMultiplier } from '@/lib/scoring/getPviMultiplier';
-import { formatSplitDuration } from '@/lib/sessionSync/computeParticipantSplits';
+import { formatSplitDuration } from '@/lib/missionSync/computeParticipantSplits';
 
 interface PacingBarChartProps {
   roundSplits: number[];
@@ -21,11 +21,7 @@ function buildAriaLabel(roundSplits: number[], slowestRound: number): string {
   return `Pacing chart with ${roundSplits.length} rounds. Slowest round was round ${slowestRound}.`;
 }
 
-export function PacingBarChart({
-  roundSplits,
-  durationMinutes,
-  pvi,
-}: PacingBarChartProps) {
+export function PacingBarChart({ roundSplits, durationMinutes, pvi }: PacingBarChartProps) {
   const excludeBuyIn = shouldExcludeBuyInRound(durationMinutes);
   const pviEligibleDurations = getPacingDurations(roundSplits, {
     excludeFirstRound: excludeBuyIn,
@@ -42,8 +38,7 @@ export function PacingBarChart({
       : 0;
 
   const slowestIndex = roundSplits.reduce(
-    (slowest, duration, index) =>
-      duration > roundSplits[slowest] ? index : slowest,
+    (slowest, duration, index) => (duration > roundSplits[slowest] ? index : slowest),
     0
   );
 
@@ -68,13 +63,9 @@ export function PacingBarChart({
             </p>
           </div>
           <div className="text-right">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted">
-              Avg round time
-            </p>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">Avg round time</p>
             <p className="text-display text-lg tabular-nums text-ink">
-              {averagePaceSec === null
-                ? 'N/A'
-                : formatSplitDuration(Math.round(averagePaceSec))}
+              {averagePaceSec === null ? 'N/A' : formatSplitDuration(Math.round(averagePaceSec))}
             </p>
           </div>
         </div>
@@ -148,7 +139,7 @@ export function PacingBarChart({
                 height={barHeight}
                 rx="2"
                 fill={isBuyIn ? 'url(#buy-in-hatch)' : 'currentColor'}
-                className={isBuyIn ? 'stroke-border text-muted/40' : 'text-accent'}
+                className={isBuyIn ? 'text-muted/40 stroke-border' : 'text-accent'}
                 strokeWidth={isBuyIn ? 1 : 0}
                 opacity={isBuyIn ? 0.75 : 1}
               />
@@ -182,11 +173,7 @@ export function PacingBarChart({
           );
         })}
 
-        <text
-          x={4}
-          y={PADDING.top + 8}
-          className="fill-muted text-[10px]"
-        >
+        <text x={4} y={PADDING.top + 8} className="fill-muted text-[10px]">
           sec
         </text>
       </svg>

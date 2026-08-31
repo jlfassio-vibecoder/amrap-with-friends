@@ -3,21 +3,17 @@ import { getOrCreateAnonId } from '@/lib/analytics/identity';
 
 export interface TrackContext {
   userId?: string | null;
-  sessionId?: string | null;
+  missionId?: string | null;
   participantId?: string | null;
 }
 
-function buildPayload(
-  eventName: string,
-  props: Record<string, unknown>,
-  context: TrackContext
-) {
+function buildPayload(eventName: string, props: Record<string, unknown>, context: TrackContext) {
   return {
     event_name: eventName,
     occurred_at: new Date().toISOString(),
     user_id: context.userId ?? null,
     anon_id: getOrCreateAnonId(),
-    session_id: context.sessionId ?? null,
+    mission_id: context.missionId ?? null,
     participant_id: context.participantId ?? null,
     route: typeof window !== 'undefined' ? window.location.pathname : null,
     props,

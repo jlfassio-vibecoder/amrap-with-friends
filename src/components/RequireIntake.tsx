@@ -11,7 +11,7 @@ interface RequireIntakeProps {
    * visitor isn't authenticated — for content that should stay visible even
    * behind the gate (e.g. a public Featured WOD preview). */
   signedOutPreview?: ReactNode;
-  /** Title on the signed-out gate. Defaults to the create-session wording. */
+  /** Title on the signed-out gate. Defaults to the create-mission wording. */
   gateTitle?: string;
   /** Explains what signing in unlocks here, so the gate matches the route. */
   gateMessage?: string;
@@ -24,13 +24,12 @@ export function RequireIntake({
   children,
   guestMode,
   signedOutPreview,
-  gateTitle = 'Create session',
-  gateMessage = 'Sign in and set up your profile before creating a session. You can still join as a guest.',
+  gateTitle = 'Create mission',
+  gateMessage = 'Sign in and set up your profile before creating a mission. You can still join as a guest.',
   gateAllowsGuest = true,
 }: RequireIntakeProps) {
   const location = useLocation();
-  const { profile, missing, loading, isAuthenticated, isAuthLoading, error } =
-    useAthleteProfile();
+  const { profile, missing, loading, isAuthenticated, isAuthLoading, error } = useAthleteProfile();
   const [authOpen, setAuthOpen] = useState(true);
 
   if (isAuthLoading || loading) {
@@ -54,11 +53,7 @@ export function RequireIntake({
           <AuthModal onClose={() => setAuthOpen(false)} guestAllowed={gateAllowsGuest} />
         ) : null}
         {!authOpen ? (
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => setAuthOpen(true)}
-          >
+          <button type="button" className="btn-primary" onClick={() => setAuthOpen(true)}>
             Sign in
           </button>
         ) : null}

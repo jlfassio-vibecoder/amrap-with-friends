@@ -1,7 +1,7 @@
 import { MAX_CAMPAIGN_TESTS, MIN_WEEKS_FOR_DELOAD } from './constants';
 
 /**
- * What a session is for. `build` is the default and covers most of a campaign;
+ * What a mission is for. `build` is the default and covers most of a campaign;
  * the other three are the shape the crew needs to understand before turning up.
  */
 export type CampaignOccurrenceRole = 'benchmark' | 'retest' | 'deload' | 'build';
@@ -13,11 +13,11 @@ export interface RoleReadableOccurrence {
 }
 
 /**
- * Recovers each session's role from the schedule alone.
+ * Recovers each mission's role from the schedule alone.
  *
  * The role is not stored. It does not need to be: `planCampaignWorkouts` keeps
- * the benchmark out of the build rotation, so *the only sessions running the
- * first workout are the tests*, and a deload is by construction the session
+ * the benchmark out of the build rotation, so *the only missions running the
+ * first workout are the tests*, and a deload is by construction the mission
  * before a test. That means the same rule reads a plan the host is previewing
  * and a campaign loaded back out of Postgres — no column, no migration, and no
  * way for a stored role to drift from the workout actually scheduled.
@@ -83,7 +83,7 @@ const ROLE_LABELS: Record<CampaignOccurrenceRole, string | null> = {
   build: null,
 };
 
-/** The badge to show beside a session, or null when it needs no explaining. */
+/** The badge to show beside a mission, or null when it needs no explaining. */
 export function campaignRoleLabel(role: CampaignOccurrenceRole): string | null {
   return ROLE_LABELS[role];
 }
@@ -91,7 +91,7 @@ export function campaignRoleLabel(role: CampaignOccurrenceRole): string | null {
 const ROLE_DESCRIPTIONS: Record<CampaignOccurrenceRole, string | null> = {
   benchmark: 'Your starting score. You run this one again at the end.',
   retest: 'The same workout as week one — this is where you see the difference.',
-  deload: 'A light session before the retest, so the score measures fitness and not fatigue.',
+  deload: 'A light mission before the retest, so the score measures fitness and not fatigue.',
   build: null,
 };
 

@@ -1,6 +1,6 @@
 export const VAULT_SAMPLE_URLS = {
   roundLog: '/audio/vault/vault-round-log.mp3',
-  sessionStart: '/audio/vault/vault-session-start.mp3',
+  missionStart: '/audio/vault/vault-mission-start.mp3',
 } as const;
 
 export type VaultSampleId = keyof typeof VAULT_SAMPLE_URLS;
@@ -15,10 +15,7 @@ export function resetVaultSamplesForTests(): void {
   loadPromise = null;
 }
 
-async function decodeSample(
-  context: AudioContext,
-  url: string
-): Promise<AudioBuffer> {
+async function decodeSample(context: AudioContext, url: string): Promise<AudioBuffer> {
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Failed to load vault sample: ${url} (${response.status})`);
@@ -34,10 +31,7 @@ export function preloadVaultSamples(context: AudioContext): Promise<void> {
   }
 
   loadPromise = (async () => {
-    const entries = Object.entries(VAULT_SAMPLE_URLS) as [
-      VaultSampleId,
-      string,
-    ][];
+    const entries = Object.entries(VAULT_SAMPLE_URLS) as [VaultSampleId, string][];
     await Promise.all(
       entries.map(async ([id, url]) => {
         if (buffers[id]) {

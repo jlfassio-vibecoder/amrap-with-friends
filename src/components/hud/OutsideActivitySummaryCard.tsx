@@ -26,23 +26,21 @@ export function OutsideActivitySummaryCard({ entries }: OutsideActivitySummaryCa
       </p>
       <dl className="grid grid-cols-3 gap-2 text-center">
         <div>
-          <dt className="text-xs uppercase tracking-wide text-secondary">Sessions</dt>
-          <dd className="tabular-nums text-lg text-ink">{recent.length}</dd>
+          <dt className="text-xs uppercase tracking-wide text-secondary">Missions</dt>
+          <dd className="text-lg tabular-nums text-ink">{recent.length}</dd>
         </div>
         <div>
           <dt className="text-xs uppercase tracking-wide text-secondary">Minutes</dt>
-          <dd className="tabular-nums text-lg text-ink">{totalMinutes}</dd>
+          <dd className="text-lg tabular-nums text-ink">{totalMinutes}</dd>
         </div>
         <div>
           <dt className="text-xs uppercase tracking-wide text-secondary">Avg intensity</dt>
-          <dd className="tabular-nums text-lg text-ink">
+          <dd className="text-lg tabular-nums text-ink">
             {recent.length > 0 ? averageIntensity.toFixed(1) : '—'}
           </dd>
         </div>
       </dl>
-      <p className="text-xs text-secondary">
-        Does not count toward weekly classification minutes.
-      </p>
+      <p className="text-xs text-secondary">Does not count toward weekly classification minutes.</p>
     </section>
   );
 }

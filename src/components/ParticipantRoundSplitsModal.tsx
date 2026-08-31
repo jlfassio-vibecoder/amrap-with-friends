@@ -1,7 +1,7 @@
 import {
   formatSplitDuration,
   type ParticipantSplitEntry,
-} from '@/lib/sessionSync/computeParticipantSplits';
+} from '@/lib/missionSync/computeParticipantSplits';
 
 interface ParticipantRoundSplitsModalProps {
   nickname: string;
@@ -51,9 +51,7 @@ export function ParticipantRoundSplitsModal({
                 key={split.roundNumber}
                 className="flex flex-col items-center rounded-card border border-border bg-page px-2 py-2 text-center tabular-nums"
               >
-                <span className="text-xs font-medium text-muted">
-                  Round {split.roundNumber}
-                </span>
+                <span className="text-xs font-medium text-muted">Round {split.roundNumber}</span>
                 <span className="text-display text-lg text-accent">
                   {formatSplitDuration(split.durationSec)}
                 </span>

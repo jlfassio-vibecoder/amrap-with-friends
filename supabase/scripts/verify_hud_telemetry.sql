@@ -77,6 +77,6 @@ FROM fixtures;
 --   }
 -- }
 -- attrition length must be 12; index 11 = current local week; index 0 = 11 weeks ago.
--- A week is true iff sum(duration_minutes) of claimed+locked sessions in that Mon–Sun >= 150.
+-- A week is true iff sum(duration_minutes) of claimed+locked missions in that Mon–Sun >= 150.
 -- domainMinutes30d uses rolling now() - 30 days on score lock time; other = non 5/10/15/20.
 -- NULL intensity_tier counts as 2 for lethality; custom/historical cannot fill I3+/I4+ quotas alone.

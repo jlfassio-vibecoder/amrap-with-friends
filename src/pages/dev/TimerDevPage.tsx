@@ -1,15 +1,14 @@
 import { AuthHeaderActions } from '@/components/AuthHeaderActions';
 import { useAmrapTimer } from '@/hooks/useAmrapTimer';
 import { useTacticalAudio } from '@/hooks/useTacticalAudio';
-import type { LiveSessionPhase } from '@/lib/sessionSync/types';
+import type { LiveMissionPhase } from '@/lib/missionSync/types';
 
 const DEV_SETUP_SEC = 5;
 const DEV_WORK_SEC = 60;
 
 export default function TimerDevPage() {
   const timer = useAmrapTimer();
-  const displayPhase: LiveSessionPhase =
-    timer.phase === 'idle' ? 'waiting' : timer.phase;
+  const displayPhase: LiveMissionPhase = timer.phase === 'idle' ? 'waiting' : timer.phase;
   const { unlock, playRoundLogged } = useTacticalAudio({
     phase: displayPhase,
     timeLeftSec: timer.timeLeftSec,

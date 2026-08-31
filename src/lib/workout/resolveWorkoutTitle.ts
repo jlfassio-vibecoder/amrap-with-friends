@@ -1,7 +1,7 @@
 import { WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
 
 /**
- * Display title for the session workout card. Built-in library templates resolve
+ * Display title for the mission workout card. Built-in library templates resolve
  * by template_id; custom and unresolved coach ids fall back to "Workout".
  */
 export function resolveWorkoutTitle(templateId: string | null | undefined): string {

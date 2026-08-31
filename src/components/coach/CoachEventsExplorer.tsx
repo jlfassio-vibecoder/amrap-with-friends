@@ -8,17 +8,17 @@ import {
 } from '@/lib/coach/formatCoachLabel';
 
 const KNOWN_EVENT_NAMES = [
-  'session_created',
-  'session_joined',
+  'mission_created',
+  'mission_joined',
   'template_selected',
   'audio_unlock_result',
-  'session_abandoned',
+  'mission_abandoned',
   'claim_prompt_shown',
   'claim_completed',
   'claim_conflict',
   'rally_link_copied',
-  'lobby_countdown_started',
-  'lobby_countdown_canceled',
+  'rally_point_countdown_started',
+  'rally_point_countdown_canceled',
   'practice_started',
   'practice_finished',
   'intake_submitted',
@@ -108,8 +108,8 @@ export function CoachEventsExplorer({ userId }: CoachEventsExplorerProps) {
             },
             { header: 'Event', render: (row) => formatCoachEventLabel(row.eventName, row.props) },
             {
-              header: 'Session',
-              render: (row) => (row.sessionId ? row.sessionId.slice(0, 8) : '—'),
+              header: 'Mission',
+              render: (row) => (row.missionId ? row.missionId.slice(0, 8) : '—'),
             },
             {
               header: 'Anon',
@@ -118,9 +118,7 @@ export function CoachEventsExplorer({ userId }: CoachEventsExplorerProps) {
             {
               header: 'Props',
               render: (row) => (
-                <code className="text-xs text-secondary">
-                  {formatCoachProps(row.props)}
-                </code>
+                <code className="text-xs text-secondary">{formatCoachProps(row.props)}</code>
               ),
             },
           ]}

@@ -5,7 +5,7 @@ import type { HeaderTone } from '@/components/headerTone';
 interface AppHeaderProps {
   title: string;
   subtitle?: string;
-  /** When true, the desktop header center title is the page's sole h1 (Session). */
+  /** When true, the desktop header center title is the page's sole h1 (Mission). */
   desktopTitleAsPageHeading?: boolean;
   /**
    * Hide the header title on every breakpoint, leaving only the brand link and

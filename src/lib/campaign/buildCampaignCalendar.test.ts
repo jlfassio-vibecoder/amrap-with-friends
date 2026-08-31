@@ -21,8 +21,8 @@ function input(overrides: Partial<CampaignScheduleInput> = {}): CampaignSchedule
 describe('buildCampaignCalendar', () => {
   it('expands weeks x slots into one occurrence each', () => {
     const calendar = buildCampaignCalendar(input());
-    expect(calendar.totalSessions).toBe(8);
-    expect(calendar.sessionsPerWeek).toBe(2);
+    expect(calendar.totalMissions).toBe(8);
+    expect(calendar.missionsPerWeek).toBe(2);
     expect(calendar.occurrences).toHaveLength(8);
   });
 
@@ -47,22 +47,22 @@ describe('buildCampaignCalendar', () => {
     expect(calendar.occurrences[1].localTime).toBe('06:30');
   });
 
-  it('reports the first and last session dates, not just the anchor', () => {
+  it('reports the first and last mission dates, not just the anchor', () => {
     const calendar = buildCampaignCalendar(input());
     expect(calendar.anchorDate).toBe(MONDAY);
-    expect(calendar.firstSessionDate).toBe(MONDAY);
-    expect(calendar.lastSessionDate).toBe('2026-03-26');
+    expect(calendar.firstMissionDate).toBe(MONDAY);
+    expect(calendar.lastMissionDate).toBe('2026-03-26');
   });
 
-  it('distinguishes the anchor from the first session when they differ', () => {
+  it('distinguishes the anchor from the first mission when they differ', () => {
     // Anchored to a Sunday with a Monday slot: the campaign is described by
     // the Monday, because that is the day anyone actually trains.
     const calendar = buildCampaignCalendar(
       input({ weekCount: 2, startDate: '2026-03-01', slots: [{ weekday: 1, timeLocal: '18:00' }] })
     );
     expect(calendar.anchorDate).toBe('2026-03-01');
-    expect(calendar.firstSessionDate).toBe('2026-03-02');
-    expect(calendar.lastSessionDate).toBe('2026-03-09');
+    expect(calendar.firstMissionDate).toBe('2026-03-02');
+    expect(calendar.lastMissionDate).toBe('2026-03-09');
   });
 
   it('never schedules before the start date when a slot day precedes it', () => {
@@ -72,9 +72,9 @@ describe('buildCampaignCalendar', () => {
     );
     expect(weekdayOf('2026-03-05')).toBe(4);
     expect(calendar.occurrences[0].localDate).toBe('2026-03-09');
-    expect(
-      calendar.occurrences.every((occurrence) => occurrence.localDate >= '2026-03-05')
-    ).toBe(true);
+    expect(calendar.occurrences.every((occurrence) => occurrence.localDate >= '2026-03-05')).toBe(
+      true
+    );
   });
 
   it('orders slots chronologically within the week regardless of input order', () => {
@@ -122,7 +122,7 @@ describe('buildCampaignCalendar', () => {
         ],
       })
     );
-    expect(calendar.totalSessions).toBe(60);
+    expect(calendar.totalMissions).toBe(60);
     expect(new Set(calendar.occurrences.map((o) => o.localDate)).size).toBe(60);
   });
 
@@ -138,7 +138,7 @@ describe('buildCampaignCalendar', () => {
     );
   });
 
-  it('rejects too few or too many sessions a week', () => {
+  it('rejects too few or too many missions a week', () => {
     expect(() => buildCampaignCalendar(input({ slots: [] }))).toThrow(CampaignValidationError);
     expect(() =>
       buildCampaignCalendar(
@@ -149,7 +149,7 @@ describe('buildCampaignCalendar', () => {
     ).toThrow(CampaignValidationError);
   });
 
-  it('rejects two sessions on the same weekday', () => {
+  it('rejects two missions on the same weekday', () => {
     expect(() =>
       buildCampaignCalendar(
         input({

@@ -123,7 +123,7 @@ export function HomeSeoContent() {
           </p>
           <p className="text-base leading-[1.7] text-secondary">
             <strong className="font-semibold text-ink">AMRAP With Friends</strong> takes that format
-            and makes it social: host a live AMRAP session, share a code, and everyone&apos;s
+            and makes it social: host a live AMRAP mission, share a code, and everyone&apos;s
             countdown, round count, and leaderboard position update in real time — whether
             you&apos;re all in the same gym or scattered across different time zones.
           </p>

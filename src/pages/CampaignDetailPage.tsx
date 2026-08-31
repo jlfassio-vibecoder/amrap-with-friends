@@ -231,7 +231,7 @@ export default function CampaignDetailPage() {
       setMakeupError(result.error?.message ?? 'Something went wrong. Please try again.');
       return;
     }
-    navigate(`/session/${result.data.sessionId}`);
+    navigate(`/mission/${result.data.missionId}`);
   }
 
   const progress = campaignProgress(
@@ -250,7 +250,7 @@ export default function CampaignDetailPage() {
     status: detail.status,
     occurrences: detail.occurrences.map((occurrence) => ({
       status: occurrence.status,
-      sessionId: occurrence.sessionId,
+      missionId: occurrence.missionId,
     })),
     activeMemberCount: detail.members.length,
   };
@@ -258,12 +258,12 @@ export default function CampaignDetailPage() {
   const showDelete = canDeleteCampaign(lifecycle);
   const showEdit = canEditCampaign(lifecycle);
 
-  const hasCountableSessions = detail.occurrences.some(
+  const hasCountableMissions = detail.occurrences.some(
     (occurrence) => occurrence.status === 'generated' || occurrence.status === 'done'
   );
   const hasMadeUpScores = standingsScores.some((score) => score.madeUp === true);
   const madeUpFootnote =
-    'Made up means they scored it alone after missing the live session with the crew. It still counts.';
+    'Made up means they scored it alone after missing the live mission with the crew. It still counts.';
 
   const testProgress: CampaignTestProgress | null = computeCampaignTestProgress({
     occurrences: detail.occurrences.map((occurrence) => ({
@@ -303,7 +303,7 @@ export default function CampaignDetailPage() {
   return (
     <NarrowPageLayout
       title={detail.name}
-      subtitle={formatCampaignShape(detail.weekCount, detail.sessionsPerWeek)}
+      subtitle={formatCampaignShape(detail.weekCount, detail.missionsPerWeek)}
       contentMaxWidthClassName="max-w-3xl"
     >
       <section className="card space-y-4 p-6">
@@ -312,7 +312,7 @@ export default function CampaignDetailPage() {
             {STATUS_LABEL[detail.status] ?? detail.status}
           </span>
           <span className="text-sm text-secondary">
-            {progress.done} of {progress.total} sessions done
+            {progress.done} of {progress.total} missions done
           </span>
         </div>
 
@@ -359,11 +359,11 @@ export default function CampaignDetailPage() {
           <div>
             <h2 className="text-display text-xl text-ink">
               {owedQueue.length === 1
-                ? 'You owe 1 session'
-                : `You owe ${owedQueue.length} sessions`}
+                ? 'You owe 1 mission'
+                : `You owe ${owedQueue.length} missions`}
             </h2>
             <p className="text-sm text-secondary">
-              Make them up oldest first. Live campaign sessions stay open — this only settles what
+              Make them up oldest first. Live campaign missions stay open — this only settles what
               you missed.
             </p>
           </div>
@@ -441,9 +441,9 @@ export default function CampaignDetailPage() {
 
       <section className="card space-y-4 p-6">
         <h2 className="text-display text-xl text-ink">Standings</h2>
-        {!hasCountableSessions ? (
+        {!hasCountableMissions ? (
           <p className="text-sm text-secondary">
-            Standings show up once the first campaign session is generated.
+            Standings show up once the first campaign mission is generated.
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -453,7 +453,7 @@ export default function CampaignDetailPage() {
                   <th className="pb-2 pr-3 font-semibold">Rank</th>
                   <th className="pb-2 pr-3 font-semibold">Athlete</th>
                   <th className="pb-2 pr-3 font-semibold">Average</th>
-                  <th className="pb-2 font-semibold">Sessions attended</th>
+                  <th className="pb-2 font-semibold">Missions attended</th>
                 </tr>
               </thead>
               <tbody>
@@ -560,7 +560,7 @@ export default function CampaignDetailPage() {
                 <p className="text-sm text-secondary">
                   {confirmHostAction === 'delete'
                     ? 'Delete this campaign? Nothing has run yet, so there is nothing to keep. This cannot be undone.'
-                    : 'End this campaign? The sessions still to come are cancelled, everyone keeps the ones they finished, and you get the slot back to start something else.'}
+                    : 'End this campaign? The missions still to come are cancelled, everyone keeps the ones they finished, and you get the slot back to start something else.'}
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <button
@@ -596,7 +596,7 @@ export default function CampaignDetailPage() {
           confirmLeave ? (
             <div className="space-y-2">
               <p className="text-sm text-secondary">
-                Leave this campaign? Your finished sessions stay on your record, and the host can
+                Leave this campaign? Your finished missions stay on your record, and the host can
                 invite you back.
               </p>
               <div className="flex flex-wrap gap-3">
@@ -635,7 +635,7 @@ export default function CampaignDetailPage() {
         canMove={(occurrence) =>
           canRescheduleOccurrence(lifecycle, {
             status: occurrence.status,
-            sessionId: occurrence.sessionId,
+            missionId: occurrence.missionId,
           })
         }
         onMove={handleMove}

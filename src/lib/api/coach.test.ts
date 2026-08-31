@@ -22,14 +22,14 @@ describe('fetchCoachDashboard', () => {
       data: {
         ok: true,
         topStrip: {
-          sessionsCreated7d: 3,
-          sessionsCreated30d: 10,
-          sessionsFinished7d: 2,
-          sessionsFinished30d: 8,
+          missionsCreated7d: 3,
+          missionsCreated30d: 10,
+          missionsFinished7d: 2,
+          missionsFinished30d: 8,
           uniqueAnonIds: 5,
           registeredUsers: 4,
-          practiceSessionsStarted: 1,
-          liveSessionsCreated: 9,
+          practiceMissionsStarted: 1,
+          liveMissionsCreated: 9,
         },
         claimFunnel: {
           prompts_shown: 10,
@@ -47,9 +47,9 @@ describe('fetchCoachDashboard', () => {
           deep_link_joins: 3,
           conversion_rate_pct: 37.5,
         },
-        sessionAbandonment: {
-          sessions_finished: 20,
-          sessions_with_abandonment_event: 2,
+        missionAbandonment: {
+          missions_finished: 20,
+          missions_with_abandonment_event: 2,
           abandonment_rate_pct: 10,
         },
         templatePerformance: [
@@ -57,8 +57,8 @@ describe('fetchCoachDashboard', () => {
             template_id: 'blood-shunt-5',
             intensity_tier: 3,
             duration_minutes: 5,
-            sessions_created: 4,
-            sessions_completed: 3,
+            missions_created: 4,
+            missions_completed: 3,
             completion_rate_pct: 75,
           },
         ],
@@ -66,7 +66,7 @@ describe('fetchCoachDashboard', () => {
           {
             first_role: 'host',
             user_count: 2,
-            avg_sessions_per_user: 3.5,
+            avg_missions_per_user: 3.5,
             avg_active_days_per_user: 2,
           },
         ],
@@ -79,7 +79,7 @@ describe('fetchCoachDashboard', () => {
         ],
         rpcReliability: [
           {
-            rpc_name: 'join_session',
+            rpc_name: 'join_mission',
             call_count: 20,
             error_count: 1,
             error_rate_pct: 5,
@@ -102,7 +102,7 @@ describe('fetchCoachDashboard', () => {
 
     expect(callRpcMock).toHaveBeenCalledWith('coach_dashboard');
     expect(result.error).toBeNull();
-    expect(result.data?.topStrip.sessionsCreated7d).toBe(3);
+    expect(result.data?.topStrip.missionsCreated7d).toBe(3);
     expect(result.data?.claimFunnel.completionRatePct).toBe(40);
     expect(result.data?.templatePerformance[0]?.templateId).toBe('blood-shunt-5');
   });
@@ -140,9 +140,9 @@ describe('fetchCoachRecentEvents', () => {
         events: [
           {
             id: '11111111-1111-4111-8111-111111111111',
-            event_name: 'session_joined',
+            event_name: 'mission_joined',
             occurred_at: '2026-08-26T12:00:00.000Z',
-            session_id: '22222222-2222-4222-8222-222222222222',
+            mission_id: '22222222-2222-4222-8222-222222222222',
             participant_id: null,
             user_id: null,
             anon_id: 'anon-1',
@@ -160,18 +160,18 @@ describe('fetchCoachRecentEvents', () => {
     });
 
     const result = await fetchCoachRecentEvents({
-      eventName: 'session_joined',
+      eventName: 'mission_joined',
       limit: 50,
     });
 
     expect(callRpcMock).toHaveBeenCalledWith('coach_events_recent', {
-      p_event_name: 'session_joined',
+      p_event_name: 'mission_joined',
       p_limit: 50,
       p_user_id: null,
     });
     expect(result.error).toBeNull();
     expect(result.data).toHaveLength(1);
-    expect(result.data?.[0].eventName).toBe('session_joined');
+    expect(result.data?.[0].eventName).toBe('mission_joined');
     expect(result.data?.[0].props).toEqual({ deep_link: true });
   });
 
@@ -202,7 +202,7 @@ describe('fetchCoachUsersList', () => {
             perceived_classification: 'operator',
             account_created_at: '2026-08-26T10:00:00.000Z',
             last_active_at: '2026-08-26T12:00:00.000Z',
-            total_sessions: 3,
+            total_missions: 3,
           },
           {
             user_id: 'bad-row',
@@ -245,10 +245,10 @@ describe('fetchCoachUserDetail', () => {
           accountCreatedAt: '2026-08-26T10:00:00.000Z',
         },
         summary: {
-          sessionsAsHost: 2,
-          sessionsAsJoiner: 1,
-          totalSessions: 3,
-          practiceSessionsStarted: 0,
+          missionsAsHost: 2,
+          missionsAsJoiner: 1,
+          totalMissions: 3,
+          practiceMissionsStarted: 0,
           firstSeenAt: '2026-08-26T10:00:00.000Z',
           lastActiveAt: '2026-08-26T12:00:00.000Z',
         },
@@ -260,9 +260,9 @@ describe('fetchCoachUserDetail', () => {
             occurred_at: '2026-08-26T11:00:00.000Z',
           },
         ],
-        sessions: [
+        missions: [
           {
-            session_id: '22222222-2222-4222-8222-222222222222',
+            mission_id: '22222222-2222-4222-8222-222222222222',
             role: 'host',
             template_id: 'blood-shunt-5',
             intensity_tier: 3,
@@ -289,9 +289,9 @@ describe('fetchCoachUserDetail', () => {
     });
     expect(result.error).toBeNull();
     expect(result.data?.profile.nickname).toBe('Ghost');
-    expect(result.data?.summary.totalSessions).toBe(3);
+    expect(result.data?.summary.totalMissions).toBe(3);
     expect(result.data?.classificationHistory).toHaveLength(1);
-    expect(result.data?.sessions[0]?.finalScore).toBe(42);
+    expect(result.data?.missions[0]?.finalScore).toBe(42);
     expect(result.data?.overtraining).toEqual({
       acuteLoad7d: 120,
       chronicWeeklyLoad28d: 60,

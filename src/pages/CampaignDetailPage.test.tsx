@@ -53,7 +53,7 @@ function occurrence(sequence: number, weekNumber: number, overrides = {}) {
     durationMinutes: 10,
     intensityTier: 3,
     workout: [{ name: 'Air Squats', target: 10 }],
-    sessionId: null,
+    missionId: null,
     status: 'planned',
     ...overrides,
   };
@@ -65,7 +65,7 @@ function detail(overrides = {}) {
     name: 'Winter Engine Build',
     goal: 'Eight rounds by week four.',
     weekCount: 2,
-    sessionsPerWeek: 2,
+    missionsPerWeek: 2,
     startDate: '2026-10-05',
     timezone: 'America/Denver',
     status: 'active',
@@ -119,7 +119,7 @@ beforeEach(() => {
   deleteMock.mockResolvedValue({ error: null });
   updateMock.mockResolvedValue({ error: null });
   rescheduleMock.mockResolvedValue({ error: null });
-  startMakeupMock.mockResolvedValue({ data: { sessionId: 'makeup-sess' }, error: null });
+  startMakeupMock.mockResolvedValue({ data: { missionId: 'makeup-sess' }, error: null });
   Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
 });
 
@@ -133,11 +133,11 @@ describe('CampaignDetailPage', () => {
 
   it('reports progress from the occurrences that are done', async () => {
     renderPage();
-    await waitFor(() => expect(screen.getByText('1 of 4 sessions done')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('1 of 4 missions done')).toBeTruthy());
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('25');
   });
 
-  it('shows empty standings copy before any session is generated', async () => {
+  it('shows empty standings copy before any mission is generated', async () => {
     fetchDetailMock.mockResolvedValue({
       data: detail({
         occurrences: [occurrence(1, 1), occurrence(2, 1), occurrence(3, 2), occurrence(4, 2)],
@@ -147,16 +147,16 @@ describe('CampaignDetailPage', () => {
     renderPage();
     await waitFor(() => expect(screen.getByText('Standings')).toBeTruthy());
     expect(
-      screen.getByText('Standings show up once the first campaign session is generated.')
+      screen.getByText('Standings show up once the first campaign mission is generated.')
     ).toBeTruthy();
   });
 
-  it('lists standings with rank, average, and sessions attended', async () => {
+  it('lists standings with rank, average, and missions attended', async () => {
     fetchDetailMock.mockResolvedValue({
       data: detail({
         occurrences: [
-          occurrence(1, 1, { status: 'done', sessionId: 's1' }),
-          occurrence(2, 1, { status: 'generated', sessionId: 's2' }),
+          occurrence(1, 1, { status: 'done', missionId: 's1' }),
+          occurrence(2, 1, { status: 'generated', missionId: 's2' }),
         ],
       }),
       error: null,
@@ -217,25 +217,25 @@ describe('CampaignDetailPage', () => {
         occurrences: [
           occurrence(1, 1, {
             status: 'done',
-            sessionId: 's1',
+            missionId: 's1',
             templateId: 'flash-flood',
             localDate: '2026-10-05',
           }),
           occurrence(2, 1, {
             status: 'done',
-            sessionId: 's2',
+            missionId: 's2',
             templateId: 'other',
             localDate: '2026-10-07',
           }),
           occurrence(3, 2, {
             status: 'done',
-            sessionId: 's3',
+            missionId: 's3',
             templateId: 'other-2',
             localDate: '2026-10-12',
           }),
           occurrence(4, 2, {
             status: 'done',
-            sessionId: 's4',
+            missionId: 's4',
             templateId: 'flash-flood',
             localDate: '2026-10-14',
           }),
@@ -276,7 +276,7 @@ describe('CampaignDetailPage', () => {
     await waitFor(() => expect(screen.getAllByText('Made up').length).toBeGreaterThan(0));
     expect(
       screen.getAllByText(
-        'Made up means they scored it alone after missing the live session with the crew. It still counts.'
+        'Made up means they scored it alone after missing the live mission with the crew. It still counts.'
       ).length
     ).toBeGreaterThan(0);
   });
@@ -287,25 +287,25 @@ describe('CampaignDetailPage', () => {
         occurrences: [
           occurrence(1, 1, {
             status: 'done',
-            sessionId: 's1',
+            missionId: 's1',
             templateId: 'flash-flood',
             localDate: '2026-10-05',
           }),
           occurrence(2, 1, {
             status: 'done',
-            sessionId: 's2',
+            missionId: 's2',
             templateId: 'other',
             localDate: '2026-10-07',
           }),
           occurrence(3, 2, {
             status: 'done',
-            sessionId: 's3',
+            missionId: 's3',
             templateId: 'other-2',
             localDate: '2026-10-12',
           }),
           occurrence(4, 2, {
             status: 'done',
-            sessionId: 's4',
+            missionId: 's4',
             templateId: 'flash-flood',
             localDate: '2026-10-14',
           }),
@@ -347,7 +347,7 @@ describe('CampaignDetailPage', () => {
     expect(screen.queryByText('Made up')).toBeNull();
     expect(
       screen.queryByText(
-        'Made up means they scored it alone after missing the live session with the crew. It still counts.'
+        'Made up means they scored it alone after missing the live mission with the crew. It still counts.'
       )
     ).toBeNull();
   });
@@ -365,19 +365,19 @@ describe('CampaignDetailPage', () => {
     expect(screen.getByText('Host')).toBeTruthy();
   });
 
-  it('links a generated session to its staging area and leaves planned ones inert', async () => {
+  it('links a generated mission to its rally point and leaves planned ones inert', async () => {
     fetchDetailMock.mockResolvedValue({
       data: detail({
-        occurrences: [occurrence(1, 1, { status: 'generated', sessionId: 's1' }), occurrence(2, 1)],
+        occurrences: [occurrence(1, 1, { status: 'generated', missionId: 's1' }), occurrence(2, 1)],
       }),
       error: null,
     });
     renderPage();
     await waitFor(() =>
-      expect(screen.getByRole('link', { name: 'Staging area open' })).toBeTruthy()
+      expect(screen.getByRole('link', { name: 'Rally point open' })).toBeTruthy()
     );
-    expect(screen.getByRole('link', { name: 'Staging area open' }).getAttribute('href')).toBe(
-      '/session/s1'
+    expect(screen.getByRole('link', { name: 'Rally point open' }).getAttribute('href')).toBe(
+      '/mission/s1'
     );
     expect(screen.queryByRole('link', { name: 'Planned' })).toBeNull();
   });
@@ -489,11 +489,11 @@ describe('CampaignDetailPage', () => {
       expect(screen.getByText('Delete campaign')).toBeTruthy();
     });
 
-    it('drops the delete option once a session has been generated', async () => {
+    it('drops the delete option once a mission has been generated', async () => {
       fetchDetailMock.mockResolvedValue({
         data: untouched({
           occurrences: [
-            occurrence(1, 1, { status: 'generated', sessionId: 's1' }),
+            occurrence(1, 1, { status: 'generated', missionId: 's1' }),
             occurrence(2, 1),
             occurrence(3, 2),
             occurrence(4, 2),
@@ -699,9 +699,9 @@ describe('CampaignDetailPage', () => {
       expect(screen.queryByText('Edit name and goal')).toBeNull();
     });
 
-    it('moves a session that has not run yet', async () => {
+    it('moves a mission that has not run yet', async () => {
       renderPage();
-      // Session 1 is done, so only the three still planned can be moved.
+      // Mission 1 is done, so only the three still planned can be moved.
       await waitFor(() => expect(screen.getAllByText('Change time').length).toBe(3));
 
       fireEvent.click(screen.getAllByText('Change time')[0]);
@@ -714,12 +714,12 @@ describe('CampaignDetailPage', () => {
       await waitFor(() => expect(fetchDetailMock).toHaveBeenCalledTimes(2));
     });
 
-    it('does not offer to move a session whose staging area is open', async () => {
+    it('does not offer to move a mission whose rally point is open', async () => {
       fetchDetailMock.mockResolvedValue({
         data: detail({
           occurrences: [
-            occurrence(1, 1, { status: 'generated', sessionId: 's1' }),
-            occurrence(2, 1, { status: 'done', sessionId: 's2' }),
+            occurrence(1, 1, { status: 'generated', missionId: 's1' }),
+            occurrence(2, 1, { status: 'done', missionId: 's2' }),
             occurrence(3, 2, { status: 'skipped' }),
             occurrence(4, 2),
           ],
@@ -733,7 +733,7 @@ describe('CampaignDetailPage', () => {
 
     it('keeps the row open and shows why when a move is refused', async () => {
       rescheduleMock.mockResolvedValue({
-        error: { message: 'Move it before the session after it.' },
+        error: { message: 'Move it before the mission after it.' },
       });
       renderPage();
       await waitFor(() => expect(screen.getAllByText('Change time').length).toBe(3));
@@ -741,7 +741,7 @@ describe('CampaignDetailPage', () => {
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() =>
-        expect(screen.getByText('Move it before the session after it.')).toBeTruthy()
+        expect(screen.getByText('Move it before the mission after it.')).toBeTruthy()
       );
       expect(screen.getByText('Save')).toBeTruthy();
       expect(fetchDetailMock).toHaveBeenCalledTimes(1);
@@ -749,7 +749,7 @@ describe('CampaignDetailPage', () => {
   });
 
   describe('makeup queue', () => {
-    it('shows You owe N and Make this up for the oldest missed session', async () => {
+    it('shows You owe N and Make this up for the oldest missed mission', async () => {
       fetchDetailMock.mockResolvedValue({
         data: detail({
           members: [
@@ -771,12 +771,12 @@ describe('CampaignDetailPage', () => {
 
       renderPage();
 
-      await waitFor(() => expect(screen.getByText('You owe 2 sessions')).toBeTruthy());
+      await waitFor(() => expect(screen.getByText('You owe 2 missions')).toBeTruthy());
       expect(screen.getByText(/Next up: Mon 5 Oct/)).toBeTruthy();
       expect(screen.getByRole('button', { name: 'Make this up' })).toBeTruthy();
     });
 
-    it('navigates to the makeup session when Make this up succeeds', async () => {
+    it('navigates to the makeup mission when Make this up succeeds', async () => {
       fetchDetailMock.mockResolvedValue({
         data: detail({
           members: [
@@ -791,7 +791,7 @@ describe('CampaignDetailPage', () => {
         }),
         error: null,
       });
-      startMakeupMock.mockResolvedValue({ data: { sessionId: 'makeup-sess' }, error: null });
+      startMakeupMock.mockResolvedValue({ data: { missionId: 'makeup-sess' }, error: null });
 
       renderPage();
       await waitFor(() =>
@@ -801,7 +801,7 @@ describe('CampaignDetailPage', () => {
 
       await waitFor(() => {
         expect(startMakeupMock).toHaveBeenCalledWith('o1');
-        expect(navigateMock).toHaveBeenCalledWith('/session/makeup-sess');
+        expect(navigateMock).toHaveBeenCalledWith('/mission/makeup-sess');
       });
     });
 

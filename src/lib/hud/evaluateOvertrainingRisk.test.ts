@@ -23,7 +23,7 @@ describe('evaluateOvertrainingRisk', () => {
   });
 
   it('returns null acwr when all logged load falls inside the acute window (no real baseline yet)', () => {
-    // A single 30-minute moderate (tier 2) session, just logged, with
+    // A single 30-minute moderate (tier 2) mission, just logged, with
     // nothing before it: acuteLoad7d and the 28-day total are identical,
     // so there is no prior period to compare against.
     expect(

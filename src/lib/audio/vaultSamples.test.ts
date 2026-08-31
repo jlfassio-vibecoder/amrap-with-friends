@@ -64,25 +64,21 @@ describe('vaultSamples', () => {
     await preloadVaultSamples(context as unknown as AudioContext);
 
     expect(fetch).toHaveBeenCalledWith(VAULT_SAMPLE_URLS.roundLog);
-    expect(fetch).toHaveBeenCalledWith(VAULT_SAMPLE_URLS.sessionStart);
+    expect(fetch).toHaveBeenCalledWith(VAULT_SAMPLE_URLS.missionStart);
     expect(isVaultSampleReady('roundLog')).toBe(true);
-    expect(isVaultSampleReady('sessionStart')).toBe(true);
+    expect(isVaultSampleReady('missionStart')).toBe(true);
   });
 
   it('playVaultSample starts a buffer source when ready', async () => {
     const context = createFakeContext();
     await preloadVaultSamples(context as unknown as AudioContext);
 
-    expect(playVaultSample(context as unknown as AudioContext, 'roundLog')).toBe(
-      true
-    );
+    expect(playVaultSample(context as unknown as AudioContext, 'roundLog')).toBe(true);
     expect(context._started).toHaveLength(1);
   });
 
   it('playVaultSample returns false before preload finishes', () => {
     const context = createFakeContext();
-    expect(playVaultSample(context as unknown as AudioContext, 'sessionStart')).toBe(
-      false
-    );
+    expect(playVaultSample(context as unknown as AudioContext, 'missionStart')).toBe(false);
   });
 });

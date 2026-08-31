@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { supabase } from '@/lib/supabase';
-import * as sessionIdentity from '@/lib/sessionIdentity';
+import * as missionIdentity from '@/lib/missionIdentity';
 import {
   addSquadFriendToCampaign,
   createCampaign,
@@ -18,14 +18,14 @@ vi.mock('@/lib/supabase', () => ({
   getSupabaseClient: vi.fn(),
 }));
 vi.mock('@/lib/analytics/track', () => ({ track: vi.fn() }));
-vi.mock('@/lib/sessionIdentity', () => ({
-  persistSessionIdentity: vi.fn(),
+vi.mock('@/lib/missionIdentity', () => ({
+  persistMissionIdentity: vi.fn(),
   setStoredGhostSelection: vi.fn(),
 }));
 
 const rpcMock = vi.mocked(supabase.rpc);
-const persistMock = vi.mocked(sessionIdentity.persistSessionIdentity);
-const ghostSeedMock = vi.mocked(sessionIdentity.setStoredGhostSelection);
+const persistMock = vi.mocked(missionIdentity.persistMissionIdentity);
+const ghostSeedMock = vi.mocked(missionIdentity.setStoredGhostSelection);
 
 beforeEach(() => {
   rpcMock.mockReset();
@@ -57,8 +57,8 @@ describe('createCampaign', () => {
         ok: true,
         campaign_id: 'c1',
         invite_code: 'ABC123',
-        total_sessions: 2,
-        sessions_per_week: 2,
+        total_missions: 2,
+        missions_per_week: 2,
       },
       error: null,
     } as never);
@@ -187,14 +187,14 @@ describe('fetchMyCampaigns', () => {
             name: 'Winter Engine Build',
             goal: null,
             week_count: 4,
-            sessions_per_week: 2,
+            missions_per_week: 2,
             start_date: '2026-10-05',
             timezone: 'America/Denver',
             status: 'active',
             role: 'host',
             invite_code: 'ABC123',
-            total_sessions: 8,
-            completed_sessions: 3,
+            total_missions: 8,
+            completed_missions: 3,
             member_count: 4,
           },
         ],
@@ -209,8 +209,8 @@ describe('fetchMyCampaigns', () => {
       campaignId: 'c1',
       role: 'host',
       inviteCode: 'ABC123',
-      totalSessions: 8,
-      completedSessions: 3,
+      totalMissions: 8,
+      completedMissions: 3,
       memberCount: 4,
     });
   });
@@ -242,7 +242,7 @@ describe('fetchCampaignDetail', () => {
           name: 'Winter Engine Build',
           goal: 'Eight rounds by week four.',
           week_count: 4,
-          sessions_per_week: 2,
+          missions_per_week: 2,
           start_date: '2026-10-05',
           timezone: 'America/Denver',
           status: 'active',
@@ -261,7 +261,7 @@ describe('fetchCampaignDetail', () => {
             duration_minutes: 10,
             intensity_tier: 3,
             workout: [{ name: 'Air Squats', target: 10 }],
-            session_id: null,
+            mission_id: null,
             status: 'planned',
           },
         ],
@@ -319,13 +319,13 @@ describe('fetchCampaignInvitePreview', () => {
         name: 'Winter Engine Build',
         goal: 'Eight rounds by week four.',
         week_count: 8,
-        sessions_per_week: 3,
+        missions_per_week: 3,
         status: 'active',
         host_nickname: 'Maya',
         member_count: 4,
         member_limit: 50,
-        first_session_date: '2026-10-05',
-        last_session_date: '2026-11-27',
+        first_mission_date: '2026-10-05',
+        last_mission_date: '2026-11-27',
       },
       error: null,
     } as never);
@@ -484,13 +484,13 @@ describe('startCampaignMakeup', () => {
     rpcMock.mockResolvedValue({
       data: {
         ok: true,
-        session_id: 'makeup-sess',
+        mission_id: 'makeup-sess',
         host_token: 'host-1',
         participant_id: 'part-1',
         claim_token: 'claim-1',
         nickname: 'Jules',
         pacer: {
-          session_id: 'live-sess',
+          mission_id: 'live-sess',
           participant_id: 'crew-part',
           nickname: 'Maya',
           final_score: 120,
@@ -503,7 +503,7 @@ describe('startCampaignMakeup', () => {
 
     const result = await startCampaignMakeup('o1');
     expect(result.error).toBeNull();
-    expect(result.data).toEqual({ sessionId: 'makeup-sess' });
+    expect(result.data).toEqual({ missionId: 'makeup-sess' });
     expect(rpcMock).toHaveBeenCalledWith('start_campaign_makeup', {
       p_occurrence_id: 'o1',
     });
@@ -516,7 +516,7 @@ describe('startCampaignMakeup', () => {
     expect(ghostSeedMock).toHaveBeenCalledWith(
       'makeup-sess',
       expect.objectContaining({
-        sessionId: 'live-sess',
+        missionId: 'live-sess',
         participantId: 'crew-part',
         nickname: 'Maya',
         finalScore: 120,
@@ -528,7 +528,7 @@ describe('startCampaignMakeup', () => {
     rpcMock.mockResolvedValue({
       data: {
         ok: true,
-        session_id: 'makeup-sess',
+        mission_id: 'makeup-sess',
         host_token: 'host-1',
         participant_id: 'part-1',
         claim_token: 'claim-1',
@@ -550,7 +550,7 @@ describe('startCampaignMakeup', () => {
       error: { message: 'Not next to make up' },
     } as never);
     expect((await startCampaignMakeup('o2')).error?.message).toBe(
-      'Make up the oldest session you owe first.'
+      'Make up the oldest mission you owe first.'
     );
   });
 });

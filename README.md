@@ -1,6 +1,6 @@
 # AMRAP With Friends
 
-AMRAP With Friends is a standalone web app for running social AMRAP (As Many Rounds As Possible) workout sessions with friends in real time. This repository is a from-scratch rebuild focused on a single, self-contained experience—create or join a session, sync the timer, and track rounds together.
+AMRAP With Friends is a standalone web app for running social AMRAP (As Many Rounds As Possible) AMRAP missions with friends in real time. This repository is a from-scratch rebuild focused on a single, self-contained experience—create or join a mission, sync the timer, and track rounds together.
 
 ## Local development
 
@@ -15,13 +15,13 @@ The dev server runs at [http://localhost:5173](http://localhost:5173).
 
 ### Other scripts
 
-| Command | Description |
-|---|---|
-| `npm run build` | Type-check and production build |
-| `npm run lint` | ESLint |
-| `npm run typecheck` | TypeScript project references build |
-| `npm run test` | Vitest (single run) |
-| `npm run format` | Prettier |
+| Command                       | Description                                                                |
+| ----------------------------- | -------------------------------------------------------------------------- |
+| `npm run build`               | Type-check and production build                                            |
+| `npm run lint`                | ESLint                                                                     |
+| `npm run typecheck`           | TypeScript project references build                                        |
+| `npm run test`                | Vitest (single run)                                                        |
+| `npm run format`              | Prettier                                                                   |
 | `npm run seed:exercise-media` | Manual: seed empty `exercise-media/{id}/.keep` folders in Supabase Storage |
 
 ### Seed exercise-media folders (manual)
@@ -37,9 +37,9 @@ Upload sequence stills as **`{exerciseId}/sequence.jpeg`** or **`{exerciseId}/se
 
 ## Supabase migrations
 
-Lobby schema and RPCs live in [`supabase/migrations/`](supabase/migrations/). Apply with the Supabase CLI (`supabase db push`) or paste into the Supabase SQL editor. Use a service-role key only on your machine for admin tasks—never in the client or `.env` bundled with the app.
+Rally point schema and RPCs live in [`supabase/migrations/`](supabase/migrations/). Apply with the Supabase CLI (`supabase db push`) or paste into the Supabase SQL editor. Use a service-role key only on your machine for admin tasks—never in the client or `.env` bundled with the app.
 
-Manual RPC checks: [`supabase/scripts/verify_lobby_rpc.sql`](supabase/scripts/verify_lobby_rpc.sql).
+Manual RPC checks: [`supabase/scripts/verify_rally_point_rpc.sql`](supabase/scripts/verify_rally_point_rpc.sql).
 
 ### Verifying a migration locally
 
@@ -66,12 +66,12 @@ Exercising an RPC afterwards needs a row in `auth.users`, a matching
 `perceived_classification` is one of `civilian` / `operator` / `special_ops`),
 then `SET request.jwt.claim.sub = '<uuid>'` so `auth.uid()` resolves.
 
-Note that `create_session` is overloaded such that a positional 3-argument call
+Note that `create_mission` is overloaded such that a positional 3-argument call
 is ambiguous. The client always sends all seven named parameters, so this never
 bites in production, but a hand-written `psql` call has to use the 7-argument
 form.
 
-### Hosted Supabase deploy (required for score lock at session finish)
+### Hosted Supabase deploy (required for score lock at mission finish)
 
 After linking the project (`supabase link --project-ref <ref>`):
 
@@ -90,9 +90,9 @@ Enable Supabase Auth **email** provider and redirect URLs for your dev origin (e
 
 After `supabase db push` for `20260822140000_auth_claim.sql`:
 
-1. Play a session as guest, finish, sign in (magic link or password), click **Save this session to my account**.
-2. Open **My sessions** — saved session appears with round count.
-3. Optional: sign in mid-session, save, then **Log round** still works after claim.
+1. Play a mission as guest, finish, sign in (magic link or password), click **Save this mission to my account**.
+2. Open **My missions** — the saved mission appears with round count.
+3. Optional: sign in mid-mission, save, then **Log round** still works after claim.
 4. Password sign-up: if email confirmation is enabled on hosted, UI should prompt to check email; local dev may sign in immediately.
 
 **Follow-up (out of scope):** forgot-password / password reset flow.

@@ -21,7 +21,7 @@ export function CopyCampaignInvite({ inviteCode, campaignId }: CopyCampaignInvit
   async function handleCopy() {
     const ok = await copy(inviteUrl, `Could not copy. Share this link manually: ${inviteUrl}`);
     if (ok) {
-      // campaign_id rides in props: TrackContext only carries session-scoped
+      // campaign_id rides in props: TrackContext only carries mission-scoped
       // ids, and widening it would mean an analytics_events migration.
       track('campaign_invite_copied', { campaign_id: campaignId });
     }

@@ -185,7 +185,7 @@ export default function SquadPage() {
         <h2 className="text-display text-xl text-ink">Invite someone in</h2>
         <p className="text-sm text-secondary">
           Share this link. After they create an account they can accept and join your squad. For a
-          workout tonight, send a rally link from the session instead.
+          workout tonight, send a rally link from the mission instead.
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <button
@@ -212,8 +212,8 @@ export default function SquadPage() {
         {confirmReset ? (
           <div className="space-y-2">
             <p className="text-sm text-secondary">
-              Reset the link? Anyone still holding the old one will not be able to
-              use it. People already on your squad stay.
+              Reset the link? Anyone still holding the old one will not be able to use it. People
+              already on your squad stay.
             </p>
             <div className="flex flex-wrap gap-3">
               <button
@@ -224,11 +224,7 @@ export default function SquadPage() {
               >
                 {resetting ? 'Resetting…' : 'Yes, reset it'}
               </button>
-              <button
-                type="button"
-                className="btn-outline"
-                onClick={() => setConfirmReset(false)}
-              >
+              <button type="button" className="btn-outline" onClick={() => setConfirmReset(false)}>
                 Keep it
               </button>
             </div>

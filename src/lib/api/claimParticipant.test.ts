@@ -12,7 +12,7 @@ vi.mock('@/lib/supabase', () => ({
 const rpcMock = vi.mocked(supabase.rpc);
 
 const PARTICIPANT_ID = '22222222-2222-4222-8222-222222222222';
-const SESSION_ID = '11111111-1111-4111-8111-111111111111';
+const MISSION_ID = '11111111-1111-4111-8111-111111111111';
 const USER_ID = '33333333-3333-4333-8333-333333333333';
 
 describe('claimParticipant API', () => {
@@ -25,7 +25,7 @@ describe('claimParticipant API', () => {
       data: {
         ok: true,
         participant_id: PARTICIPANT_ID,
-        session_id: SESSION_ID,
+        mission_id: MISSION_ID,
         user_id: USER_ID,
       },
       error: null,
@@ -48,7 +48,7 @@ describe('claimParticipant API', () => {
     expect(result.data).toEqual({
       ok: true,
       participantId: PARTICIPANT_ID,
-      sessionId: SESSION_ID,
+      missionId: MISSION_ID,
       userId: USER_ID,
       alreadyClaimed: false,
     });
@@ -60,7 +60,7 @@ describe('claimParticipant API', () => {
         ok: true,
         already_claimed: true,
         participant_id: PARTICIPANT_ID,
-        session_id: SESSION_ID,
+        mission_id: MISSION_ID,
         user_id: USER_ID,
       },
       error: null,

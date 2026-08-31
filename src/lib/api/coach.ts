@@ -4,14 +4,14 @@ import type { HudOvertraining } from '@/lib/hud/types';
 export type CoachApiError = { message: string };
 
 export interface CoachTopStrip {
-  sessionsCreated7d: number;
-  sessionsCreated30d: number;
-  sessionsFinished7d: number;
-  sessionsFinished30d: number;
+  missionsCreated7d: number;
+  missionsCreated30d: number;
+  missionsFinished7d: number;
+  missionsFinished30d: number;
   uniqueAnonIds: number;
   registeredUsers: number;
-  practiceSessionsStarted: number;
-  liveSessionsCreated: number;
+  practiceMissionsStarted: number;
+  liveMissionsCreated: number;
 }
 
 export interface CoachClaimFunnel {
@@ -33,9 +33,9 @@ export interface CoachRallyConversion {
   conversionRatePct: number | null;
 }
 
-export interface CoachSessionAbandonment {
-  sessionsFinished: number;
-  sessionsWithAbandonmentEvent: number;
+export interface CoachMissionAbandonment {
+  missionsFinished: number;
+  missionsWithAbandonmentEvent: number;
   abandonmentRatePct: number | null;
 }
 
@@ -43,15 +43,15 @@ export interface CoachTemplatePerformanceRow {
   templateId: string;
   intensityTier: number | null;
   durationMinutes: number;
-  sessionsCreated: number;
-  sessionsCompleted: number;
+  missionsCreated: number;
+  missionsCompleted: number;
   completionRatePct: number | null;
 }
 
 export interface CoachHostVsJoinerRow {
   firstRole: string;
   userCount: number;
-  avgSessionsPerUser: number | null;
+  avgMissionsPerUser: number | null;
   avgActiveDaysPerUser: number | null;
 }
 
@@ -81,7 +81,7 @@ export interface CoachDashboard {
   claimFunnel: CoachClaimFunnel;
   intakeFunnel: CoachIntakeFunnel;
   rallyConversion: CoachRallyConversion;
-  sessionAbandonment: CoachSessionAbandonment;
+  missionAbandonment: CoachMissionAbandonment;
   templatePerformance: CoachTemplatePerformanceRow[];
   hostVsJoinerRetention: CoachHostVsJoinerRow[];
   audioUnlockRate: CoachAudioUnlockRow[];
@@ -93,7 +93,7 @@ export interface CoachEventRow {
   id: string;
   eventName: string;
   occurredAt: string;
-  sessionId: string | null;
+  missionId: string | null;
   participantId: string | null;
   userId: string | null;
   anonId: string | null;
@@ -109,7 +109,7 @@ export interface CoachUserListRow {
   perceivedClassification: string;
   accountCreatedAt: string;
   lastActiveAt: string | null;
-  totalSessions: number;
+  totalMissions: number;
 }
 
 export interface CoachUserProfile {
@@ -132,8 +132,8 @@ export interface CoachUserClassificationEvent {
   occurredAt: string;
 }
 
-export interface CoachUserSessionRow {
-  sessionId: string;
+export interface CoachUserMissionRow {
+  missionId: string;
   role: string;
   templateId: string | null;
   intensityTier: number | null;
@@ -145,10 +145,10 @@ export interface CoachUserSessionRow {
 }
 
 export interface CoachUserSummary {
-  sessionsAsHost: number;
-  sessionsAsJoiner: number;
-  totalSessions: number;
-  practiceSessionsStarted: number;
+  missionsAsHost: number;
+  missionsAsJoiner: number;
+  totalMissions: number;
+  practiceMissionsStarted: number;
   firstSeenAt: string | null;
   lastActiveAt: string | null;
 }
@@ -156,7 +156,7 @@ export interface CoachUserSummary {
 export interface CoachUserDetail {
   profile: CoachUserProfile;
   classificationHistory: CoachUserClassificationEvent[];
-  sessions: CoachUserSessionRow[];
+  missions: CoachUserMissionRow[];
   summary: CoachUserSummary;
   overtraining: HudOvertraining;
 }
@@ -209,14 +209,14 @@ function mapCoachError(message: string | undefined): string {
 
 function parseTopStrip(row: Record<string, unknown>): CoachTopStrip {
   return {
-    sessionsCreated7d: num(row, 'sessionsCreated7d'),
-    sessionsCreated30d: num(row, 'sessionsCreated30d'),
-    sessionsFinished7d: num(row, 'sessionsFinished7d'),
-    sessionsFinished30d: num(row, 'sessionsFinished30d'),
+    missionsCreated7d: num(row, 'missionsCreated7d'),
+    missionsCreated30d: num(row, 'missionsCreated30d'),
+    missionsFinished7d: num(row, 'missionsFinished7d'),
+    missionsFinished30d: num(row, 'missionsFinished30d'),
     uniqueAnonIds: num(row, 'uniqueAnonIds'),
     registeredUsers: num(row, 'registeredUsers'),
-    practiceSessionsStarted: num(row, 'practiceSessionsStarted'),
-    liveSessionsCreated: num(row, 'liveSessionsCreated'),
+    practiceMissionsStarted: num(row, 'practiceMissionsStarted'),
+    liveMissionsCreated: num(row, 'liveMissionsCreated'),
   };
 }
 
@@ -245,10 +245,10 @@ function parseRallyConversion(row: Record<string, unknown>): CoachRallyConversio
   };
 }
 
-function parseSessionAbandonment(row: Record<string, unknown>): CoachSessionAbandonment {
+function parseMissionAbandonment(row: Record<string, unknown>): CoachMissionAbandonment {
   return {
-    sessionsFinished: num(row, 'sessions_finished'),
-    sessionsWithAbandonmentEvent: num(row, 'sessions_with_abandonment_event'),
+    missionsFinished: num(row, 'missions_finished'),
+    missionsWithAbandonmentEvent: num(row, 'missions_with_abandonment_event'),
     abandonmentRatePct: numOrNull(row, 'abandonment_rate_pct'),
   };
 }
@@ -258,8 +258,8 @@ function parseTemplateRow(row: Record<string, unknown>): CoachTemplatePerformanc
     templateId: str(row, 'template_id'),
     intensityTier: numOrNull(row, 'intensity_tier'),
     durationMinutes: num(row, 'duration_minutes'),
-    sessionsCreated: num(row, 'sessions_created'),
-    sessionsCompleted: num(row, 'sessions_completed'),
+    missionsCreated: num(row, 'missions_created'),
+    missionsCompleted: num(row, 'missions_completed'),
     completionRatePct: numOrNull(row, 'completion_rate_pct'),
   };
 }
@@ -268,7 +268,7 @@ function parseHostVsJoinerRow(row: Record<string, unknown>): CoachHostVsJoinerRo
   return {
     firstRole: str(row, 'first_role'),
     userCount: num(row, 'user_count'),
-    avgSessionsPerUser: numOrNull(row, 'avg_sessions_per_user'),
+    avgMissionsPerUser: numOrNull(row, 'avg_missions_per_user'),
     avgActiveDaysPerUser: numOrNull(row, 'avg_active_days_per_user'),
   };
 }
@@ -311,7 +311,7 @@ function parseEventRow(row: Record<string, unknown>): CoachEventRow | null {
     id,
     eventName,
     occurredAt,
-    sessionId: strOrNull(row, 'session_id'),
+    missionId: strOrNull(row, 'mission_id'),
     participantId: strOrNull(row, 'participant_id'),
     userId: strOrNull(row, 'user_id'),
     anonId: strOrNull(row, 'anon_id'),
@@ -335,7 +335,7 @@ function parseUserListRow(row: Record<string, unknown>): CoachUserListRow | null
     perceivedClassification: str(row, 'perceived_classification'),
     accountCreatedAt: str(row, 'account_created_at'),
     lastActiveAt: strOrNull(row, 'last_active_at'),
-    totalSessions: num(row, 'total_sessions'),
+    totalMissions: num(row, 'total_missions'),
   };
 }
 
@@ -377,15 +377,15 @@ function parseClassificationEvent(
   };
 }
 
-function parseUserSessionRow(row: Record<string, unknown>): CoachUserSessionRow | null {
-  const sessionId = strOrNull(row, 'session_id');
+function parseUserMissionRow(row: Record<string, unknown>): CoachUserMissionRow | null {
+  const missionId = strOrNull(row, 'mission_id');
   const joinedAt = strOrNull(row, 'joined_at');
   const createdAt = strOrNull(row, 'created_at');
-  if (!sessionId || !joinedAt || !createdAt) {
+  if (!missionId || !joinedAt || !createdAt) {
     return null;
   }
   return {
-    sessionId,
+    missionId,
     role: str(row, 'role'),
     templateId: strOrNull(row, 'template_id'),
     intensityTier: numOrNull(row, 'intensity_tier'),
@@ -407,10 +407,10 @@ function parseOvertraining(row: Record<string, unknown>): HudOvertraining {
 
 function parseUserSummary(row: Record<string, unknown>): CoachUserSummary {
   return {
-    sessionsAsHost: num(row, 'sessionsAsHost'),
-    sessionsAsJoiner: num(row, 'sessionsAsJoiner'),
-    totalSessions: num(row, 'totalSessions'),
-    practiceSessionsStarted: num(row, 'practiceSessionsStarted'),
+    missionsAsHost: num(row, 'missionsAsHost'),
+    missionsAsJoiner: num(row, 'missionsAsJoiner'),
+    totalMissions: num(row, 'totalMissions'),
+    practiceMissionsStarted: num(row, 'practiceMissionsStarted'),
     firstSeenAt: strOrNull(row, 'firstSeenAt'),
     lastActiveAt: strOrNull(row, 'lastActiveAt'),
   };
@@ -467,15 +467,15 @@ export async function fetchCoachUserDetail(userId: string): Promise<{
     .map(parseClassificationEvent)
     .filter((row): row is CoachUserClassificationEvent => row !== null);
 
-  const sessions = asArray(raw.sessions)
-    .map(parseUserSessionRow)
-    .filter((row): row is CoachUserSessionRow => row !== null);
+  const missions = asArray(raw.missions)
+    .map(parseUserMissionRow)
+    .filter((row): row is CoachUserMissionRow => row !== null);
 
   return {
     data: {
       profile,
       classificationHistory,
-      sessions,
+      missions,
       summary: parseUserSummary(asRecord(raw.summary)),
       overtraining: parseOvertraining(asRecord(raw.overtraining)),
     },
@@ -504,7 +504,7 @@ export async function fetchCoachDashboard(): Promise<{
       claimFunnel: parseClaimFunnel(asRecord(raw.claimFunnel)),
       intakeFunnel: parseIntakeFunnel(asRecord(raw.intakeFunnel)),
       rallyConversion: parseRallyConversion(asRecord(raw.rallyConversion)),
-      sessionAbandonment: parseSessionAbandonment(asRecord(raw.sessionAbandonment)),
+      missionAbandonment: parseMissionAbandonment(asRecord(raw.missionAbandonment)),
       templatePerformance: asArray(raw.templatePerformance).map(parseTemplateRow),
       hostVsJoinerRetention: asArray(raw.hostVsJoinerRetention).map(parseHostVsJoinerRow),
       audioUnlockRate: asArray(raw.audioUnlockRate).map(parseAudioUnlockRow),
