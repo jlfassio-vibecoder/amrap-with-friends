@@ -1,6 +1,6 @@
 # Epic: Mission read + Realtime scoping
 
-**Status:** Phase 2 complete — SELECT hardened; Phase 3 (dual-channel hygiene) pending  
+**Status:** Phases 0–3 complete  
 **Last updated:** 2026-08-31  
 **Follows:** Close policy + Rally point / Next Mission vocabulary pass  
 **Phase 0 ADR:** [`adr-mission-read-realtime-scoping.md`](./adr-mission-read-realtime-scoping.md)  
@@ -130,11 +130,11 @@ Lock one entitlement model before writing migrations:
 - Guest mitigation **(a)+(b):** auth Realtime when `realtimeTables: isAuthenticated`; guests poll every 5s (`GUEST_MISSION_POLL_MS`).
 - Acceptance: anon without join/claim cannot SELECT mission rows; joined guest loads waiting room via RPC.
 
-### Phase 3 — Ops / dual-channel hygiene (P1)
+### Phase 3 — Ops / dual-channel hygiene (P1) — **complete**
 
-- Surface `rallyPointChannel.error` on the waiting room when linked.
-- Consider dropping rally-point Realtime during finished unless force-nav/daisy need it.
-- Acceptance: channel failure is visible; no silent Pass Command / force-nav degrade.
+- Waiting room surfaces `rallyPointChannel.error` when linked (same alert strip as mission sync errors).
+- Hub channel subscribe predicate: [`shouldSubscribeRallyPointOnMission`](../../src/lib/rallyPoint/shouldSubscribeRallyPointOnMission.ts) — **keep** during `finished` (force-nav + daisy need `activeMissionId` / `nextMissionPendingAt`); drop only during `work`.
+- Acceptance: hub failure is visible; Pass Command / force-nav are not silently degraded by dropping finished subscribe.
 
 ---
 
@@ -145,8 +145,8 @@ Lock one entitlement model before writing migrations:
 - [x] Mission table reads are entitlement-scoped; UUID alone is insufficient.
 - [ ] Guest join → live waiting room → work still works without sign-in.
 - [ ] Host Start / countdown / `log_round` / score lock unchanged in product behavior.
-- [ ] Next Mission hub force-nav and daisy-chain still pull athletes into `/mission/:id`.
-- [ ] Migration(s) + client tests; `npm run lint && npm run typecheck && npm run test` green.
+- [x] Next Mission hub force-nav and daisy-chain still pull athletes into `/mission/:id`.
+- [x] Migration(s) + client tests; `npm run lint && npm run typecheck && npm run test` green.
 - [x] CLAUDE.md architecture note: live mission reads are scoped (exception to “RPC-only” called out honestly if SELECT remains).
 
 ---

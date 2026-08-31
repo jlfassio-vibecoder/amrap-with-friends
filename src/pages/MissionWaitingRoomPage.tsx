@@ -48,6 +48,7 @@ import {
   touchRallyPointPresence,
 } from '@/lib/api/rallyPoint';
 import { canPassRallyPointCommand } from '@/lib/rallyPoint/canPassRallyPointCommand';
+import { shouldSubscribeRallyPointOnMission } from '@/lib/rallyPoint/shouldSubscribeRallyPointOnMission';
 import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
 import {
   getStoredRallyPointIdForMission,
@@ -457,9 +458,7 @@ function LiveMissionView({
       ? { memberId: rallyPointMemberId, nickname: rallyPointNickname }
       : null;
   const rallyPointChannel = useRallyPointChannel(
-    rallyPointId && (livePhase === 'waiting' || livePhase === 'setup' || livePhase === 'finished')
-      ? rallyPointId
-      : undefined,
+    rallyPointId && shouldSubscribeRallyPointOnMission(livePhase) ? rallyPointId : undefined,
     rallyPointChannelPresence,
     { realtimeTables: isAuthenticated }
   );
@@ -847,6 +846,10 @@ function LiveMissionView({
           ) : null}
 
           {live.syncError && <p className="alert-error">{live.syncError}</p>}
+
+          {rallyPointId && rallyPointChannel.error ? (
+            <p className="alert-error">{rallyPointChannel.error}</p>
+          ) : null}
 
           {claim.claimError && <p className="alert-error">{claim.claimError}</p>}
 
