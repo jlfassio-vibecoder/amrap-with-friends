@@ -58,6 +58,7 @@ describe('useLobbyChannel', () => {
         status: 'open',
         createdAt: '',
         updatedAt: '',
+        nextMissionPendingAt: null,
         members: [],
       },
       error: null,

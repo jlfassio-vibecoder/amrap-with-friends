@@ -1,11 +1,28 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SessionScorecard } from './SessionScorecard';
 import type { LeaderboardEntry } from '@/lib/sessionSync/types';
+import { DAISY_CHAIN_TOOLTIP } from '@/lib/session/daisyChainCopy';
+
+const announceNextMissionMock = vi.fn();
+const navigateMock = vi.fn();
+
+vi.mock('@/lib/api/lobby', () => ({
+  announceNextMission: (...args: unknown[]) => announceNextMissionMock(...args),
+}));
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+  };
+});
 
 afterEach(() => {
   cleanup();
+  vi.clearAllMocks();
 });
 
 const entry: LeaderboardEntry = {
@@ -36,46 +53,115 @@ const scorecardProps = {
   onClose: vi.fn(),
 };
 
+const LOBBY_HREF = '/lobby/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const LOBBY_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
 describe('SessionScorecard', () => {
   it('renders save button when saveState is idle', () => {
-    render(<SessionScorecard {...scorecardProps} saveState="idle" />);
+    render(
+      <MemoryRouter>
+        <SessionScorecard {...scorecardProps} saveState="idle" />
+      </MemoryRouter>
+    );
 
     expect(screen.getByRole('button', { name: 'Save to my account' })).toBeDefined();
   });
 
   it('renders saving label when saveState is saving', () => {
-    render(<SessionScorecard {...scorecardProps} saveState="saving" />);
+    render(
+      <MemoryRouter>
+        <SessionScorecard {...scorecardProps} saveState="saving" />
+      </MemoryRouter>
+    );
 
     expect(screen.getByRole('button', { name: 'Saving…' })).toBeDefined();
   });
 
   it('renders saved label when saveState is saved', () => {
-    render(<SessionScorecard {...scorecardProps} saveState="saved" />);
+    render(
+      <MemoryRouter>
+        <SessionScorecard {...scorecardProps} saveState="saved" />
+      </MemoryRouter>
+    );
 
     expect(screen.getByRole('button', { name: 'Saved to my account' })).toBeDefined();
   });
 
   it('shows unavailable message when saveState is unavailable', () => {
-    render(<SessionScorecard {...scorecardProps} saveState="unavailable" />);
+    render(
+      <MemoryRouter>
+        <SessionScorecard {...scorecardProps} saveState="unavailable" />
+      </MemoryRouter>
+    );
 
     expect(screen.queryByRole('button', { name: 'Save to my account' })).toBeNull();
     expect(screen.getByText(/can no longer be saved/i)).toBeDefined();
   });
 
-  it('shows Back to staging primary and Back home secondary when stagingHref is set', () => {
+  it('shows Daisy-chain CTA with tooltip and Back home when stagingHref is set', () => {
     render(
       <MemoryRouter>
         <SessionScorecard
           {...scorecardProps}
           saveState="saved"
-          stagingHref="/lobby/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+          stagingHref={LOBBY_HREF}
+          lobbyId={LOBBY_ID}
+          isHost
         />
       </MemoryRouter>
     );
 
-    const staging = screen.getByRole('link', { name: 'Back to staging' });
-    expect(staging.getAttribute('href')).toBe('/lobby/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+    const daisy = screen.getByRole('button', { name: 'Daisy-chain another session' });
+    expect(daisy.getAttribute('aria-describedby')).toBeTruthy();
+    expect(screen.getByText(DAISY_CHAIN_TOOLTIP)).toBeDefined();
     const home = screen.getByRole('link', { name: 'Back home' });
     expect(home.getAttribute('href')).toBe('/');
+  });
+
+  it('announces then navigates when the host daisy-chains', async () => {
+    announceNextMissionMock.mockResolvedValue({
+      data: { ok: true, nextMissionPendingAt: '2026-09-01T12:00:00Z' },
+      error: null,
+    });
+
+    render(
+      <MemoryRouter>
+        <SessionScorecard
+          {...scorecardProps}
+          saveState="saved"
+          stagingHref={LOBBY_HREF}
+          lobbyId={LOBBY_ID}
+          isHost
+        />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Daisy-chain another session' }));
+
+    await waitFor(() => {
+      expect(announceNextMissionMock).toHaveBeenCalledWith(LOBBY_ID);
+      expect(navigateMock).toHaveBeenCalledWith(LOBBY_HREF);
+    });
+  });
+
+  it('navigates without announcing when a non-host daisy-chains', async () => {
+    render(
+      <MemoryRouter>
+        <SessionScorecard
+          {...scorecardProps}
+          saveState="saved"
+          stagingHref={LOBBY_HREF}
+          lobbyId={LOBBY_ID}
+          isHost={false}
+        />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Daisy-chain another session' }));
+
+    await waitFor(() => {
+      expect(announceNextMissionMock).not.toHaveBeenCalled();
+      expect(navigateMock).toHaveBeenCalledWith(LOBBY_HREF);
+    });
   });
 });

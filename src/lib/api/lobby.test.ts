@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  announceNextMission,
   createLobbySession,
+  getLobby,
   joinLobby,
   leaveLobby,
   passLobbyCommand,
@@ -348,6 +350,56 @@ describe('lobby API', () => {
 
       expect(result.data).toBeNull();
       expect(result.error).not.toBeNull();
+    });
+  });
+
+  describe('announceNextMission', () => {
+    it('calls the announce RPC', async () => {
+      rpcMock.mockResolvedValue({
+        data: {
+          ok: true,
+          lobby_id: LOBBY_ID,
+          next_mission_pending_at: '2026-09-01T12:00:00Z',
+        },
+        error: null,
+        count: null,
+        status: 200,
+        statusText: 'OK',
+      } as never);
+
+      const result = await announceNextMission(LOBBY_ID);
+
+      expect(rpcMock).toHaveBeenCalledWith('announce_next_mission', { p_lobby_id: LOBBY_ID });
+      expect(result.error).toBeNull();
+      expect(result.data?.nextMissionPendingAt).toBe('2026-09-01T12:00:00Z');
+    });
+  });
+
+  describe('getLobby', () => {
+    it('parses next_mission_pending_at', async () => {
+      rpcMock.mockResolvedValue({
+        data: {
+          ok: true,
+          lobby_id: LOBBY_ID,
+          host_user_id: 'user-1',
+          active_session_id: SESSION_ID,
+          active_session_state: 'finished',
+          status: 'open',
+          created_at: '2026-09-01T10:00:00Z',
+          updated_at: '2026-09-01T11:00:00Z',
+          next_mission_pending_at: '2026-09-01T12:00:00Z',
+          members: [],
+        },
+        error: null,
+        count: null,
+        status: 200,
+        statusText: 'OK',
+      } as never);
+
+      const result = await getLobby(LOBBY_ID);
+
+      expect(result.error).toBeNull();
+      expect(result.data?.nextMissionPendingAt).toBe('2026-09-01T12:00:00Z');
     });
   });
 });

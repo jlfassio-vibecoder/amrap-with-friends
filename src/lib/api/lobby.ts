@@ -31,6 +31,8 @@ export type LobbySnapshot = {
   status: 'open' | 'closed';
   createdAt: string;
   updatedAt: string;
+  /** Host announced Daisy-chain; crew should hang on for the next mission. */
+  nextMissionPendingAt: string | null;
   members: LobbyMember[];
 };
 
@@ -346,7 +348,31 @@ export async function getLobby(
       status,
       createdAt,
       updatedAt,
+      nextMissionPendingAt: readString(raw.next_mission_pending_at),
       members,
+    },
+    error: null,
+  };
+}
+
+export async function announceNextMission(
+  lobbyId: string
+): Promise<{
+  data: { ok: boolean; nextMissionPendingAt: string | null } | null;
+  error: LobbyApiError | null;
+}> {
+  const { data, error } = await callRpc('announce_next_mission', { p_lobby_id: lobbyId });
+  if (error) {
+    return { data: null, error: { message: mapRpcError(error.message) } };
+  }
+  const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+  return {
+    data: {
+      ok: true,
+      nextMissionPendingAt: readString(raw.next_mission_pending_at),
     },
     error: null,
   };
