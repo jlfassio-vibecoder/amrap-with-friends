@@ -32,7 +32,41 @@ export interface RouteSeo {
   index: boolean;
 }
 
-export const ROUTE_SEO: RouteSeo[] = [
+/**
+ * Static pages built by Astro. Real HTML in the first response, which is the
+ * only thing an AI crawler ever reads — none of them execute JavaScript.
+ */
+export const CONTENT_ROUTES: RouteSeo[] = [
+  {
+    path: '/amrap-timer',
+    title: 'Free AMRAP Timer — Online, No Signup',
+    description:
+      'A free online AMRAP timer for 5, 10, 15 and 20 minute workouts. Countdown clock, round counter, audible cues. No signup, no app install, no ads.',
+    index: true,
+  },
+  {
+    path: '/about',
+    title: 'About AMRAP With Friends',
+    description:
+      'Why AMRAP With Friends exists: every other workout timer is built for one person. This one puts a whole crew on the same clock and the same leaderboard.',
+    index: true,
+  },
+  {
+    path: '/privacy',
+    title: 'Privacy — AMRAP With Friends',
+    description: 'What AMRAP With Friends stores, why, and how to have it deleted.',
+    index: true,
+  },
+  {
+    path: '/terms',
+    title: 'Terms of Use — AMRAP With Friends',
+    description: 'The terms you agree to when you use AMRAP With Friends.',
+    index: true,
+  },
+];
+
+/** Routes served by the React SPA shell. */
+export const APP_ROUTES: RouteSeo[] = [
   {
     path: '/',
     title: DEFAULT_TITLE,
@@ -67,11 +101,28 @@ export const ROUTE_SEO: RouteSeo[] = [
   { path: '/coach/wods', title: 'WOD Builder', description: '', index: false },
 ];
 
-/** Trailing slashes and repeated slashes are the same URL to us; the canonical never carries them. */
+/**
+ * Content routes come first: they are all literal, so a literal page can never
+ * be shadowed by a parameterised app route at the same depth.
+ */
+export const ROUTE_SEO: RouteSeo[] = [...CONTENT_ROUTES, ...APP_ROUTES];
+
+/** True when this path is served by the SPA shell rather than a static page. */
+export function isAppRoute(pathname: string): boolean {
+  return APP_ROUTES.some((route) => matchRoutePath(route.path, pathname));
+}
+
+/**
+ * Trailing slashes, repeated slashes and a `.html` suffix are all the same URL
+ * to us; the canonical carries none of them. The `.html` case is not theoretical:
+ * Astro's file-format build reports `/about.html` as the page's pathname, and
+ * `cleanUrls` redirects that suffix away in production.
+ */
 export function normalizePathname(pathname: string): string {
   const withoutQuery = pathname.split(/[?#]/)[0];
   const collapsed = withoutQuery.replace(/\/{2,}/g, '/');
-  const trimmed = collapsed.replace(/\/+$/, '');
+  const withoutSuffix = collapsed.replace(/\.html$/i, '');
+  const trimmed = withoutSuffix.replace(/\/+$/, '');
   return trimmed === '' ? '/' : trimmed;
 }
 

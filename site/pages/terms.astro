@@ -1,0 +1,72 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { breadcrumbList } from '@/lib/seo/structuredData';
+
+// DRAFT — plain-language and accurate to how the product works, but it has not
+// been through legal review. See docs/epics/seo-roadmap.md, Phase 1.
+const jsonLd = [
+  breadcrumbList([
+    { name: 'Home', path: '/' },
+    { name: 'Terms', path: '/terms' },
+  ]),
+];
+---
+
+<BaseLayout jsonLd={jsonLd}>
+  <div class="mx-auto w-full max-w-[42rem] space-y-10 px-6 py-12 lg:px-10 lg:py-16">
+    <header class="space-y-4">
+      <h1 class="text-display text-[clamp(2.5rem,7vw,4rem)] leading-[0.9] text-ink">Terms of use</h1>
+      <p class="text-base leading-[1.7] text-secondary">
+        The short version: train sensibly, be decent to the people you train with, and understand
+        that this is a timer and a scoreboard, not a coach or a doctor.
+      </p>
+    </header>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">This is not medical advice</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        AMRAP With Friends provides workout timing, programming suggestions and scoring. It is not
+        medical advice and it does not know anything about your health. Exercise carries risk of
+        injury. Talk to a doctor before starting a new training programme, scale any workout to what
+        you can safely do, and stop if something hurts. You train at your own risk.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Your account</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        Keep your sign-in details to yourself, and give accurate information in your profile — scores
+        are calculated from it, so wrong details produce meaningless numbers. You are responsible for
+        what happens under your account.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Behaviour</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        Do not harass other athletes, post content you do not have the right to post, falsify scores
+        in shared missions, or try to break, overload or reverse-engineer the service. We may suspend
+        accounts that do.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">The service itself</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        We provide AMRAP With Friends as it is, without warranties. Features may change and missions
+        depend on a working network connection, so we cannot promise the service will always be
+        available or error-free. To the extent the law allows, we are not liable for losses arising
+        from your use of it.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Questions</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        Email
+        <a class="link-accent" href="mailto:hello@amrapwithfriends.com">hello@amrapwithfriends.com</a
+        >.
+      </p>
+    </section>
+  </div>
+</BaseLayout>

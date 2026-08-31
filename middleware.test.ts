@@ -23,6 +23,14 @@ describe('middleware', () => {
     expect((await middleware(request('/dev/timer'))).status).toBe(404);
   });
 
+  it('lets a static content page through instead of 404ing it', async () => {
+    for (const path of ['/amrap-timer', '/about', '/privacy', '/terms']) {
+      const response = await middleware(request(path));
+      expect(response.status, path).not.toBe(404);
+      expect(response.headers.get('x-robots-tag'), path).toBe('index, follow');
+    }
+  });
+
   it('lets an indexable route through as indexable', async () => {
     const response = await middleware(request('/create'));
     expect(response.status).not.toBe(404);

@@ -19,6 +19,11 @@ describe('normalizePathname', () => {
     expect(normalizePathname('/join#top')).toBe('/join');
   });
 
+  it("treats a .html suffix as the same URL, which is how Astro's build reports it", () => {
+    expect(normalizePathname('/about.html')).toBe('/about');
+    expect(normalizePathname('/index.html')).toBe('/index');
+  });
+
   it('collapses repeated slashes and never returns an empty string', () => {
     expect(normalizePathname('//create//')).toBe('/create');
     expect(normalizePathname('')).toBe('/');
@@ -54,6 +59,12 @@ describe('resolveSeo', () => {
 
   it('canonicalises away a trailing slash rather than pointing at the homepage', () => {
     expect(resolveSeo('/create/').canonical).toBe(`${SITE_ORIGIN}/create`);
+  });
+
+  it('resolves the pathname Astro reports for a statically built page', () => {
+    const seo = resolveSeo('/amrap-timer.html');
+    expect(seo.known).toBe(true);
+    expect(seo.canonical).toBe(`${SITE_ORIGIN}/amrap-timer`);
   });
 
   it('drops the canonical on noindex routes', () => {

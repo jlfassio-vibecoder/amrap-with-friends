@@ -28,3 +28,8 @@ jobs:
 
       - name: Test
         run: npm run test
+
+      # Type errors inside .astro frontmatter only surface at build time, so the
+      # build is the check that covers the content layer.
+      - name: Build
+        run: npm run build

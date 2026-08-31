@@ -11,6 +11,9 @@
 
 User-agent: *
 Allow: /
+# The SPA's entry HTML. App routes are rewritten to it server-side, so crawlers
+# only ever request the real URLs; this just keeps the internal path out.
+Disallow: /_app-shell
 
 # --- Search crawlers -------------------------------------------------------
 # Googlebot also feeds AI Overviews and Gemini grounding.

@@ -1,3 +1,67 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "outputDirectory": "dist",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/_app-shell/index.html"
+    },
+    {
+      "source": "/create",
+      "destination": "/_app-shell/index.html"
+    },
+    {
+      "source": "/join",
+      "destination": "/_app-shell/index.html"
+    },
+    {
+      "source": "/intake",
+      "destination": "/_app-shell/index.html"
+    },
+    {
+      "source": "/hud",
+      "destination": "/_app-shell/index.html"
+    },
+    {
+      "source": "/my-missions",
+      "destination": "/_app-shell/index.html"
+    },
+    {
+      "source": "/squad",
+      "destination": "/_app-shell/index.html"
+    },
+    {
+      "source": "/squad/join",
+      "destination": "/_app-shell/index.html"
+    },
+    {
+      "source": "/campaign/new",
+      "destination": "/_app-shell/index.html"
+    },
+    {
+      "source": "/campaign/join",
+      "destination": "/_app-shell/index.html"
+    },
+    {
+      "source": "/campaign/:campaignId",
+      "destination": "/_app-shell/index.html"
+    },
+    {
+      "source": "/mission/:missionId",
+      "destination": "/_app-shell/index.html"
+    },
+    {
+      "source": "/rally-point/:rallyPointId",
+      "destination": "/_app-shell/index.html"
+    },
+    {
+      "source": "/coach",
+      "destination": "/_app-shell/index.html"
+    },
+    {
+      "source": "/coach/wods",
+      "destination": "/_app-shell/index.html"
+    }
+  ]
 }

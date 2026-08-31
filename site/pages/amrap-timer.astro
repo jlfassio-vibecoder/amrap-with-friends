@@ -1,0 +1,88 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import FreeAmrapTimer from '../islands/FreeAmrapTimer';
+import { breadcrumbList, faqPage, webApplication } from '@/lib/seo/structuredData';
+
+// Answer-first: each question is a visible heading and the paragraph directly
+// under it is the answer, in 40-60 words. The FAQPage markup is built from this
+// same array, so what a crawler is told and what a reader sees cannot drift.
+const faqs = [
+  {
+    question: 'What is an AMRAP timer?',
+    answer:
+      'An AMRAP timer is a countdown clock for "as many rounds as possible" training. You set a time cap, the clock counts down to zero, and you complete as many rounds of a fixed set of movements as you can before it runs out. Your score is rounds plus any extra reps.',
+  },
+  {
+    question: 'How long should an AMRAP be?',
+    answer:
+      'Most AMRAPs run 5 to 20 minutes. Five and ten minute caps reward an all-out anaerobic effort; fifteen and twenty minute caps become pacing tests, where going out too fast in round one costs you more than it gains. Pick the cap first, then choose movements you can hold under fatigue.',
+  },
+  {
+    question: 'How do you score an AMRAP?',
+    answer:
+      'Count every complete round, then add the reps you finished of the round you were partway through when the clock hit zero. A score of "7+12" means seven full rounds plus twelve reps. Record the workout with the score, because the number only means something next to the same movements.',
+  },
+  {
+    question: 'Is this AMRAP timer free?',
+    answer:
+      'Yes. This page needs no account, no app install and no payment, and it runs entirely in your browser. If you want to run the same clock with other people and share a live leaderboard, that is what the rest of AMRAP With Friends does.',
+  },
+];
+
+const jsonLd = [
+  webApplication(),
+  faqPage(faqs),
+  breadcrumbList([
+    { name: 'Home', path: '/' },
+    { name: 'AMRAP timer', path: '/amrap-timer' },
+  ]),
+];
+---
+
+<BaseLayout jsonLd={jsonLd}>
+  <div class="mx-auto w-full max-w-[46rem] space-y-14 px-6 py-12 lg:px-10 lg:py-16">
+    <header class="space-y-4">
+      <p class="eyebrow text-accent">Free tool</p>
+      <h1 class="text-display text-[clamp(2.5rem,7vw,4rem)] leading-[0.9] text-ink">
+        Free AMRAP timer
+      </h1>
+      <p class="text-base leading-[1.7] text-secondary">
+        A countdown clock and round counter for AMRAP workouts. Pick a time cap, hit start, and tap
+        <strong class="font-semibold text-ink">Log round</strong> each time you come back to the top.
+        No signup, no app, no ads.
+      </p>
+    </header>
+
+    <!-- The only interactive element on the page, so it is the only thing that ships JavaScript. -->
+    <FreeAmrapTimer client:load />
+
+    <section class="space-y-4">
+      <h2 class="text-display text-[clamp(1.75rem,4vw,2.5rem)] leading-[0.95] text-ink">
+        Run it with your friends instead
+      </h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        This timer runs on one phone. AMRAP With Friends runs the same clock on everybody's phone at
+        once — one synced countdown, one shared leaderboard, and a score for each athlete at the
+        end. Everyone in the group is racing the same twenty minutes, wherever they are training.
+      </p>
+      <a
+        class="rounded-card inline-block bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
+        href="/create">Create a mission</a
+      >
+    </section>
+
+    <section class="space-y-8">
+      <h2 class="text-display text-[clamp(1.75rem,4vw,2.5rem)] leading-[0.95] text-ink">
+        AMRAP questions, answered
+      </h2>
+      {
+        faqs.map((faq) => (
+          <div class="space-y-3">
+            <h3 class="text-base font-semibold text-ink">{faq.question}</h3>
+            <p class="text-base leading-[1.7] text-secondary">{faq.answer}</p>
+          </div>
+        ))
+      }
+    </section>
+  </div>
+</BaseLayout>
