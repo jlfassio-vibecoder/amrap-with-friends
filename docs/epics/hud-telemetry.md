@@ -24,7 +24,7 @@ This project already locks an immutable `score_breakdown` at session finish. The
 | Volume tracking | No aggregation of `sessions.duration_minutes` |
 | Compliance | No 150-minute weekly floor |
 | Telemetry | P.V.I. and domain weight exist **per session** ([`ScoreBreakdown`](src/lib/scoring/types.ts)); no trends across weeks |
-| Auth surface | Signed-in header link is **My sessions** only ([`AuthHeaderActions`](src/components/AuthHeaderActions.tsx)) |
+| Auth surface | Signed-in header link is **My missions** only ([`AuthHeaderActions`](src/components/AuthHeaderActions.tsx)) |
 | Route | `/my-sessions` exists; no `/hud` |
 
 This epic adds a centralized telemetry query and a brutalist UI. It does **not** replace My Sessions.
@@ -201,7 +201,7 @@ Each phase is **one planning slice**. Plan, implement, and ship independently wh
 - Migration: `hud_telemetry(p_timezone text) returns jsonb` (SECURITY DEFINER, `GRANT EXECUTE … TO authenticated`).
 - Client: `HUDTelemetryPayload`, `fetchHudTelemetry(timeZone)`, `HUDPage` at `/hud`.
 - UI: weekly bar + countdown. Auth gate identical to My Sessions (sign-in prompt if guest).
-- Header: **HUD** link next to **My sessions** when authenticated.
+- Header: **HUD** link next to **My missions** when authenticated.
 
 #### Dependencies
 
