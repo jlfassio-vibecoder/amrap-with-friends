@@ -134,37 +134,32 @@ export function useMissionChannel(
       setParticipants(parsedParticipants);
       participantIdsRef.current = new Set(parsedParticipants.map((participant) => participant.id));
 
-      const participantIds = parsedParticipants.map((participant) => participant.id);
-      if (participantIds.length > 0) {
-        const segmentResultsResult = await supabase
-          .from('participant_segment_results')
-          .select(
-            'participant_id, segment_index, partial_reps, final_score, score_breakdown, updated_at'
-          )
-          .in('participant_id', participantIds);
+      const segmentResultsResult = await supabase
+        .from('participant_segment_results')
+        .select(
+          'mission_id, participant_id, segment_index, partial_reps, final_score, score_breakdown, updated_at'
+        )
+        .eq('mission_id', missionId);
 
-        if (cancelled) {
-          return;
-        }
-
-        if (segmentResultsResult.error) {
-          setError(segmentResultsResult.error.message);
-          return;
-        }
-
-        const parsedSegmentResults = (segmentResultsResult.data ?? [])
-          .map((row) => parseSegmentResultRow(row as Record<string, unknown>))
-          .filter((row): row is ParticipantSegmentResultRow => row !== null);
-        setSegmentResults((prev) => {
-          let merged = prev;
-          for (const row of parsedSegmentResults) {
-            merged = upsertSegmentResult(merged, row);
-          }
-          return merged;
-        });
-      } else {
-        setSegmentResults([]);
+      if (cancelled) {
+        return;
       }
+
+      if (segmentResultsResult.error) {
+        setError(segmentResultsResult.error.message);
+        return;
+      }
+
+      const parsedSegmentResults = (segmentResultsResult.data ?? [])
+        .map((row) => parseSegmentResultRow(row as Record<string, unknown>))
+        .filter((row): row is ParticipantSegmentResultRow => row !== null);
+      setSegmentResults((prev) => {
+        let merged = prev;
+        for (const row of parsedSegmentResults) {
+          merged = upsertSegmentResult(merged, row);
+        }
+        return merged;
+      });
 
       const parsedRounds = (roundsResult.data ?? [])
         .map((row) => parseRoundRow(row as Record<string, unknown>))
@@ -224,6 +219,7 @@ export function useMissionChannel(
           event: '*',
           schema: 'public',
           table: 'participant_segment_results',
+          filter: `mission_id=eq.${missionId}`,
         },
         (payload) => {
           if (payload.eventType === 'DELETE') {

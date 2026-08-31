@@ -122,9 +122,9 @@ Pointing back to [`mission-realtime-read-scoping.md`](./mission-realtime-read-sc
 
 ### Phase 1 — Segment-results Realtime scoping
 
-- [ ] Migration: `mission_id` on `participant_segment_results`, backfill, trigger, index, Realtime replica identity as needed.
-- [ ] Client: subscribe with `mission_id=eq.${missionId}`; remove unfiltered listener.
-- [ ] Tests cover filter wiring; no production SELECT revoke required in this phase.
+- [x] Migration: `mission_id` on `participant_segment_results`, backfill, trigger, index, Realtime replica identity as needed.
+- [x] Client: subscribe with `mission_id=eq.${missionId}`; remove unfiltered listener.
+- [x] Tests cover filter wiring; no production SELECT revoke required in this phase.
 
 ### Phase 2 — SELECT / RLS + RPC bootstrap
 

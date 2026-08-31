@@ -1,6 +1,6 @@
 # Epic: Mission read + Realtime scoping
 
-**Status:** Phase 0 complete — ADR locked; Phases 1–2 pending  
+**Status:** Phase 1 complete — segment-results scoped; Phase 2 (SELECT/RPC) pending  
 **Last updated:** 2026-08-31  
 **Follows:** Close policy + Rally point / Next Mission vocabulary pass  
 **Phase 0 ADR:** [`adr-mission-read-realtime-scoping.md`](./adr-mission-read-realtime-scoping.md)  
@@ -25,7 +25,7 @@ Architectural review of `/mission/:id` and `/rally-point/:id` ranked these as **
 | Gap | Risk |
 | --- | --- |
 | Mission / participants / rounds / messages SELECT `USING (true)` | Anyone with a UUID (or who enumerates) can bootstrap full public columns via PostgREST |
-| `participant_segment_results` Realtime with **no** `mission_id` filter | Every live client receives all segment-result changes project-wide; filters only in JS |
+| ~~`participant_segment_results` Realtime with **no** `mission_id` filter~~ (Phase 1 fixed) | Was: every live client received all segment-result changes; now filtered by `mission_id` |
 | Dual channels (mission + rally point) when linked | Cost/opacity; secondary to scoping but note fan-out while linked |
 
 Column grants already omit secrets (`host_token`, claim hashes). That is necessary but not sufficient.
@@ -49,7 +49,7 @@ USING (true);
 | Mission bootstrap | Direct `.from('missions' \| 'participants' \| 'rounds' \| 'messages')` in [`useMissionChannel`](../../src/lib/realtime/useMissionChannel.ts) |
 | RLS | Permissive SELECT for anon/authenticated on those tables (renamed from sessions) |
 | Realtime filters | `missions`, `participants`, `rounds`, `messages` filtered by `mission_id` / `id` |
-| Segment results | Subscribe to **all** `participant_segment_results` events; client keeps rows whose `participant_id` is in the local set |
+| Segment results | `mission_id` denorm + Realtime/bootstrap `mission_id=eq.…` (Phase 1); JS roster guard kept as defense-in-depth |
 | Writes | Still RPC-only (`update_mission_state`, `log_round`, claim, chat, etc.) — **do not regress** |
 | Hub tables | `rally_points` / members: RPC + membership-gated Realtime — better model to emulate where possible |
 | Product split | Waiting room = Rally point; hub = Next Mission — **out of scope for this epic** except not breaking live pull / force-nav |
@@ -104,12 +104,7 @@ Lock one entitlement model before writing migrations:
 
 ### `participant_segment_results` specifically
 
-Today ([`useMissionChannel.ts`](../../src/lib/realtime/useMissionChannel.ts) ~221–253):
-
-- No filter on subscribe.
-- Handler drops events whose `participant_id` ∉ local roster.
-
-**Chosen (Phase 0):** Denormalize `mission_id` onto `participant_segment_results` (trigger/backfill) and filter `mission_id=eq.…`. Rejected as primary path: `participant_id=in.(…)` (roster churn + filter length at cap 100).
+**Shipped (Phase 1):** [`useMissionChannel.ts`](../../src/lib/realtime/useMissionChannel.ts) bootstrap and Realtime use `mission_id=eq.…`. Column filled by trigger/backfill in [`20260902120000_participant_segment_results_mission_id.sql`](../../supabase/migrations/20260902120000_participant_segment_results_mission_id.sql). Roster `participantIdsRef` guard remains defense-in-depth. Rejected as primary path: `participant_id=in.(…)` (roster churn + filter length at cap 100).
 
 ---
 
@@ -122,11 +117,11 @@ Today ([`useMissionChannel.ts`](../../src/lib/realtime/useMissionChannel.ts) ~22
 - Locked **B** + denorm `mission_id`; rejected A/C.
 - Deliverable: [`adr-mission-read-realtime-scoping.md`](./adr-mission-read-realtime-scoping.md). **No** production RLS revoke or live RPC cutover in this phase.
 
-### Phase 1 — Segment-results Realtime scoping (P0)
+### Phase 1 — Segment-results Realtime scoping (P0) — **complete**
 
-- Implement chosen filter/denorm.
-- Load test / log: event rate per client with 10+ concurrent missions.
-- Acceptance: client never registers an unfiltered `participant_segment_results` listener; tests cover filter wiring.
+- Denorm `mission_id` + trigger/backfill; client bootstrap and Realtime use `mission_id=eq.…`.
+- Fan-out model: [`segmentResultsFanOut.ts`](../../src/lib/realtime/segmentResultsFanOut.ts); log with `npx tsx scripts/log-segment-results-fanout.ts` (offline; O(events in this mission) at 10+ concurrent missions). Optional live Realtime soak against preview is out of CI.
+- Acceptance: [`useMissionChannel.test.tsx`](../../src/lib/realtime/useMissionChannel.test.tsx) asserts every `participant_segment_results` listener has a non-empty `mission_id` filter.
 
 ### Phase 2 — SELECT / RLS hardening for mission tables (P0)
 
@@ -145,7 +140,7 @@ Today ([`useMissionChannel.ts`](../../src/lib/realtime/useMissionChannel.ts) ~22
 ## Acceptance criteria (epic done)
 
 - [x] Design spike ADR recorded (entitlement + segment-results approach) — [`adr-mission-read-realtime-scoping.md`](./adr-mission-read-realtime-scoping.md).
-- [ ] No unfiltered Realtime subscription on `participant_segment_results` (or successor path).
+- [x] No unfiltered Realtime subscription on `participant_segment_results` (or successor path).
 - [ ] Mission table reads are entitlement-scoped; UUID alone is insufficient.
 - [ ] Guest join → live waiting room → work still works without sign-in.
 - [ ] Host Start / countdown / `log_round` / score lock unchanged in product behavior.
