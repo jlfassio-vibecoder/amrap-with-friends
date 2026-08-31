@@ -6,6 +6,7 @@ import {
   deleteIncompleteSession,
   displayMySessionScore,
   formatMySessionScoreDisplay,
+  mySessionWorkoutTitle,
 } from './mySessions';
 import type { MySessionEntry } from './mySessions';
 import { supabase } from '@/lib/supabase';
@@ -33,6 +34,7 @@ function baseEntry(overrides: Partial<MySessionEntry> = {}): MySessionEntry {
       { name: 'Burpees', target: 20, unit: 'reps' },
       { name: 'Air squats', target: 20, unit: 'reps' },
     ],
+    templateId: null,
     state: 'waiting',
     segmentIndex: 0,
     roundCount: 0,
@@ -45,12 +47,27 @@ function baseEntry(overrides: Partial<MySessionEntry> = {}): MySessionEntry {
 }
 
 describe('mySessions helpers', () => {
+  it('mySessionWorkoutTitle prefers coach name over template', () => {
+    expect(
+      mySessionWorkoutTitle(
+        baseEntry({
+          coachWorkoutName: 'Crimp Conditioning',
+          templateId: 'the-pendulum',
+        })
+      )
+    ).toBe('Crimp Conditioning');
+  });
+
+  it('mySessionWorkoutTitle resolves library template names', () => {
+    expect(mySessionWorkoutTitle(baseEntry({ templateId: 'the-pendulum' }))).toBe('The Pendulum');
+  });
+
+  it('mySessionWorkoutTitle falls back to Workout', () => {
+    expect(mySessionWorkoutTitle(baseEntry())).toBe('Workout');
+  });
+
   it('countRoundsForSegment filters by segment index', () => {
-    const rounds = [
-      { segment_index: 0 },
-      { segment_index: 0 },
-      { segment_index: 1 },
-    ];
+    const rounds = [{ segment_index: 0 }, { segment_index: 0 }, { segment_index: 1 }];
 
     expect(countRoundsForSegment(rounds, 0)).toBe(2);
     expect(countRoundsForSegment(rounds, 1)).toBe(1);
@@ -148,9 +165,7 @@ describe('deleteIncompleteSession', () => {
       success: true,
     });
 
-    const result = await deleteIncompleteSession(
-      '22222222-2222-4222-8222-222222222222'
-    );
+    const result = await deleteIncompleteSession('22222222-2222-4222-8222-222222222222');
 
     expect(rpcMock).toHaveBeenCalledWith('delete_incomplete_session', {
       p_session_id: '22222222-2222-4222-8222-222222222222',
@@ -168,9 +183,7 @@ describe('deleteIncompleteSession', () => {
       success: true,
     });
 
-    const result = await deleteIncompleteSession(
-      '22222222-2222-4222-8222-222222222222'
-    );
+    const result = await deleteIncompleteSession('22222222-2222-4222-8222-222222222222');
 
     expect(result.error).toBeNull();
   });
@@ -200,9 +213,7 @@ describe('deleteIncompleteSession', () => {
       success: false,
     });
 
-    const result = await deleteIncompleteSession(
-      '22222222-2222-4222-8222-222222222222'
-    );
+    const result = await deleteIncompleteSession('22222222-2222-4222-8222-222222222222');
 
     expect(result.error?.message).toBe('Completed sessions cannot be deleted.');
   });

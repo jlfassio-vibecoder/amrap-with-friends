@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { supabase } from '@/lib/supabase';
 import * as sessionIdentity from '@/lib/sessionIdentity';
 import {
+  addSquadFriendToCampaign,
   createCampaign,
   fetchCampaignDetail,
   fetchCampaignInvitePreview,
@@ -394,6 +395,70 @@ describe('joinCampaign', () => {
       error: { message: 'Campaign full' },
     } as never);
     expect((await joinCampaign('ABC123')).error?.message).toBe('This campaign is full.');
+  });
+});
+
+describe('addSquadFriendToCampaign', () => {
+  it('sends the campaign and the athlete to the RPC', async () => {
+    rpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        campaign_id: 'c1',
+        user_id: 'u2',
+        nickname: 'Britt',
+        already_member: false,
+      },
+      error: null,
+    } as never);
+
+    const result = await addSquadFriendToCampaign('c1', 'u2');
+
+    expect(rpcMock).toHaveBeenCalledWith('add_squad_friend_to_campaign', {
+      p_campaign_id: 'c1',
+      p_user_id: 'u2',
+    });
+    expect(result.data).toEqual({ userId: 'u2', nickname: 'Britt', alreadyMember: false });
+  });
+
+  it('treats a repeat add as success, not an error', async () => {
+    rpcMock.mockResolvedValue({
+      data: { ok: true, campaign_id: 'c1', user_id: 'u2', nickname: 'Britt', already_member: true },
+      error: null,
+    } as never);
+
+    const result = await addSquadFriendToCampaign('c1', 'u2');
+
+    expect(result.error).toBeNull();
+    expect(result.data?.alreadyMember).toBe(true);
+  });
+
+  it('refuses an empty pick without calling the RPC', async () => {
+    const result = await addSquadFriendToCampaign('c1', '');
+
+    expect(rpcMock).not.toHaveBeenCalled();
+    expect(result.error?.message).toBe('Pick a squad friend to add.');
+  });
+
+  it('explains someone who is not a squad friend', async () => {
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: { message: 'Pick a squad friend to add' },
+    } as never);
+
+    expect((await addSquadFriendToCampaign('c1', 'u2')).error?.message).toBe(
+      'Pick a squad friend to add.'
+    );
+  });
+
+  it('hides a campaign the caller does not host behind the not-found copy', async () => {
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: { message: 'Campaign not found' },
+    } as never);
+
+    expect((await addSquadFriendToCampaign('c1', 'u2')).error?.message).toBe(
+      'That campaign is not available.'
+    );
   });
 });
 

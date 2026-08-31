@@ -116,6 +116,8 @@ const ERROR_COPY: Record<string, string> = {
   'Move it after the session before it': 'Move it later than the session before it.',
   'Move it before the session after it': 'Move it earlier than the session after it.',
   'Campaign not found': 'That campaign is not available.',
+  'Pick a squad friend to add': 'Pick a squad friend to add.',
+  'Squad friend has no profile': 'That athlete no longer has a profile.',
   invalid_timezone: 'We could not read your timezone. Try again from this device.',
 };
 
@@ -431,6 +433,44 @@ export async function joinCampaign(
     data: {
       campaignId,
       name: readString(row.name) ?? '',
+      alreadyMember: row.already_member === true,
+    },
+    error: null,
+  };
+}
+
+export interface AddSquadFriendResult {
+  userId: string;
+  nickname: string | null;
+  alreadyMember: boolean;
+}
+
+/**
+ * Puts a squad friend straight onto a campaign roster. Reach is enforced in
+ * Postgres against squad_friends, the same rule that governs sending a workout;
+ * this only offers the people it will accept.
+ */
+export async function addSquadFriendToCampaign(
+  campaignId: string,
+  userId: string
+): Promise<{ data: AddSquadFriendResult | null; error: CampaignApiError | null }> {
+  if (!userId) {
+    return { data: null, error: { message: 'Pick a squad friend to add.' } };
+  }
+
+  const { data, error } = await callRpc('add_squad_friend_to_campaign', {
+    p_campaign_id: campaignId,
+    p_user_id: userId,
+  });
+  if (error) {
+    return { data: null, error: { message: mapError(error.message) } };
+  }
+
+  const row = readRecord(data);
+  return {
+    data: {
+      userId: readString(row.user_id) ?? userId,
+      nickname: readString(row.nickname),
       alreadyMember: row.already_member === true,
     },
     error: null,

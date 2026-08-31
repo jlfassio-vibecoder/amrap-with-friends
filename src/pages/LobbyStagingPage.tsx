@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
 import { WorkoutTemplatePicker } from '@/components/createSession/WorkoutTemplatePicker';
+import { SendWorkoutToSquad } from '@/components/session/SendWorkoutToSquad';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { useLobbyForceNav } from '@/hooks/useLobbyForceNav';
@@ -61,6 +62,16 @@ export default function LobbyStagingPage() {
 
   const selectedTemplate =
     WORKOUT_TEMPLATES.find((template) => template.id === selectedTemplateId) ?? null;
+
+  // Same text the host would start, so what a friend receives cannot drift from
+  // what "Start next session" would run.
+  const stagedWorkout = useMemo(() => {
+    try {
+      return parseWorkoutText(workoutText);
+    } catch {
+      return [];
+    }
+  }, [workoutText]);
 
   const presence = memberId ? { memberId, nickname } : null;
   const { lobby, presenceByMemberId, error, refresh } = useLobbyChannel(
@@ -429,6 +440,17 @@ export default function LobbyStagingPage() {
                 {busy ? 'Starting…' : 'Start next session'}
               </button>
             </form>
+            {isAuthenticated ? (
+              <SendWorkoutToSquad
+                durationMinutes={durationMinutes}
+                workout={stagedWorkout}
+                templateId={selectedTemplate?.id}
+                intensityTier={selectedTemplate?.intensityTier}
+                ready={Boolean(selectedTemplate) && stagedWorkout.length > 0}
+                triggerClassName="btn-outline w-full font-semibold"
+                triggerLabel="Send this to a squad friend"
+              />
+            ) : null}
             <button
               type="button"
               className="text-sm text-muted hover:text-ink"
