@@ -49,6 +49,7 @@ import {
 } from '@/lib/api/rallyPoint';
 import { canPassRallyPointCommand } from '@/lib/rallyPoint/canPassRallyPointCommand';
 import { shouldSubscribeRallyPointOnMission } from '@/lib/rallyPoint/shouldSubscribeRallyPointOnMission';
+import { shouldUseMissionRealtimeTables } from '@/lib/realtime/shouldUseMissionRealtimeTables';
 import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
 import {
   getStoredRallyPointIdForMission,
@@ -431,11 +432,16 @@ function LiveMissionView({
     confirmSafetyNotice,
   } = useMissionSafetyNotices(missionId);
 
+  const useRealtimeTables = shouldUseMissionRealtimeTables({
+    isAuthenticated,
+    hasClaimToken: Boolean(claimToken),
+  });
+
   const channel = useMissionChannel(
     missionId,
     { participantId, nickname },
     {
-      realtimeTables: isAuthenticated,
+      realtimeTables: useRealtimeTables,
     }
   );
   const live = useLiveAmrapMission(missionId, channel);
@@ -460,7 +466,7 @@ function LiveMissionView({
   const rallyPointChannel = useRallyPointChannel(
     rallyPointId && shouldSubscribeRallyPointOnMission(livePhase) ? rallyPointId : undefined,
     rallyPointChannelPresence,
-    { realtimeTables: isAuthenticated }
+    { realtimeTables: useRealtimeTables }
   );
 
   useRallyPointHostHandoff({

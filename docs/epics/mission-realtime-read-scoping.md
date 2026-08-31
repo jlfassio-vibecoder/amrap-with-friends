@@ -22,11 +22,11 @@ This epic hardens **who can read mission tables** and **which Realtime events re
 
 Architectural review of `/mission/:id` and `/rally-point/:id` ranked these as **P0 for scale/security** after product separation (close-while-live + vocabulary) landed:
 
-| Gap | Risk |
-| --- | --- |
-| ~~Mission / participants / rounds / messages SELECT `USING (true)`~~ (Phase 2 fixed) | Was: UUID enumeration; now RPC entitlement + membership Realtime |
+| Gap                                                                                        | Risk                                                                                     |
+| ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| ~~Mission / participants / rounds / messages SELECT `USING (true)`~~ (Phase 2 fixed)       | Was: UUID enumeration; now RPC entitlement + membership Realtime                         |
 | ~~`participant_segment_results` Realtime with **no** `mission_id` filter~~ (Phase 1 fixed) | Was: every live client received all segment-result changes; now filtered by `mission_id` |
-| Dual channels (mission + rally point) when linked | Cost/opacity; secondary to scoping but note fan-out while linked |
+| Dual channels (mission + rally point) when linked                                          | Cost/opacity; secondary to scoping but note fan-out while linked                         |
 
 Column grants already omit secrets (`host_token`, claim hashes). That is necessary but not sufficient.
 
@@ -44,15 +44,15 @@ USING (true);
 
 ## Current state (baseline)
 
-| Area | Today |
-| --- | --- |
+| Area              | Today                                                                                                                                                                  |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Mission bootstrap | [`get_mission_live_state`](../../supabase/migrations/20260902130000_mission_live_state_rls.sql) via [`useMissionChannel`](../../src/lib/realtime/useMissionChannel.ts) |
-| RLS | Anon SELECT revoked on live tables; authenticated membership via `is_mission_participant` |
-| Realtime filters | Auth: filtered `postgres_changes`; guests: 5s poll of live-state RPC (hub pattern) |
-| Segment results | `mission_id` denorm + Realtime/bootstrap `mission_id=eq.…` (Phase 1); JS roster guard kept as defense-in-depth |
-| Writes | Still RPC-only (`update_mission_state`, `log_round`, claim, chat, etc.) — **do not regress** |
-| Hub tables | `rally_points` / members: RPC + membership-gated Realtime — better model to emulate where possible |
-| Product split | Waiting room = Rally point; hub = Next Mission — **out of scope for this epic** except not breaking live pull / force-nav |
+| RLS               | Anon SELECT revoked on live tables; authenticated membership via `is_mission_participant`                                                                              |
+| Realtime filters  | Auth: filtered `postgres_changes`; guests: 5s poll of live-state RPC (hub pattern)                                                                                     |
+| Segment results   | `mission_id` denorm + Realtime/bootstrap `mission_id=eq.…` (Phase 1); JS roster guard kept as defense-in-depth                                                         |
+| Writes            | Still RPC-only (`update_mission_state`, `log_round`, claim, chat, etc.) — **do not regress**                                                                           |
+| Hub tables        | `rally_points` / members: RPC + membership-gated Realtime — better model to emulate where possible                                                                     |
+| Product split     | Waiting room = Rally point; hub = Next Mission — **out of scope for this epic** except not breaking live pull / force-nav                                              |
 
 ---
 
@@ -94,11 +94,11 @@ useMissionChannel (same consumer API)
 
 Lock one entitlement model before writing migrations:
 
-| Option | Idea | Pros | Cons |
-| --- | --- | --- | --- |
-| **A. RLS membership** | `EXISTS (participant for auth.uid()) OR claim_token path for anon` | Fits Realtime (RLS filters payloads) | Anon claim hard to express in RLS without a session GUC / signed JWT claim |
-| **B. RPC snapshot + narrow Realtime** | `get_mission_live_state(mission_id, claim)` for bootstrap; Realtime only after join | Clear security boundary | Two code paths; claim must still authorize Realtime |
-| **C. Mission-scoped views** | Views with `security_barrier` + grants; Realtime on views if supported | Cleaner filters | Supabase Realtime + view quirks; verify before committing |
+| Option                                | Idea                                                                                | Pros                                 | Cons                                                                       |
+| ------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------ | -------------------------------------------------------------------------- |
+| **A. RLS membership**                 | `EXISTS (participant for auth.uid()) OR claim_token path for anon`                  | Fits Realtime (RLS filters payloads) | Anon claim hard to express in RLS without a session GUC / signed JWT claim |
+| **B. RPC snapshot + narrow Realtime** | `get_mission_live_state(mission_id, claim)` for bootstrap; Realtime only after join | Clear security boundary              | Two code paths; claim must still authorize Realtime                        |
+| **C. Mission-scoped views**           | Views with `security_barrier` + grants; Realtime on views if supported              | Cleaner filters                      | Supabase Realtime + view quirks; verify before committing                  |
 
 **Locked by Phase 0 ADR:** **B** (RPC snapshot + narrow Realtime). **A** rejected (claim not in PostgREST/RLS context). **C** skipped unless B is blocked. Segment results: **denorm `mission_id`** (not `in.(participant_ids)`). See [`adr-mission-read-realtime-scoping.md`](./adr-mission-read-realtime-scoping.md).
 
@@ -143,8 +143,8 @@ Lock one entitlement model before writing migrations:
 - [x] Design spike ADR recorded (entitlement + segment-results approach) — [`adr-mission-read-realtime-scoping.md`](./adr-mission-read-realtime-scoping.md).
 - [x] No unfiltered Realtime subscription on `participant_segment_results` (or successor path).
 - [x] Mission table reads are entitlement-scoped; UUID alone is insufficient.
-- [ ] Guest join → live waiting room → work still works without sign-in.
-- [ ] Host Start / countdown / `log_round` / score lock unchanged in product behavior.
+- [x] Guest join → live waiting room → work still works without sign-in.
+- [x] Host Start / countdown / `log_round` / score lock unchanged in product behavior.
 - [x] Next Mission hub force-nav and daisy-chain still pull athletes into `/mission/:id`.
 - [x] Migration(s) + client tests; `npm run lint && npm run typecheck && npm run test` green.
 - [x] CLAUDE.md architecture note: live mission reads are scoped (exception to “RPC-only” called out honestly if SELECT remains).
@@ -153,12 +153,12 @@ Lock one entitlement model before writing migrations:
 
 ## Dependencies / risks
 
-| Risk | Mitigation |
-| --- | --- |
-| Breaking anon Realtime when tightening RLS | Spike first; feature-flag or staged rollout on a preview project |
+| Risk                                         | Mitigation                                                        |
+| -------------------------------------------- | ----------------------------------------------------------------- |
+| Breaking anon Realtime when tightening RLS   | Spike first; feature-flag or staged rollout on a preview project  |
 | `in.(uuid,…)` filter length at large rallies | Cap participants (already product-capped); or denorm `mission_id` |
-| Replica identity / Realtime payload size | Keep column grants minimal; do not grant secret columns |
-| Drift from CLAUDE “all access via RPC” | Prefer RPC snapshot if SELECT policies become unmaintainable |
+| Replica identity / Realtime payload size     | Keep column grants minimal; do not grant secret columns           |
+| Drift from CLAUDE “all access via RPC”       | Prefer RPC snapshot if SELECT policies become unmaintainable      |
 
 ---
 
