@@ -565,7 +565,7 @@ export async function deleteCampaign(
  * The session never sets campaign_occurrence_id — the link lives in
  * campaign_makeups so the live-session unique index stays intact.
  * When a crewmate recording is available, seeds the ghost pacer selection
- * before navigation so the strip is armed in staging.
+ * before navigation so the strip is armed at the rally point.
  */
 export async function startCampaignMakeup(
   occurrenceId: string

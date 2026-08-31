@@ -1,18 +1,18 @@
 import type { FeaturedWod } from '@/lib/api/featuredWod';
 import { formatFeaturedWodTime } from '@/lib/api/featuredWod';
 
-/** Matches the historic scheduler lead window: lobby join opens 15 minutes before start. */
-export const FEATURED_WOD_LOBBY_LEAD_MS = 15 * 60 * 1000;
+/** Matches the historic scheduler lead window: rally point join opens 15 minutes before start. */
+export const FEATURED_WOD_RALLY_POINT_LEAD_MS = 15 * 60 * 1000;
 
-export type FeaturedWodCardPhase = 'preview' | 'lobby' | 'work' | 'finished';
+export type FeaturedWodCardPhase = 'preview' | 'rallyPoint' | 'work' | 'finished';
 
 export interface FeaturedWodCardPresentation {
   phase: FeaturedWodCardPhase;
   /** Primary status line under the schedule metadata. */
   statusLine: string;
-  showJoinLobby: boolean;
-  /** True when the CTA should be the "Staging area opens shortly before start." hint. */
-  showLobbyOpensSoon: boolean;
+  showJoinRallyPoint: boolean;
+  /** True when the CTA should be the "Rally point opens shortly before start." hint. */
+  showRallyPointOpensSoon: boolean;
 }
 
 /**
@@ -32,8 +32,8 @@ export function getFeaturedWodCardPresentation(
     return {
       phase: 'preview',
       statusLine: scheduledLabel,
-      showJoinLobby: false,
-      showLobbyOpensSoon: true,
+      showJoinRallyPoint: false,
+      showRallyPointOpensSoon: true,
     };
   }
 
@@ -43,8 +43,8 @@ export function getFeaturedWodCardPresentation(
     return {
       phase,
       statusLine: 'Session locked, amrap in progress.',
-      showJoinLobby: false,
-      showLobbyOpensSoon: false,
+      showJoinRallyPoint: false,
+      showRallyPointOpensSoon: false,
     };
   }
 
@@ -52,21 +52,20 @@ export function getFeaturedWodCardPresentation(
     return {
       phase,
       statusLine: 'Session locked, AMRAP ended.',
-      showJoinLobby: false,
-      showLobbyOpensSoon: false,
+      showJoinRallyPoint: false,
+      showRallyPointOpensSoon: false,
     };
   }
 
   const scheduledAtMs = Date.parse(featured.scheduledAt);
-  const withinLobbyLead =
-    Number.isFinite(scheduledAtMs) &&
-    nowMs >= scheduledAtMs - FEATURED_WOD_LOBBY_LEAD_MS;
+  const withinRallyPointLead =
+    Number.isFinite(scheduledAtMs) && nowMs >= scheduledAtMs - FEATURED_WOD_RALLY_POINT_LEAD_MS;
 
   return {
-    phase: 'lobby',
+    phase: 'rallyPoint',
     statusLine: `${scheduledLabel}${attendeeSuffix}`,
-    showJoinLobby: withinLobbyLead,
-    showLobbyOpensSoon: !withinLobbyLead,
+    showJoinRallyPoint: withinRallyPointLead,
+    showRallyPointOpensSoon: !withinRallyPointLead,
   };
 }
 
@@ -79,5 +78,5 @@ function resolveCardPhase(featured: FeaturedWod): FeaturedWodCardPhase {
     return 'work';
   }
 
-  return 'lobby';
+  return 'rallyPoint';
 }

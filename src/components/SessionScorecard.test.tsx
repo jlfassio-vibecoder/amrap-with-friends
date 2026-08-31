@@ -8,7 +8,7 @@ import { DAISY_CHAIN_TOOLTIP } from '@/lib/session/daisyChainCopy';
 const announceNextMissionMock = vi.fn();
 const navigateMock = vi.fn();
 
-vi.mock('@/lib/api/lobby', () => ({
+vi.mock('@/lib/api/rallyPoint', () => ({
   announceNextMission: (...args: unknown[]) => announceNextMissionMock(...args),
 }));
 
@@ -53,8 +53,8 @@ const scorecardProps = {
   onClose: vi.fn(),
 };
 
-const LOBBY_HREF = '/lobby/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-const LOBBY_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const RALLY_POINT_HREF = '/rally-point/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const RALLY_POINT_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
 describe('SessionScorecard', () => {
   it('renders save button when saveState is idle', () => {
@@ -98,14 +98,14 @@ describe('SessionScorecard', () => {
     expect(screen.getByText(/can no longer be saved/i)).toBeDefined();
   });
 
-  it('shows Daisy-chain CTA with tooltip and Back home when stagingHref is set', () => {
+  it('shows Daisy-chain CTA with tooltip and Back home when rallyPointHref is set', () => {
     render(
       <MemoryRouter>
         <SessionScorecard
           {...scorecardProps}
           saveState="saved"
-          stagingHref={LOBBY_HREF}
-          lobbyId={LOBBY_ID}
+          rallyPointHref={RALLY_POINT_HREF}
+          rallyPointId={RALLY_POINT_ID}
           isHost
         />
       </MemoryRouter>
@@ -129,8 +129,8 @@ describe('SessionScorecard', () => {
         <SessionScorecard
           {...scorecardProps}
           saveState="saved"
-          stagingHref={LOBBY_HREF}
-          lobbyId={LOBBY_ID}
+          rallyPointHref={RALLY_POINT_HREF}
+          rallyPointId={RALLY_POINT_ID}
           isHost
         />
       </MemoryRouter>
@@ -139,8 +139,8 @@ describe('SessionScorecard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Daisy-chain another session' }));
 
     await waitFor(() => {
-      expect(announceNextMissionMock).toHaveBeenCalledWith(LOBBY_ID);
-      expect(navigateMock).toHaveBeenCalledWith(LOBBY_HREF);
+      expect(announceNextMissionMock).toHaveBeenCalledWith(RALLY_POINT_ID);
+      expect(navigateMock).toHaveBeenCalledWith(RALLY_POINT_HREF);
     });
   });
 
@@ -150,8 +150,8 @@ describe('SessionScorecard', () => {
         <SessionScorecard
           {...scorecardProps}
           saveState="saved"
-          stagingHref={LOBBY_HREF}
-          lobbyId={LOBBY_ID}
+          rallyPointHref={RALLY_POINT_HREF}
+          rallyPointId={RALLY_POINT_ID}
           isHost={false}
         />
       </MemoryRouter>
@@ -161,7 +161,7 @@ describe('SessionScorecard', () => {
 
     await waitFor(() => {
       expect(announceNextMissionMock).not.toHaveBeenCalled();
-      expect(navigateMock).toHaveBeenCalledWith(LOBBY_HREF);
+      expect(navigateMock).toHaveBeenCalledWith(RALLY_POINT_HREF);
     });
   });
 });

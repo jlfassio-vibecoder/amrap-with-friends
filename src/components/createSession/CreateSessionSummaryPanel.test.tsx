@@ -27,43 +27,27 @@ const baseProps = {
 };
 
 describe('CreateSessionSummaryPanel', () => {
-  it('shows Open staging area by default and Schedule staging time controls when selected', () => {
+  it('shows Open rally point by default and Schedule rally point time controls when selected', () => {
     const { rerender } = render(
-      <CreateSessionSummaryPanel
-        {...baseProps}
-        scheduleMode="now"
-        capReached={false}
-      />
+      <CreateSessionSummaryPanel {...baseProps} scheduleMode="now" capReached={false} />
     );
 
-    expect(screen.getByRole('button', { name: 'Open staging area' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Open rally point' })).toBeTruthy();
     expect(screen.queryByLabelText('Scheduled time')).toBeNull();
 
-    rerender(
-      <CreateSessionSummaryPanel
-        {...baseProps}
-        scheduleMode="rally"
-        capReached={false}
-      />
-    );
+    rerender(<CreateSessionSummaryPanel {...baseProps} scheduleMode="rally" capReached={false} />);
 
-    expect(screen.getByRole('button', { name: 'Schedule staging' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Schedule rally point' })).toBeTruthy();
     expect(screen.getByLabelText('Scheduled time')).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Today' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Tomorrow' })).toBeTruthy();
   });
 
   it('warns and disables submit at the host session cap', () => {
-    render(
-      <CreateSessionSummaryPanel
-        {...baseProps}
-        scheduleMode="now"
-        capReached
-      />
-    );
+    render(<CreateSessionSummaryPanel {...baseProps} scheduleMode="now" capReached />);
 
     expect(screen.getByText(/3 active sessions/i)).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Open staging area' })).toHaveProperty(
+    expect(screen.getByRole('button', { name: 'Open rally point' })).toHaveProperty(
       'disabled',
       true
     );
@@ -80,7 +64,7 @@ describe('CreateSessionSummaryPanel', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Schedule staging' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Schedule rally point' }));
     expect(onScheduleModeChange).toHaveBeenCalledWith('rally');
   });
 });

@@ -13,13 +13,12 @@ const authState = vi.hoisted(() => ({
 }));
 
 vi.mock('@/lib/api/hostScheduledSessions', async () => {
-  const actual = await vi.importActual<
-    typeof import('@/lib/api/hostScheduledSessions')
-  >('@/lib/api/hostScheduledSessions');
+  const actual = await vi.importActual<typeof import('@/lib/api/hostScheduledSessions')>(
+    '@/lib/api/hostScheduledSessions'
+  );
   return {
     ...actual,
-    fetchHostScheduledSessions: (...args: unknown[]) =>
-      fetchHostScheduledSessionsMock(...args),
+    fetchHostScheduledSessions: (...args: unknown[]) => fetchHostScheduledSessionsMock(...args),
   };
 });
 
@@ -115,9 +114,9 @@ describe('HostScheduledSessionsPanel', () => {
     await waitFor(() => {
       expect(screen.getByText('Burpees')).toBeTruthy();
     });
-    expect(
-      screen.getByRole('link', { name: 'Enter staging area' }).getAttribute('href')
-    ).toBe('/session/22222222-2222-4222-8222-222222222222');
+    expect(screen.getByRole('link', { name: 'Enter rally point' }).getAttribute('href')).toBe(
+      '/session/22222222-2222-4222-8222-222222222222'
+    );
     expect(screen.getByRole('link', { name: 'All my sessions' }).getAttribute('href')).toBe(
       '/my-sessions'
     );
@@ -161,7 +160,7 @@ describe('HostScheduledSessionsPanel', () => {
     renderPanel();
 
     expect(
-      await screen.findByText(/No scheduled sessions. Create one and choose Schedule staging/i)
+      await screen.findByText(/No scheduled sessions. Create one and choose Schedule rally point/i)
     ).toBeTruthy();
   });
 });

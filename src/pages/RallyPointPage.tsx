@@ -5,26 +5,26 @@ import { WorkoutTemplatePicker } from '@/components/createSession/WorkoutTemplat
 import { SendWorkoutToSquad } from '@/components/session/SendWorkoutToSquad';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
-import { useLobbyForceNav } from '@/hooks/useLobbyForceNav';
-import { useStaleLobbyHostClaim } from '@/hooks/useStaleLobbyHostClaim';
-import { useLobbyChannel } from '@/lib/realtime/useLobbyChannel';
+import { useRallyPointForceNav } from '@/hooks/useRallyPointForceNav';
+import { useStaleRallyPointHostClaim } from '@/hooks/useStaleRallyPointHostClaim';
+import { useRallyPointChannel } from '@/lib/realtime/useRallyPointChannel';
 import {
-  closeLobby,
-  joinLobby,
-  leaveLobby,
-  passLobbyCommand,
-  startNextLobbySession,
-  touchLobbyPresence,
-} from '@/lib/api/lobby';
+  closeRallyPoint,
+  joinRallyPoint,
+  leaveRallyPoint,
+  passRallyPointCommand,
+  startNextRallyPointSession,
+  touchRallyPointPresence,
+} from '@/lib/api/rallyPoint';
 import {
-  clearStoredLobbyIdentity,
-  getStoredLobbyMemberId,
-  getStoredLobbyNickname,
-  persistLobbyIdentity,
-} from '@/lib/lobbyIdentity';
-import { canPassLobbyCommand } from '@/lib/lobby/canPassLobbyCommand';
+  clearStoredRallyPointIdentity,
+  getStoredRallyPointMemberId,
+  getStoredRallyPointNickname,
+  persistRallyPointIdentity,
+} from '@/lib/rallyPointIdentity';
+import { canPassRallyPointCommand } from '@/lib/rallyPoint/canPassRallyPointCommand';
 import { setStoredHostToken } from '@/lib/sessionIdentity';
-import { buildLobbyInviteUrl } from '@/lib/session/buildLobbyInviteUrl';
+import { buildRallyPointInviteUrl } from '@/lib/session/buildRallyPointInviteUrl';
 import { ogCardFromSex } from '@/lib/share/ogCard';
 import { parseWorkoutText } from '@/lib/workout/parseWorkoutLines';
 import { applyTemplate } from '@/lib/workout/templateToExercises';
@@ -41,15 +41,15 @@ import {
 
 const HEARTBEAT_MS = 15_000;
 
-export default function LobbyStagingPage() {
-  const { lobbyId = '' } = useParams<{ lobbyId: string }>();
+export default function RallyPointPage() {
+  const { rallyPointId = '' } = useParams<{ rallyPointId: string }>();
   const navigate = useNavigate();
   const { user, isAuthenticated, isAuthLoading } = useAmrapAuth();
   const { profile } = useAthleteProfile();
 
-  const [memberId, setMemberId] = useState(() => getStoredLobbyMemberId(lobbyId) ?? '');
+  const [memberId, setMemberId] = useState(() => getStoredRallyPointMemberId(rallyPointId) ?? '');
   const [nickname, setNickname] = useState(
-    () => getStoredLobbyNickname(lobbyId) ?? callsignFromEmail(user?.email) ?? 'Athlete'
+    () => getStoredRallyPointNickname(rallyPointId) ?? callsignFromEmail(user?.email) ?? 'Athlete'
   );
   const [durationMinutes, setDurationMinutes] = useState<TimeDomain>(10);
   const [selectedCategory, setSelectedCategory] = useState<WorkoutCategory>('blood-shunt');
@@ -74,87 +74,89 @@ export default function LobbyStagingPage() {
   }, [workoutText]);
 
   const presence = memberId ? { memberId, nickname } : null;
-  const { lobby, presenceByMemberId, error, refresh } = useLobbyChannel(
-    lobbyId || undefined,
+  const { rallyPoint, presenceByMemberId, error, refresh } = useRallyPointChannel(
+    rallyPointId || undefined,
     presence,
     { realtimeTables: isAuthenticated }
   );
 
-  const forceNav = useLobbyForceNav({
-    lobbyId,
-    activeSessionId: lobby?.activeSessionId,
-    activeSessionState: lobby?.activeSessionState,
+  const forceNav = useRallyPointForceNav({
+    rallyPointId,
+    activeSessionId: rallyPoint?.activeSessionId,
+    activeSessionState: rallyPoint?.activeSessionState,
     currentSessionId: null,
-    enabled: Boolean(lobby && lobby.status === 'open'),
+    enabled: Boolean(rallyPoint && rallyPoint.status === 'open'),
     onError: setActionError,
   });
 
   useEffect(() => {
-    if (!lobbyId || !isAuthenticated) {
+    if (!rallyPointId || !isAuthenticated) {
       return;
     }
-    const storedMember = getStoredLobbyMemberId(lobbyId);
-    const storedNick = getStoredLobbyNickname(lobbyId);
+    const storedMember = getStoredRallyPointMemberId(rallyPointId);
+    const storedNick = getStoredRallyPointNickname(rallyPointId);
     if (storedMember) {
       setMemberId(storedMember);
     }
     if (storedNick) {
       setNickname(storedNick);
     }
-  }, [lobbyId, isAuthenticated]);
+  }, [rallyPointId, isAuthenticated]);
 
   // Deep link / new tab: rejoin so memberId exists for presence + force-nav.
   useEffect(() => {
-    if (!lobbyId || isAuthLoading || rejoinAttemptedRef.current) {
+    if (!rallyPointId || isAuthLoading || rejoinAttemptedRef.current) {
       return;
     }
-    if (getStoredLobbyMemberId(lobbyId)) {
+    if (getStoredRallyPointMemberId(rallyPointId)) {
       return;
     }
-    const callsign = getStoredLobbyNickname(lobbyId) ?? callsignFromEmail(user?.email) ?? nickname;
+    const callsign =
+      getStoredRallyPointNickname(rallyPointId) ?? callsignFromEmail(user?.email) ?? nickname;
     if (!callsign.trim()) {
       return;
     }
     // Guests need a prior nickname; authenticated users rejoin with callsign.
-    if (!isAuthenticated && !getStoredLobbyNickname(lobbyId)) {
+    if (!isAuthenticated && !getStoredRallyPointNickname(rallyPointId)) {
       return;
     }
     rejoinAttemptedRef.current = true;
     void (async () => {
-      const result = await joinLobby({ lobbyId, nickname: callsign });
+      const result = await joinRallyPoint({ rallyPointId, nickname: callsign });
       if (result.error || !result.data) {
-        setActionError(result.error?.message ?? 'Could not rejoin staging.');
+        setActionError(result.error?.message ?? 'Could not rejoin the rally point.');
         rejoinAttemptedRef.current = false;
         return;
       }
-      setMemberId(result.data.lobbyMemberId);
+      setMemberId(result.data.rallyPointMemberId);
       setNickname(result.data.nickname);
       await refresh();
     })();
-  }, [lobbyId, isAuthenticated, isAuthLoading, user?.email, nickname, refresh]);
+  }, [rallyPointId, isAuthenticated, isAuthLoading, user?.email, nickname, refresh]);
 
   useEffect(() => {
-    if (!lobbyId || !memberId || !isAuthenticated) {
+    if (!rallyPointId || !memberId || !isAuthenticated) {
       return;
     }
-    void touchLobbyPresence(lobbyId);
+    void touchRallyPointPresence(rallyPointId);
     const id = window.setInterval(() => {
-      void touchLobbyPresence(lobbyId);
+      void touchRallyPointPresence(rallyPointId);
     }, HEARTBEAT_MS);
     return () => window.clearInterval(id);
-  }, [lobbyId, memberId, isAuthenticated]);
+  }, [rallyPointId, memberId, isAuthenticated]);
 
   const hostMemberId =
-    lobby?.members.find((member) => Boolean(lobby.hostUserId) && member.userId === lobby.hostUserId)
-      ?.id ?? null;
+    rallyPoint?.members.find(
+      (member) => Boolean(rallyPoint.hostUserId) && member.userId === rallyPoint.hostUserId
+    )?.id ?? null;
 
-  useStaleLobbyHostClaim({
-    lobbyId,
-    hostUserId: lobby?.hostUserId,
+  useStaleRallyPointHostClaim({
+    rallyPointId,
+    hostUserId: rallyPoint?.hostUserId,
     userId: user?.id,
     hostMemberId,
     presenceByMemberId,
-    enabled: Boolean(lobby && lobby.status === 'open' && user?.id),
+    enabled: Boolean(rallyPoint && rallyPoint.status === 'open' && user?.id),
     onClaimed: (result) => {
       if (result.hostToken && result.activeSessionId) {
         setStoredHostToken(result.activeSessionId, result.hostToken);
@@ -164,29 +166,34 @@ export default function LobbyStagingPage() {
   });
 
   useEffect(() => {
-    if (!lobby || !user?.id || lobby.hostUserId !== user.id || !lobby.activeSessionId) {
+    if (
+      !rallyPoint ||
+      !user?.id ||
+      rallyPoint.hostUserId !== user.id ||
+      !rallyPoint.activeSessionId
+    ) {
       return;
     }
-    void resumeSessionIdentity(lobby.activeSessionId).then((result) => {
+    void resumeSessionIdentity(rallyPoint.activeSessionId).then((result) => {
       if (result.data?.hostToken) {
-        setStoredHostToken(lobby.activeSessionId!, result.data.hostToken);
+        setStoredHostToken(rallyPoint.activeSessionId!, result.data.hostToken);
       }
     });
-  }, [lobby, user?.id]);
+  }, [rallyPoint, user?.id]);
 
-  const isHost = Boolean(user?.id && lobby && lobby.hostUserId === user.id);
+  const isHost = Boolean(user?.id && rallyPoint && rallyPoint.hostUserId === user.id);
   const displayError = actionError ?? error;
 
   async function handlePassCommand(toUserId: string) {
     setActionError(null);
     setBusy(true);
     try {
-      const result = await passLobbyCommand({ lobbyId, toUserId });
+      const result = await passRallyPointCommand({ rallyPointId, toUserId });
       if (result.error) {
         setActionError(result.error.message);
         return;
       }
-      // Outgoing host token is cleared in passLobbyCommand. New host picks up via
+      // Outgoing host token is cleared in passRallyPointCommand. New host picks up via
       // resumeSessionIdentity when host_user_id matches after refresh/realtime.
       await refresh();
     } finally {
@@ -204,8 +211,8 @@ export default function LobbyStagingPage() {
     setBusy(true);
     try {
       const workout = parseWorkoutText(workoutText);
-      const result = await startNextLobbySession({
-        lobbyId,
+      const result = await startNextRallyPointSession({
+        rallyPointId,
         durationMinutes,
         workout,
         templateId: selectedTemplate.id,
@@ -216,8 +223,8 @@ export default function LobbyStagingPage() {
         return;
       }
       if (result.data) {
-        persistLobbyIdentity(lobbyId, {
-          memberId: memberId || getStoredLobbyMemberId(lobbyId) || '',
+        persistRallyPointIdentity(rallyPointId, {
+          memberId: memberId || getStoredRallyPointMemberId(rallyPointId) || '',
           nickname,
           sessionId: result.data.sessionId,
         });
@@ -259,12 +266,12 @@ export default function LobbyStagingPage() {
       // Was navigating home regardless: a guest's leave failed with
       // "Authentication required" and the seat stayed active, while the control
       // looked like it had worked.
-      const result = await leaveLobby(lobbyId);
+      const result = await leaveRallyPoint(rallyPointId);
       if (result.error) {
         setActionError(result.error.message);
         return;
       }
-      clearStoredLobbyIdentity(lobbyId);
+      clearStoredRallyPointIdentity(rallyPointId);
       navigate('/');
     } finally {
       setBusy(false);
@@ -274,7 +281,7 @@ export default function LobbyStagingPage() {
   async function handleClose() {
     setBusy(true);
     try {
-      const result = await closeLobby(lobbyId);
+      const result = await closeRallyPoint(rallyPointId);
       if (result.error) {
         setActionError(result.error.message);
         return;
@@ -286,8 +293,8 @@ export default function LobbyStagingPage() {
   }
 
   async function handleCopyInvite() {
-    const url = buildLobbyInviteUrl(
-      lobbyId,
+    const url = buildRallyPointInviteUrl(
+      rallyPointId,
       window.location.origin,
       ogCardFromSex(profile?.biologicalSex)
     );
@@ -300,18 +307,18 @@ export default function LobbyStagingPage() {
     }
   }
 
-  if (!lobbyId) {
+  if (!rallyPointId) {
     return (
       <main className="min-h-screen bg-page p-6">
-        <p className="text-error">Staging area not found.</p>
+        <p className="text-error">Rally point not found.</p>
       </main>
     );
   }
 
-  if (error && !lobby) {
+  if (error && !rallyPoint) {
     return (
       <main className="min-h-screen bg-page p-6">
-        <AppHeader title="Staging area" />
+        <AppHeader title="Rally point" />
         <p className="text-error mt-6">{displayError}</p>
         <Link className="link-accent mt-4 inline-block" to="/">
           Back home
@@ -322,7 +329,7 @@ export default function LobbyStagingPage() {
 
   return (
     <main className="min-h-screen bg-page">
-      <AppHeader title="Staging area" subtitle="Next mission with the crew" />
+      <AppHeader title="Rally point" subtitle="Next mission with the crew" />
       <div className="mx-auto max-w-lg space-y-6 px-6 pb-10 pt-4">
         {forceNav.pendingSessionId ? (
           <div
@@ -346,8 +353,8 @@ export default function LobbyStagingPage() {
           <button type="button" className="btn-secondary" onClick={() => void handleCopyInvite()}>
             {copied ? 'LINK COPIED' : 'Copy rally link'}
           </button>
-          {lobby?.activeSessionId ? (
-            <Link className="link-accent text-sm" to={`/session/${lobby.activeSessionId}`}>
+          {rallyPoint?.activeSessionId ? (
+            <Link className="link-accent text-sm" to={`/session/${rallyPoint.activeSessionId}`}>
               Open current session
             </Link>
           ) : null}
@@ -355,16 +362,16 @@ export default function LobbyStagingPage() {
 
         <section className="card space-y-3 p-5">
           <h2 className="text-display text-xl text-ink">The crew</h2>
-          {!lobby ? (
+          {!rallyPoint ? (
             <p className="text-sm text-secondary">Loading…</p>
           ) : (
             <ul className="space-y-2">
-              {lobby.members.map((member) => {
+              {rallyPoint.members.map((member) => {
                 const online = Boolean(presenceByMemberId[member.id]);
                 const isMemberHost = Boolean(
-                  lobby.hostUserId && member.userId === lobby.hostUserId
+                  rallyPoint.hostUserId && member.userId === rallyPoint.hostUserId
                 );
-                const canPass = isHost && canPassLobbyCommand(member, user?.id);
+                const canPass = isHost && canPassRallyPointCommand(member, user?.id);
                 return (
                   <li
                     key={member.id}
@@ -457,7 +464,7 @@ export default function LobbyStagingPage() {
               disabled={busy}
               onClick={() => void handleClose()}
             >
-              Close staging area
+              Close rally point
             </button>
           </section>
         ) : (
@@ -474,7 +481,7 @@ export default function LobbyStagingPage() {
             disabled={busy}
             onClick={() => void handleLeave()}
           >
-            Leave staging
+            Leave rally point
           </button>
           <Link className="link-accent" to="/">
             Back home

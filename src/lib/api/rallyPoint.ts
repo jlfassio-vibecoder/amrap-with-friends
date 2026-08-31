@@ -1,17 +1,17 @@
 import { callRpc } from '@/lib/api/callRpc';
 import type { WorkoutExercise } from '@/lib/api/sessionTypes';
 import {
-  getStoredLobbyMemberId,
-  getStoredLobbyNickname,
-  getStoredLobbySeatClaim,
-  persistLobbyIdentity,
-} from '@/lib/lobbyIdentity';
+  getStoredRallyPointMemberId,
+  getStoredRallyPointNickname,
+  getStoredRallyPointSeatClaim,
+  persistRallyPointIdentity,
+} from '@/lib/rallyPointIdentity';
 import { clearStoredHostToken, persistSessionIdentity } from '@/lib/sessionIdentity';
 import { track } from '@/lib/analytics/track';
 
-export type LobbyApiError = { message: string };
+export type RallyPointApiError = { message: string };
 
-export type LobbyMember = {
+export type RallyPointMember = {
   id: string;
   userId: string | null;
   nickname: string;
@@ -20,39 +20,39 @@ export type LobbyMember = {
   joinedAt: string;
 };
 
-export type LobbySessionState = 'waiting' | 'setup' | 'work' | 'finished';
+export type RallyPointSessionState = 'waiting' | 'setup' | 'work' | 'finished';
 
-export type LobbySnapshot = {
-  lobbyId: string;
-  /** Null for anonymous get_lobby responses (auth UUIDs redacted). */
+export type RallyPointSnapshot = {
+  rallyPointId: string;
+  /** Null for anonymous get_rally_point responses (auth UUIDs redacted). */
   hostUserId: string | null;
   activeSessionId: string | null;
-  activeSessionState: LobbySessionState | null;
+  activeSessionState: RallyPointSessionState | null;
   status: 'open' | 'closed';
   createdAt: string;
   updatedAt: string;
   /** Host announced Daisy-chain; crew should hang on for the next mission. */
   nextMissionPendingAt: string | null;
-  members: LobbyMember[];
+  members: RallyPointMember[];
 };
 
-export type CreateLobbySessionResult = {
-  lobbyId: string;
-  lobbyMemberId: string;
+export type CreateRallyPointSessionResult = {
+  rallyPointId: string;
+  rallyPointMemberId: string;
   sessionId: string;
   hostToken: string;
   participantId: string;
   claimToken: string;
 };
 
-export type JoinLobbyResult = {
-  lobbyId: string;
-  lobbyMemberId: string;
+export type JoinRallyPointResult = {
+  rallyPointId: string;
+  rallyPointMemberId: string;
   hostUserId: string;
   status: string;
   activeSessionId: string | null;
   sessionId: string | null;
-  sessionState: LobbySessionState | null;
+  sessionState: RallyPointSessionState | null;
   participantId: string | null;
   nickname: string;
   role: 'host' | 'joiner' | null;
@@ -60,24 +60,24 @@ export type JoinLobbyResult = {
   hostToken: string | null;
 };
 
-export function isLiveLobbySessionState(
+export function isLiveRallyPointSessionState(
   state: string | null | undefined
 ): state is 'waiting' | 'setup' | 'work' {
   return state === 'waiting' || state === 'setup' || state === 'work';
 }
 
-function parseLobbySessionState(value: unknown): LobbySessionState | null {
+function parseRallyPointSessionState(value: unknown): RallyPointSessionState | null {
   if (value === 'waiting' || value === 'setup' || value === 'work' || value === 'finished') {
     return value;
   }
   return null;
 }
 
-const LOBBY_ID_UUID_RE =
+const RALLY_POINT_ID_UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export function isLobbyIdUuid(value: string): boolean {
-  return LOBBY_ID_UUID_RE.test(value);
+export function isRallyPointIdUuid(value: string): boolean {
+  return RALLY_POINT_ID_UUID_RE.test(value);
 }
 
 function readString(value: unknown): string | null {
@@ -92,14 +92,14 @@ function mapRpcError(message: string | undefined): string {
   if (!message) {
     return 'Something went wrong. Please try again.';
   }
-  if (message.includes('Lobby not found')) {
-    return 'Staging area not found.';
+  if (message.includes('Rally point not found')) {
+    return 'Rally point not found.';
   }
-  if (message.includes('Lobby closed')) {
-    return 'This staging area is closed.';
+  if (message.includes('Rally point closed')) {
+    return 'This rally point is closed.';
   }
-  if (message.includes('Lobby is full') || message.includes('Session is full')) {
-    return 'This staging area is full.';
+  if (message.includes('Rally point is full') || message.includes('Session is full')) {
+    return 'This rally point is full.';
   }
   if (message.includes('Only the host can pass command')) {
     return 'Only the host can pass command.';
@@ -108,10 +108,10 @@ function mapRpcError(message: string | undefined): string {
     return 'Only the host can start the next session.';
   }
   if (message.includes('Only the host can close')) {
-    return 'Only the host can close the staging area.';
+    return 'Only the host can close the rally point.';
   }
   if (message.includes('Target is not an active crew member')) {
-    return 'That athlete is not in the staging area.';
+    return 'That athlete is not at the rally point.';
   }
   if (message.includes('Cannot pass command to yourself')) {
     return 'Pick someone else to pass command to.';
@@ -137,8 +137,8 @@ function mapRpcError(message: string | undefined): string {
   if (message.includes('No successor available')) {
     return 'No one else can take command right now.';
   }
-  if (message.includes('Not a lobby member')) {
-    return 'Join the staging area first.';
+  if (message.includes('Not a rally point member')) {
+    return 'Join the rally point first.';
   }
   if (message.includes('nickname')) {
     return 'Enter your name or a nickname (max 50 characters).';
@@ -146,7 +146,7 @@ function mapRpcError(message: string | undefined): string {
   return message;
 }
 
-function parseMember(raw: Record<string, unknown>): LobbyMember | null {
+function parseMember(raw: Record<string, unknown>): RallyPointMember | null {
   const id = readString(raw.id);
   const nickname = readString(raw.nickname);
   const status = readString(raw.status);
@@ -165,21 +165,21 @@ function parseMember(raw: Record<string, unknown>): LobbyMember | null {
   };
 }
 
-export async function createLobbySession(input: {
+export async function createRallyPointSession(input: {
   nickname: string;
   durationMinutes: number;
   workout: WorkoutExercise[];
   templateId?: string | null;
   intensityTier?: number | null;
   scheduledAt?: string | null;
-}): Promise<{ data: CreateLobbySessionResult | null; error: LobbyApiError | null }> {
+}): Promise<{ data: CreateRallyPointSessionResult | null; error: RallyPointApiError | null }> {
   const nickname = input.nickname.trim();
   if (!nickname) {
     return { data: null, error: { message: 'Enter your name or a nickname.' } };
   }
 
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const { data, error } = await callRpc('create_lobby_session', {
+  const { data, error } = await callRpc('create_rally_point_session', {
     p_duration_minutes: input.durationMinutes,
     p_nickname: nickname,
     p_workout: input.workout,
@@ -194,18 +194,25 @@ export async function createLobbySession(input: {
   }
 
   const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
-  const lobbyId = readString(raw.lobby_id);
-  const lobbyMemberId = readString(raw.lobby_member_id);
+  const rallyPointId = readString(raw.rally_point_id);
+  const rallyPointMemberId = readString(raw.rally_point_member_id);
   const sessionId = readString(raw.session_id);
   const hostToken = readString(raw.host_token);
   const participantId = readString(raw.participant_id);
   const claimToken = readString(raw.claim_token);
 
-  if (!lobbyId || !lobbyMemberId || !sessionId || !hostToken || !participantId || !claimToken) {
+  if (
+    !rallyPointId ||
+    !rallyPointMemberId ||
+    !sessionId ||
+    !hostToken ||
+    !participantId ||
+    !claimToken
+  ) {
     return { data: null, error: { message: 'Something went wrong. Please try again.' } };
   }
 
-  persistLobbyIdentity(lobbyId, { memberId: lobbyMemberId, nickname, sessionId });
+  persistRallyPointIdentity(rallyPointId, { memberId: rallyPointMemberId, nickname, sessionId });
   persistSessionIdentity(sessionId, {
     nickname,
     participantId,
@@ -213,44 +220,44 @@ export async function createLobbySession(input: {
     claimToken,
   });
 
-  track('lobby_created', { session_id: sessionId }, { sessionId, participantId });
+  track('rally_point_created', { session_id: sessionId }, { sessionId, participantId });
 
   return {
-    data: { lobbyId, lobbyMemberId, sessionId, hostToken, participantId, claimToken },
+    data: { rallyPointId, rallyPointMemberId, sessionId, hostToken, participantId, claimToken },
     error: null,
   };
 }
 
-export async function joinLobby(input: {
-  lobbyId: string;
+export async function joinRallyPoint(input: {
+  rallyPointId: string;
   nickname: string;
   /** Overrides the stored member id; tests and explicit re-joins use it. */
-  lobbyMemberId?: string | null;
-}): Promise<{ data: JoinLobbyResult | null; error: LobbyApiError | null }> {
+  rallyPointMemberId?: string | null;
+}): Promise<{ data: JoinRallyPointResult | null; error: RallyPointApiError | null }> {
   const nickname = input.nickname.trim();
   if (!nickname) {
     return { data: null, error: { message: 'Enter your name or a nickname.' } };
   }
-  const requestLobbyId = input.lobbyId.trim();
-  if (!isLobbyIdUuid(requestLobbyId)) {
-    return { data: null, error: { message: 'Staging area not found.' } };
+  const requestRallyPointId = input.rallyPointId.trim();
+  if (!isRallyPointIdUuid(requestRallyPointId)) {
+    return { data: null, error: { message: 'Rally point not found.' } };
   }
 
   // A guest has no user_id for the server to match on, so hand back the member
   // id + seat_claim we were given the first time. Without the member id every
-  // re-join minted a new seat, and start_next_lobby_session makes the force-nav
+  // re-join minted a new seat, and start_next_rally_point_session makes the force-nav
   // hook re-join on every chained mission. Member ids alone are visible in
-  // get_lobby and are not proof of ownership — seat_claim is the secret.
+  // get_rally_point and are not proof of ownership — seat_claim is the secret.
   const knownMemberId =
-    input.lobbyMemberId === undefined
-      ? getStoredLobbyMemberId(requestLobbyId)
-      : input.lobbyMemberId;
-  const seatClaim = knownMemberId ? getStoredLobbySeatClaim(requestLobbyId) : null;
+    input.rallyPointMemberId === undefined
+      ? getStoredRallyPointMemberId(requestRallyPointId)
+      : input.rallyPointMemberId;
+  const seatClaim = knownMemberId ? getStoredRallyPointSeatClaim(requestRallyPointId) : null;
 
-  const { data, error } = await callRpc('join_lobby', {
-    p_lobby_id: requestLobbyId,
+  const { data, error } = await callRpc('join_rally_point', {
+    p_rally_point_id: requestRallyPointId,
     p_nickname: nickname,
-    p_lobby_member_id: knownMemberId,
+    p_rally_point_member_id: knownMemberId,
     p_seat_claim: seatClaim,
   });
 
@@ -259,8 +266,8 @@ export async function joinLobby(input: {
   }
 
   const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
-  const lobbyId = readString(raw.lobby_id);
-  const lobbyMemberId = readString(raw.lobby_member_id);
+  const rallyPointId = readString(raw.rally_point_id);
+  const rallyPointMemberId = readString(raw.rally_point_member_id);
   const hostUserId = readString(raw.host_user_id);
   const status = readString(raw.status) ?? 'open';
   const activeSessionId = readString(raw.active_session_id);
@@ -271,14 +278,14 @@ export async function joinLobby(input: {
   const claimToken = readString(raw.claim_token);
   const hostToken = readString(raw.host_token);
   const seatClaimOut = readString(raw.seat_claim);
-  const sessionState = parseLobbySessionState(raw.session_state);
+  const sessionState = parseRallyPointSessionState(raw.session_state);
 
-  if (!lobbyId || !lobbyMemberId || !hostUserId) {
+  if (!rallyPointId || !rallyPointMemberId || !hostUserId) {
     return { data: null, error: { message: 'Something went wrong. Please try again.' } };
   }
 
-  persistLobbyIdentity(lobbyId, {
-    memberId: lobbyMemberId,
+  persistRallyPointIdentity(rallyPointId, {
+    memberId: rallyPointMemberId,
     nickname: readString(raw.nickname) ?? nickname,
     sessionId,
     seatClaim: seatClaimOut,
@@ -293,12 +300,16 @@ export async function joinLobby(input: {
     });
   }
 
-  track('lobby_joined', { has_session: Boolean(sessionId), role }, { sessionId, participantId });
+  track(
+    'rally_point_joined',
+    { has_session: Boolean(sessionId), role },
+    { sessionId, participantId }
+  );
 
   return {
     data: {
-      lobbyId,
-      lobbyMemberId,
+      rallyPointId,
+      rallyPointMemberId,
       hostUserId,
       status,
       activeSessionId,
@@ -314,16 +325,16 @@ export async function joinLobby(input: {
   };
 }
 
-export async function getLobby(
-  lobbyId: string
-): Promise<{ data: LobbySnapshot | null; error: LobbyApiError | null }> {
-  const { data, error } = await callRpc('get_lobby', { p_lobby_id: lobbyId });
+export async function getRallyPoint(
+  rallyPointId: string
+): Promise<{ data: RallyPointSnapshot | null; error: RallyPointApiError | null }> {
+  const { data, error } = await callRpc('get_rally_point', { p_rally_point_id: rallyPointId });
   if (error) {
     return { data: null, error: { message: mapRpcError(error.message) } };
   }
 
   const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
-  const id = readString(raw.lobby_id);
+  const id = readString(raw.rally_point_id);
   const hostUserId = readString(raw.host_user_id);
   const status = readString(raw.status);
   const createdAt = readString(raw.created_at);
@@ -337,14 +348,14 @@ export async function getLobby(
     .map((entry) =>
       entry && typeof entry === 'object' ? parseMember(entry as Record<string, unknown>) : null
     )
-    .filter((m): m is LobbyMember => m !== null);
+    .filter((m): m is RallyPointMember => m !== null);
 
   return {
     data: {
-      lobbyId: id,
+      rallyPointId: id,
       hostUserId,
       activeSessionId: readString(raw.active_session_id),
-      activeSessionState: parseLobbySessionState(raw.active_session_state),
+      activeSessionState: parseRallyPointSessionState(raw.active_session_state),
       status,
       createdAt,
       updatedAt,
@@ -355,13 +366,13 @@ export async function getLobby(
   };
 }
 
-export async function announceNextMission(
-  lobbyId: string
-): Promise<{
+export async function announceNextMission(rallyPointId: string): Promise<{
   data: { ok: boolean; nextMissionPendingAt: string | null } | null;
-  error: LobbyApiError | null;
+  error: RallyPointApiError | null;
 }> {
-  const { data, error } = await callRpc('announce_next_mission', { p_lobby_id: lobbyId });
+  const { data, error } = await callRpc('announce_next_mission', {
+    p_rally_point_id: rallyPointId,
+  });
   if (error) {
     return { data: null, error: { message: mapRpcError(error.message) } };
   }
@@ -378,12 +389,15 @@ export async function announceNextMission(
   };
 }
 
-export async function passLobbyCommand(input: { lobbyId: string; toUserId: string }): Promise<{
+export async function passRallyPointCommand(input: {
+  rallyPointId: string;
+  toUserId: string;
+}): Promise<{
   data: { hostUserId: string; hostToken: string | null; activeSessionId: string | null } | null;
-  error: LobbyApiError | null;
+  error: RallyPointApiError | null;
 }> {
-  const { data, error } = await callRpc('pass_lobby_command', {
-    p_lobby_id: input.lobbyId,
+  const { data, error } = await callRpc('pass_rally_point_command', {
+    p_rally_point_id: input.rallyPointId,
     p_to_user_id: input.toUserId,
   });
   if (error) {
@@ -410,18 +424,18 @@ export async function passLobbyCommand(input: { lobbyId: string; toUserId: strin
   };
 }
 
-export async function startNextLobbySession(input: {
-  lobbyId: string;
+export async function startNextRallyPointSession(input: {
+  rallyPointId: string;
   durationMinutes: number;
   workout: WorkoutExercise[];
   templateId?: string | null;
   intensityTier?: number | null;
 }): Promise<{
   data: { sessionId: string; hostToken: string; participantId: string; claimToken: string } | null;
-  error: LobbyApiError | null;
+  error: RallyPointApiError | null;
 }> {
-  const { data, error } = await callRpc('start_next_lobby_session', {
-    p_lobby_id: input.lobbyId,
+  const { data, error } = await callRpc('start_next_rally_point_session', {
+    p_rally_point_id: input.rallyPointId,
     p_duration_minutes: input.durationMinutes,
     p_workout: input.workout,
     p_template_id: input.templateId ?? null,
@@ -439,8 +453,8 @@ export async function startNextLobbySession(input: {
     return { data: null, error: { message: 'Something went wrong. Please try again.' } };
   }
 
-  const nickname = getStoredLobbyNickname(input.lobbyId) ?? 'Athlete';
-  const memberId = getStoredLobbyMemberId(input.lobbyId);
+  const nickname = getStoredRallyPointNickname(input.rallyPointId) ?? 'Athlete';
+  const memberId = getStoredRallyPointMemberId(input.rallyPointId);
   persistSessionIdentity(sessionId, {
     nickname,
     participantId,
@@ -448,31 +462,33 @@ export async function startNextLobbySession(input: {
     claimToken,
   });
   if (memberId) {
-    persistLobbyIdentity(input.lobbyId, {
+    persistRallyPointIdentity(input.rallyPointId, {
       memberId,
       nickname,
       sessionId,
     });
   }
 
-  track('lobby_next_session', {}, { sessionId, participantId });
+  track('rally_point_next_session', {}, { sessionId, participantId });
 
   return { data: { sessionId, hostToken, participantId, claimToken }, error: null };
 }
 
-export async function leaveLobby(
-  lobbyId: string,
-  options?: { lobbyMemberId?: string | null }
-): Promise<{ data: { left: boolean; closed?: boolean } | null; error: LobbyApiError | null }> {
-  // As with joinLobby: a guest leaves with the member id + seat_claim it was
-  // handed. Member id alone is not proof — it is visible in get_lobby.
-  const lobbyMemberId =
-    options?.lobbyMemberId === undefined ? getStoredLobbyMemberId(lobbyId) : options.lobbyMemberId;
-  const seatClaim = lobbyMemberId ? getStoredLobbySeatClaim(lobbyId) : null;
+export async function leaveRallyPoint(
+  rallyPointId: string,
+  options?: { rallyPointMemberId?: string | null }
+): Promise<{ data: { left: boolean; closed?: boolean } | null; error: RallyPointApiError | null }> {
+  // As with joinRallyPoint: a guest leaves with the member id + seat_claim it was
+  // handed. Member id alone is not proof — it is visible in get_rally_point.
+  const rallyPointMemberId =
+    options?.rallyPointMemberId === undefined
+      ? getStoredRallyPointMemberId(rallyPointId)
+      : options.rallyPointMemberId;
+  const seatClaim = rallyPointMemberId ? getStoredRallyPointSeatClaim(rallyPointId) : null;
 
-  const { data, error } = await callRpc('leave_lobby', {
-    p_lobby_id: lobbyId,
-    p_lobby_member_id: lobbyMemberId,
+  const { data, error } = await callRpc('leave_rally_point', {
+    p_rally_point_id: rallyPointId,
+    p_rally_point_member_id: rallyPointMemberId,
     p_seat_claim: seatClaim,
   });
   if (error) {
@@ -482,9 +498,9 @@ export async function leaveLobby(
   const closed = raw.closed === true;
   const wasHost = raw.was_host === true;
   if (closed) {
-    track('lobby_closed', {});
+    track('rally_point_closed', {});
   } else if (wasHost) {
-    track('lobby_host_reassigned', {});
+    track('rally_point_host_reassigned', {});
   }
   return {
     data: { left: raw.left === true, closed },
@@ -492,21 +508,23 @@ export async function leaveLobby(
   };
 }
 
-export async function closeLobby(
-  lobbyId: string
-): Promise<{ data: { ok: boolean } | null; error: LobbyApiError | null }> {
-  const { error } = await callRpc('close_lobby', { p_lobby_id: lobbyId });
+export async function closeRallyPoint(
+  rallyPointId: string
+): Promise<{ data: { ok: boolean } | null; error: RallyPointApiError | null }> {
+  const { error } = await callRpc('close_rally_point', { p_rally_point_id: rallyPointId });
   if (error) {
     return { data: null, error: { message: mapRpcError(error.message) } };
   }
-  track('lobby_closed', {});
+  track('rally_point_closed', {});
   return { data: { ok: true }, error: null };
 }
 
-export async function touchLobbyPresence(
-  lobbyId: string
-): Promise<{ data: { ok: boolean } | null; error: LobbyApiError | null }> {
-  const { data, error } = await callRpc('touch_lobby_presence', { p_lobby_id: lobbyId });
+export async function touchRallyPointPresence(
+  rallyPointId: string
+): Promise<{ data: { ok: boolean } | null; error: RallyPointApiError | null }> {
+  const { data, error } = await callRpc('touch_rally_point_presence', {
+    p_rally_point_id: rallyPointId,
+  });
   if (error) {
     return { data: null, error: { message: mapRpcError(error.message) } };
   }
@@ -514,7 +532,7 @@ export async function touchLobbyPresence(
   return { data: { ok: raw.ok === true }, error: null };
 }
 
-export async function claimLobbyCommandIfStale(lobbyId: string): Promise<{
+export async function claimRallyPointCommandIfStale(rallyPointId: string): Promise<{
   data: {
     claimed: boolean;
     hostUserId: string | null;
@@ -522,17 +540,17 @@ export async function claimLobbyCommandIfStale(lobbyId: string): Promise<{
     activeSessionId: string | null;
     reason: string | null;
   } | null;
-  error: LobbyApiError | null;
+  error: RallyPointApiError | null;
 }> {
-  const { data, error } = await callRpc('claim_lobby_command_if_stale', {
-    p_lobby_id: lobbyId,
+  const { data, error } = await callRpc('claim_rally_point_command_if_stale', {
+    p_rally_point_id: rallyPointId,
   });
   if (error) {
     return { data: null, error: { message: mapRpcError(error.message) } };
   }
   const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
   if (raw.claimed === true) {
-    track('lobby_host_reassigned', {});
+    track('rally_point_host_reassigned', {});
   }
   return {
     data: {

@@ -1,31 +1,31 @@
--- Local fixtures for lobby RPCs (run after replaying migrations).
+-- Local fixtures for rally point RPCs (run after replaying migrations).
 -- Requires two auth.users (+ optional athlete_profiles), then:
 --   SET request.jwt.claim.sub = '<uuid-a>' so auth.uid() resolves.
 --
 -- Evidence targets:
---   1. create_lobby_session returns lobby + session + host_token to creator only
---   2. Second user join_lobby → joiner, no host_token
---   3. pass_lobby_command → host_token null; old host update_session_state with
+--   1. create_rally_point_session returns rally point + session + host_token to creator only
+--   2. Second user join_rally_point → joiner, no host_token
+--   3. pass_rally_point_command → host_token null; old host update_session_state with
 --      old token fails; new host resume_session_identity gets token and can set countdown
 --   4. start_next after finished → new session; guests not pre-inserted; claimed members present
 --   5. Pass during work raises
 --   6. Second start_next while waiting raises “still active”
---   7. claim_lobby_command_if_stale after host last_seen aged past 45s → claimed
+--   7. claim_rally_point_command_if_stale after host last_seen aged past 45s → claimed
 --   8. claim during work raises
 --   9. stale first-successor skipped when a fresher later joiner exists
---  10. anon SELECT on lobbies / lobby_members returns 0 rows (no grant / no policy)
---  11. authenticated non-member SELECT on another crew's lobby returns 0 rows
---  12. authenticated active member SELECT sees own lobby row
---  13. guest join_lobby returns seat_claim; reclaim with wrong/missing claim does not
+--  10. anon SELECT on rally_points / rally_point_members returns 0 rows (no grant / no policy)
+--  11. authenticated non-member SELECT on another crew's rally point returns 0 rows
+--  12. authenticated active member SELECT sees own rally point row
+--  13. guest join_rally_point returns seat_claim; reclaim with wrong/missing claim does not
 --      take another guest's seat (new seat or left:false)
---  14. guest leave_lobby without matching seat_claim cannot mark another seat left
---  15. anon get_lobby redacts host_user_id and member user_id (nulls)
+--  14. guest leave_rally_point without matching seat_claim cannot mark another seat left
+--  15. anon get_rally_point redacts host_user_id and member user_id (nulls)
 
 -- Example (adjust ids / workout jsonb to match validate_workout):
 --
 -- -- As host A
 -- SET request.jwt.claim.sub = '<uuid-a>';
--- SELECT public.create_lobby_session(
+-- SELECT public.create_rally_point_session(
 --   12,
 --   'HostA',
 --   '[{"name":"Burpees","target":10}]'::jsonb,
@@ -34,16 +34,16 @@
 --   NULL,
 --   NULL
 -- );
--- -- Expect: lobby_id, session_id, host_token, participant_id, claim_token
+-- -- Expect: rally_point_id, session_id, host_token, participant_id, claim_token
 --
 -- -- As joiner B
 -- SET request.jwt.claim.sub = '<uuid-b>';
--- SELECT public.join_lobby('<lobby_id>', 'HostB');
+-- SELECT public.join_rally_point('<rally_point_id>', 'HostB');
 -- -- Expect: role joiner, host_token null
 --
 -- -- Pass command (as A, session waiting/setup)
 -- SET request.jwt.claim.sub = '<uuid-a>';
--- SELECT public.pass_lobby_command('<lobby_id>', '<uuid-b>');
+-- SELECT public.pass_rally_point_command('<rally_point_id>', '<uuid-b>');
 -- -- Expect: host_token IS NULL, host_user_id = <uuid-b>
 --
 -- -- Old host cannot drive session with stale token
@@ -64,26 +64,26 @@
 --
 -- -- Finish active session, then start_next
 -- -- (host finishes via normal host path, then:)
--- SELECT public.start_next_lobby_session(
---   '<lobby_id>',
+-- SELECT public.start_next_rally_point_session(
+--   '<rally_point_id>',
 --   10,
 --   '[{"name":"Air Squats","target":15}]'::jsonb,
 --   NULL,
 --   NULL
 -- );
 -- -- Expect: new session_id; participants only for claimed members (user_id NOT NULL);
--- -- guests absent until they join_lobby again
+-- -- guests absent until they join_rally_point again
 --
 -- -- Pass during live work
 -- UPDATE public.sessions SET state = 'work' WHERE id = '<active_session_id>';
 -- SET request.jwt.claim.sub = '<host_uuid>';
--- SELECT public.pass_lobby_command('<lobby_id>', '<other_uuid>');
+-- SELECT public.pass_rally_point_command('<rally_point_id>', '<other_uuid>');
 -- -- Expect: EXCEPTION Cannot pass command during a live session
 --
 -- -- Concurrent start_next while waiting
 -- -- (after a successful start_next that left state waiting:)
--- SELECT public.start_next_lobby_session(
---   '<lobby_id>',
+-- SELECT public.start_next_rally_point_session(
+--   '<rally_point_id>',
 --   10,
 --   '[{"name":"Air Squats","target":15}]'::jsonb,
 --   NULL,
@@ -92,63 +92,63 @@
 -- -- Expect: EXCEPTION Current session is still active
 --
 -- -- AFK claim after host last_seen aged past grace
--- UPDATE public.lobby_members
+-- UPDATE public.rally_point_members
 -- SET last_seen_at = now() - interval '60 seconds'
--- WHERE lobby_id = '<lobby_id>' AND user_id = '<host_uuid>';
+-- WHERE rally_point_id = '<rally_point_id>' AND user_id = '<host_uuid>';
 -- SET request.jwt.claim.sub = '<successor_uuid>';
--- SELECT public.claim_lobby_command_if_stale('<lobby_id>');
+-- SELECT public.claim_rally_point_command_if_stale('<rally_point_id>');
 -- -- Expect: claimed true (and host_token when session waiting/setup)
 --
 -- -- Claim during live work
 -- UPDATE public.sessions SET state = 'work' WHERE id = '<active_session_id>';
--- UPDATE public.lobby_members
+-- UPDATE public.rally_point_members
 -- SET last_seen_at = now() - interval '60 seconds'
--- WHERE lobby_id = '<lobby_id>' AND user_id = '<host_uuid>';
+-- WHERE rally_point_id = '<rally_point_id>' AND user_id = '<host_uuid>';
 -- SET request.jwt.claim.sub = '<successor_uuid>';
--- SELECT public.claim_lobby_command_if_stale('<lobby_id>');
+-- SELECT public.claim_rally_point_command_if_stale('<rally_point_id>');
 -- -- Expect: EXCEPTION Cannot claim command during a live session
 --
 -- -- Stale first-successor skipped: age B, keep C fresh → C is elected
 -- -- (B joined before C; both active claimed members)
--- UPDATE public.lobby_members
+-- UPDATE public.rally_point_members
 -- SET last_seen_at = now() - interval '60 seconds'
--- WHERE lobby_id = '<lobby_id>' AND user_id = '<uuid-b>';
--- UPDATE public.lobby_members
+-- WHERE rally_point_id = '<rally_point_id>' AND user_id = '<uuid-b>';
+-- UPDATE public.rally_point_members
 -- SET last_seen_at = now()
--- WHERE lobby_id = '<lobby_id>' AND user_id = '<uuid-c>';
+-- WHERE rally_point_id = '<rally_point_id>' AND user_id = '<uuid-c>';
 -- SET request.jwt.claim.sub = '<uuid-c>';
--- SELECT public.claim_lobby_command_if_stale('<lobby_id>');
+-- SELECT public.claim_rally_point_command_if_stale('<rally_point_id>');
 -- -- Expect: claimed true for C (B would get not_successor)
 --
--- -- Anon cannot enumerate lobby rows (no SELECT grant / no policy)
+-- -- Anon cannot enumerate rally_point rows (no SELECT grant / no policy)
 -- SET ROLE anon;
--- SELECT count(*) FROM public.lobbies;
--- SELECT count(*) FROM public.lobby_members;
+-- SELECT count(*) FROM public.rally_points;
+-- SELECT count(*) FROM public.rally_point_members;
 -- -- Expect: 0 (or permission denied on column/table SELECT)
 -- RESET ROLE;
 --
--- -- Authenticated non-member cannot read another crew's lobby
+-- -- Authenticated non-member cannot read another crew's rally point
 -- SET request.jwt.claim.sub = '<uuid-outsider>';
--- SELECT id FROM public.lobbies WHERE id = '<lobby_id>';
+-- SELECT id FROM public.rally_points WHERE id = '<rally_point_id>';
 -- -- Expect: 0 rows
 --
--- -- Authenticated active member can read own lobby
+-- -- Authenticated active member can read own rally_point
 -- SET request.jwt.claim.sub = '<uuid-a>';
--- SELECT id FROM public.lobbies WHERE id = '<lobby_id>';
+-- SELECT id FROM public.rally_points WHERE id = '<rally_point_id>';
 -- -- Expect: 1 row
 --
 -- -- Guest seat claim: join as anon, reclaim requires seat_claim
 -- RESET ROLE;
 -- SELECT set_config('request.jwt.claim.sub', '', true);
--- SELECT public.join_lobby('<lobby_id>', 'Guest');
--- -- Expect: lobby_member_id + seat_claim
+-- SELECT public.join_rally_point('<rally_point_id>', 'Guest');
+-- -- Expect: rally_point_member_id + seat_claim
 -- -- Reclaim with member id alone (null claim) must not touch that seat
--- SELECT public.join_lobby('<lobby_id>', 'Guest', '<member_id>', NULL);
--- -- Expect: new lobby_member_id (or Lobby is full), original seat still active
+-- SELECT public.join_rally_point('<rally_point_id>', 'Guest', '<member_id>', NULL);
+-- -- Expect: new rally_point_member_id (or Rally point is full), original seat still active
 -- -- Leave with wrong claim must not mark seat left
--- SELECT public.leave_lobby('<lobby_id>', '<member_id>', 'wrong');
+-- SELECT public.leave_rally_point('<rally_point_id>', '<member_id>', 'wrong');
 -- -- Expect: left false
 --
--- -- Anon get_lobby redacts auth UUIDs
--- SELECT public.get_lobby('<lobby_id>');
+-- -- Anon get_rally_point redacts auth UUIDs
+-- SELECT public.get_rally_point('<rally_point_id>');
 -- -- Expect: host_user_id null; members[].user_id null

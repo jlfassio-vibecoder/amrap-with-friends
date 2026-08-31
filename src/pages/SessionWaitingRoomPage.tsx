@@ -26,37 +26,41 @@ import { CopyInviteLink } from '@/components/session/CopyInviteLink';
 import { DaisyChainCta } from '@/components/session/DaisyChainCta';
 import { MissionLoadingModal } from '@/components/session/MissionLoadingModal';
 import { EditRallyScheduleForm } from '@/components/session/EditRallyScheduleForm';
-import { ArmedLobbyControls } from '@/components/session/ArmedLobbyControls';
-import { HostStagingSteps } from '@/components/session/HostStagingSteps';
+import { ArmedRallyPointControls } from '@/components/session/ArmedRallyPointControls';
+import { HostRallyPointSteps } from '@/components/session/HostRallyPointSteps';
 import { SafetyNoticeModal } from '@/components/safety/SafetyNoticeModal';
 import { useSessionSafetyNotices } from '@/components/safety/useSessionSafetyNotices';
 import { CoachWalkthrough } from '@/components/walkthrough/CoachWalkthrough';
 import { WalkthroughCompleteModal } from '@/components/walkthrough/WalkthroughCompleteModal';
-import { useStagingWalkthrough } from '@/components/walkthrough/useStagingWalkthrough';
+import { useRallyPointWalkthrough } from '@/components/walkthrough/useRallyPointWalkthrough';
 import { useGhostPacer } from '@/hooks/useGhostPacer';
 import { useTacticalAudio } from '@/hooks/useTacticalAudio';
-import { useLobbyForceNav } from '@/hooks/useLobbyForceNav';
-import { useLobbyHostHandoff } from '@/hooks/useLobbyHostHandoff';
-import { useStaleLobbyHostClaim } from '@/hooks/useStaleLobbyHostClaim';
-import { useLobbyChannel } from '@/lib/realtime/useLobbyChannel';
-import { announceNextMission, passLobbyCommand, touchLobbyPresence } from '@/lib/api/lobby';
-import { canPassLobbyCommand } from '@/lib/lobby/canPassLobbyCommand';
+import { useRallyPointForceNav } from '@/hooks/useRallyPointForceNav';
+import { useRallyPointHostHandoff } from '@/hooks/useRallyPointHostHandoff';
+import { useStaleRallyPointHostClaim } from '@/hooks/useStaleRallyPointHostClaim';
+import { useRallyPointChannel } from '@/lib/realtime/useRallyPointChannel';
+import {
+  announceNextMission,
+  passRallyPointCommand,
+  touchRallyPointPresence,
+} from '@/lib/api/rallyPoint';
+import { canPassRallyPointCommand } from '@/lib/rallyPoint/canPassRallyPointCommand';
 import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
 import {
-  getStoredLobbyIdForSession,
-  getStoredLobbyMemberId,
-  getStoredLobbyNickname,
-  setStoredLobbyIdForSession,
-} from '@/lib/lobbyIdentity';
+  getStoredRallyPointIdForSession,
+  getStoredRallyPointMemberId,
+  getStoredRallyPointNickname,
+  setStoredRallyPointIdForSession,
+} from '@/lib/rallyPointIdentity';
 import type { StoredGhostSelection } from '@/lib/sessionIdentity';
 import { clearStoredHostToken, setStoredHostToken } from '@/lib/sessionIdentity';
 import {
-  elapsedPastLobbyCountdownSec,
+  elapsedPastRallyPointCountdownSec,
   formatTMinus,
-  remainingLobbyCountdownSec,
-} from '@/lib/session/lobbyCountdown';
+  remainingRallyPointCountdownSec,
+} from '@/lib/session/rallyPointCountdown';
 
-const LOBBY_HEARTBEAT_MS = 15_000;
+const RALLY_POINT_HEARTBEAT_MS = 15_000;
 
 function formatTime(totalSec: number): string {
   const minutes = Math.floor(totalSec / 60);
@@ -425,72 +429,75 @@ function LiveSessionView({
   const live = useLiveAmrapSession(sessionId, channel);
   const { isHost, start: startSession, phase: livePhase } = live;
 
-  const lobbyId = channel.session?.lobby_id ?? getStoredLobbyIdForSession(sessionId) ?? null;
+  const rallyPointId =
+    channel.session?.rally_point_id ?? getStoredRallyPointIdForSession(sessionId) ?? null;
 
   useEffect(() => {
-    if (channel.session?.lobby_id) {
-      setStoredLobbyIdForSession(sessionId, channel.session.lobby_id);
+    if (channel.session?.rally_point_id) {
+      setStoredRallyPointIdForSession(sessionId, channel.session.rally_point_id);
     }
-  }, [channel.session?.lobby_id, sessionId]);
+  }, [channel.session?.rally_point_id, sessionId]);
 
-  const lobbyMemberId = lobbyId ? getStoredLobbyMemberId(lobbyId) : null;
-  const lobbyNickname = (lobbyId ? getStoredLobbyNickname(lobbyId) : null) ?? nickname;
-  const lobbyChannelPresence =
-    lobbyId && lobbyMemberId && lobbyNickname
-      ? { memberId: lobbyMemberId, nickname: lobbyNickname }
+  const rallyPointMemberId = rallyPointId ? getStoredRallyPointMemberId(rallyPointId) : null;
+  const rallyPointNickname =
+    (rallyPointId ? getStoredRallyPointNickname(rallyPointId) : null) ?? nickname;
+  const rallyPointChannelPresence =
+    rallyPointId && rallyPointMemberId && rallyPointNickname
+      ? { memberId: rallyPointMemberId, nickname: rallyPointNickname }
       : null;
-  const lobbyChannel = useLobbyChannel(
-    lobbyId && (livePhase === 'waiting' || livePhase === 'setup' || livePhase === 'finished')
-      ? lobbyId
+  const rallyPointChannel = useRallyPointChannel(
+    rallyPointId && (livePhase === 'waiting' || livePhase === 'setup' || livePhase === 'finished')
+      ? rallyPointId
       : undefined,
-    lobbyChannelPresence,
+    rallyPointChannelPresence,
     { realtimeTables: isAuthenticated }
   );
 
-  useLobbyHostHandoff({
-    hostUserId: lobbyChannel.lobby?.hostUserId,
-    activeSessionId: lobbyChannel.lobby?.activeSessionId ?? sessionId,
+  useRallyPointHostHandoff({
+    hostUserId: rallyPointChannel.rallyPoint?.hostUserId,
+    activeSessionId: rallyPointChannel.rallyPoint?.activeSessionId ?? sessionId,
     userId: user?.id,
-    enabled: Boolean(lobbyId) && (livePhase === 'waiting' || livePhase === 'setup'),
+    enabled: Boolean(rallyPointId) && (livePhase === 'waiting' || livePhase === 'setup'),
     onHostAuthorityChange,
   });
 
   const waitingOrSetup = livePhase === 'waiting' || livePhase === 'setup';
 
   useEffect(() => {
-    if (!lobbyId || !isAuthenticated || !waitingOrSetup) {
+    if (!rallyPointId || !isAuthenticated || !waitingOrSetup) {
       return;
     }
-    void touchLobbyPresence(lobbyId);
+    void touchRallyPointPresence(rallyPointId);
     const id = window.setInterval(() => {
-      void touchLobbyPresence(lobbyId);
-    }, LOBBY_HEARTBEAT_MS);
+      void touchRallyPointPresence(rallyPointId);
+    }, RALLY_POINT_HEARTBEAT_MS);
     return () => window.clearInterval(id);
-  }, [lobbyId, isAuthenticated, waitingOrSetup]);
+  }, [rallyPointId, isAuthenticated, waitingOrSetup]);
 
   const waitingHostMemberId =
-    lobbyChannel.lobby?.members.find(
+    rallyPointChannel.rallyPoint?.members.find(
       (member) =>
-        Boolean(lobbyChannel.lobby?.hostUserId) && member.userId === lobbyChannel.lobby?.hostUserId
+        Boolean(rallyPointChannel.rallyPoint?.hostUserId) &&
+        member.userId === rallyPointChannel.rallyPoint?.hostUserId
     )?.id ?? null;
 
-  useStaleLobbyHostClaim({
-    lobbyId,
-    hostUserId: lobbyChannel.lobby?.hostUserId,
+  useStaleRallyPointHostClaim({
+    rallyPointId,
+    hostUserId: rallyPointChannel.rallyPoint?.hostUserId,
     userId: user?.id,
     hostMemberId: waitingHostMemberId,
-    presenceByMemberId: lobbyChannel.presenceByMemberId,
-    enabled: Boolean(lobbyId && waitingOrSetup && user?.id),
+    presenceByMemberId: rallyPointChannel.presenceByMemberId,
+    enabled: Boolean(rallyPointId && waitingOrSetup && user?.id),
     onClaimed: (result) => {
       if (result.hostToken && result.activeSessionId) {
         setStoredHostToken(result.activeSessionId, result.hostToken);
       }
       onHostAuthorityChange?.();
-      void lobbyChannel.refresh();
+      void rallyPointChannel.refresh();
     },
   });
 
-  const walkthrough = useStagingWalkthrough({
+  const walkthrough = useRallyPointWalkthrough({
     sessionId,
     isHost,
     enabled: safetyNoticesComplete && livePhase === 'waiting',
@@ -506,24 +513,25 @@ function LiveSessionView({
   const selfLeaderboardEntry = live.leaderboard.find((entry) => entry.isSelf) ?? null;
   const selfBaseScore = selfLeaderboardEntry?.baseScore ?? 0;
 
-  const lobbyCountdownEndsAt = live.lobbyCountdownEndsAt;
-  const lobbyRemaining = remainingLobbyCountdownSec(lobbyCountdownEndsAt, nowMs);
-  const lobbyCountdownArmed = livePhase === 'waiting' && lobbyCountdownEndsAt !== null;
-  const lobbyTicking = lobbyCountdownArmed && lobbyRemaining !== null && lobbyRemaining > 0;
-  const lobbyIgnited = lobbyCountdownArmed && lobbyRemaining === 0;
-  const lobbyOvertimeSec = lobbyIgnited
-    ? elapsedPastLobbyCountdownSec(lobbyCountdownEndsAt, nowMs)
+  const rallyPointCountdownEndsAt = live.rallyPointCountdownEndsAt;
+  const rallyPointRemaining = remainingRallyPointCountdownSec(rallyPointCountdownEndsAt, nowMs);
+  const rallyPointCountdownArmed = livePhase === 'waiting' && rallyPointCountdownEndsAt !== null;
+  const rallyPointTicking =
+    rallyPointCountdownArmed && rallyPointRemaining !== null && rallyPointRemaining > 0;
+  const rallyPointIgnited = rallyPointCountdownArmed && rallyPointRemaining === 0;
+  const rallyPointOvertimeSec = rallyPointIgnited
+    ? elapsedPastRallyPointCountdownSec(rallyPointCountdownEndsAt, nowMs)
     : null;
 
   useEffect(() => {
-    if (!lobbyCountdownArmed) {
+    if (!rallyPointCountdownArmed) {
       return;
     }
     const id = window.setInterval(() => {
       setNowMs(Date.now());
     }, 250);
     return () => window.clearInterval(id);
-  }, [lobbyCountdownArmed]);
+  }, [rallyPointCountdownArmed]);
 
   const ghostPacer = useGhostPacer({
     sessionId,
@@ -546,15 +554,18 @@ function LiveSessionView({
     ghostPacer.error === null &&
     !ghostPacer.isLoading;
 
-  // Copilot suggestion ignored: Start/Abort while armed live in ArmedLobbyControls; changing showStart would duplicate host Start while ticking.
+  // Copilot suggestion ignored: Start/Abort while armed live in ArmedRallyPointControls; changing showStart would duplicate host Start while ticking.
   const showStart =
     isHost &&
     livePhase === 'waiting' &&
-    !lobbyCountdownArmed &&
+    !rallyPointCountdownArmed &&
     !live.isPractice &&
     safetyNoticesComplete;
   const showPractice =
-    livePhase === 'waiting' && !lobbyCountdownArmed && !live.isPractice && safetyNoticesComplete;
+    livePhase === 'waiting' &&
+    !rallyPointCountdownArmed &&
+    !live.isPractice &&
+    safetyNoticesComplete;
   const showSafetyNotice = livePhase === 'waiting' && activeSafetyNotice !== null;
   const showWalkthrough = walkthrough.active;
   const showWalkthroughFinale = walkthrough.showingFinale;
@@ -611,10 +622,10 @@ function LiveSessionView({
     !showPartialRepsModal &&
     !showScorecard;
 
-  const forceNav = useLobbyForceNav({
-    lobbyId,
-    activeSessionId: lobbyChannel.lobby?.activeSessionId,
-    activeSessionState: lobbyChannel.lobby?.activeSessionState,
+  const forceNav = useRallyPointForceNav({
+    rallyPointId,
+    activeSessionId: rallyPointChannel.rallyPoint?.activeSessionId,
+    activeSessionState: rallyPointChannel.rallyPoint?.activeSessionState,
     currentSessionId: sessionId,
     // Hold straggler pull until AAR is dismissed — Daisy-chain / Close are the exits.
     enabled: livePhase === 'finished' && !showPartialRepsModal && !showScorecard,
@@ -622,13 +633,13 @@ function LiveSessionView({
   });
 
   async function handlePassCommand(toUserId: string) {
-    if (!lobbyId) {
+    if (!rallyPointId) {
       return;
     }
     setPassError(null);
     setPassBusy(true);
     try {
-      const result = await passLobbyCommand({ lobbyId, toUserId });
+      const result = await passRallyPointCommand({ rallyPointId, toUserId });
       if (result.error) {
         setPassError(result.error.message);
         return;
@@ -640,16 +651,18 @@ function LiveSessionView({
     }
   }
 
-  const showLobbyPass =
+  const showRallyPointPass =
     isHost &&
-    Boolean(lobbyId) &&
+    Boolean(rallyPointId) &&
     (livePhase === 'waiting' || livePhase === 'setup') &&
-    Boolean(lobbyChannel.lobby?.members.length);
+    Boolean(rallyPointChannel.rallyPoint?.members.length);
 
-  const stagingHref = lobbyId ? `/lobby/${lobbyId}` : null;
-  const nextMissionPendingAt = lobbyChannel.lobby?.nextMissionPendingAt ?? null;
+  const rallyPointHref = rallyPointId ? `/rally-point/${rallyPointId}` : null;
+  const nextMissionPendingAt = rallyPointChannel.rallyPoint?.nextMissionPendingAt ?? null;
   const missionLoadingStorageKey =
-    lobbyId && nextMissionPendingAt ? `mission-loading:${lobbyId}:${nextMissionPendingAt}` : null;
+    rallyPointId && nextMissionPendingAt
+      ? `mission-loading:${rallyPointId}:${nextMissionPendingAt}`
+      : null;
 
   useEffect(() => {
     if (!missionLoadingStorageKey) {
@@ -667,19 +680,19 @@ function LiveSessionView({
     livePhase === 'finished' && Boolean(nextMissionPendingAt) && !missionLoadingDismissed;
 
   async function handleDaisyChainExit() {
-    if (!stagingHref) {
+    if (!rallyPointHref) {
       navigate('/');
       return;
     }
     setDaisyExitError(null);
-    if (isHost && lobbyId) {
-      const result = await announceNextMission(lobbyId);
+    if (isHost && rallyPointId) {
+      const result = await announceNextMission(rallyPointId);
       if (result.error) {
         setDaisyExitError(result.error.message);
         return;
       }
     }
-    navigate(stagingHref);
+    navigate(rallyPointHref);
   }
 
   function dismissMissionLoading() {
@@ -780,7 +793,7 @@ function LiveSessionView({
           undefined
         }
       >
-        <AppHeader title="Staging area" subtitle={hostStatusText} desktopTitleAsPageHeading />
+        <AppHeader title="Rally point" subtitle={hostStatusText} desktopTitleAsPageHeading />
 
         <div className="space-y-6 px-6 pb-6 pt-0 lg:mx-auto lg:w-full lg:max-w-7xl lg:shrink-0 lg:space-y-4 lg:px-8 lg:pb-0 lg:pt-6">
           {forceNav.pendingSessionId ? (
@@ -855,21 +868,21 @@ function LiveSessionView({
                     {phaseLabel(live.phase)}
                   </p>
                 )}
-                {live.phase === 'waiting' && (lobbyTicking || lobbyIgnited) ? (
+                {live.phase === 'waiting' && (rallyPointTicking || rallyPointIgnited) ? (
                   <p className="font-mono text-3xl tabular-nums tracking-widest text-accent lg:text-5xl">
-                    {formatTMinus(lobbyRemaining ?? 0)}
+                    {formatTMinus(rallyPointRemaining ?? 0)}
                   </p>
                 ) : live.phase !== 'waiting' ? (
                   <p className="text-display text-5xl tabular-nums text-accent lg:text-7xl xl:text-8xl">
                     {formatTime(live.timeLeftSec)}
                   </p>
                 ) : null}
-                {isHost && lobbyCountdownArmed ? (
+                {isHost && rallyPointCountdownArmed ? (
                   <div className="flex justify-center pt-1">
-                    <ArmedLobbyControls
+                    <ArmedRallyPointControls
                       sessionId={sessionId}
-                      ticking={lobbyTicking}
-                      overtimeSec={lobbyOvertimeSec}
+                      ticking={rallyPointTicking}
+                      overtimeSec={rallyPointOvertimeSec}
                       actionsEnabled={sessionReady}
                       onAudioUnlock={handleAudioUnlock}
                       onStart={() => {
@@ -924,10 +937,10 @@ function LiveSessionView({
               ) : null}
 
               {isHost && live.phase === 'waiting' ? (
-                <HostStagingSteps
+                <HostRallyPointSteps
                   sessionId={sessionId}
-                  lobbyId={lobbyId}
-                  countdownArmed={lobbyCountdownArmed}
+                  rallyPointId={rallyPointId}
+                  countdownArmed={rallyPointCountdownArmed}
                   actionsEnabled={sessionReady}
                   onAudioUnlock={handleAudioUnlock}
                   showPacer={showGhostPicker}
@@ -939,7 +952,7 @@ function LiveSessionView({
               ) : null}
 
               {!isHost && live.phase === 'waiting' ? (
-                <CopyInviteLink sessionId={sessionId} lobbyId={lobbyId} />
+                <CopyInviteLink sessionId={sessionId} rallyPointId={rallyPointId} />
               ) : null}
 
               {showGhostPacerError && activeGhostSelection ? (
@@ -1063,23 +1076,23 @@ function LiveSessionView({
               selfParticipantId={live.participantId}
               phase={live.phase}
               className={
-                showLobbyPass && lobbyChannel.lobby
+                showRallyPointPass && rallyPointChannel.rallyPoint
                   ? 'lg:min-h-0 lg:flex-[2] lg:overflow-hidden'
                   : 'lg:min-h-0 lg:flex-1 lg:overflow-hidden'
               }
             />
 
-            {showLobbyPass && lobbyChannel.lobby ? (
+            {showRallyPointPass && rallyPointChannel.rallyPoint ? (
               <section className="card flex min-h-0 flex-col space-y-3 overflow-hidden p-4 lg:flex-1 lg:overflow-y-auto">
                 <h2 className="shrink-0 text-sm font-semibold uppercase tracking-widest text-secondary">
                   Pass Command
                 </h2>
                 <ul className="min-h-0 space-y-2 overflow-y-auto">
-                  {lobbyChannel.lobby.members.map((member) => {
-                    const canPass = canPassLobbyCommand(member, user?.id);
+                  {rallyPointChannel.rallyPoint.members.map((member) => {
+                    const canPass = canPassRallyPointCommand(member, user?.id);
                     const isMemberHost = Boolean(
-                      lobbyChannel.lobby?.hostUserId &&
-                      member.userId === lobbyChannel.lobby.hostUserId
+                      rallyPointChannel.rallyPoint?.hostUserId &&
+                      member.userId === rallyPointChannel.rallyPoint.hostUserId
                     );
                     if (!canPass && !isMemberHost) {
                       return null;
@@ -1127,14 +1140,14 @@ function LiveSessionView({
           {daisyExitError ? <p className="text-error text-sm">{daisyExitError}</p> : null}
           {forceNavError ? <p className="text-error text-sm">{forceNavError}</p> : null}
           <div className="flex flex-wrap gap-4">
-            {stagingHref ? (
+            {rallyPointHref ? (
               <DaisyChainCta className="link-accent text-sm" onActivate={handleDaisyChainExit} />
             ) : (
               <Link className="link-accent" to="/">
                 Back home
               </Link>
             )}
-            {stagingHref ? (
+            {rallyPointHref ? (
               <Link className="link-accent" to="/">
                 Back home
               </Link>
@@ -1152,14 +1165,14 @@ function LiveSessionView({
           <span className="flex flex-wrap items-center gap-4">
             {daisyExitError ? <span className="text-error text-sm">{daisyExitError}</span> : null}
             {forceNavError ? <span className="text-error text-sm">{forceNavError}</span> : null}
-            {stagingHref ? (
+            {rallyPointHref ? (
               <DaisyChainCta className="link-accent text-sm" onActivate={handleDaisyChainExit} />
             ) : (
               <Link className="link-accent" to="/">
                 Back home
               </Link>
             )}
-            {stagingHref ? (
+            {rallyPointHref ? (
               <Link className="link-accent" to="/">
                 Back home
               </Link>
@@ -1185,8 +1198,8 @@ function LiveSessionView({
           saveError={claim.claimError}
           saveMessage={claim.claimMessage}
           onClose={() => setScorecardDismissed(true)}
-          stagingHref={stagingHref}
-          lobbyId={lobbyId}
+          rallyPointHref={rallyPointHref}
+          rallyPointId={rallyPointId}
           isHost={isHost}
         />
       ) : null}

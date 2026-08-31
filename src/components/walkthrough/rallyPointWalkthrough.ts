@@ -13,10 +13,9 @@ export const WALKTHROUGH_TARGET = {
   participants: 'participants',
 } as const;
 
-export type WalkthroughTargetId =
-  (typeof WALKTHROUGH_TARGET)[keyof typeof WALKTHROUGH_TARGET];
+export type WalkthroughTargetId = (typeof WALKTHROUGH_TARGET)[keyof typeof WALKTHROUGH_TARGET];
 
-export interface StagingWalkthroughStep {
+export interface RallyPointWalkthroughStep {
   id: string;
   role: WalkthroughStepRole;
   targetId: WalkthroughTargetId;
@@ -24,12 +23,12 @@ export interface StagingWalkthroughStep {
   body: string;
 }
 
-export const STAGING_WALKTHROUGH_STEPS: StagingWalkthroughStep[] = [
+export const RALLY_POINT_WALKTHROUGH_STEPS: RallyPointWalkthroughStep[] = [
   {
     id: 'status',
     role: 'all',
     targetId: WALKTHROUGH_TARGET.status,
-    title: 'This is staging',
+    title: 'This is the rally point',
     body: 'Waiting means the clock has not started. Realtime shows whether you are connected to the live session.',
   },
   {
@@ -51,7 +50,7 @@ export const STAGING_WALKTHROUGH_STEPS: StagingWalkthroughStep[] = [
     role: 'all',
     targetId: WALKTHROUGH_TARGET.rallyLink,
     title: 'Invite the crew',
-    body: 'Copy the rally link and send it to friends. Anyone with the link can join this staging area.',
+    body: 'Copy the rally link and send it to friends. Anyone with the link can join this rally point.',
   },
   {
     id: 'pacer',
@@ -97,11 +96,9 @@ export const STAGING_WALKTHROUGH_STEPS: StagingWalkthroughStep[] = [
   },
 ];
 
-export function stepsForRole(isHost: boolean): StagingWalkthroughStep[] {
+export function stepsForRole(isHost: boolean): RallyPointWalkthroughStep[] {
   const role: WalkthroughRole = isHost ? 'host' : 'joiner';
-  return STAGING_WALKTHROUGH_STEPS.filter(
-    (step) => step.role === 'all' || step.role === role
-  );
+  return RALLY_POINT_WALKTHROUGH_STEPS.filter((step) => step.role === 'all' || step.role === role);
 }
 
 export function walkthroughTargetSelector(targetId: string): string {

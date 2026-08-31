@@ -14,7 +14,10 @@ interface CreateSessionSummaryPanelProps {
   durationMinutes: number;
   workoutSource: 'custom' | 'library' | 'coach';
   selectedTemplate: WorkoutTemplate | null;
-  selectedCoachWorkout: { name: string; movements: { name: string; target?: number; unit?: string }[] } | null;
+  selectedCoachWorkout: {
+    name: string;
+    movements: { name: string; target?: number; unit?: string }[];
+  } | null;
   scheduleMode: CreateScheduleMode;
   rallyDay: RallyDay;
   rallyTime: string;
@@ -70,8 +73,8 @@ export function CreateSessionSummaryPanel({
   const submitLabel = loading
     ? 'Creating…'
     : scheduleMode === 'rally'
-      ? 'Schedule staging'
-      : 'Open staging area';
+      ? 'Schedule rally point'
+      : 'Open rally point';
 
   return (
     <form className="card space-y-4 p-6" onSubmit={onSubmit}>
@@ -109,7 +112,7 @@ export function CreateSessionSummaryPanel({
       {workoutSource === 'library' && selectedTemplate ? (
         <div className="space-y-2">
           <p className="text-sm font-semibold">Selected workout</p>
-          <div className="rounded-card border border-border bg-page p-4 space-y-2">
+          <div className="space-y-2 rounded-card border border-border bg-page p-4">
             <p className="text-display text-base text-ink">{selectedTemplate.name}</p>
             <ul className="space-y-1 text-sm text-ink">
               {selectedTemplate.movements.map((movement) => (
@@ -125,7 +128,7 @@ export function CreateSessionSummaryPanel({
       {workoutSource === 'coach' && selectedCoachWorkout ? (
         <div className="space-y-2">
           <p className="text-sm font-semibold">Selected workout</p>
-          <div className="rounded-card border border-border bg-page p-4 space-y-2">
+          <div className="space-y-2 rounded-card border border-border bg-page p-4">
             <p className="text-display text-base text-ink">{selectedCoachWorkout.name}</p>
             <ul className="space-y-1 text-sm text-ink">
               {selectedCoachWorkout.movements.map((movement, index) => (
@@ -145,7 +148,7 @@ export function CreateSessionSummaryPanel({
         <div
           className="inline-flex rounded-full border border-border bg-page p-1"
           role="tablist"
-          aria-label="Staging timing"
+          aria-label="Rally point timing"
         >
           <button
             type="button"
@@ -154,7 +157,7 @@ export function CreateSessionSummaryPanel({
             className={chipClass(scheduleMode === 'now')}
             onClick={() => onScheduleModeChange('now')}
           >
-            Open staging
+            Open rally point
           </button>
           <button
             type="button"
@@ -163,7 +166,7 @@ export function CreateSessionSummaryPanel({
             className={chipClass(scheduleMode === 'rally')}
             onClick={() => onScheduleModeChange('rally')}
           >
-            Schedule staging
+            Schedule rally point
           </button>
         </div>
       </div>

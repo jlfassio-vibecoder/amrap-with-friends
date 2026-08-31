@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FeaturedWod } from '@/lib/api/featuredWod';
 import {
-  FEATURED_WOD_LOBBY_LEAD_MS,
+  FEATURED_WOD_RALLY_POINT_LEAD_MS,
   getFeaturedWodCardPresentation,
 } from './featuredWodCardPresentation';
 
@@ -31,40 +31,40 @@ describe('getFeaturedWodCardPresentation', () => {
       SCHEDULED_MS - 60_000
     );
     expect(presentation.phase).toBe('preview');
-    expect(presentation.showJoinLobby).toBe(false);
-    expect(presentation.showLobbyOpensSoon).toBe(true);
+    expect(presentation.showJoinRallyPoint).toBe(false);
+    expect(presentation.showRallyPointOpensSoon).toBe(true);
     expect(presentation.statusLine.length).toBeGreaterThan(0);
   });
 
   it('withholds join until the 15-minute lead window even when a session exists', () => {
     const presentation = getFeaturedWodCardPresentation(
       featured({ state: 'waiting' }),
-      SCHEDULED_MS - FEATURED_WOD_LOBBY_LEAD_MS - 60_000
+      SCHEDULED_MS - FEATURED_WOD_RALLY_POINT_LEAD_MS - 60_000
     );
-    expect(presentation.phase).toBe('lobby');
-    expect(presentation.showJoinLobby).toBe(false);
-    expect(presentation.showLobbyOpensSoon).toBe(true);
+    expect(presentation.phase).toBe('rallyPoint');
+    expect(presentation.showJoinRallyPoint).toBe(false);
+    expect(presentation.showRallyPointOpensSoon).toBe(true);
     expect(presentation.statusLine).toContain('joining');
   });
 
-  it('shows lobby join inside the 15-minute lead window while waiting', () => {
+  it('shows rally point join inside the 15-minute lead window while waiting', () => {
     const presentation = getFeaturedWodCardPresentation(
       featured({ state: 'waiting' }),
       SCHEDULED_MS - 60_000
     );
-    expect(presentation.phase).toBe('lobby');
-    expect(presentation.showJoinLobby).toBe(true);
-    expect(presentation.showLobbyOpensSoon).toBe(false);
+    expect(presentation.phase).toBe('rallyPoint');
+    expect(presentation.showJoinRallyPoint).toBe(true);
+    expect(presentation.showRallyPointOpensSoon).toBe(false);
     expect(presentation.statusLine).toContain('joining');
   });
 
-  it('stays lobby after scheduled_at while still waiting (manual start)', () => {
+  it('stays rallyPoint after scheduled_at while still waiting (manual start)', () => {
     const presentation = getFeaturedWodCardPresentation(
       featured({ state: 'waiting' }),
       SCHEDULED_MS + 60_000
     );
-    expect(presentation.phase).toBe('lobby');
-    expect(presentation.showJoinLobby).toBe(true);
+    expect(presentation.phase).toBe('rallyPoint');
+    expect(presentation.showJoinRallyPoint).toBe(true);
     expect(presentation.statusLine).not.toContain('amrap in progress');
   });
 
@@ -74,7 +74,7 @@ describe('getFeaturedWodCardPresentation', () => {
       SCHEDULED_MS + 3_000
     );
     expect(presentation.phase).toBe('work');
-    expect(presentation.showJoinLobby).toBe(false);
+    expect(presentation.showJoinRallyPoint).toBe(false);
     expect(presentation.statusLine).toBe('Session locked, amrap in progress.');
   });
 
@@ -87,8 +87,8 @@ describe('getFeaturedWodCardPresentation', () => {
       SCHEDULED_MS + 10_000
     );
     expect(presentation.phase).toBe('work');
-    expect(presentation.showJoinLobby).toBe(false);
-    expect(presentation.showLobbyOpensSoon).toBe(false);
+    expect(presentation.showJoinRallyPoint).toBe(false);
+    expect(presentation.showRallyPointOpensSoon).toBe(false);
     expect(presentation.statusLine).toBe('Session locked, amrap in progress.');
   });
 

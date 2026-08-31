@@ -13,11 +13,11 @@ export interface SessionRow {
   is_paused: boolean;
   started_at: string | null;
   scheduled_at: string | null;
-  lobby_countdown_ends_at: string | null;
+  rally_point_countdown_ends_at: string | null;
   segment_index: number;
   created_at: string;
   is_featured: boolean;
-  lobby_id: string | null;
+  rally_point_id: string | null;
 }
 
 export interface ParticipantRow {
@@ -72,9 +72,7 @@ export interface UpdateSessionStateFailure {
   reason: string;
 }
 
-export type UpdateSessionStateResult =
-  | UpdateSessionStateSuccess
-  | UpdateSessionStateFailure;
+export type UpdateSessionStateResult = UpdateSessionStateSuccess | UpdateSessionStateFailure;
 
 export interface LogRoundInput {
   sessionId: string;
@@ -133,8 +131,7 @@ export interface SubmitParticipantResultFailure {
 }
 
 export type SubmitParticipantResultResult =
-  | SubmitParticipantResultSuccess
-  | SubmitParticipantResultFailure;
+  SubmitParticipantResultSuccess | SubmitParticipantResultFailure;
 
 export interface SessionPresenceEntry {
   participantId: string;

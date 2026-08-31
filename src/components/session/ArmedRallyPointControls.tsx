@@ -1,11 +1,9 @@
 import { useState } from 'react';
-import {
-  cancelLobbyCountdown,
-} from '@/lib/api/sessionSync';
+import { cancelRallyPointCountdown } from '@/lib/api/sessionSync';
 import { getStoredHostToken } from '@/lib/sessionIdentity';
-import { formatPlusElapsed } from '@/lib/session/lobbyCountdown';
+import { formatPlusElapsed } from '@/lib/session/rallyPointCountdown';
 
-interface ArmedLobbyControlsProps {
+interface ArmedRallyPointControlsProps {
   sessionId: string;
   ticking: boolean;
   /** Seconds past T-0; null while still ticking / not past end. */
@@ -15,15 +13,15 @@ interface ArmedLobbyControlsProps {
   onAudioUnlock?: () => void;
 }
 
-/** Abort / override controls shown after the lobby countdown is armed. */
-export function ArmedLobbyControls({
+/** Abort / override controls shown after the rally point countdown is armed. */
+export function ArmedRallyPointControls({
   sessionId,
   ticking,
   overtimeSec,
   actionsEnabled = true,
   onStart,
   onAudioUnlock,
-}: ArmedLobbyControlsProps) {
+}: ArmedRallyPointControlsProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,7 +35,7 @@ export function ArmedLobbyControls({
     setBusy(true);
     setError(null);
     try {
-      const result = await cancelLobbyCountdown({ sessionId, hostToken });
+      const result = await cancelRallyPointCountdown({ sessionId, hostToken });
       if (result.error) {
         setError(result.error.message);
       }

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { useLobbyHostHandoff } from './useLobbyHostHandoff';
+import { useRallyPointHostHandoff } from './useRallyPointHostHandoff';
 
 const resumeMock = vi.fn();
 const getStoredHostTokenMock = vi.fn();
@@ -19,7 +19,7 @@ vi.mock('@/lib/sessionIdentity', () => ({
 
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
 
-describe('useLobbyHostHandoff', () => {
+describe('useRallyPointHostHandoff', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -43,7 +43,7 @@ describe('useLobbyHostHandoff', () => {
     const onHostAuthorityChange = vi.fn();
 
     renderHook(() =>
-      useLobbyHostHandoff({
+      useRallyPointHostHandoff({
         hostUserId: 'user-b',
         activeSessionId: SESSION_ID,
         userId: 'user-b',
@@ -64,7 +64,7 @@ describe('useLobbyHostHandoff', () => {
     const onHostAuthorityChange = vi.fn();
 
     renderHook(() =>
-      useLobbyHostHandoff({
+      useRallyPointHostHandoff({
         hostUserId: 'user-b',
         activeSessionId: SESSION_ID,
         userId: 'user-a',
@@ -85,7 +85,7 @@ describe('useLobbyHostHandoff', () => {
     const onHostAuthorityChange = vi.fn();
 
     renderHook(() =>
-      useLobbyHostHandoff({
+      useRallyPointHostHandoff({
         hostUserId: 'user-b',
         activeSessionId: SESSION_ID,
         userId: 'user-a',

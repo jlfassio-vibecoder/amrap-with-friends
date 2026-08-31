@@ -7,10 +7,10 @@ import {
 } from '@/lib/sessionIdentity';
 
 /**
- * Keeps local host_token in sync with lobbies.host_user_id during waiting/setup.
+ * Keeps local host_token in sync with rallyPoints.host_user_id during waiting/setup.
  * New host resumes identity; demoted host clears the token so waiting-room chrome remounts.
  */
-export function useLobbyHostHandoff(input: {
+export function useRallyPointHostHandoff(input: {
   hostUserId: string | null | undefined;
   activeSessionId: string | null | undefined;
   userId: string | null | undefined;

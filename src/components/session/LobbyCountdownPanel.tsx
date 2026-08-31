@@ -1,1 +1,1 @@
-export { ArmedLobbyControls } from '@/components/session/ArmedLobbyControls';
+export { ArmedRallyPointControls } from '@/components/session/ArmedRallyPointControls';

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { parseLobbyRow } from './useLobbyChannel';
+import { parseRallyPointRow } from './useRallyPointChannel';
 
 /** The payload an authenticated client receives. */
 const ROW = {
-  id: 'lobby-1',
+  id: 'rallyPoint-1',
   host_user_id: 'user-1',
   active_session_id: 'session-1',
   status: 'open',
@@ -18,10 +18,10 @@ function withheldFromAnon(): Record<string, unknown> {
   return row;
 }
 
-describe('parseLobbyRow', () => {
+describe('parseRallyPointRow', () => {
   it('reads a full row', () => {
-    expect(parseLobbyRow(ROW)).toMatchObject({
-      lobbyId: 'lobby-1',
+    expect(parseRallyPointRow(ROW)).toMatchObject({
+      rallyPointId: 'rallyPoint-1',
       hostUserId: 'user-1',
       activeSessionId: 'session-1',
       status: 'open',
@@ -29,10 +29,10 @@ describe('parseLobbyRow', () => {
   });
 
   it('keeps the row when host_user_id is withheld', () => {
-    // A guest is anon, and anon has no SELECT on lobbies.host_user_id. Dropping
+    // A guest is anon, and anon has no SELECT on rallyPoints.host_user_id. Dropping
     // the row would cost them every active_session_id change, and with it the
     // forced launch into the next mission.
-    const parsed = parseLobbyRow(withheldFromAnon());
+    const parsed = parseRallyPointRow(withheldFromAnon());
 
     expect(parsed).not.toBeNull();
     expect(parsed?.activeSessionId).toBe('session-1');
@@ -40,28 +40,28 @@ describe('parseLobbyRow', () => {
   });
 
   it('leaves hostUserId absent rather than null, so a merge keeps the last known host', () => {
-    expect(parseLobbyRow(withheldFromAnon())).not.toHaveProperty('hostUserId');
+    expect(parseRallyPointRow(withheldFromAnon())).not.toHaveProperty('hostUserId');
   });
 
   it('still refuses a row with no id or no usable status', () => {
-    expect(parseLobbyRow({ ...ROW, id: undefined })).toBeNull();
-    expect(parseLobbyRow({ ...ROW, status: 'wat' })).toBeNull();
+    expect(parseRallyPointRow({ ...ROW, id: undefined })).toBeNull();
+    expect(parseRallyPointRow({ ...ROW, status: 'wat' })).toBeNull();
   });
 
   it('treats a missing active session as null rather than dropping the row', () => {
-    const parsed = parseLobbyRow({ ...ROW, active_session_id: null });
+    const parsed = parseRallyPointRow({ ...ROW, active_session_id: null });
     expect(parsed?.activeSessionId).toBeNull();
   });
 
   it('reads next_mission_pending_at when present', () => {
     expect(
-      parseLobbyRow({ ...ROW, next_mission_pending_at: '2026-09-01T12:00:00Z' })
+      parseRallyPointRow({ ...ROW, next_mission_pending_at: '2026-09-01T12:00:00Z' })
     ).toMatchObject({
       nextMissionPendingAt: '2026-09-01T12:00:00Z',
     });
-    expect(parseLobbyRow({ ...ROW, next_mission_pending_at: null })).toMatchObject({
+    expect(parseRallyPointRow({ ...ROW, next_mission_pending_at: null })).toMatchObject({
       nextMissionPendingAt: null,
     });
-    expect(parseLobbyRow(ROW)).not.toHaveProperty('nextMissionPendingAt');
+    expect(parseRallyPointRow(ROW)).not.toHaveProperty('nextMissionPendingAt');
   });
 });

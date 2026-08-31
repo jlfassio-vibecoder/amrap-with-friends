@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { buildRallyInviteUrl } from '@/lib/session/buildRallyInviteUrl';
-import { buildLobbyInviteUrl } from '@/lib/session/buildLobbyInviteUrl';
+import { buildRallyPointInviteUrl } from '@/lib/session/buildRallyPointInviteUrl';
 import { track } from '@/lib/analytics/track';
 import type { OgCard } from '@/lib/share/ogCard';
 
@@ -8,7 +8,7 @@ const SECURED_MS = 2000;
 
 export function useCopySessionInvite(
   sessionId: string,
-  lobbyId?: string | null,
+  rallyPointId?: string | null,
   card: OgCard = 'f'
 ) {
   const [secured, setSecured] = useState(false);
@@ -41,12 +41,12 @@ export function useCopySessionInvite(
 
   async function copyInvite() {
     setError(null);
-    const inviteUrl = lobbyId
-      ? buildLobbyInviteUrl(lobbyId, window.location.origin, card)
+    const inviteUrl = rallyPointId
+      ? buildRallyPointInviteUrl(rallyPointId, window.location.origin, card)
       : buildRallyInviteUrl(sessionId, window.location.origin, card);
     try {
       await navigator.clipboard.writeText(inviteUrl);
-      track('rally_link_copied', { lobby: Boolean(lobbyId) }, { sessionId });
+      track('rally_link_copied', { rallyPoint: Boolean(rallyPointId) }, { sessionId });
       flash(setSecured, linkTimerRef);
     } catch {
       setError(`Could not copy link. Copy this session link manually: ${inviteUrl}`);

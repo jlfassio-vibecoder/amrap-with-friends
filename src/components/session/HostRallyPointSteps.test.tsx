@@ -1,20 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import type { ComponentProps } from 'react';
-import { HostStagingSteps } from './HostStagingSteps';
+import { HostRallyPointSteps } from './HostRallyPointSteps';
 
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
 const TEMPLATE_ID = '22222222-2222-4222-8222-222222222222';
 
 vi.mock('@/lib/api/sessionSync', () => ({
-  setLobbyCountdown: vi.fn().mockResolvedValue({ data: { ends_at: null }, error: null }),
-  cancelLobbyCountdown: vi.fn().mockResolvedValue({ data: { ok: true }, error: null }),
+  setRallyPointCountdown: vi.fn().mockResolvedValue({ data: { ends_at: null }, error: null }),
+  cancelRallyPointCountdown: vi.fn().mockResolvedValue({ data: { ok: true }, error: null }),
 }));
 
 vi.mock('@/lib/sessionIdentity', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/sessionIdentity')>(
-    '@/lib/sessionIdentity'
-  );
+  const actual =
+    await vi.importActual<typeof import('@/lib/sessionIdentity')>('@/lib/sessionIdentity');
   return {
     ...actual,
     getStoredHostToken: () => 'host-token',
@@ -39,9 +38,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function renderSteps(overrides: Partial<ComponentProps<typeof HostStagingSteps>> = {}) {
+function renderSteps(overrides: Partial<ComponentProps<typeof HostRallyPointSteps>> = {}) {
   return render(
-    <HostStagingSteps
+    <HostRallyPointSteps
       sessionId={SESSION_ID}
       countdownArmed={false}
       actionsEnabled
@@ -55,7 +54,7 @@ function renderSteps(overrides: Partial<ComponentProps<typeof HostStagingSteps>>
   );
 }
 
-describe('HostStagingSteps', () => {
+describe('HostRallyPointSteps', () => {
   beforeEach(() => {
     Object.defineProperty(window, 'location', {
       configurable: true,
@@ -85,7 +84,7 @@ describe('HostStagingSteps', () => {
     ).toBe('true');
 
     rerender(
-      <HostStagingSteps
+      <HostRallyPointSteps
         sessionId={SESSION_ID}
         countdownArmed
         actionsEnabled
@@ -136,9 +135,7 @@ describe('HostStagingSteps', () => {
       fireEvent.click(copyShortcut);
     });
 
-    expect(writeText).toHaveBeenCalledWith(
-      `https://amrap.example/join?s=${SESSION_ID}&card=f`
-    );
+    expect(writeText).toHaveBeenCalledWith(`https://amrap.example/join?s=${SESSION_ID}&card=f`);
     expect(shareHeader.getAttribute('aria-expanded')).toBe('false');
   });
 

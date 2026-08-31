@@ -40,12 +40,7 @@ function readBoolean(value: unknown): boolean | null {
 }
 
 function isLiveSessionPhase(value: string): value is LiveSessionPhase {
-  return (
-    value === 'waiting' ||
-    value === 'setup' ||
-    value === 'work' ||
-    value === 'finished'
-  );
+  return value === 'waiting' || value === 'setup' || value === 'work' || value === 'finished';
 }
 
 function mapRpcError(message: string | undefined): string {
@@ -107,9 +102,7 @@ function readScoreBreakdown(value: unknown): ScoreBreakdown | null {
   return parseScoreBreakdownJson(value);
 }
 
-export async function updateSessionState(
-  input: UpdateSessionStateInput
-): Promise<{
+export async function updateSessionState(input: UpdateSessionStateInput): Promise<{
   data: UpdateSessionStateResult | null;
   error: SessionSyncApiError | null;
 }> {
@@ -126,8 +119,7 @@ export async function updateSessionState(
     return { data: null, error: { message: mapRpcError(error.message) } };
   }
 
-  const raw =
-    data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
   const ok = raw.ok === true;
 
   if (!ok) {
@@ -160,9 +152,7 @@ export async function updateSessionState(
 
   const startedAtRaw = raw.started_at;
   const startedAt =
-    startedAtRaw === null || startedAtRaw === undefined
-      ? null
-      : readString(String(startedAtRaw));
+    startedAtRaw === null || startedAtRaw === undefined ? null : readString(String(startedAtRaw));
 
   return {
     data: {
@@ -194,8 +184,7 @@ export async function logRound(
     return { data: null, error: { message: mapRpcError(error.message) } };
   }
 
-  const raw =
-    data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
   const ok = raw.ok === true;
 
   if (!ok) {
@@ -211,12 +200,7 @@ export async function logRound(
   const elapsedSecAtRound = readNumber(raw.elapsed_sec_at_round);
   const segmentIndex = readNumber(raw.segment_index);
 
-  if (
-    !roundId ||
-    roundIndex === null ||
-    elapsedSecAtRound === null ||
-    segmentIndex === null
-  ) {
+  if (!roundId || roundIndex === null || elapsedSecAtRound === null || segmentIndex === null) {
     return {
       data: null,
       error: { message: 'Something went wrong. Please try again.' },
@@ -235,9 +219,7 @@ export async function logRound(
   };
 }
 
-export async function submitParticipantResult(
-  input: SubmitParticipantResultInput
-): Promise<{
+export async function submitParticipantResult(input: SubmitParticipantResultInput): Promise<{
   data: SubmitParticipantResultResult | null;
   error: SessionSyncApiError | null;
 }> {
@@ -255,8 +237,7 @@ export async function submitParticipantResult(
     return { data: null, error: { message: mapInvokeError(error.message) } };
   }
 
-  const raw =
-    data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
   const ok = raw.ok === true;
 
   if (!ok) {
@@ -302,20 +283,17 @@ export async function submitParticipantResult(
   };
 }
 
-export type LobbyCountdownResult =
-  | { ok: true; lobbyCountdownEndsAt: string }
-  | { ok: false; reason: string };
+export type RallyPointCountdownResult =
+  { ok: true; rallyPointCountdownEndsAt: string } | { ok: false; reason: string };
 
-export type CancelLobbyCountdownResult =
-  | { ok: true }
-  | { ok: false; reason: string };
+export type CancelRallyPointCountdownResult = { ok: true } | { ok: false; reason: string };
 
-function mapLobbyCountdownReason(reason: string): string {
+function mapRallyPointCountdownReason(reason: string): string {
   switch (reason) {
     case 'invalid_host_token':
       return 'Host credentials are invalid. Reopen the session as host.';
     case 'session_not_waiting':
-      return 'Countdown can only run while the lobby is waiting.';
+      return 'Countdown can only run while the rally point is waiting.';
     case 'invalid_seconds':
       return 'Countdown must be between 1 and 600 seconds.';
     case 'not_found':
@@ -325,15 +303,15 @@ function mapLobbyCountdownReason(reason: string): string {
   }
 }
 
-export async function setLobbyCountdown(input: {
+export async function setRallyPointCountdown(input: {
   sessionId: string;
   hostToken: string;
   seconds: number;
 }): Promise<{
-  data: LobbyCountdownResult | null;
+  data: RallyPointCountdownResult | null;
   error: SessionSyncApiError | null;
 }> {
-  const { data, error } = await callRpc('set_lobby_countdown', {
+  const { data, error } = await callRpc('set_rally_point_countdown', {
     p_session_id: input.sessionId,
     p_host_token: input.hostToken,
     p_seconds: input.seconds,
@@ -343,24 +321,21 @@ export async function setLobbyCountdown(input: {
     return { data: null, error: { message: mapRpcError(error.message) } };
   }
 
-  const raw =
-    data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
 
   if (raw.ok !== true) {
     const reason = readString(raw.reason) ?? 'unknown';
     return {
       data: { ok: false, reason },
-      error: { message: mapLobbyCountdownReason(reason) },
+      error: { message: mapRallyPointCountdownReason(reason) },
     };
   }
 
-  const endsAtRaw = raw.lobby_countdown_ends_at;
-  const lobbyCountdownEndsAt =
-    endsAtRaw === null || endsAtRaw === undefined
-      ? null
-      : readString(String(endsAtRaw));
+  const endsAtRaw = raw.rally_point_countdown_ends_at;
+  const rallyPointCountdownEndsAt =
+    endsAtRaw === null || endsAtRaw === undefined ? null : readString(String(endsAtRaw));
 
-  if (!lobbyCountdownEndsAt) {
+  if (!rallyPointCountdownEndsAt) {
     return {
       data: null,
       error: { message: 'Something went wrong. Please try again.' },
@@ -368,25 +343,25 @@ export async function setLobbyCountdown(input: {
   }
 
   track(
-    'lobby_countdown_started',
+    'rally_point_countdown_started',
     { seconds: input.seconds },
     { sessionId: input.sessionId }
   );
 
   return {
-    data: { ok: true, lobbyCountdownEndsAt },
+    data: { ok: true, rallyPointCountdownEndsAt },
     error: null,
   };
 }
 
-export async function cancelLobbyCountdown(input: {
+export async function cancelRallyPointCountdown(input: {
   sessionId: string;
   hostToken: string;
 }): Promise<{
-  data: CancelLobbyCountdownResult | null;
+  data: CancelRallyPointCountdownResult | null;
   error: SessionSyncApiError | null;
 }> {
-  const { data, error } = await callRpc('cancel_lobby_countdown', {
+  const { data, error } = await callRpc('cancel_rally_point_countdown', {
     p_session_id: input.sessionId,
     p_host_token: input.hostToken,
   });
@@ -395,18 +370,17 @@ export async function cancelLobbyCountdown(input: {
     return { data: null, error: { message: mapRpcError(error.message) } };
   }
 
-  const raw =
-    data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
 
   if (raw.ok !== true) {
     const reason = readString(raw.reason) ?? 'unknown';
     return {
       data: { ok: false, reason },
-      error: { message: mapLobbyCountdownReason(reason) },
+      error: { message: mapRallyPointCountdownReason(reason) },
     };
   }
 
-  track('lobby_countdown_canceled', {}, { sessionId: input.sessionId });
+  track('rally_point_countdown_canceled', {}, { sessionId: input.sessionId });
 
   return { data: { ok: true }, error: null };
 }

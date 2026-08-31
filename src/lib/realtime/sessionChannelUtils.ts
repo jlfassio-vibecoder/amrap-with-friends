@@ -29,11 +29,9 @@ export function parseSessionRow(record: Record<string, unknown>): SessionRow | n
   const durationMinutes =
     typeof record.duration_minutes === 'number' ? record.duration_minutes : null;
   const state = typeof record.state === 'string' ? record.state : null;
-  const timeLeftSec =
-    typeof record.time_left_sec === 'number' ? record.time_left_sec : null;
+  const timeLeftSec = typeof record.time_left_sec === 'number' ? record.time_left_sec : null;
   const isPaused = typeof record.is_paused === 'boolean' ? record.is_paused : null;
-  const segmentIndex =
-    typeof record.segment_index === 'number' ? record.segment_index : null;
+  const segmentIndex = typeof record.segment_index === 'number' ? record.segment_index : null;
   const createdAt = typeof record.created_at === 'string' ? record.created_at : null;
   const workout = record.workout;
 
@@ -50,12 +48,7 @@ export function parseSessionRow(record: Record<string, unknown>): SessionRow | n
     return null;
   }
 
-  if (
-    state !== 'waiting' &&
-    state !== 'setup' &&
-    state !== 'work' &&
-    state !== 'finished'
-  ) {
+  if (state !== 'waiting' && state !== 'setup' && state !== 'work' && state !== 'finished') {
     return null;
   }
 
@@ -69,11 +62,11 @@ export function parseSessionRow(record: Record<string, unknown>): SessionRow | n
       ? null
       : String(record.scheduled_at);
 
-  const lobbyCountdownEndsAt =
-    record.lobby_countdown_ends_at === null ||
-    record.lobby_countdown_ends_at === undefined
+  const rallyPointCountdownEndsAt =
+    record.rally_point_countdown_ends_at === null ||
+    record.rally_point_countdown_ends_at === undefined
       ? null
-      : String(record.lobby_countdown_ends_at);
+      : String(record.rally_point_countdown_ends_at);
 
   const templateIdRaw = record.template_id;
   const templateId =
@@ -83,12 +76,12 @@ export function parseSessionRow(record: Record<string, unknown>): SessionRow | n
         ? templateIdRaw.trim()
         : null;
 
-  const lobbyIdRaw = record.lobby_id;
-  const lobbyId =
-    lobbyIdRaw === null || lobbyIdRaw === undefined
+  const rallyPointIdRaw = record.rally_point_id;
+  const rallyPointId =
+    rallyPointIdRaw === null || rallyPointIdRaw === undefined
       ? null
-      : typeof lobbyIdRaw === 'string' && lobbyIdRaw.trim().length > 0
-        ? lobbyIdRaw.trim()
+      : typeof rallyPointIdRaw === 'string' && rallyPointIdRaw.trim().length > 0
+        ? rallyPointIdRaw.trim()
         : null;
 
   return {
@@ -101,17 +94,15 @@ export function parseSessionRow(record: Record<string, unknown>): SessionRow | n
     is_paused: isPaused,
     started_at: startedAt,
     scheduled_at: scheduledAt,
-    lobby_countdown_ends_at: lobbyCountdownEndsAt,
+    rally_point_countdown_ends_at: rallyPointCountdownEndsAt,
     segment_index: segmentIndex,
     created_at: createdAt,
     is_featured: record.is_featured === true,
-    lobby_id: lobbyId,
+    rally_point_id: rallyPointId,
   };
 }
 
-export function parseParticipantRow(
-  record: Record<string, unknown>
-): ParticipantRow | null {
+export function parseParticipantRow(record: Record<string, unknown>): ParticipantRow | null {
   const id = typeof record.id === 'string' ? record.id : null;
   const sessionId = typeof record.session_id === 'string' ? record.session_id : null;
   const nickname = typeof record.nickname === 'string' ? record.nickname : null;
@@ -138,16 +129,11 @@ export function parseParticipantRow(
 export function parseRoundRow(record: Record<string, unknown>): RoundRow | null {
   const id = typeof record.id === 'string' ? record.id : null;
   const sessionId = typeof record.session_id === 'string' ? record.session_id : null;
-  const participantId =
-    typeof record.participant_id === 'string' ? record.participant_id : null;
-  const roundIndex =
-    typeof record.round_index === 'number' ? record.round_index : null;
+  const participantId = typeof record.participant_id === 'string' ? record.participant_id : null;
+  const roundIndex = typeof record.round_index === 'number' ? record.round_index : null;
   const elapsedSecAtRound =
-    typeof record.elapsed_sec_at_round === 'number'
-      ? record.elapsed_sec_at_round
-      : null;
-  const segmentIndex =
-    typeof record.segment_index === 'number' ? record.segment_index : null;
+    typeof record.elapsed_sec_at_round === 'number' ? record.elapsed_sec_at_round : null;
+  const segmentIndex = typeof record.segment_index === 'number' ? record.segment_index : null;
   const createdAt = typeof record.created_at === 'string' ? record.created_at : null;
 
   if (
@@ -184,12 +170,9 @@ function parseScoreBreakdown(value: unknown): ScoreBreakdown | null {
 export function parseSegmentResultRow(
   record: Record<string, unknown>
 ): ParticipantSegmentResultRow | null {
-  const participantId =
-    typeof record.participant_id === 'string' ? record.participant_id : null;
-  const segmentIndex =
-    typeof record.segment_index === 'number' ? record.segment_index : null;
-  const partialReps =
-    typeof record.partial_reps === 'number' ? record.partial_reps : null;
+  const participantId = typeof record.participant_id === 'string' ? record.participant_id : null;
+  const segmentIndex = typeof record.segment_index === 'number' ? record.segment_index : null;
+  const partialReps = typeof record.partial_reps === 'number' ? record.partial_reps : null;
   const finalScore =
     record.final_score === null || record.final_score === undefined
       ? null
@@ -200,12 +183,7 @@ export function parseSegmentResultRow(
       : parseScoreBreakdown(record.score_breakdown);
   const updatedAt = typeof record.updated_at === 'string' ? record.updated_at : null;
 
-  if (
-    !participantId ||
-    segmentIndex === null ||
-    partialReps === null ||
-    !updatedAt
-  ) {
+  if (!participantId || segmentIndex === null || partialReps === null || !updatedAt) {
     return null;
   }
 
@@ -234,12 +212,10 @@ export function parseSegmentResultRow(
 export function parseMessageRow(record: Record<string, unknown>): MessageRow | null {
   const id = typeof record.id === 'string' ? record.id : null;
   const sessionId = typeof record.session_id === 'string' ? record.session_id : null;
-  const participantId =
-    typeof record.participant_id === 'string' ? record.participant_id : null;
+  const participantId = typeof record.participant_id === 'string' ? record.participant_id : null;
   const nickname = typeof record.nickname === 'string' ? record.nickname : null;
   const body = typeof record.body === 'string' ? record.body : null;
-  const segmentIndex =
-    typeof record.segment_index === 'number' ? record.segment_index : null;
+  const segmentIndex = typeof record.segment_index === 'number' ? record.segment_index : null;
   const createdAt = typeof record.created_at === 'string' ? record.created_at : null;
 
   if (
@@ -318,8 +294,7 @@ export function upsertSegmentResult(
 ): ParticipantSegmentResultRow[] {
   const existingIndex = results.findIndex(
     (result) =>
-      result.participant_id === row.participant_id &&
-      result.segment_index === row.segment_index
+      result.participant_id === row.participant_id && result.segment_index === row.segment_index
   );
 
   if (existingIndex >= 0) {
@@ -335,11 +310,7 @@ export function removeSegmentResult(
   segmentIndex: number
 ): ParticipantSegmentResultRow[] {
   return results.filter(
-    (result) =>
-      !(
-        result.participant_id === participantId &&
-        result.segment_index === segmentIndex
-      )
+    (result) => !(result.participant_id === participantId && result.segment_index === segmentIndex)
   );
 }
 
@@ -362,9 +333,7 @@ export function buildParticipantRoundSummaries(
 ): Array<{ roundNumber: number; durationSec: number }> {
   const participantRounds = rounds
     .filter(
-      (round) =>
-        round.participant_id === participantId &&
-        round.segment_index === segmentIndex
+      (round) => round.participant_id === participantId && round.segment_index === segmentIndex
     )
     .sort((a, b) => a.round_index - b.round_index);
 
@@ -375,8 +344,7 @@ function summarizeSortedParticipantRounds(
   participantRounds: RoundRow[]
 ): Array<{ roundNumber: number; durationSec: number }> {
   return participantRounds.map((round, index) => {
-    const previousElapsed =
-      index > 0 ? participantRounds[index - 1].elapsed_sec_at_round : 0;
+    const previousElapsed = index > 0 ? participantRounds[index - 1].elapsed_sec_at_round : 0;
 
     return {
       roundNumber: round.round_index + 1,
@@ -403,10 +371,7 @@ export function buildLeaderboard(
   }
 
   const partialByParticipant = new Map<string, number>();
-  const lockedByParticipant = new Map<
-    string,
-    { finalScore: number; breakdown: ScoreBreakdown }
-  >();
+  const lockedByParticipant = new Map<string, { finalScore: number; breakdown: ScoreBreakdown }>();
 
   for (const result of segmentResults) {
     if (result.segment_index !== segmentIndex) {
@@ -415,10 +380,7 @@ export function buildLeaderboard(
 
     partialByParticipant.set(result.participant_id, result.partial_reps);
 
-    if (
-      result.final_score !== null &&
-      result.score_breakdown !== null
-    ) {
+    if (result.final_score !== null && result.score_breakdown !== null) {
       lockedByParticipant.set(result.participant_id, {
         finalScore: result.final_score,
         breakdown: result.score_breakdown,
@@ -470,12 +432,7 @@ export function buildLeaderboard(
       const roundDurationsSec = roundSummaries.map((round) => round.durationSec);
       const breakdown = locked
         ? locked.breakdown
-        : computeScoreBreakdown(
-            roundDurationsSec,
-            durationMinutes,
-            sessionPhase,
-            baseScore
-          );
+        : computeScoreBreakdown(roundDurationsSec, durationMinutes, sessionPhase, baseScore);
       const finalScore = locked ? locked.finalScore : breakdown.finalScore;
       const pviTier = getPviMultiplier(breakdown.pvi);
 
@@ -488,8 +445,7 @@ export function buildLeaderboard(
         baseScore: breakdown.baseScore,
         pvi: breakdown.pvi,
         pviMultiplier: breakdown.pviMultiplier,
-        pviClassification:
-          sessionPhase === 'finished' ? pviTier.classification : 'Standard',
+        pviClassification: sessionPhase === 'finished' ? pviTier.classification : 'Standard',
         pviVerdict: sessionPhase === 'finished' ? pviTier.verdict : '',
         domainWeight: breakdown.domainWeight,
         finalScore,

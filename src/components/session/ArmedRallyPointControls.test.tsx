@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { ArmedLobbyControls } from './ArmedLobbyControls';
+import { ArmedRallyPointControls } from './ArmedRallyPointControls';
 
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
 
-const cancelLobbyCountdownMock = vi.fn();
+const cancelRallyPointCountdownMock = vi.fn();
 
 vi.mock('@/lib/api/sessionSync', () => ({
-  cancelLobbyCountdown: (...args: unknown[]) => cancelLobbyCountdownMock(...args),
+  cancelRallyPointCountdown: (...args: unknown[]) => cancelRallyPointCountdownMock(...args),
 }));
 
 vi.mock('@/lib/sessionIdentity', () => ({
@@ -16,14 +16,14 @@ vi.mock('@/lib/sessionIdentity', () => ({
 
 afterEach(() => {
   cleanup();
-  cancelLobbyCountdownMock.mockReset();
+  cancelRallyPointCountdownMock.mockReset();
 });
 
-describe('ArmedLobbyControls', () => {
+describe('ArmedRallyPointControls', () => {
   it('shows Override: start now while the countdown is ticking', () => {
     const onStart = vi.fn();
     render(
-      <ArmedLobbyControls
+      <ArmedRallyPointControls
         sessionId={SESSION_ID}
         ticking
         overtimeSec={null}
@@ -42,7 +42,7 @@ describe('ArmedLobbyControls', () => {
   it('shows Start with +elapsed after T-0 and does not auto-start', () => {
     const onStart = vi.fn();
     render(
-      <ArmedLobbyControls
+      <ArmedRallyPointControls
         sessionId={SESSION_ID}
         ticking={false}
         overtimeSec={5}
@@ -61,7 +61,7 @@ describe('ArmedLobbyControls', () => {
 
   it('hides +elapsed when overtimeSec is null after T-0', () => {
     render(
-      <ArmedLobbyControls
+      <ArmedRallyPointControls
         sessionId={SESSION_ID}
         ticking={false}
         overtimeSec={null}
@@ -75,7 +75,7 @@ describe('ArmedLobbyControls', () => {
 
   it('shows +00:00 when overtime is zero', () => {
     render(
-      <ArmedLobbyControls
+      <ArmedRallyPointControls
         sessionId={SESSION_ID}
         ticking={false}
         overtimeSec={0}

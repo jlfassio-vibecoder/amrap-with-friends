@@ -4,7 +4,7 @@ import { ogCardFromSex } from '@/lib/share/ogCard';
 
 interface CopyInviteLinkProps {
   sessionId: string;
-  lobbyId?: string | null;
+  rallyPointId?: string | null;
   /** When true, omit the outer walkthrough wrapper (parent owns the anchor). */
   embedded?: boolean;
   className?: string;
@@ -12,13 +12,13 @@ interface CopyInviteLinkProps {
 
 export function CopyInviteLink({
   sessionId,
-  lobbyId = null,
+  rallyPointId = null,
   embedded = false,
   className,
 }: CopyInviteLinkProps) {
   const { profile } = useAthleteProfile();
   const card = ogCardFromSex(profile?.biologicalSex);
-  const { secured, error, copyInvite } = useCopySessionInvite(sessionId, lobbyId, card);
+  const { secured, error, copyInvite } = useCopySessionInvite(sessionId, rallyPointId, card);
 
   const button = (
     <button

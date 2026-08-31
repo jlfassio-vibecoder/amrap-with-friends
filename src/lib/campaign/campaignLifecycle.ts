@@ -53,7 +53,7 @@ export function canEditCampaign(input: CampaignLifecycleInput): boolean {
 
 /**
  * A session can be moved while it is still only a plan. Once the generator has
- * made it a session the staging area is open and people may be on their way,
+ * made it a session the rally point is open and people may be on their way,
  * so the time stops being the host's to change.
  */
 export function canRescheduleOccurrence(

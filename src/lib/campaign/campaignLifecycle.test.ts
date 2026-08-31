@@ -130,7 +130,7 @@ describe('canRescheduleOccurrence', () => {
     expect(canRescheduleOccurrence(input(), planned_)).toBe(true);
   });
 
-  it('refuses one whose staging area is already open', () => {
+  it('refuses one whose rally point is already open', () => {
     expect(canRescheduleOccurrence(input(), { status: 'generated', sessionId: 's1' })).toBe(false);
   });
 

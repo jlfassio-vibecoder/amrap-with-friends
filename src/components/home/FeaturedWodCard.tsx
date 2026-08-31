@@ -161,7 +161,7 @@ export function FeaturedWodCard() {
           Add to Google Calendar
         </a>
       </p>
-      {presentation.showJoinLobby ? (
+      {presentation.showJoinRallyPoint ? (
         <Link
           className="btn-primary inline-block"
           to={`/join?s=${featured.sessionId}`}
@@ -175,8 +175,8 @@ export function FeaturedWodCard() {
         >
           Join session
         </Link>
-      ) : presentation.showLobbyOpensSoon ? (
-        <p className="text-xs text-secondary">Staging area opens shortly before start.</p>
+      ) : presentation.showRallyPointOpensSoon ? (
+        <p className="text-xs text-secondary">Rally point opens shortly before start.</p>
       ) : null}
     </div>
   );

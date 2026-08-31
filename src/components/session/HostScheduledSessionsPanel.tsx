@@ -62,9 +62,7 @@ export function HostScheduledSessionsPanel() {
   async function handleSaved(sessionId: string, scheduledAt: string) {
     setEditingSessionId(null);
     setEntries((prev) =>
-      prev.map((entry) =>
-        entry.sessionId === sessionId ? { ...entry, scheduledAt } : entry
-      )
+      prev.map((entry) => (entry.sessionId === sessionId ? { ...entry, scheduledAt } : entry))
     );
     await loadEntries();
   }
@@ -75,19 +73,13 @@ export function HostScheduledSessionsPanel() {
         <h2 className="text-sm font-semibold uppercase tracking-wide text-ink">
           Scheduled sessions
         </h2>
-        <p className="text-sm text-secondary">
-          Return to a session you scheduled for later.
-        </p>
+        <p className="text-sm text-secondary">Return to a session you scheduled for later.</p>
       </div>
 
       {!isAuthLoading && !isAuthenticated ? (
         <div className="card space-y-3 p-4 text-sm">
           <p className="text-secondary">Sign in to see your scheduled sessions.</p>
-          <button
-            type="button"
-            className="btn-outline"
-            onClick={() => setAuthOpen(true)}
-          >
+          <button type="button" className="btn-outline" onClick={() => setAuthOpen(true)}>
             Sign in
           </button>
         </div>
@@ -99,7 +91,7 @@ export function HostScheduledSessionsPanel() {
 
       {!loading && isAuthenticated && entries.length === 0 ? (
         <p className="text-sm text-secondary">
-          No scheduled sessions. Create one and choose Schedule staging.
+          No scheduled sessions. Create one and choose Schedule rally point.
         </p>
       ) : null}
 
@@ -107,9 +99,7 @@ export function HostScheduledSessionsPanel() {
         <ul className="space-y-3">
           {entries.map((entry) => (
             <li key={entry.sessionId} className="card space-y-2 p-4 text-sm">
-              <p className="font-semibold">
-                {formatHostScheduledSessionWorkout(entry.workout)}
-              </p>
+              <p className="font-semibold">{formatHostScheduledSessionWorkout(entry.workout)}</p>
               <p className="text-secondary">
                 Rally time: {formatHostScheduledSessionRallyTime(entry.scheduledAt)} ·{' '}
                 {entry.durationMinutes} min · {formatHostScheduledSessionState(entry.state)}
@@ -124,11 +114,8 @@ export function HostScheduledSessionsPanel() {
                 />
               ) : (
                 <div className="flex flex-wrap items-center gap-3">
-                  <Link
-                    className="link-accent"
-                    to={`/session/${entry.sessionId}`}
-                  >
-                    Enter staging area
+                  <Link className="link-accent" to={`/session/${entry.sessionId}`}>
+                    Enter rally point
                   </Link>
                   <button
                     type="button"

@@ -73,7 +73,7 @@ function mapRpcError(message: string | undefined): string {
     return 'Only the host can update rally time.';
   }
   if (message.includes('Session is not waiting')) {
-    return 'Rally time can only be changed while waiting in the lobby.';
+    return 'Rally time can only be changed while waiting at the rally point.';
   }
   if (message.includes('Session has no scheduled rally time')) {
     return 'This session does not have a scheduled rally time.';

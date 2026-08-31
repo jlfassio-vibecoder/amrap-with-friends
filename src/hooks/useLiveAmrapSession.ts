@@ -6,10 +6,7 @@ import { selectElapsedSec } from '@/lib/amrapTimer/reducer';
 import type { AmrapRoundLog, AmrapTimerPhase } from '@/lib/amrapTimer/types';
 import { useAmrapTimer } from '@/hooks/useAmrapTimer';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
-import {
-  buildLeaderboard,
-  buildPresenceList,
-} from '@/lib/realtime/sessionChannelUtils';
+import { buildLeaderboard, buildPresenceList } from '@/lib/realtime/sessionChannelUtils';
 import type { UseSessionChannelResult } from '@/lib/realtime/useSessionChannel';
 import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
 import {
@@ -51,7 +48,7 @@ export interface UseLiveAmrapSessionReturn {
   participantCount: number;
   segmentIndex: number;
   scheduledAt: string | null;
-  lobbyCountdownEndsAt: string | null;
+  rallyPointCountdownEndsAt: string | null;
   repsPerRound: number;
   hasSubmittedPartialReps: boolean;
   leaderboard: LeaderboardEntry[];
@@ -101,14 +98,10 @@ export function useLiveAmrapSession(
   const timer = useAmrapTimer();
   const { isAuthenticated } = useAmrapAuth();
 
-  const [joinerSnapshot, setJoinerSnapshot] = useState<AuthoritativeSnapshot | null>(
-    null
-  );
+  const [joinerSnapshot, setJoinerSnapshot] = useState<AuthoritativeSnapshot | null>(null);
   const [joinerDisplay, setJoinerDisplay] = useState<DisplayState | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
-  const [lastAuthoritativeSyncAtMs, setLastAuthoritativeSyncAtMs] = useState<
-    number | null
-  >(null);
+  const [lastAuthoritativeSyncAtMs, setLastAuthoritativeSyncAtMs] = useState<number | null>(null);
   const [localPartialSubmitted, setLocalPartialSubmitted] = useState(false);
   const [isPractice, setIsPractice] = useState(false);
 
@@ -119,9 +112,7 @@ export function useLiveAmrapSession(
 
   const session = channel.session;
   const segmentIndex = session?.segment_index ?? 0;
-  const workDurationSec = session
-    ? session.duration_minutes * 60
-    : timer.workDurationSec;
+  const workDurationSec = session ? session.duration_minutes * 60 : timer.workDurationSec;
   const setupDurationSec = getSetupDurationSec();
 
   useEffect(() => {
@@ -274,9 +265,7 @@ export function useLiveAmrapSession(
       pushInFlightRef.current = true;
 
       const startedAt =
-        timer.workStartedAtMs !== null
-          ? new Date(timer.workStartedAtMs).toISOString()
-          : null;
+        timer.workStartedAtMs !== null ? new Date(timer.workStartedAtMs).toISOString() : null;
 
       try {
         const result = await updateSessionState({
@@ -336,29 +325,24 @@ export function useLiveAmrapSession(
 
     prevSessionStateRef.current = sessionState;
     prevIsPausedRef.current = timer.isPaused;
-  }, [
-    isHost,
-    isPractice,
-    timer.phase,
-    timer.timeLeftSec,
-    timer.isPaused,
-    pushHostState,
-  ]);
+  }, [isHost, isPractice, timer.phase, timer.timeLeftSec, timer.isPaused, pushHostState]);
 
   const hostDisplayPhase = mapHostDisplayPhase(timer.phase, session?.state);
   const hostTimeLeftSec =
     timer.phase === 'idle' ? (session?.time_left_sec ?? setupDurationSec) : timer.timeLeftSec;
   const hostIsPaused = timer.phase === 'work' ? timer.isPaused : false;
   const hostElapsedSec =
-    timer.phase === 'idle' ? 0 : selectElapsedSec({
-      phase: timer.phase,
-      setupDurationSec: timer.setupDurationSec,
-      workDurationSec: timer.workDurationSec,
-      timeLeftSec: timer.timeLeftSec,
-      isPaused: timer.isPaused,
-      workStartedAtMs: timer.workStartedAtMs,
-      rounds: timer.rounds,
-    });
+    timer.phase === 'idle'
+      ? 0
+      : selectElapsedSec({
+          phase: timer.phase,
+          setupDurationSec: timer.setupDurationSec,
+          workDurationSec: timer.workDurationSec,
+          timeLeftSec: timer.timeLeftSec,
+          isPaused: timer.isPaused,
+          workStartedAtMs: timer.workStartedAtMs,
+          rounds: timer.rounds,
+        });
 
   const practicePhase = mapTimerPhaseToSessionState(timer.phase);
 
@@ -380,9 +364,8 @@ export function useLiveAmrapSession(
       ? hostIsPaused
       : (joinerDisplay?.isPaused ?? session?.is_paused ?? false);
 
-  const displayWorkStartedAtMs = isPractice || isHost
-    ? timer.workStartedAtMs
-    : (joinerDisplay?.workStartedAtMs ?? null);
+  const displayWorkStartedAtMs =
+    isPractice || isHost ? timer.workStartedAtMs : (joinerDisplay?.workStartedAtMs ?? null);
 
   const displayElapsedSec = isPractice
     ? hostElapsedSec
@@ -392,9 +375,7 @@ export function useLiveAmrapSession(
         ? selectElapsedSecFromDisplay(joinerDisplay)
         : 0;
 
-  const effectiveWorkDurationSec = isPractice
-    ? timer.workDurationSec
-    : workDurationSec;
+  const effectiveWorkDurationSec = isPractice ? timer.workDurationSec : workDurationSec;
 
   const workout = useMemo(() => session?.workout ?? [], [session?.workout]);
   const templateId = session?.template_id ?? null;
@@ -413,22 +394,13 @@ export function useLiveAmrapSession(
       return true;
     }
     return channel.segmentResults.some(
-      (result) =>
-        result.participant_id === participantId &&
-        result.segment_index === segmentIndex
+      (result) => result.participant_id === participantId && result.segment_index === segmentIndex
     );
-  }, [
-    localPartialSubmitted,
-    channel.segmentResults,
-    participantId,
-    segmentIndex,
-  ]);
+  }, [localPartialSubmitted, channel.segmentResults, participantId, segmentIndex]);
 
   const myRoundCount = useMemo(() => {
     return channel.rounds.filter(
-      (round) =>
-        round.participant_id === participantId &&
-        round.segment_index === segmentIndex
+      (round) => round.participant_id === participantId && round.segment_index === segmentIndex
     ).length;
   }, [channel.rounds, participantId, segmentIndex]);
 
@@ -458,8 +430,7 @@ export function useLiveAmrapSession(
   );
 
   const presence = useMemo(
-    () =>
-      buildPresenceList(channel.participants, channel.presenceByParticipantId),
+    () => buildPresenceList(channel.participants, channel.presenceByParticipantId),
     [channel.participants, channel.presenceByParticipantId]
   );
 
@@ -531,11 +502,7 @@ export function useLiveAmrapSession(
     if (!isPractice) {
       return;
     }
-    track(
-      'practice_finished',
-      { round_count: timer.rounds.length },
-      { sessionId, participantId }
-    );
+    track('practice_finished', { round_count: timer.rounds.length }, { sessionId, participantId });
     setIsPractice(false);
     timer.reset();
   }, [isPractice, timer, sessionId, participantId]);
@@ -690,7 +657,7 @@ export function useLiveAmrapSession(
     participantCount,
     segmentIndex,
     scheduledAt: session?.scheduled_at ?? null,
-    lobbyCountdownEndsAt: session?.lobby_countdown_ends_at ?? null,
+    rallyPointCountdownEndsAt: session?.rally_point_countdown_ends_at ?? null,
     repsPerRound,
     hasSubmittedPartialReps: isPractice ? true : hasSubmittedPartialReps,
     leaderboard,

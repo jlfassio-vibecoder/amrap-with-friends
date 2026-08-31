@@ -1,4 +1,4 @@
--- Manual verification for lobby RPCs (run in Supabase SQL editor as postgres / service role).
+-- Manual verification for rally point RPCs (run in Supabase SQL editor as postgres / service role).
 -- pgTAP / supabase local can be added later for automated SQL tests.
 
 -- 1) Create session

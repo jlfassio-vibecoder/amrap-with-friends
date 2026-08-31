@@ -23,7 +23,7 @@ import {
   type WorkoutTemplate,
 } from '@/data/workoutTemplates';
 import { fetchHostActiveSessionCount } from '@/lib/api/sessions';
-import { createLobbySession } from '@/lib/api/lobby';
+import { createRallyPointSession } from '@/lib/api/rallyPoint';
 import { SendWorkoutToSquad } from '@/components/session/SendWorkoutToSquad';
 import { getSupabaseConfigError } from '@/lib/supabase';
 import { track } from '@/lib/analytics/track';
@@ -306,7 +306,7 @@ export default function CreateSessionPage() {
           : workoutSource === 'coach' && selectedCoachWorkout
             ? `coach:${selectedCoachWorkout.id}`
             : undefined;
-      const result = await createLobbySession({
+      const result = await createRallyPointSession({
         nickname,
         durationMinutes,
         workout,

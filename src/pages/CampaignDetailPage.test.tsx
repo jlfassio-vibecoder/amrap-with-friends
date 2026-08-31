@@ -365,7 +365,7 @@ describe('CampaignDetailPage', () => {
     expect(screen.getByText('Host')).toBeTruthy();
   });
 
-  it('links a generated session to its staging area and leaves planned ones inert', async () => {
+  it('links a generated session to its rally point and leaves planned ones inert', async () => {
     fetchDetailMock.mockResolvedValue({
       data: detail({
         occurrences: [occurrence(1, 1, { status: 'generated', sessionId: 's1' }), occurrence(2, 1)],
@@ -374,9 +374,9 @@ describe('CampaignDetailPage', () => {
     });
     renderPage();
     await waitFor(() =>
-      expect(screen.getByRole('link', { name: 'Staging area open' })).toBeTruthy()
+      expect(screen.getByRole('link', { name: 'Rally point open' })).toBeTruthy()
     );
-    expect(screen.getByRole('link', { name: 'Staging area open' }).getAttribute('href')).toBe(
+    expect(screen.getByRole('link', { name: 'Rally point open' }).getAttribute('href')).toBe(
       '/session/s1'
     );
     expect(screen.queryByRole('link', { name: 'Planned' })).toBeNull();
@@ -714,7 +714,7 @@ describe('CampaignDetailPage', () => {
       await waitFor(() => expect(fetchDetailMock).toHaveBeenCalledTimes(2));
     });
 
-    it('does not offer to move a session whose staging area is open', async () => {
+    it('does not offer to move a session whose rally point is open', async () => {
       fetchDetailMock.mockResolvedValue({
         data: detail({
           occurrences: [

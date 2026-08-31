@@ -8,9 +8,8 @@ const fetchCurrentFeaturedWodMock = vi.fn();
 const trackMock = vi.fn();
 
 vi.mock('@/lib/api/featuredWod', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/api/featuredWod')>(
-    '@/lib/api/featuredWod'
-  );
+  const actual =
+    await vi.importActual<typeof import('@/lib/api/featuredWod')>('@/lib/api/featuredWod');
   return {
     ...actual,
     fetchCurrentFeaturedWod: (...args: unknown[]) => fetchCurrentFeaturedWodMock(...args),
@@ -99,14 +98,12 @@ describe('FeaturedWodCard', () => {
     expect(screen.getByText(/3 joining/)).toBeTruthy();
 
     const joinLink = screen.getByRole('link', { name: 'Join session' });
-    expect(joinLink.getAttribute('href')).toBe(
-      '/join?s=22222222-2222-4222-8222-222222222222'
-    );
+    expect(joinLink.getAttribute('href')).toBe('/join?s=22222222-2222-4222-8222-222222222222');
 
-    expect(trackMock).toHaveBeenCalledWith(
-      'featured_wod_viewed',
-      { joinable: true, state: 'waiting' }
-    );
+    expect(trackMock).toHaveBeenCalledWith('featured_wod_viewed', {
+      joinable: true,
+      state: 'waiting',
+    });
   });
 
   it('shows locked in-progress copy and hides join once work starts', async () => {
@@ -155,7 +152,7 @@ describe('FeaturedWodCard', () => {
       expect(screen.getByText('Sunrise AMRAP')).toBeTruthy();
     });
     expect(screen.queryByRole('link', { name: /Join/ })).toBeNull();
-    expect(screen.getByText('Staging area opens shortly before start.')).toBeTruthy();
+    expect(screen.getByText('Rally point opens shortly before start.')).toBeTruthy();
     expect(screen.queryByText(/joining/)).toBeNull();
   });
 
@@ -174,7 +171,7 @@ describe('FeaturedWodCard', () => {
       expect(screen.getByText('Sunrise AMRAP')).toBeTruthy();
     });
     expect(screen.queryByRole('link', { name: /Join/ })).toBeNull();
-    expect(screen.getByText('Staging area opens shortly before start.')).toBeTruthy();
+    expect(screen.getByText('Rally point opens shortly before start.')).toBeTruthy();
     expect(screen.getByText(/1 joining/)).toBeTruthy();
   });
 
@@ -249,7 +246,7 @@ describe('FeaturedWodCard', () => {
     renderCard();
 
     await vi.waitFor(() => {
-      expect(screen.getByText('Staging area opens shortly before start.')).toBeTruthy();
+      expect(screen.getByText('Rally point opens shortly before start.')).toBeTruthy();
     });
     expect(trackMock).toHaveBeenCalledWith('featured_wod_viewed', {
       joinable: false,
@@ -278,7 +275,9 @@ describe('FeaturedWodCard', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Download calendar invite' })).toBeTruthy();
     });
-    const googleLink = screen.getByRole('link', { name: 'Add to Google Calendar' }) as HTMLAnchorElement;
+    const googleLink = screen.getByRole('link', {
+      name: 'Add to Google Calendar',
+    }) as HTMLAnchorElement;
     expect(googleLink.href).toContain('calendar.google.com/calendar/render');
     expect(googleLink.href).toContain('Sunrise+AMRAP');
   });
@@ -289,10 +288,7 @@ describe('FeaturedWodCard', () => {
     const createObjectURL = vi.fn().mockReturnValue('blob:fake-url');
     const revokeObjectURL = vi.fn();
     const RealURL = globalThis.URL;
-    function PatchedURL(
-      this: unknown,
-      ...args: ConstructorParameters<typeof URL>
-    ): URL {
+    function PatchedURL(this: unknown, ...args: ConstructorParameters<typeof URL>): URL {
       return Reflect.construct(RealURL, args) as URL;
     }
     Object.setPrototypeOf(PatchedURL, RealURL);

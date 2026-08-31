@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   announceNextMission,
-  createLobbySession,
-  getLobby,
-  joinLobby,
-  leaveLobby,
-  passLobbyCommand,
-  startNextLobbySession,
-} from './lobby';
+  createRallyPointSession,
+  getRallyPoint,
+  joinRallyPoint,
+  leaveRallyPoint,
+  passRallyPointCommand,
+  startNextRallyPointSession,
+} from './rallyPoint';
 import { supabase } from '@/lib/supabase';
 import * as sessionIdentity from '@/lib/sessionIdentity';
-import * as lobbyIdentity from '@/lib/lobbyIdentity';
+import * as rallyPointIdentity from '@/lib/rallyPointIdentity';
 import { track } from '@/lib/analytics/track';
 
 vi.mock('@/lib/supabase', () => ({
@@ -20,11 +20,11 @@ vi.mock('@/lib/sessionIdentity', () => ({
   persistSessionIdentity: vi.fn(),
   clearStoredHostToken: vi.fn(),
 }));
-vi.mock('@/lib/lobbyIdentity', () => ({
-  persistLobbyIdentity: vi.fn(),
-  getStoredLobbyMemberId: vi.fn(() => 'member-1'),
-  getStoredLobbyNickname: vi.fn(() => 'Host'),
-  getStoredLobbySeatClaim: vi.fn(() => 'seat-secret'),
+vi.mock('@/lib/rallyPointIdentity', () => ({
+  persistRallyPointIdentity: vi.fn(),
+  getStoredRallyPointMemberId: vi.fn(() => 'member-1'),
+  getStoredRallyPointNickname: vi.fn(() => 'Host'),
+  getStoredRallyPointSeatClaim: vi.fn(() => 'seat-secret'),
 }));
 vi.mock('@/lib/analytics/track', () => ({ track: vi.fn() }));
 
@@ -32,21 +32,21 @@ const trackMock = vi.mocked(track);
 
 const rpcMock = vi.mocked(supabase.rpc);
 
-const LOBBY_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const RALLY_POINT_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
 const PARTICIPANT_ID = '22222222-2222-4222-8222-222222222222';
 const MEMBER_ID = '33333333-3333-4333-8333-333333333333';
 
-describe('lobby API', () => {
+describe('rally point API', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('createLobbySession persists lobby and session identity', async () => {
+  it('createRallyPointSession persists rallyPoint and session identity', async () => {
     rpcMock.mockResolvedValue({
       data: {
-        lobby_id: LOBBY_ID,
-        lobby_member_id: MEMBER_ID,
+        rally_point_id: RALLY_POINT_ID,
+        rally_point_member_id: MEMBER_ID,
         session_id: SESSION_ID,
         host_token: 'host-secret',
         participant_id: PARTICIPANT_ID,
@@ -58,48 +58,48 @@ describe('lobby API', () => {
       statusText: 'OK',
     } as never);
 
-    const result = await createLobbySession({
+    const result = await createRallyPointSession({
       nickname: 'Host',
       durationMinutes: 12,
       workout: [{ name: 'Burpees', target: 10 }],
     });
 
     expect(rpcMock).toHaveBeenCalledWith(
-      'create_lobby_session',
+      'create_rally_point_session',
       expect.objectContaining({
         p_duration_minutes: 12,
         p_nickname: 'Host',
       })
     );
-    expect(lobbyIdentity.persistLobbyIdentity).toHaveBeenCalledWith(LOBBY_ID, {
+    expect(rallyPointIdentity.persistRallyPointIdentity).toHaveBeenCalledWith(RALLY_POINT_ID, {
       memberId: MEMBER_ID,
       nickname: 'Host',
       sessionId: SESSION_ID,
     });
     expect(sessionIdentity.persistSessionIdentity).toHaveBeenCalled();
     expect(result.error).toBeNull();
-    expect(result.data?.lobbyId).toBe(LOBBY_ID);
+    expect(result.data?.rallyPointId).toBe(RALLY_POINT_ID);
   });
 
-  it('joinLobby maps not-found errors', async () => {
+  it('joinRallyPoint maps not-found errors', async () => {
     rpcMock.mockResolvedValue({
       data: null,
-      error: { message: 'Lobby not found' },
+      error: { message: 'Rally point not found' },
       count: null,
       status: 400,
       statusText: 'Bad Request',
     } as never);
 
-    const result = await joinLobby({ lobbyId: LOBBY_ID, nickname: 'Jules' });
+    const result = await joinRallyPoint({ rallyPointId: RALLY_POINT_ID, nickname: 'Jules' });
     expect(result.data).toBeNull();
-    expect(result.error?.message).toBe('Staging area not found.');
+    expect(result.error?.message).toBe('Rally point not found.');
   });
 
-  it('joinLobby persists rotated claim_token and session_state on reclaim', async () => {
+  it('joinRallyPoint persists rotated claim_token and session_state on reclaim', async () => {
     rpcMock.mockResolvedValue({
       data: {
-        lobby_id: LOBBY_ID,
-        lobby_member_id: MEMBER_ID,
+        rally_point_id: RALLY_POINT_ID,
+        rally_point_member_id: MEMBER_ID,
         host_user_id: 'user-1',
         status: 'open',
         active_session_id: SESSION_ID,
@@ -117,7 +117,7 @@ describe('lobby API', () => {
       statusText: 'OK',
     } as never);
 
-    const result = await joinLobby({ lobbyId: LOBBY_ID, nickname: 'Jules' });
+    const result = await joinRallyPoint({ rallyPointId: RALLY_POINT_ID, nickname: 'Jules' });
     expect(result.error).toBeNull();
     expect(result.data?.sessionState).toBe('waiting');
     expect(result.data?.claimToken).toBe('rotated-claim');
@@ -130,7 +130,7 @@ describe('lobby API', () => {
     );
   });
 
-  it('passLobbyCommand returns null host_token and clears the old host token', async () => {
+  it('passRallyPointCommand returns null host_token and clears the old host token', async () => {
     rpcMock.mockResolvedValue({
       data: {
         ok: true,
@@ -144,7 +144,10 @@ describe('lobby API', () => {
       statusText: 'OK',
     } as never);
 
-    const result = await passLobbyCommand({ lobbyId: LOBBY_ID, toUserId: 'user-2' });
+    const result = await passRallyPointCommand({
+      rallyPointId: RALLY_POINT_ID,
+      toUserId: 'user-2',
+    });
     expect(result.error).toBeNull();
     expect(result.data).toEqual({
       hostUserId: 'user-2',
@@ -154,27 +157,27 @@ describe('lobby API', () => {
     expect(sessionIdentity.clearStoredHostToken).toHaveBeenCalledWith(SESSION_ID);
   });
 
-  it('leaveLobby tracks lobby_closed when the last host leaves', async () => {
+  it('leaveRallyPoint tracks rally_point_closed when the last host leaves', async () => {
     rpcMock.mockResolvedValue({
-      data: { ok: true, lobby_id: LOBBY_ID, left: true, closed: true },
+      data: { ok: true, rally_point_id: RALLY_POINT_ID, left: true, closed: true },
       error: null,
       count: null,
       status: 200,
       statusText: 'OK',
     } as never);
 
-    const result = await leaveLobby(LOBBY_ID);
+    const result = await leaveRallyPoint(RALLY_POINT_ID);
     expect(result.error).toBeNull();
     expect(result.data).toEqual({ left: true, closed: true });
-    expect(trackMock).toHaveBeenCalledWith('lobby_closed', {});
-    expect(trackMock).not.toHaveBeenCalledWith('lobby_host_reassigned', {});
+    expect(trackMock).toHaveBeenCalledWith('rally_point_closed', {});
+    expect(trackMock).not.toHaveBeenCalledWith('rally_point_host_reassigned', {});
   });
 
-  it('leaveLobby tracks lobby_host_reassigned when host leaves a successor', async () => {
+  it('leaveRallyPoint tracks rally_point_host_reassigned when host leaves a successor', async () => {
     rpcMock.mockResolvedValue({
       data: {
         ok: true,
-        lobby_id: LOBBY_ID,
+        rally_point_id: RALLY_POINT_ID,
         left: true,
         was_host: true,
         host_user_id: 'user-2',
@@ -185,14 +188,14 @@ describe('lobby API', () => {
       statusText: 'OK',
     } as never);
 
-    const result = await leaveLobby(LOBBY_ID);
+    const result = await leaveRallyPoint(RALLY_POINT_ID);
     expect(result.error).toBeNull();
     expect(result.data?.left).toBe(true);
-    expect(trackMock).toHaveBeenCalledWith('lobby_host_reassigned', {});
-    expect(trackMock).not.toHaveBeenCalledWith('lobby_closed', {});
+    expect(trackMock).toHaveBeenCalledWith('rally_point_host_reassigned', {});
+    expect(trackMock).not.toHaveBeenCalledWith('rally_point_closed', {});
   });
 
-  it('startNextLobbySession seeds the new session identity', async () => {
+  it('startNextRallyPointSession seeds the new session identity', async () => {
     rpcMock.mockResolvedValue({
       data: {
         ok: true,
@@ -207,8 +210,8 @@ describe('lobby API', () => {
       statusText: 'OK',
     } as never);
 
-    const result = await startNextLobbySession({
-      lobbyId: LOBBY_ID,
+    const result = await startNextRallyPointSession({
+      rallyPointId: RALLY_POINT_ID,
       durationMinutes: 10,
       workout: [{ name: 'Air Squats', target: 15 }],
       templateId: 'blood-shunt-10',
@@ -216,7 +219,7 @@ describe('lobby API', () => {
     });
 
     expect(rpcMock).toHaveBeenCalledWith(
-      'start_next_lobby_session',
+      'start_next_rally_point_session',
       expect.objectContaining({
         p_template_id: 'blood-shunt-10',
         p_intensity_tier: 3,
@@ -234,12 +237,12 @@ describe('lobby API', () => {
     );
   });
 
-  describe('joinLobby guest seat', () => {
+  describe('joinRallyPoint guest seat', () => {
     function joinOk() {
       rpcMock.mockResolvedValue({
         data: {
-          lobby_id: LOBBY_ID,
-          lobby_member_id: MEMBER_ID,
+          rally_point_id: RALLY_POINT_ID,
+          rally_point_member_id: MEMBER_ID,
           host_user_id: 'user-1',
           status: 'open',
           active_session_id: SESSION_ID,
@@ -259,52 +262,56 @@ describe('lobby API', () => {
     }
 
     it('hands the stored member id back so a guest reclaims its seat', async () => {
-      vi.mocked(lobbyIdentity.getStoredLobbyMemberId).mockReturnValue(MEMBER_ID);
-      vi.mocked(lobbyIdentity.getStoredLobbySeatClaim).mockReturnValue('seat-secret');
+      vi.mocked(rallyPointIdentity.getStoredRallyPointMemberId).mockReturnValue(MEMBER_ID);
+      vi.mocked(rallyPointIdentity.getStoredRallyPointSeatClaim).mockReturnValue('seat-secret');
       joinOk();
 
-      await joinLobby({ lobbyId: LOBBY_ID, nickname: 'Guesty' });
+      await joinRallyPoint({ rallyPointId: RALLY_POINT_ID, nickname: 'Guesty' });
 
-      expect(rpcMock).toHaveBeenCalledWith('join_lobby', {
-        p_lobby_id: LOBBY_ID,
+      expect(rpcMock).toHaveBeenCalledWith('join_rally_point', {
+        p_rally_point_id: RALLY_POINT_ID,
         p_nickname: 'Guesty',
-        p_lobby_member_id: MEMBER_ID,
+        p_rally_point_member_id: MEMBER_ID,
         p_seat_claim: 'seat-secret',
       });
     });
 
     it('sends null on a first visit, so a new guest gets a fresh seat', async () => {
-      vi.mocked(lobbyIdentity.getStoredLobbyMemberId).mockReturnValue(null);
-      vi.mocked(lobbyIdentity.getStoredLobbySeatClaim).mockReturnValue(null);
+      vi.mocked(rallyPointIdentity.getStoredRallyPointMemberId).mockReturnValue(null);
+      vi.mocked(rallyPointIdentity.getStoredRallyPointSeatClaim).mockReturnValue(null);
       joinOk();
 
-      await joinLobby({ lobbyId: LOBBY_ID, nickname: 'Newcomer' });
+      await joinRallyPoint({ rallyPointId: RALLY_POINT_ID, nickname: 'Newcomer' });
 
-      expect(rpcMock).toHaveBeenCalledWith('join_lobby', {
-        p_lobby_id: LOBBY_ID,
+      expect(rpcMock).toHaveBeenCalledWith('join_rally_point', {
+        p_rally_point_id: RALLY_POINT_ID,
         p_nickname: 'Newcomer',
-        p_lobby_member_id: null,
+        p_rally_point_member_id: null,
         p_seat_claim: null,
       });
     });
 
     it('lets an explicit null override the stored id', async () => {
-      vi.mocked(lobbyIdentity.getStoredLobbyMemberId).mockReturnValue(MEMBER_ID);
+      vi.mocked(rallyPointIdentity.getStoredRallyPointMemberId).mockReturnValue(MEMBER_ID);
       joinOk();
 
-      await joinLobby({ lobbyId: LOBBY_ID, nickname: 'Guesty', lobbyMemberId: null });
+      await joinRallyPoint({
+        rallyPointId: RALLY_POINT_ID,
+        nickname: 'Guesty',
+        rallyPointMemberId: null,
+      });
 
       expect(rpcMock).toHaveBeenCalledWith(
-        'join_lobby',
-        expect.objectContaining({ p_lobby_member_id: null, p_seat_claim: null })
+        'join_rally_point',
+        expect.objectContaining({ p_rally_point_member_id: null, p_seat_claim: null })
       );
     });
   });
 
-  describe('leaveLobby guest seat', () => {
+  describe('leaveRallyPoint guest seat', () => {
     function leaveOk() {
       rpcMock.mockResolvedValue({
-        data: { ok: true, lobby_id: LOBBY_ID, left: true },
+        data: { ok: true, rally_point_id: RALLY_POINT_ID, left: true },
         error: null,
         count: null,
         status: 200,
@@ -313,42 +320,42 @@ describe('lobby API', () => {
     }
 
     it('hands the stored member id back so a guest can leave', async () => {
-      vi.mocked(lobbyIdentity.getStoredLobbyMemberId).mockReturnValue(MEMBER_ID);
-      vi.mocked(lobbyIdentity.getStoredLobbySeatClaim).mockReturnValue('seat-secret');
+      vi.mocked(rallyPointIdentity.getStoredRallyPointMemberId).mockReturnValue(MEMBER_ID);
+      vi.mocked(rallyPointIdentity.getStoredRallyPointSeatClaim).mockReturnValue('seat-secret');
       leaveOk();
 
-      await leaveLobby(LOBBY_ID);
+      await leaveRallyPoint(RALLY_POINT_ID);
 
-      expect(rpcMock).toHaveBeenCalledWith('leave_lobby', {
-        p_lobby_id: LOBBY_ID,
-        p_lobby_member_id: MEMBER_ID,
+      expect(rpcMock).toHaveBeenCalledWith('leave_rally_point', {
+        p_rally_point_id: RALLY_POINT_ID,
+        p_rally_point_member_id: MEMBER_ID,
         p_seat_claim: 'seat-secret',
       });
     });
 
     it('sends null when there is no stored seat', async () => {
-      vi.mocked(lobbyIdentity.getStoredLobbyMemberId).mockReturnValue(null);
-      vi.mocked(lobbyIdentity.getStoredLobbySeatClaim).mockReturnValue(null);
+      vi.mocked(rallyPointIdentity.getStoredRallyPointMemberId).mockReturnValue(null);
+      vi.mocked(rallyPointIdentity.getStoredRallyPointSeatClaim).mockReturnValue(null);
       leaveOk();
 
-      await leaveLobby(LOBBY_ID);
+      await leaveRallyPoint(RALLY_POINT_ID);
 
       expect(rpcMock).toHaveBeenCalledWith(
-        'leave_lobby',
-        expect.objectContaining({ p_lobby_member_id: null, p_seat_claim: null })
+        'leave_rally_point',
+        expect.objectContaining({ p_rally_point_member_id: null, p_seat_claim: null })
       );
     });
 
     it('reports a refusal instead of pretending the seat was released', async () => {
       rpcMock.mockResolvedValue({
         data: null,
-        error: { message: 'Lobby not found' },
+        error: { message: 'Rally point not found' },
         count: null,
         status: 400,
         statusText: 'Bad Request',
       } as never);
 
-      const result = await leaveLobby(LOBBY_ID);
+      const result = await leaveRallyPoint(RALLY_POINT_ID);
 
       expect(result.data).toBeNull();
       expect(result.error).not.toBeNull();
@@ -360,7 +367,7 @@ describe('lobby API', () => {
       rpcMock.mockResolvedValue({
         data: {
           ok: true,
-          lobby_id: LOBBY_ID,
+          rally_point_id: RALLY_POINT_ID,
           next_mission_pending_at: '2026-09-01T12:00:00Z',
         },
         error: null,
@@ -369,20 +376,22 @@ describe('lobby API', () => {
         statusText: 'OK',
       } as never);
 
-      const result = await announceNextMission(LOBBY_ID);
+      const result = await announceNextMission(RALLY_POINT_ID);
 
-      expect(rpcMock).toHaveBeenCalledWith('announce_next_mission', { p_lobby_id: LOBBY_ID });
+      expect(rpcMock).toHaveBeenCalledWith('announce_next_mission', {
+        p_rally_point_id: RALLY_POINT_ID,
+      });
       expect(result.error).toBeNull();
       expect(result.data?.nextMissionPendingAt).toBe('2026-09-01T12:00:00Z');
     });
   });
 
-  describe('getLobby', () => {
+  describe('getRallyPoint', () => {
     it('parses next_mission_pending_at', async () => {
       rpcMock.mockResolvedValue({
         data: {
           ok: true,
-          lobby_id: LOBBY_ID,
+          rally_point_id: RALLY_POINT_ID,
           host_user_id: 'user-1',
           active_session_id: SESSION_ID,
           active_session_state: 'finished',
@@ -398,7 +407,7 @@ describe('lobby API', () => {
         statusText: 'OK',
       } as never);
 
-      const result = await getLobby(LOBBY_ID);
+      const result = await getRallyPoint(RALLY_POINT_ID);
 
       expect(result.error).toBeNull();
       expect(result.data?.nextMissionPendingAt).toBe('2026-09-01T12:00:00Z');

@@ -1,8 +1,8 @@
-import type { LobbyMember } from '@/lib/api/lobby';
+import type { RallyPointMember } from '@/lib/api/rallyPoint';
 
 /** Pass Command targets: active claimed crewmate who is not the current user. */
-export function canPassLobbyCommand(
-  member: Pick<LobbyMember, 'status' | 'userId'>,
+export function canPassRallyPointCommand(
+  member: Pick<RallyPointMember, 'status' | 'userId'>,
   selfUserId: string | null | undefined
 ): boolean {
   return (

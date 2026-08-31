@@ -41,7 +41,7 @@ describe('sessionChannelUtils', () => {
     expect(row?.state).toBe('waiting');
     expect(row?.duration_minutes).toBe(15);
     expect(row?.scheduled_at).toBeNull();
-    expect(row?.lobby_countdown_ends_at).toBeNull();
+    expect(row?.rally_point_countdown_ends_at).toBeNull();
     expect(row?.is_featured).toBe(false);
   });
 
@@ -60,7 +60,7 @@ describe('sessionChannelUtils', () => {
     });
 
     expect(row?.scheduled_at).toBe('2026-08-25T16:30:00.000Z');
-    expect(row?.lobby_countdown_ends_at).toBeNull();
+    expect(row?.rally_point_countdown_ends_at).toBeNull();
   });
 
   it('parseSessionRow keeps is_featured when present', () => {
@@ -81,7 +81,7 @@ describe('sessionChannelUtils', () => {
     expect(row?.is_featured).toBe(true);
   });
 
-  it('parseSessionRow keeps lobby_countdown_ends_at when present', () => {
+  it('parseSessionRow keeps rally_point_countdown_ends_at when present', () => {
     const row = parseSessionRow({
       id: SESSION_ID,
       duration_minutes: 15,
@@ -91,12 +91,12 @@ describe('sessionChannelUtils', () => {
       is_paused: false,
       started_at: null,
       scheduled_at: null,
-      lobby_countdown_ends_at: '2026-08-25T12:05:00.000Z',
+      rally_point_countdown_ends_at: '2026-08-25T12:05:00.000Z',
       segment_index: 0,
       created_at: '2026-08-22T12:00:00.000Z',
     });
 
-    expect(row?.lobby_countdown_ends_at).toBe('2026-08-25T12:05:00.000Z');
+    expect(row?.rally_point_countdown_ends_at).toBe('2026-08-25T12:05:00.000Z');
   });
 
   it('mergePresenceState extracts online participants', () => {
@@ -185,16 +185,7 @@ describe('sessionChannelUtils', () => {
       })!,
     ];
 
-    const leaderboard = buildLeaderboard(
-      participants,
-      rounds,
-      [],
-      0,
-      HOST_ID,
-      WORKOUT,
-      5,
-      'work'
-    );
+    const leaderboard = buildLeaderboard(participants, rounds, [], 0, HOST_ID, WORKOUT, 5, 'work');
     expect(leaderboard[0].participantId).toBe(HOST_ID);
     expect(leaderboard[0].roundCount).toBe(2);
     expect(leaderboard[0].baseScore).toBe(40);

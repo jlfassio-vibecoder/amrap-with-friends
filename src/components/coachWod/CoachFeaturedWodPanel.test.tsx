@@ -25,9 +25,8 @@ vi.mock('@/lib/api/featuredWodSchedule', async () => {
 });
 
 vi.mock('@/lib/api/featuredWod', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/api/featuredWod')>(
-    '@/lib/api/featuredWod'
-  );
+  const actual =
+    await vi.importActual<typeof import('@/lib/api/featuredWod')>('@/lib/api/featuredWod');
   return {
     ...actual,
     fetchCurrentFeaturedWod: (...args: unknown[]) => fetchCurrentFeaturedWodMock(...args),
@@ -172,8 +171,8 @@ describe('CoachFeaturedWodPanel attendee list', () => {
   });
 });
 
-describe('CoachFeaturedWodPanel join staging', () => {
-  it('hides Join staging more than 15 minutes before start', async () => {
+describe('CoachFeaturedWodPanel join rally point', () => {
+  it('hides Join rally point more than 15 minutes before start', async () => {
     fetchCurrentFeaturedWodMock.mockResolvedValue({
       data: {
         workoutName: 'Sunrise AMRAP',
@@ -195,10 +194,10 @@ describe('CoachFeaturedWodPanel join staging', () => {
     await waitFor(() => {
       expect(fetchCurrentFeaturedWodMock).toHaveBeenCalled();
     });
-    expect(screen.queryByRole('link', { name: /Join staging/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Join rally point/i })).toBeNull();
   });
 
-  it('shows Join staging within 15 minutes of start', async () => {
+  it('shows Join rally point within 15 minutes of start', async () => {
     fetchCurrentFeaturedWodMock.mockResolvedValue({
       data: {
         workoutName: 'Sunrise AMRAP',
@@ -218,9 +217,9 @@ describe('CoachFeaturedWodPanel join staging', () => {
     await renderWithExistingSchedule();
 
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: /Join staging/i })).toBeTruthy();
+      expect(screen.getByRole('link', { name: /Join rally point/i })).toBeTruthy();
     });
-    expect(screen.getByRole('link', { name: /Join staging/i }).getAttribute('href')).toBe(
+    expect(screen.getByRole('link', { name: /Join rally point/i }).getAttribute('href')).toBe(
       '/session/session-1'
     );
   });

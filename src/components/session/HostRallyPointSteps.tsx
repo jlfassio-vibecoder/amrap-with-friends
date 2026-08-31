@@ -1,6 +1,6 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
-import { LOBBY_COUNTDOWN_MAX_SECONDS } from '@/lib/session/lobbyCountdown';
-import { setLobbyCountdown } from '@/lib/api/sessionSync';
+import { RALLY_POINT_COUNTDOWN_MAX_SECONDS } from '@/lib/session/rallyPointCountdown';
+import { setRallyPointCountdown } from '@/lib/api/sessionSync';
 import { getStoredHostToken } from '@/lib/sessionIdentity';
 import { GhostPicker } from '@/components/GhostPicker';
 import { useCopySessionInvite } from '@/components/session/useCopySessionInvite';
@@ -16,9 +16,9 @@ const PRESET_SECONDS = [
 
 type ExpandedStep = 0 | 1 | 2 | null;
 
-export interface HostStagingStepsProps {
+export interface HostRallyPointStepsProps {
   sessionId: string;
-  lobbyId?: string | null;
+  rallyPointId?: string | null;
   countdownArmed: boolean;
   actionsEnabled?: boolean;
   onAudioUnlock?: () => void;
@@ -34,9 +34,9 @@ function durationSummaryLabel(seconds: number): string {
   return preset ? preset.label : `${seconds} sec`;
 }
 
-export function HostStagingSteps({
+export function HostRallyPointSteps({
   sessionId,
-  lobbyId = null,
+  rallyPointId = null,
   countdownArmed,
   actionsEnabled = true,
   onAudioUnlock,
@@ -45,11 +45,9 @@ export function HostStagingSteps({
   durationMinutes,
   ghostSelection,
   onGhostChange,
-}: HostStagingStepsProps) {
+}: HostRallyPointStepsProps) {
   const baseId = useId();
-  const [expandedStep, setExpandedStep] = useState<ExpandedStep>(() =>
-    countdownArmed ? null : 0
-  );
+  const [expandedStep, setExpandedStep] = useState<ExpandedStep>(() => (countdownArmed ? null : 0));
   const [selectedSeconds, setSelectedSeconds] = useState(300);
   const [customSeconds, setCustomSeconds] = useState('300');
   const [busy, setBusy] = useState(false);
@@ -61,7 +59,7 @@ export function HostStagingSteps({
     error: copyError,
     copyInvite,
     copySessionId,
-  } = useCopySessionInvite(sessionId, lobbyId, ogCardFromSex(profile?.biologicalSex));
+  } = useCopySessionInvite(sessionId, rallyPointId, ogCardFromSex(profile?.biologicalSex));
 
   useEffect(() => {
     if (countdownArmed) {
@@ -81,11 +79,7 @@ export function HostStagingSteps({
   function applyCustomSeconds(raw: string) {
     setCustomSeconds(raw);
     const parsed = Number(raw);
-    if (
-      Number.isInteger(parsed) &&
-      parsed > 0 &&
-      parsed <= LOBBY_COUNTDOWN_MAX_SECONDS
-    ) {
+    if (Number.isInteger(parsed) && parsed > 0 && parsed <= RALLY_POINT_COUNTDOWN_MAX_SECONDS) {
       setSelectedSeconds(parsed);
     }
   }
@@ -100,7 +94,7 @@ export function HostStagingSteps({
     setBusy(true);
     setEngageError(null);
     try {
-      const result = await setLobbyCountdown({
+      const result = await setRallyPointCountdown({
         sessionId,
         hostToken,
         seconds: selectedSeconds,
@@ -113,9 +107,7 @@ export function HostStagingSteps({
     }
   }
 
-  const pacerSummary = ghostSelection?.label?.trim()
-    ? ghostSelection.label
-    : 'None ›';
+  const pacerSummary = ghostSelection?.label?.trim() ? ghostSelection.label : 'None ›';
 
   const steps: Array<{
     index: 0 | 1 | 2;
@@ -131,7 +123,7 @@ export function HostStagingSteps({
       walkthroughId: 't-minus',
       visible: true,
       summary: (
-        <span className="text-xs text-muted tabular-nums">
+        <span className="text-xs tabular-nums text-muted">
           {durationSummaryLabel(selectedSeconds)}
         </span>
       ),
@@ -158,7 +150,7 @@ export function HostStagingSteps({
                 className="input-field py-1 text-sm tabular-nums"
                 type="number"
                 min={1}
-                max={LOBBY_COUNTDOWN_MAX_SECONDS}
+                max={RALLY_POINT_COUNTDOWN_MAX_SECONDS}
                 aria-label="Custom seconds (1–600)"
                 placeholder="sec"
                 value={customSeconds}
@@ -174,7 +166,7 @@ export function HostStagingSteps({
               !actionsEnabled ||
               !Number.isInteger(selectedSeconds) ||
               selectedSeconds <= 0 ||
-              selectedSeconds > LOBBY_COUNTDOWN_MAX_SECONDS
+              selectedSeconds > RALLY_POINT_COUNTDOWN_MAX_SECONDS
             }
             onClick={() => void engageClock()}
           >
@@ -232,9 +224,7 @@ export function HostStagingSteps({
       label: 'Select pacer',
       walkthroughId: 'pacer',
       visible: showPacer && Boolean(templateId),
-      summary: (
-        <span className="max-w-[12rem] truncate text-xs text-muted">{pacerSummary}</span>
-      ),
+      summary: <span className="max-w-[12rem] truncate text-xs text-muted">{pacerSummary}</span>,
       body:
         showPacer && templateId ? (
           <div className="pb-3">
@@ -254,7 +244,7 @@ export function HostStagingSteps({
   const visibleSteps = steps.filter((step) => step.visible);
 
   return (
-    <div className="rounded-card border border-border bg-page/40">
+    <div className="bg-page/40 rounded-card border border-border">
       {visibleSteps.map((step, order) => {
         const expanded = expandedStep === step.index;
         const panelId = `${baseId}-panel-${step.index}`;

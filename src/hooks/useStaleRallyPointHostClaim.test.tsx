@@ -1,16 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { useStaleLobbyHostClaim } from './useStaleLobbyHostClaim';
+import { useStaleRallyPointHostClaim } from './useStaleRallyPointHostClaim';
 
 const claimMock = vi.fn();
 
-vi.mock('@/lib/api/lobby', () => ({
-  claimLobbyCommandIfStale: (...args: unknown[]) => claimMock(...args),
+vi.mock('@/lib/api/rallyPoint', () => ({
+  claimRallyPointCommandIfStale: (...args: unknown[]) => claimMock(...args),
 }));
 
-const LOBBY_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const RALLY_POINT_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
-describe('useStaleLobbyHostClaim', () => {
+describe('useStaleRallyPointHostClaim', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
@@ -33,8 +33,8 @@ describe('useStaleLobbyHostClaim', () => {
   it('attempts immediately and on interval without resetting when presence map identity changes', async () => {
     const { rerender } = renderHook(
       (props: { presence: Record<string, { nickname: string }> }) =>
-        useStaleLobbyHostClaim({
-          lobbyId: LOBBY_ID,
+        useStaleRallyPointHostClaim({
+          rallyPointId: RALLY_POINT_ID,
           hostUserId: 'host-1',
           userId: 'user-2',
           hostMemberId: 'member-host',
@@ -79,8 +79,8 @@ describe('useStaleLobbyHostClaim', () => {
     });
 
     renderHook(() =>
-      useStaleLobbyHostClaim({
-        lobbyId: LOBBY_ID,
+      useStaleRallyPointHostClaim({
+        rallyPointId: RALLY_POINT_ID,
         hostUserId: 'host-1',
         userId: 'user-2',
         enabled: true,
@@ -99,8 +99,8 @@ describe('useStaleLobbyHostClaim', () => {
 
   it('does not poll when the viewer is already host', async () => {
     renderHook(() =>
-      useStaleLobbyHostClaim({
-        lobbyId: LOBBY_ID,
+      useStaleRallyPointHostClaim({
+        rallyPointId: RALLY_POINT_ID,
         hostUserId: 'user-2',
         userId: 'user-2',
         enabled: true,

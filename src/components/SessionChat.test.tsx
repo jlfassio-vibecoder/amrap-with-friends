@@ -6,9 +6,8 @@ import type { MessageRow } from '@/lib/sessionSync/types';
 const sendMessageMock = vi.fn();
 
 vi.mock('@/lib/api/sendMessage', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/api/sendMessage')>(
-    '@/lib/api/sendMessage'
-  );
+  const actual =
+    await vi.importActual<typeof import('@/lib/api/sendMessage')>('@/lib/api/sendMessage');
   return {
     ...actual,
     sendMessage: (...args: unknown[]) => sendMessageMock(...args),
@@ -18,12 +17,7 @@ vi.mock('@/lib/api/sendMessage', async () => {
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
 const PARTICIPANT_ID = '22222222-2222-4222-8222-222222222222';
 
-function buildMessage(
-  id: string,
-  body: string,
-  createdAt: string,
-  nickname = 'Host'
-): MessageRow {
+function buildMessage(id: string, body: string, createdAt: string, nickname = 'Host'): MessageRow {
   return {
     id,
     session_id: SESSION_ID,
@@ -87,7 +81,7 @@ describe('SessionChat', () => {
         sessionId: SESSION_ID,
         participantId: PARTICIPANT_ID,
         nickname: 'Host',
-        body: 'Hello lobby',
+        body: 'Hello rally point',
         segmentIndex: 0,
         createdAt: '2026-08-25T12:02:00.000Z',
       },
@@ -105,7 +99,7 @@ describe('SessionChat', () => {
     );
 
     fireEvent.change(screen.getByPlaceholderText('Type a message…'), {
-      target: { value: 'Hello lobby' },
+      target: { value: 'Hello rally point' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 
@@ -114,11 +108,9 @@ describe('SessionChat', () => {
         sessionId: SESSION_ID,
         participantId: PARTICIPANT_ID,
         claimToken: 'claim-token',
-        body: 'Hello lobby',
+        body: 'Hello rally point',
       });
     });
-    expect(
-      (screen.getByPlaceholderText('Type a message…') as HTMLInputElement).value
-    ).toBe('');
+    expect((screen.getByPlaceholderText('Type a message…') as HTMLInputElement).value).toBe('');
   });
 });

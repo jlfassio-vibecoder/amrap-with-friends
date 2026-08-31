@@ -15,13 +15,13 @@ The dev server runs at [http://localhost:5173](http://localhost:5173).
 
 ### Other scripts
 
-| Command | Description |
-|---|---|
-| `npm run build` | Type-check and production build |
-| `npm run lint` | ESLint |
-| `npm run typecheck` | TypeScript project references build |
-| `npm run test` | Vitest (single run) |
-| `npm run format` | Prettier |
+| Command                       | Description                                                                |
+| ----------------------------- | -------------------------------------------------------------------------- |
+| `npm run build`               | Type-check and production build                                            |
+| `npm run lint`                | ESLint                                                                     |
+| `npm run typecheck`           | TypeScript project references build                                        |
+| `npm run test`                | Vitest (single run)                                                        |
+| `npm run format`              | Prettier                                                                   |
 | `npm run seed:exercise-media` | Manual: seed empty `exercise-media/{id}/.keep` folders in Supabase Storage |
 
 ### Seed exercise-media folders (manual)
@@ -37,9 +37,9 @@ Upload sequence stills as **`{exerciseId}/sequence.jpeg`** or **`{exerciseId}/se
 
 ## Supabase migrations
 
-Lobby schema and RPCs live in [`supabase/migrations/`](supabase/migrations/). Apply with the Supabase CLI (`supabase db push`) or paste into the Supabase SQL editor. Use a service-role key only on your machine for admin tasks—never in the client or `.env` bundled with the app.
+Rally point schema and RPCs live in [`supabase/migrations/`](supabase/migrations/). Apply with the Supabase CLI (`supabase db push`) or paste into the Supabase SQL editor. Use a service-role key only on your machine for admin tasks—never in the client or `.env` bundled with the app.
 
-Manual RPC checks: [`supabase/scripts/verify_lobby_rpc.sql`](supabase/scripts/verify_lobby_rpc.sql).
+Manual RPC checks: [`supabase/scripts/verify_rally_point_rpc.sql`](supabase/scripts/verify_rally_point_rpc.sql).
 
 ### Verifying a migration locally
 

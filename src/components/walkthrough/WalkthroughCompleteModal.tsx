@@ -27,18 +27,13 @@ export function WalkthroughCompleteModal({
           Let&apos;s do this!
         </h2>
         <p className="text-sm leading-relaxed text-secondary">
-          You know the staging area. When you are ready, start the session or
-          wait for the host.
+          You know the rally point. When you are ready, start the session or wait for the host.
         </p>
         <div className="space-y-2">
           <button type="button" className="btn-primary w-full" onClick={onContinue}>
             Let&apos;s do this!
           </button>
-          <button
-            type="button"
-            className="btn-outline w-full"
-            onClick={onNeverShowAgain}
-          >
+          <button type="button" className="btn-outline w-full" onClick={onNeverShowAgain}>
             Never show this again
           </button>
         </div>

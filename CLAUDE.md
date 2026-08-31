@@ -24,17 +24,17 @@ opaque verb for one action. Same brand, opposite sides of the line.
 
 ### The nouns
 
-| Term             | Means                                                                                   | Where it belongs                                                        |
-| ---------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| **Session**      | One AMRAP workout, start to finish. The structural noun.                                | Buttons, page titles, routes — "Create session", `/session/:id`         |
-| **Mission**      | That same workout's objective. The editorial noun.                                      | Prose and headings only — "Today's mission", "Mission in progress"      |
-| **Campaign**     | A multi-week programme (2–12 weeks, 1–5 sessions a week) with an end goal.              | Buttons, page titles, routes. Always with its length: "8-week campaign" |
-| **Squad**        | A persistent friends list for inviting people to train together. Not a session.         | Buttons, page titles, routes, nav — "Your squad", `/squad`              |
-| **Staging area** | The pre-workout screen where the crew gathers before the clock starts.                  | Page title and any prose about that screen                              |
-| **Rally link**   | The shared invite URL for a session. Never a squad invite.                              | The copy button, and prose about sharing                                |
-| **Benchmark**    | A campaign's opening session. Its score is the number the campaign is measured against. | The badge on that session, and prose about it                           |
-| **Retest**       | The same workout as the benchmark, run again later in the campaign.                     | The badge on those sessions                                             |
-| **Easy day**     | The light session before a retest, so the test measures fitness not fatigue.            | The badge on that session                                               |
+| Term            | Means                                                                                              | Where it belongs                                                        |
+| --------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| **Session**     | One AMRAP workout, start to finish. The structural noun.                                           | Buttons, page titles, routes — "Create session", `/session/:id`         |
+| **Mission**     | That same workout's objective. The editorial noun.                                                 | Prose and headings only — "Today's mission", "Mission in progress"      |
+| **Campaign**    | A multi-week programme (2–12 weeks, 1–5 sessions a week) with an end goal.                         | Buttons, page titles, routes. Always with its length: "8-week campaign" |
+| **Squad**       | A persistent friends list for inviting people to train together. Not a session.                    | Buttons, page titles, routes, nav — "Your squad", `/squad`              |
+| **Rally point** | The pre-workout screen the rally link opens to, where the crew gathers and the mission is started. | Page title, buttons, routes — "Rally point", `/rally-point/:id`         |
+| **Rally link**  | The shared invite URL that opens a rally point. Never a squad invite.                              | The copy button, and prose about sharing                                |
+| **Benchmark**   | A campaign's opening session. Its score is the number the campaign is measured against.            | The badge on that session, and prose about it                           |
+| **Retest**      | The same workout as the benchmark, run again later in the campaign.                                | The badge on those sessions                                             |
+| **Easy day**    | The light session before a retest, so the test measures fitness not fatigue.                       | The badge on that session                                               |
 
 **Benchmark, retest and easy day are the only session badges.** Everything else
 in a campaign is just a session and gets no label — a badge on every row labels
@@ -52,17 +52,36 @@ because what the user is making is a session.
 carries a sense of length on its own. Write "8-week campaign", never a bare
 "Campaign" on a button.
 
+**Rally point is one word for one screen, all the way down.** It used to be
+three: `lobby` in the data layer, "Staging area" in the UI, and "Rally point"
+for the invite you had already been told to call a rally link. The rally link
+now opens the rally point, and the schema says `rally_points` — so there is no
+translation step left to get wrong. "Staging" is retired: staging is what the
+My sessions page does, not what this screen is.
+
 ### UI names that deliberately differ from the data layer
 
 Do not "fix" these. Renaming a shipped RPC or column is migration risk for zero
 user-visible benefit.
 
-| Data layer                                                  | UI                                        |
-| ----------------------------------------------------------- | ----------------------------------------- |
-| `lobby` (`initial_lobby_schema.sql`, `lobby_countdown.sql`) | "Staging area"                            |
-| `featured_wod_*`, `current_featured_wod()`                  | "Today's mission"                         |
-| `sessions.state = 'work'`                                   | "Live"                                    |
-| `rallySchedule.ts`, `buildRallyInviteUrl`, `RallyDay`       | (identifiers only — users never see them) |
+| Data layer                                            | UI                                        |
+| ----------------------------------------------------- | ----------------------------------------- |
+| `featured_wod_*`, `current_featured_wod()`            | "Today's mission"                         |
+| `sessions.state = 'work'`                             | "Live"                                    |
+| `rallySchedule.ts`, `buildRallyInviteUrl`, `RallyDay` | (identifiers only — users never see them) |
+
+`lobby` used to head that table. It was paid off in
+`20260901390000_rally_point_rename.sql`, which renamed the tables, columns and
+RPCs onto `rally_point` — cheap while the app was pre-release with three
+unpaid users, and the reason the exception no longer needs to exist. The
+migration files written before it keep `lobby` in their **filenames**, which is
+correct: a migration is a dated record of what ran, not a description of the
+current schema.
+
+Two `rally` identifiers now sit side by side and mean different things.
+`buildRallyInviteUrl(sessionId)` builds the rally link for one session;
+`buildRallyPointInviteUrl(rallyPointId)` builds it for a rally point that
+outlives the session. Both are rally links to the user.
 
 `WOD` is CrossFit jargon: a newcomer cannot expand it. It is fine in coach-facing
 tooling (the WOD Builder is used by coaches who know the term) and in internal
@@ -75,17 +94,22 @@ Kept here so they don't creep back in.
 | Was                                       | Now                                         |
 | ----------------------------------------- | ------------------------------------------- |
 | Engage staging area countdown timer       | Start countdown                             |
+| Staging area (page title)                 | Rally point                                 |
+| Close staging area / Leave staging        | Close rally point / Leave rally point       |
+| Open staging area / Schedule staging      | Open rally point / Schedule rally point     |
+| Enter staging area / Join staging         | Enter rally point / Join rally point        |
 | LINK SECURED / ID SECURED                 | LINK COPIED / ID COPIED                     |
 | Breach lobby / Breaching lobby            | Join session / Joining                      |
 | Callsign (as a field label)               | Your name                                   |
-| Rally point                               | You've been invited                         |
+| Rally point (as the invite-landing title) | You've been invited                         |
 | Featured WOD (on the landing card)        | Today's mission                             |
-| Lobby opens shortly before start          | Staging area opens shortly before start     |
+| Lobby opens shortly before start          | Rally point opens shortly before start      |
 | File the dossier / Your dossier was saved | Save profile / Your profile was saved       |
 | Intake / Dossier (page titles)            | Your profile / Athlete details              |
 | Enter temporary callsign (field label)    | Your name                                   |
 | Scheduled rallies                         | Scheduled sessions                          |
 | Return to a lobby you scheduled for later | Return to a session you scheduled for later |
+| Staging area not found                    | Rally point not found                       |
 | T-Minus console                           | Set the countdown                           |
 | Work (phase label)                        | Live                                        |
 

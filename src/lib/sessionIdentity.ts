@@ -148,7 +148,7 @@ export function clearStoredGhostSelection(sessionId: string): void {
   }
 }
 
-/** Lobby display name from email local-part (max 50). */
+/** RallyPoint display name from email local-part (max 50). */
 export function callsignFromEmail(email: string | null | undefined): string | null {
   if (!email) {
     return null;

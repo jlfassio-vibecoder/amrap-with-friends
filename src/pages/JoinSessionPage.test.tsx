@@ -6,7 +6,7 @@ import JoinSessionPage from './JoinSessionPage';
 import { SESSION_LOCKED_OR_INVALID, SESSION_RALLY_DEPARTED } from '@/lib/api/sessions';
 
 const joinSessionMock = vi.fn();
-const joinLobbyMock = vi.fn();
+const joinRallyPointMock = vi.fn();
 const resumeSessionIdentityMock = vi.fn();
 const authState = vi.hoisted(() => ({
   isAuthenticated: false,
@@ -22,11 +22,12 @@ vi.mock('@/lib/api/sessions', async () => {
   };
 });
 
-vi.mock('@/lib/api/lobby', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/api/lobby')>('@/lib/api/lobby');
+vi.mock('@/lib/api/rallyPoint', async () => {
+  const actual =
+    await vi.importActual<typeof import('@/lib/api/rallyPoint')>('@/lib/api/rallyPoint');
   return {
     ...actual,
-    joinLobby: (...args: unknown[]) => joinLobbyMock(...args),
+    joinRallyPoint: (...args: unknown[]) => joinRallyPointMock(...args),
   };
 });
 
@@ -54,12 +55,12 @@ vi.mock('@/lib/api/hostScheduledSessions', () => ({
 }));
 
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
-const LOBBY_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const RALLY_POINT_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
 afterEach(() => {
   cleanup();
   joinSessionMock.mockReset();
-  joinLobbyMock.mockReset();
+  joinRallyPointMock.mockReset();
   resumeSessionIdentityMock.mockReset();
   authState.isAuthenticated = false;
   authState.isAuthLoading = false;
@@ -72,8 +73,8 @@ function renderJoin(path: string) {
       <ThemeProvider>
         <Routes>
           <Route path="/join" element={<JoinSessionPage />} />
-          <Route path="/session/:sessionId" element={<p>In lobby</p>} />
-          <Route path="/lobby/:lobbyId" element={<p>In staging</p>} />
+          <Route path="/session/:sessionId" element={<p>At the rally point</p>} />
+          <Route path="/rally-point/:rallyPointId" element={<p>At the rally point</p>} />
         </Routes>
       </ThemeProvider>
     </MemoryRouter>
@@ -106,7 +107,7 @@ describe('JoinSessionPage deep link', () => {
         nickname: 'Ghost',
       });
     });
-    expect(await screen.findByText('In lobby')).toBeTruthy();
+    expect(await screen.findByText('At the rally point')).toBeTruthy();
   });
 
   it('auto-joins authenticated users with email local-part', async () => {
@@ -138,7 +139,7 @@ describe('JoinSessionPage deep link', () => {
         nickname: 'operator',
       });
     });
-    expect(await screen.findByText('In lobby')).toBeTruthy();
+    expect(await screen.findByText('At the rally point')).toBeTruthy();
   });
 
   it('reclaims host via resume before join for authenticated users', async () => {
@@ -161,7 +162,7 @@ describe('JoinSessionPage deep link', () => {
       expect(resumeSessionIdentityMock).toHaveBeenCalledWith(SESSION_ID);
     });
     expect(joinSessionMock).not.toHaveBeenCalled();
-    expect(await screen.findByText('In lobby')).toBeTruthy();
+    expect(await screen.findByText('At the rally point')).toBeTruthy();
   });
 
   it('shows LOCKED OR INVALID for a bad s param', () => {
@@ -185,11 +186,11 @@ describe('JoinSessionPage deep link', () => {
     expect(await screen.findByText(SESSION_RALLY_DEPARTED)).toBeTruthy();
   });
 
-  it('routes ?l= to staging when the active session is finished', async () => {
-    joinLobbyMock.mockResolvedValue({
+  it('routes ?r= to the rally point when the active session is finished', async () => {
+    joinRallyPointMock.mockResolvedValue({
       data: {
-        lobbyId: LOBBY_ID,
-        lobbyMemberId: 'm1',
+        rallyPointId: RALLY_POINT_ID,
+        rallyPointMemberId: 'm1',
         sessionId: SESSION_ID,
         sessionState: 'finished',
         participantId: 'p1',
@@ -198,7 +199,7 @@ describe('JoinSessionPage deep link', () => {
       },
       error: null,
     });
-    renderJoin(`/join?l=${LOBBY_ID}`);
+    renderJoin(`/join?r=${RALLY_POINT_ID}`);
 
     fireEvent.change(screen.getByLabelText(/Your name/i), {
       target: { value: 'Jules' },
@@ -206,19 +207,19 @@ describe('JoinSessionPage deep link', () => {
     fireEvent.click(screen.getByRole('button', { name: /Join session/i }));
 
     await waitFor(() => {
-      expect(joinLobbyMock).toHaveBeenCalledWith({
-        lobbyId: LOBBY_ID,
+      expect(joinRallyPointMock).toHaveBeenCalledWith({
+        rallyPointId: RALLY_POINT_ID,
         nickname: 'Jules',
       });
     });
-    expect(await screen.findByText('In staging')).toBeTruthy();
+    expect(await screen.findByText('At the rally point')).toBeTruthy();
   });
 
-  it('routes ?l= to the session when the active session is live', async () => {
-    joinLobbyMock.mockResolvedValue({
+  it('routes ?r= to the session when the active session is live', async () => {
+    joinRallyPointMock.mockResolvedValue({
       data: {
-        lobbyId: LOBBY_ID,
-        lobbyMemberId: 'm1',
+        rallyPointId: RALLY_POINT_ID,
+        rallyPointMemberId: 'm1',
         sessionId: SESSION_ID,
         sessionState: 'waiting',
         participantId: 'p1',
@@ -227,13 +228,13 @@ describe('JoinSessionPage deep link', () => {
       },
       error: null,
     });
-    renderJoin(`/join?l=${LOBBY_ID}`);
+    renderJoin(`/join?r=${RALLY_POINT_ID}`);
 
     fireEvent.change(screen.getByLabelText(/Your name/i), {
       target: { value: 'Jules' },
     });
     fireEvent.click(screen.getByRole('button', { name: /Join session/i }));
 
-    expect(await screen.findByText('In lobby')).toBeTruthy();
+    expect(await screen.findByText('At the rally point')).toBeTruthy();
   });
 });

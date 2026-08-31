@@ -1,25 +1,31 @@
 import { useEffect, useRef, useState } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { getSupabaseClient } from '@/lib/supabase';
-import { getLobby, type LobbySessionState, type LobbySnapshot } from '@/lib/api/lobby';
+import {
+  getRallyPoint,
+  type RallyPointSessionState,
+  type RallyPointSnapshot,
+} from '@/lib/api/rallyPoint';
 
-export type LobbyPresenceByMemberId = Record<string, { nickname: string }>;
+export type RallyPointPresenceByMemberId = Record<string, { nickname: string }>;
 
-/** Guests cannot SELECT lobby tables (membership RLS); poll get_lobby instead. */
-export const GUEST_LOBBY_POLL_MS = 5_000;
+/** Guests cannot SELECT rallyPoint tables (membership RLS); poll get_rally_point instead. */
+export const GUEST_RALLY_POINT_POLL_MS = 5_000;
 
-export interface UseLobbyChannelResult {
-  lobby: LobbySnapshot | null;
-  presenceByMemberId: LobbyPresenceByMemberId;
+export interface UseRallyPointChannelResult {
+  rallyPoint: RallyPointSnapshot | null;
+  presenceByMemberId: RallyPointPresenceByMemberId;
   isConnected: boolean;
   error: string | null;
   refresh: () => Promise<void>;
 }
 
-export function parseLobbyRow(record: Record<string, unknown>): Partial<LobbySnapshot> | null {
-  const lobbyId = typeof record.id === 'string' ? record.id : null;
+export function parseRallyPointRow(
+  record: Record<string, unknown>
+): Partial<RallyPointSnapshot> | null {
+  const rallyPointId = typeof record.id === 'string' ? record.id : null;
   const status = record.status === 'open' || record.status === 'closed' ? record.status : null;
-  if (!lobbyId || !status) {
+  if (!rallyPointId || !status) {
     return null;
   }
   // host_user_id is not in the anon SELECT grant, so a guest's payload carries
@@ -32,10 +38,10 @@ export function parseLobbyRow(record: Record<string, unknown>): Partial<LobbySna
     record.active_session_state === 'setup' ||
     record.active_session_state === 'work' ||
     record.active_session_state === 'finished'
-      ? (record.active_session_state as LobbySessionState)
+      ? (record.active_session_state as RallyPointSessionState)
       : undefined;
   return {
-    lobbyId,
+    rallyPointId,
     ...(hostUserId !== null ? { hostUserId } : {}),
     activeSessionId: typeof record.active_session_id === 'string' ? record.active_session_id : null,
     ...(activeSessionState !== undefined ? { activeSessionState } : {}),
@@ -51,70 +57,70 @@ export function parseLobbyRow(record: Record<string, unknown>): Partial<LobbySna
 }
 
 /**
- * Subscribe to lobby:{lobbyId} for optional postgres_changes + presence.
- * Snapshot load always uses get_lobby. Table Realtime is only for authenticated
- * members (membership RLS); guests poll get_lobby.
+ * Subscribe to rallyPoint:{rallyPointId} for optional postgres_changes + presence.
+ * Snapshot load always uses get_rally_point. Table Realtime is only for authenticated
+ * members (membership RLS); guests poll get_rally_point.
  */
-export function useLobbyChannel(
-  lobbyId: string | undefined,
+export function useRallyPointChannel(
+  rallyPointId: string | undefined,
   presence: { memberId: string; nickname: string } | null,
   options?: { realtimeTables?: boolean }
-): UseLobbyChannelResult {
+): UseRallyPointChannelResult {
   const realtimeTables = options?.realtimeTables === true;
-  const [lobby, setLobby] = useState<LobbySnapshot | null>(null);
-  const [presenceByMemberId, setPresenceByMemberId] = useState<LobbyPresenceByMemberId>({});
+  const [rallyPoint, setRallyPoint] = useState<RallyPointSnapshot | null>(null);
+  const [presenceByMemberId, setPresenceByMemberId] = useState<RallyPointPresenceByMemberId>({});
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const cancelledRef = useRef(false);
-  const lobbyIdRef = useRef(lobbyId);
+  const rallyPointIdRef = useRef(rallyPointId);
   const fetchGenRef = useRef(0);
 
   const presenceMemberId = presence?.memberId;
   const presenceNickname = presence?.nickname;
 
   async function refresh() {
-    const requestedLobbyId = lobbyIdRef.current;
-    if (!requestedLobbyId) {
+    const requestedRallyPointId = rallyPointIdRef.current;
+    if (!requestedRallyPointId) {
       return;
     }
     const genAtStart = fetchGenRef.current;
-    const result = await getLobby(requestedLobbyId);
-    // Ignore late responses after unmount or lobbyId switch (cancelledRef alone
-    // is reset when the next lobby mounts, so also compare request generation).
+    const result = await getRallyPoint(requestedRallyPointId);
+    // Ignore late responses after unmount or rallyPointId switch (cancelledRef alone
+    // is reset when the next rallyPoint mounts, so also compare request generation).
     if (cancelledRef.current || genAtStart !== fetchGenRef.current) {
       return;
     }
     if (result.error || !result.data) {
-      setError(result.error?.message ?? 'Staging area not found.');
+      setError(result.error?.message ?? 'Rally point not found.');
       return;
     }
-    setLobby(result.data);
+    setRallyPoint(result.data);
     setError(null);
   }
 
   useEffect(() => {
-    if (!lobbyId) {
+    if (!rallyPointId) {
       fetchGenRef.current += 1;
       return;
     }
 
-    lobbyIdRef.current = lobbyId;
+    rallyPointIdRef.current = rallyPointId;
     const supabase = getSupabaseClient();
     cancelledRef.current = false;
 
     // Snapshot load; setState only after await inside refresh (not sync in effect).
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- async getLobby then setState
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- async getRallyPoint then setState
     void refresh();
 
     let pollTimer: number | null = null;
     if (!realtimeTables) {
       pollTimer = window.setInterval(() => {
         void refresh();
-      }, GUEST_LOBBY_POLL_MS);
+      }, GUEST_RALLY_POINT_POLL_MS);
     }
 
-    const channel = supabase.channel(`lobby:${lobbyId}`, {
+    const channel = supabase.channel(`rallyPoint:${rallyPointId}`, {
       config: presenceMemberId ? { presence: { key: presenceMemberId } } : {},
     });
     channelRef.current = channel;
@@ -122,21 +128,26 @@ export function useLobbyChannel(
     if (realtimeTables) {
       channel.on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'lobbies', filter: `id=eq.${lobbyId}` },
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'rallyPoints',
+          filter: `id=eq.${rallyPointId}`,
+        },
         (payload) => {
-          const parsed = parseLobbyRow(payload.new as Record<string, unknown>);
+          const parsed = parseRallyPointRow(payload.new as Record<string, unknown>);
           if (!parsed) {
             return;
           }
-          setLobby((prev) => {
+          setRallyPoint((prev) => {
             if (!prev) {
               return null;
             }
             const sessionChanged = parsed.activeSessionId !== prev.activeSessionId;
             if (sessionChanged || parsed.hostUserId === undefined) {
-              // lobbies row has no session state; refetch so force-nav sees live
+              // rallyPoints row has no session state; refetch so force-nav sees live
               // state. Also refetch when the payload omitted host_user_id — a
-              // guest cannot read that column, and get_lobby is SECURITY DEFINER
+              // guest cannot read that column, and get_rally_point is SECURITY DEFINER
               // so it still returns who holds command.
               void refresh();
             }
@@ -159,8 +170,8 @@ export function useLobbyChannel(
         {
           event: '*',
           schema: 'public',
-          table: 'lobby_members',
-          filter: `lobby_id=eq.${lobbyId}`,
+          table: 'rally_point_members',
+          filter: `rally_point_id=eq.${rallyPointId}`,
         },
         () => {
           void refresh();
@@ -170,7 +181,7 @@ export function useLobbyChannel(
 
     channel.on('presence', { event: 'sync' }, () => {
       const state = channel.presenceState<{ member_id?: string; nickname?: string }>();
-      const next: LobbyPresenceByMemberId = {};
+      const next: RallyPointPresenceByMemberId = {};
       for (const key of Object.keys(state)) {
         const metas = state[key] ?? [];
         for (const meta of metas) {
@@ -229,13 +240,13 @@ export function useLobbyChannel(
       channelRef.current = null;
       setIsConnected(false);
     };
-  }, [lobbyId, presenceMemberId, presenceNickname, realtimeTables]);
+  }, [rallyPointId, presenceMemberId, presenceNickname, realtimeTables]);
 
   return {
-    lobby: lobbyId ? lobby : null,
-    presenceByMemberId: lobbyId ? presenceByMemberId : {},
-    isConnected: Boolean(lobbyId) && isConnected,
-    error: lobbyId ? error : null,
+    rallyPoint: rallyPointId ? rallyPoint : null,
+    presenceByMemberId: rallyPointId ? presenceByMemberId : {},
+    isConnected: Boolean(rallyPointId) && isConnected,
+    error: rallyPointId ? error : null,
     refresh,
   };
 }

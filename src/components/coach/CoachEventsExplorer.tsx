@@ -17,8 +17,8 @@ const KNOWN_EVENT_NAMES = [
   'claim_completed',
   'claim_conflict',
   'rally_link_copied',
-  'lobby_countdown_started',
-  'lobby_countdown_canceled',
+  'rally_point_countdown_started',
+  'rally_point_countdown_canceled',
   'practice_started',
   'practice_finished',
   'intake_submitted',
@@ -118,9 +118,7 @@ export function CoachEventsExplorer({ userId }: CoachEventsExplorerProps) {
             {
               header: 'Props',
               render: (row) => (
-                <code className="text-xs text-secondary">
-                  {formatCoachProps(row.props)}
-                </code>
+                <code className="text-xs text-secondary">{formatCoachProps(row.props)}</code>
               ),
             },
           ]}

@@ -48,12 +48,11 @@ export function useSessionChannel(
   const [session, setSession] = useState<SessionRow | null>(null);
   const [participants, setParticipants] = useState<ParticipantRow[]>([]);
   const [rounds, setRounds] = useState<RoundRow[]>([]);
-  const [segmentResults, setSegmentResults] = useState<ParticipantSegmentResultRow[]>(
-    []
-  );
+  const [segmentResults, setSegmentResults] = useState<ParticipantSegmentResultRow[]>([]);
   const [messages, setMessages] = useState<MessageRow[]>([]);
-  const [presenceByParticipantId, setPresenceByParticipantId] =
-    useState<PresenceByParticipantId>({});
+  const [presenceByParticipantId, setPresenceByParticipantId] = useState<PresenceByParticipantId>(
+    {}
+  );
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -71,12 +70,11 @@ export function useSessionChannel(
     let cancelled = false;
 
     async function loadInitial() {
-      const [sessionResult, participantsResult, roundsResult, messagesResult] =
-        await Promise.all([
+      const [sessionResult, participantsResult, roundsResult, messagesResult] = await Promise.all([
         supabase
           .from('sessions')
           .select(
-            'id, duration_minutes, workout, template_id, state, time_left_sec, is_paused, started_at, scheduled_at, lobby_countdown_ends_at, segment_index, created_at, is_featured, lobby_id'
+            'id, duration_minutes, workout, template_id, state, time_left_sec, is_paused, started_at, scheduled_at, rally_point_countdown_ends_at, segment_index, created_at, is_featured, rally_point_id'
           )
           .eq('id', sessionId)
           .maybeSingle(),
@@ -92,9 +90,7 @@ export function useSessionChannel(
           .eq('session_id', sessionId),
         supabase
           .from('messages')
-          .select(
-            'id, session_id, participant_id, nickname, body, segment_index, created_at'
-          )
+          .select('id, session_id, participant_id, nickname, body, segment_index, created_at')
           .eq('session_id', sessionId)
           .order('created_at', { ascending: true }),
       ]);
@@ -136,9 +132,7 @@ export function useSessionChannel(
         .map((row) => parseParticipantRow(row as Record<string, unknown>))
         .filter((row): row is ParticipantRow => row !== null);
       setParticipants(parsedParticipants);
-      participantIdsRef.current = new Set(
-        parsedParticipants.map((participant) => participant.id)
-      );
+      participantIdsRef.current = new Set(parsedParticipants.map((participant) => participant.id));
 
       const participantIds = parsedParticipants.map((participant) => participant.id);
       if (participantIds.length > 0) {
@@ -202,9 +196,7 @@ export function useSessionChannel(
           filter: `id=eq.${sessionId}`,
         },
         (payload) => {
-          const parsed = parseSessionRow(
-            payload.new as Record<string, unknown>
-          );
+          const parsed = parseSessionRow(payload.new as Record<string, unknown>);
           if (parsed) {
             setSession(parsed);
           }
@@ -219,9 +211,7 @@ export function useSessionChannel(
           filter: `session_id=eq.${sessionId}`,
         },
         (payload) => {
-          const parsed = parseParticipantRow(
-            payload.new as Record<string, unknown>
-          );
+          const parsed = parseParticipantRow(payload.new as Record<string, unknown>);
           if (parsed) {
             participantIdsRef.current.add(parsed.id);
             setParticipants((prev) => upsertParticipant(prev, parsed));
@@ -239,13 +229,9 @@ export function useSessionChannel(
           if (payload.eventType === 'DELETE') {
             const oldRecord = payload.old as Record<string, unknown>;
             const participantId =
-              typeof oldRecord.participant_id === 'string'
-                ? oldRecord.participant_id
-                : null;
+              typeof oldRecord.participant_id === 'string' ? oldRecord.participant_id : null;
             const segmentIndex =
-              typeof oldRecord.segment_index === 'number'
-                ? oldRecord.segment_index
-                : null;
+              typeof oldRecord.segment_index === 'number' ? oldRecord.segment_index : null;
 
             if (
               !participantId ||
@@ -255,15 +241,11 @@ export function useSessionChannel(
               return;
             }
 
-            setSegmentResults((prev) =>
-              removeSegmentResult(prev, participantId, segmentIndex)
-            );
+            setSegmentResults((prev) => removeSegmentResult(prev, participantId, segmentIndex));
             return;
           }
 
-          const parsed = parseSegmentResultRow(
-            payload.new as Record<string, unknown>
-          );
+          const parsed = parseSegmentResultRow(payload.new as Record<string, unknown>);
           if (parsed && participantIdsRef.current.has(parsed.participant_id)) {
             setSegmentResults((prev) => upsertSegmentResult(prev, parsed));
           }
@@ -316,8 +298,7 @@ export function useSessionChannel(
           'realtime_status',
           {
             status,
-            latency_ms:
-              status === 'SUBSCRIBED' ? Date.now() - subscribeStartedAtMs : null,
+            latency_ms: status === 'SUBSCRIBED' ? Date.now() - subscribeStartedAtMs : null,
           },
           { sessionId }
         );

@@ -1,41 +1,41 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  getLobby,
-  isLiveLobbySessionState,
-  joinLobby,
-  type LobbySessionState,
-} from '@/lib/api/lobby';
-import { getStoredLobbyNickname } from '@/lib/lobbyIdentity';
+  getRallyPoint,
+  isLiveRallyPointSessionState,
+  joinRallyPoint,
+  type RallyPointSessionState,
+} from '@/lib/api/rallyPoint';
+import { getStoredRallyPointNickname } from '@/lib/rallyPointIdentity';
 import { getStoredNickname } from '@/lib/sessionIdentity';
 
 const RETRY_MS = 2_500;
 export const FORCE_NAV_DELAY_MS = 5_000;
 
-export type LobbyForceNavState = {
+export type RallyPointForceNavState = {
   pendingSessionId: string | null;
   secondsLeft: number;
   joinNow: () => void;
 };
 
 /**
- * When the lobby's active_session_id points at a live session the viewer is
+ * When the rally point's active_session_id points at a live session the viewer is
  * not on, join and soft-nav (forced launch / straggler pull).
  *
- * Skips finished sessions so `/lobby/:id` stays reachable after AAR, and only
- * starts the countdown after joinLobby succeeds so identity is persisted first.
+ * Skips finished sessions so `/rally-point/:id` stays reachable after AAR, and only
+ * starts the countdown after joinRallyPoint succeeds so identity is persisted first.
  * Auto-nav after FORCE_NAV_DELAY_MS; Join now skips the remaining wait.
  */
-export function useLobbyForceNav(input: {
-  lobbyId: string | null | undefined;
+export function useRallyPointForceNav(input: {
+  rallyPointId: string | null | undefined;
   activeSessionId: string | null | undefined;
-  /** From get_lobby / snapshot when known; avoids a second round-trip. */
-  activeSessionState?: LobbySessionState | null;
-  /** Session the viewer is currently watching; null on the lobby page. */
+  /** From get_rally_point / snapshot when known; avoids a second round-trip. */
+  activeSessionState?: RallyPointSessionState | null;
+  /** Session the viewer is currently watching; null on the rally point page. */
   currentSessionId?: string | null;
   enabled?: boolean;
   onError?: (message: string) => void;
-}): LobbyForceNavState {
+}): RallyPointForceNavState {
   const navigate = useNavigate();
   const lastNavigatedRef = useRef<string | null>(null);
   const pendingTargetRef = useRef<string | null>(null);
@@ -76,10 +76,10 @@ export function useLobbyForceNav(input: {
     if (input.enabled === false) {
       return;
     }
-    const lobbyId = input.lobbyId;
+    const rallyPointId = input.rallyPointId;
     const target = input.activeSessionId;
     const onError = input.onError;
-    if (!lobbyId || !target) {
+    if (!rallyPointId || !target) {
       return;
     }
     if (input.currentSessionId && input.currentSessionId === target) {
@@ -92,7 +92,8 @@ export function useLobbyForceNav(input: {
       return;
     }
 
-    const nickname = getStoredLobbyNickname(lobbyId) ?? getStoredNickname(target) ?? 'Athlete';
+    const nickname =
+      getStoredRallyPointNickname(rallyPointId) ?? getStoredNickname(target) ?? 'Athlete';
 
     let cancelled = false;
     let retryTimer: number | null = null;
@@ -130,13 +131,13 @@ export function useLobbyForceNav(input: {
       }, FORCE_NAV_DELAY_MS);
     }
 
-    async function attempt(knownState: LobbySessionState | null | undefined) {
+    async function attempt(knownState: RallyPointSessionState | null | undefined) {
       let state = knownState;
-      if (!isLiveLobbySessionState(state)) {
+      if (!isLiveRallyPointSessionState(state)) {
         if (state === 'finished') {
           return;
         }
-        const snapshot = await getLobby(lobbyId!);
+        const snapshot = await getRallyPoint(rallyPointId!);
         if (cancelled) {
           return;
         }
@@ -148,12 +149,12 @@ export function useLobbyForceNav(input: {
           return;
         }
         state = snapshot.data.activeSessionState;
-        if (!isLiveLobbySessionState(state)) {
+        if (!isLiveRallyPointSessionState(state)) {
           return;
         }
       }
 
-      const joined = await joinLobby({ lobbyId: lobbyId!, nickname });
+      const joined = await joinRallyPoint({ rallyPointId: rallyPointId!, nickname });
       if (cancelled) {
         return;
       }
@@ -197,7 +198,7 @@ export function useLobbyForceNav(input: {
     input.activeSessionState,
     input.currentSessionId,
     input.enabled,
-    input.lobbyId,
+    input.rallyPointId,
     input.onError,
     navigateToPending,
   ]);

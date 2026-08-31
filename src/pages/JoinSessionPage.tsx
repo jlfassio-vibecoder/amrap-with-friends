@@ -10,7 +10,11 @@ import {
   mapDeepLinkJoinError,
   SESSION_LOCKED_OR_INVALID,
 } from '@/lib/api/sessions';
-import { isLobbyIdUuid, joinLobby, isLiveLobbySessionState } from '@/lib/api/lobby';
+import {
+  isRallyPointIdUuid,
+  joinRallyPoint,
+  isLiveRallyPointSessionState,
+} from '@/lib/api/rallyPoint';
 import { callsignFromEmail } from '@/lib/sessionIdentity';
 import { getSupabaseConfigError } from '@/lib/supabase';
 import { unlockTacticalAudio } from '@/lib/audio/tacticalSynthesis';
@@ -20,32 +24,33 @@ export default function JoinSessionPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const rallyParam = params.get('s');
-  const lobbyParam = params.get('l');
-  const lobbyDeepLink = lobbyParam !== null;
-  const rallyDeepLink = rallyParam !== null && !lobbyDeepLink;
-  const deepLink = rallyDeepLink || lobbyDeepLink;
+  const rallyPointParam = params.get('r');
+  const rallyPointDeepLink = rallyPointParam !== null;
+  const rallyDeepLink = rallyParam !== null && !rallyPointDeepLink;
+  const deepLink = rallyDeepLink || rallyPointDeepLink;
   const rallySessionId = rallyParam?.trim() ?? '';
-  const lobbyId = lobbyParam?.trim() ?? '';
+  const rallyPointId = rallyPointParam?.trim() ?? '';
   const rallyUuidValid = rallyDeepLink && isSessionIdUuid(rallySessionId);
-  const lobbyUuidValid = lobbyDeepLink && isLobbyIdUuid(lobbyId);
+  const rallyPointUuidValid = rallyPointDeepLink && isRallyPointIdUuid(rallyPointId);
 
   const { user, isAuthenticated, isAuthLoading } = useAmrapAuth();
   const authCallsign = callsignFromEmail(user?.email);
   const canAutoJoinSession = rallyDeepLink && rallyUuidValid && isAuthenticated && !!authCallsign;
-  const canAutoJoinLobby = lobbyDeepLink && lobbyUuidValid && isAuthenticated && !!authCallsign;
+  const canAutoJoinRallyPoint =
+    rallyPointDeepLink && rallyPointUuidValid && isAuthenticated && !!authCallsign;
 
   const [sessionId, setSessionId] = useState('');
   const [nickname, setNickname] = useState('');
   const [error, setError] = useState<string | null>(
-    (rallyDeepLink && !rallyUuidValid) || (lobbyDeepLink && !lobbyUuidValid)
+    (rallyDeepLink && !rallyUuidValid) || (rallyPointDeepLink && !rallyPointUuidValid)
       ? SESSION_LOCKED_OR_INVALID
       : null
   );
   const [loading, setLoading] = useState(false);
   const autoJoinedSessionIdRef = useRef<string | null>(null);
-  const autoJoinedLobbyIdRef = useRef<string | null>(null);
+  const autoJoinedRallyPointIdRef = useRef<string | null>(null);
 
-  async function performLobbyJoin(targetLobbyId: string, callsign: string) {
+  async function performRallyPointJoin(targetRallyPointId: string, callsign: string) {
     setError(null);
     const configError = getSupabaseConfigError();
     if (configError) {
@@ -54,16 +59,16 @@ export default function JoinSessionPage() {
     }
     setLoading(true);
     try {
-      const result = await joinLobby({ lobbyId: targetLobbyId, nickname: callsign });
+      const result = await joinRallyPoint({ rallyPointId: targetRallyPointId, nickname: callsign });
       if (result.error) {
         setError(result.error.message);
         return;
       }
-      if (result.data?.sessionId && isLiveLobbySessionState(result.data.sessionState)) {
+      if (result.data?.sessionId && isLiveRallyPointSessionState(result.data.sessionState)) {
         navigate(`/session/${result.data.sessionId}`);
         return;
       }
-      navigate(`/lobby/${targetLobbyId}`);
+      navigate(`/rally-point/${targetRallyPointId}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.');
     } finally {
@@ -153,26 +158,26 @@ export default function JoinSessionPage() {
   }, [canAutoJoinSession, isAuthLoading, authCallsign, rallySessionId]);
 
   useEffect(() => {
-    if (!canAutoJoinLobby || isAuthLoading || !authCallsign) {
+    if (!canAutoJoinRallyPoint || isAuthLoading || !authCallsign) {
       return;
     }
-    if (autoJoinedLobbyIdRef.current === lobbyId) {
+    if (autoJoinedRallyPointIdRef.current === rallyPointId) {
       return;
     }
-    autoJoinedLobbyIdRef.current = lobbyId;
-    void performLobbyJoin(lobbyId, authCallsign);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot auto-join per lobby id
-  }, [canAutoJoinLobby, isAuthLoading, authCallsign, lobbyId]);
+    autoJoinedRallyPointIdRef.current = rallyPointId;
+    void performRallyPointJoin(rallyPointId, authCallsign);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot auto-join per rallyPoint id
+  }, [canAutoJoinRallyPoint, isAuthLoading, authCallsign, rallyPointId]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     unlockTacticalAudio();
-    if (lobbyDeepLink) {
-      if (!lobbyUuidValid) {
+    if (rallyPointDeepLink) {
+      if (!rallyPointUuidValid) {
         setError(SESSION_LOCKED_OR_INVALID);
         return;
       }
-      await performLobbyJoin(lobbyId, nickname || authCallsign || '');
+      await performRallyPointJoin(rallyPointId, nickname || authCallsign || '');
       return;
     }
     if (rallyDeepLink) {
@@ -186,7 +191,7 @@ export default function JoinSessionPage() {
     await performJoin(sessionId, nickname, false);
   }
 
-  if ((rallyDeepLink && !rallyUuidValid) || (lobbyDeepLink && !lobbyUuidValid)) {
+  if ((rallyDeepLink && !rallyUuidValid) || (rallyPointDeepLink && !rallyPointUuidValid)) {
     return (
       <NarrowPageLayout title="Join session" subtitle="You’ve been invited">
         <p className="text-error">{SESSION_LOCKED_OR_INVALID}</p>
@@ -207,7 +212,7 @@ export default function JoinSessionPage() {
     );
   }
 
-  if (deepLink && (canAutoJoinSession || canAutoJoinLobby) && !error) {
+  if (deepLink && (canAutoJoinSession || canAutoJoinRallyPoint) && !error) {
     return (
       <NarrowPageLayout title="Join session" subtitle="You’ve been invited">
         <p className="text-sm text-secondary">Welcome, {authCallsign}. Joining…</p>

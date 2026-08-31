@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createSession, fetchHostActiveSessionCount, joinSession, updateSessionScheduledAt } from './sessions';
+import {
+  createSession,
+  fetchHostActiveSessionCount,
+  joinSession,
+  updateSessionScheduledAt,
+} from './sessions';
 import { supabase } from '@/lib/supabase';
 import * as sessionIdentity from '@/lib/sessionIdentity';
 
@@ -332,9 +337,7 @@ describe('sessions API', () => {
     });
 
     expect(result.data).toBeNull();
-    expect(result.error?.message).toBe(
-      'SESSION LOCKED. THE RALLY HAS DEPARTED.'
-    );
+    expect(result.error?.message).toBe('SESSION LOCKED. THE RALLY HAS DEPARTED.');
     expect(persistMock).not.toHaveBeenCalled();
   });
 
@@ -438,7 +441,7 @@ describe('updateSessionScheduledAt', () => {
 
     expect(result.data).toBeNull();
     expect(result.error?.message).toBe(
-      'Rally time can only be changed while waiting in the lobby.'
+      'Rally time can only be changed while waiting at the rally point.'
     );
   });
 });

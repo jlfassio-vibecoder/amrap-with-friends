@@ -2,7 +2,7 @@ import type { LeaderboardEntry } from '@/lib/sessionSync/types';
 import { resolvePacingData } from '@/lib/scoring/resolvePacingData';
 import { ScoreBreakdownDisplay } from '@/components/ScoreBreakdownDisplay';
 import { DaisyChainCta } from '@/components/session/DaisyChainCta';
-import { announceNextMission } from '@/lib/api/lobby';
+import { announceNextMission } from '@/lib/api/rallyPoint';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
@@ -16,9 +16,9 @@ interface SessionScorecardProps {
   onSave: () => void;
   saveError?: string | null;
   saveMessage?: string | null;
-  /** When set (lobby daisy-chain), primary exit opens the next-session picker. */
-  stagingHref?: string | null;
-  lobbyId?: string | null;
+  /** When set (rallyPoint daisy-chain), primary exit opens the next-session picker. */
+  rallyPointHref?: string | null;
+  rallyPointId?: string | null;
   isHost?: boolean;
 }
 
@@ -43,8 +43,8 @@ export function SessionScorecard({
   onSave,
   saveError = null,
   saveMessage = null,
-  stagingHref = null,
-  lobbyId = null,
+  rallyPointHref = null,
+  rallyPointId = null,
   isHost = false,
 }: SessionScorecardProps) {
   const navigate = useNavigate();
@@ -59,18 +59,18 @@ export function SessionScorecard({
   });
 
   async function handleDaisyChain() {
-    if (!stagingHref) {
+    if (!rallyPointHref) {
       return;
     }
     setDaisyError(null);
-    if (isHost && lobbyId) {
-      const result = await announceNextMission(lobbyId);
+    if (isHost && rallyPointId) {
+      const result = await announceNextMission(rallyPointId);
       if (result.error) {
         setDaisyError(result.error.message);
         return;
       }
     }
-    navigate(stagingHref);
+    navigate(rallyPointHref);
   }
 
   return (
@@ -138,7 +138,7 @@ export function SessionScorecard({
           </p>
         )}
 
-        {stagingHref ? (
+        {rallyPointHref ? (
           <div className="space-y-2">
             <DaisyChainCta onActivate={handleDaisyChain} />
             {daisyError ? <p className="text-error text-sm">{daisyError}</p> : null}

@@ -2,11 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
-import { FORCE_NAV_DELAY_MS, useLobbyForceNav } from './useLobbyForceNav';
+import { FORCE_NAV_DELAY_MS, useRallyPointForceNav } from './useRallyPointForceNav';
 
 const navigateMock = vi.fn();
-const joinLobbyMock = vi.fn();
-const getLobbyMock = vi.fn();
+const joinRallyPointMock = vi.fn();
+const getRallyPointMock = vi.fn();
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
@@ -16,24 +16,25 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-vi.mock('@/lib/api/lobby', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/api/lobby')>('@/lib/api/lobby');
+vi.mock('@/lib/api/rallyPoint', async () => {
+  const actual =
+    await vi.importActual<typeof import('@/lib/api/rallyPoint')>('@/lib/api/rallyPoint');
   return {
     ...actual,
-    joinLobby: (...args: unknown[]) => joinLobbyMock(...args),
-    getLobby: (...args: unknown[]) => getLobbyMock(...args),
+    joinRallyPoint: (...args: unknown[]) => joinRallyPointMock(...args),
+    getRallyPoint: (...args: unknown[]) => getRallyPointMock(...args),
   };
 });
 
-vi.mock('@/lib/lobbyIdentity', () => ({
-  getStoredLobbyNickname: () => 'Jules',
+vi.mock('@/lib/rallyPointIdentity', () => ({
+  getStoredRallyPointNickname: () => 'Jules',
 }));
 
 vi.mock('@/lib/sessionIdentity', () => ({
   getStoredNickname: () => null,
 }));
 
-const LOBBY_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const RALLY_POINT_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const SESSION_A = '11111111-1111-4111-8111-111111111111';
 const SESSION_B = '22222222-2222-4222-8222-222222222222';
 
@@ -41,13 +42,13 @@ function wrapper({ children }: { children: ReactNode }) {
   return <MemoryRouter>{children}</MemoryRouter>;
 }
 
-describe('useLobbyForceNav', () => {
+describe('useRallyPointForceNav', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    joinLobbyMock.mockResolvedValue({
+    joinRallyPointMock.mockResolvedValue({
       data: {
-        lobbyId: LOBBY_ID,
-        lobbyMemberId: 'm1',
+        rallyPointId: RALLY_POINT_ID,
+        rallyPointMemberId: 'm1',
         sessionId: SESSION_B,
         sessionState: 'waiting',
         participantId: 'p1',
@@ -63,8 +64,8 @@ describe('useLobbyForceNav', () => {
   it('skips finished active sessions', async () => {
     renderHook(
       () =>
-        useLobbyForceNav({
-          lobbyId: LOBBY_ID,
+        useRallyPointForceNav({
+          rallyPointId: RALLY_POINT_ID,
           activeSessionId: SESSION_B,
           activeSessionState: 'finished',
           currentSessionId: SESSION_A,
@@ -77,7 +78,7 @@ describe('useLobbyForceNav', () => {
       await Promise.resolve();
     });
 
-    expect(joinLobbyMock).not.toHaveBeenCalled();
+    expect(joinRallyPointMock).not.toHaveBeenCalled();
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
@@ -85,8 +86,8 @@ describe('useLobbyForceNav', () => {
     vi.useFakeTimers();
     const { result } = renderHook(
       () =>
-        useLobbyForceNav({
-          lobbyId: LOBBY_ID,
+        useRallyPointForceNav({
+          rallyPointId: RALLY_POINT_ID,
           activeSessionId: SESSION_B,
           activeSessionState: 'waiting',
           currentSessionId: SESSION_A,
@@ -99,8 +100,8 @@ describe('useLobbyForceNav', () => {
       await Promise.resolve();
     });
 
-    expect(joinLobbyMock).toHaveBeenCalledWith({
-      lobbyId: LOBBY_ID,
+    expect(joinRallyPointMock).toHaveBeenCalledWith({
+      rallyPointId: RALLY_POINT_ID,
       nickname: 'Jules',
     });
     expect(navigateMock).not.toHaveBeenCalled();
@@ -118,8 +119,8 @@ describe('useLobbyForceNav', () => {
     vi.useFakeTimers();
     const { result } = renderHook(
       () =>
-        useLobbyForceNav({
-          lobbyId: LOBBY_ID,
+        useRallyPointForceNav({
+          rallyPointId: RALLY_POINT_ID,
           activeSessionId: SESSION_B,
           activeSessionState: 'waiting',
           currentSessionId: SESSION_A,
@@ -144,8 +145,8 @@ describe('useLobbyForceNav', () => {
   it('does not start soft-nav when enabled is false', async () => {
     renderHook(
       () =>
-        useLobbyForceNav({
-          lobbyId: LOBBY_ID,
+        useRallyPointForceNav({
+          rallyPointId: RALLY_POINT_ID,
           activeSessionId: SESSION_B,
           activeSessionState: 'waiting',
           currentSessionId: SESSION_A,
@@ -158,22 +159,22 @@ describe('useLobbyForceNav', () => {
       await Promise.resolve();
     });
 
-    expect(joinLobbyMock).not.toHaveBeenCalled();
+    expect(joinRallyPointMock).not.toHaveBeenCalled();
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
   it('surfaces join errors and does not lock the navigated ref', async () => {
     vi.useFakeTimers();
     const onError = vi.fn();
-    joinLobbyMock.mockResolvedValue({
+    joinRallyPointMock.mockResolvedValue({
       data: null,
-      error: { message: 'Staging area is full.' },
+      error: { message: 'Rally point is full.' },
     });
 
     renderHook(
       () =>
-        useLobbyForceNav({
-          lobbyId: LOBBY_ID,
+        useRallyPointForceNav({
+          rallyPointId: RALLY_POINT_ID,
           activeSessionId: SESSION_B,
           activeSessionState: 'waiting',
           currentSessionId: SESSION_A,
@@ -186,13 +187,13 @@ describe('useLobbyForceNav', () => {
     await act(async () => {
       await Promise.resolve();
     });
-    expect(onError).toHaveBeenCalledWith('Staging area is full.');
+    expect(onError).toHaveBeenCalledWith('Rally point is full.');
     expect(navigateMock).not.toHaveBeenCalled();
 
-    joinLobbyMock.mockResolvedValue({
+    joinRallyPointMock.mockResolvedValue({
       data: {
-        lobbyId: LOBBY_ID,
-        lobbyMemberId: 'm1',
+        rallyPointId: RALLY_POINT_ID,
+        rallyPointMemberId: 'm1',
         sessionId: SESSION_B,
         participantId: 'p1',
       },
@@ -204,7 +205,7 @@ describe('useLobbyForceNav', () => {
       await Promise.resolve();
     });
 
-    expect(joinLobbyMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(joinRallyPointMock.mock.calls.length).toBeGreaterThanOrEqual(2);
     expect(navigateMock).not.toHaveBeenCalled();
 
     await act(async () => {
@@ -217,10 +218,10 @@ describe('useLobbyForceNav', () => {
   it('does not navigate when join succeeds without a participant seat', async () => {
     vi.useFakeTimers();
     const onError = vi.fn();
-    joinLobbyMock.mockResolvedValue({
+    joinRallyPointMock.mockResolvedValue({
       data: {
-        lobbyId: LOBBY_ID,
-        lobbyMemberId: 'm1',
+        rallyPointId: RALLY_POINT_ID,
+        rallyPointMemberId: 'm1',
         sessionId: SESSION_B,
         sessionState: 'waiting',
         participantId: null,
@@ -230,8 +231,8 @@ describe('useLobbyForceNav', () => {
 
     renderHook(
       () =>
-        useLobbyForceNav({
-          lobbyId: LOBBY_ID,
+        useRallyPointForceNav({
+          rallyPointId: RALLY_POINT_ID,
           activeSessionId: SESSION_B,
           activeSessionState: 'waiting',
           currentSessionId: SESSION_A,
@@ -248,10 +249,10 @@ describe('useLobbyForceNav', () => {
     expect(onError).toHaveBeenCalledWith('Could not join the next session. Try again.');
     expect(navigateMock).not.toHaveBeenCalled();
 
-    joinLobbyMock.mockResolvedValue({
+    joinRallyPointMock.mockResolvedValue({
       data: {
-        lobbyId: LOBBY_ID,
-        lobbyMemberId: 'm1',
+        rallyPointId: RALLY_POINT_ID,
+        rallyPointMemberId: 'm1',
         sessionId: SESSION_B,
         participantId: 'p1',
       },
@@ -270,11 +271,11 @@ describe('useLobbyForceNav', () => {
     expect(navigateMock).toHaveBeenCalledWith(`/session/${SESSION_B}`, { replace: true });
   });
 
-  it('falls back to getLobby when session state is unknown', async () => {
+  it('falls back to getRallyPoint when session state is unknown', async () => {
     vi.useFakeTimers();
-    getLobbyMock.mockResolvedValue({
+    getRallyPointMock.mockResolvedValue({
       data: {
-        lobbyId: LOBBY_ID,
+        rallyPointId: RALLY_POINT_ID,
         activeSessionId: SESSION_B,
         activeSessionState: 'setup',
         hostUserId: 'u1',
@@ -289,8 +290,8 @@ describe('useLobbyForceNav', () => {
 
     const { result } = renderHook(
       () =>
-        useLobbyForceNav({
-          lobbyId: LOBBY_ID,
+        useRallyPointForceNav({
+          rallyPointId: RALLY_POINT_ID,
           activeSessionId: SESSION_B,
           activeSessionState: null,
           currentSessionId: null,
@@ -303,7 +304,7 @@ describe('useLobbyForceNav', () => {
       await Promise.resolve();
     });
 
-    expect(getLobbyMock).toHaveBeenCalledWith(LOBBY_ID);
+    expect(getRallyPointMock).toHaveBeenCalledWith(RALLY_POINT_ID);
     expect(result.current.pendingSessionId).toBe(SESSION_B);
 
     await act(async () => {
