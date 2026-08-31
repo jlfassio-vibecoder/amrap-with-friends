@@ -4,6 +4,7 @@ import type { ScoreBreakdown } from '@/lib/scoring/types';
 import { parseScoreBreakdownJson } from '@/lib/scoring/parseScoreBreakdownJson';
 import { computeBaseScore } from '@/lib/scoring/computeBaseScore';
 import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
+import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
 
 export interface MySessionEntry {
   participantId: string;
@@ -17,6 +18,8 @@ export interface MySessionEntry {
   isFeatured: boolean;
   durationMinutes: number;
   workout: WorkoutExercise[];
+  /** Library or coach template id when the session was created from one. */
+  templateId: string | null;
   state: string;
   segmentIndex: number;
   roundCount: number;
@@ -24,6 +27,14 @@ export interface MySessionEntry {
   finalScore: number | null;
   scoreBreakdown: ScoreBreakdown | null;
   coachWorkoutName: string | null;
+}
+
+/** Card title: coach name wins, then library template name, else "Workout". */
+export function mySessionWorkoutTitle(entry: MySessionEntry): string {
+  if (entry.coachWorkoutName) {
+    return entry.coachWorkoutName;
+  }
+  return resolveWorkoutTitle(entry.templateId);
 }
 
 export type MySessionsApiError = {
@@ -122,9 +133,7 @@ function parseMySessionEntry(raw: unknown): MySessionEntry | null {
   const roundCount = readNumber(row.round_count) ?? 0;
   const partialReps = readNumber(row.partial_reps) ?? 0;
   const finalScore =
-    row.final_score === null || row.final_score === undefined
-      ? null
-      : readNumber(row.final_score);
+    row.final_score === null || row.final_score === undefined ? null : readNumber(row.final_score);
   const scoreBreakdown =
     row.score_breakdown === null || row.score_breakdown === undefined
       ? null
@@ -154,6 +163,7 @@ function parseMySessionEntry(raw: unknown): MySessionEntry | null {
     isFeatured: row.is_featured === true,
     durationMinutes,
     workout: readWorkout(row.workout),
+    templateId: readString(row.template_id),
     state,
     segmentIndex,
     roundCount,
@@ -174,8 +184,7 @@ export async function fetchMySessions(): Promise<{
     return { data: null, error: { message: error.message } };
   }
 
-  const raw =
-    data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
 
   if (raw.ok !== true) {
     return {
@@ -222,8 +231,7 @@ export async function deleteIncompleteSession(
     return { error: { message: mapDeleteError(error.message) } };
   }
 
-  const raw =
-    data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
 
   if (raw.ok !== true) {
     return {

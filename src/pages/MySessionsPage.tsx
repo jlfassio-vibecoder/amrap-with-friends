@@ -10,28 +10,22 @@ import {
   deleteIncompleteSession,
   fetchMySessions,
   formatMySessionScoreDisplay,
+  mySessionWorkoutTitle,
   type MySessionEntry,
 } from '@/lib/api/mySessions';
+import type { WorkoutExercise } from '@/lib/api/sessionTypes';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
-
-function formatWorkoutSummary(entry: MySessionEntry): string {
-  if (entry.coachWorkoutName) {
-    return entry.coachWorkoutName;
-  }
-  const workout = entry.workout;
-  if (workout.length === 0) {
-    return 'Workout';
-  }
-  const first = workout[0].name;
-  if (workout.length === 1) {
-    return first;
-  }
-  return `${first} + ${workout.length - 1} more`;
-}
 
 function formatSessionWhen(entry: MySessionEntry): string {
   const when = entry.scheduledAt ?? entry.createdAt;
   return new Date(when).toLocaleString();
+}
+
+function formatExerciseLine(exercise: WorkoutExercise): string {
+  if (exercise.target === undefined) {
+    return exercise.name;
+  }
+  return `${exercise.name} — ${exercise.target}${exercise.unit ? ` ${exercise.unit}` : ''}`;
 }
 
 function confirmDeleteMessage(entry: MySessionEntry): string {
@@ -39,6 +33,25 @@ function confirmDeleteMessage(entry: MySessionEntry): string {
     return 'Cancel this Featured WOD for this date and time only? Other scheduled days stay on the calendar.';
   }
   return 'Permanently delete this incomplete session?';
+}
+
+function MySessionMovements({ workout }: { workout: WorkoutExercise[] }) {
+  if (workout.length === 0) {
+    return null;
+  }
+
+  const summary = workout.length === 1 ? '1 movement' : `${workout.length} movements`;
+
+  return (
+    <details className="text-center">
+      <summary className="cursor-pointer text-sm text-secondary hover:text-ink">{summary}</summary>
+      <ul className="mt-2 space-y-1 text-left text-sm text-secondary">
+        {workout.map((exercise, index) => (
+          <li key={`${exercise.name}-${index}`}>{formatExerciseLine(exercise)}</li>
+        ))}
+      </ul>
+    </details>
+  );
 }
 
 export default function MySessionsPage() {
@@ -140,8 +153,11 @@ export default function MySessionsPage() {
         <ul className="space-y-3">
           {entries.map((entry) => (
             <li key={entry.participantId} className="card space-y-2 p-4 text-sm">
-              <p className="font-semibold">{formatWorkoutSummary(entry)}</p>
-              <p className="text-secondary">
+              <p className="text-display text-center text-lg text-ink">
+                {mySessionWorkoutTitle(entry)}
+              </p>
+              <MySessionMovements workout={entry.workout} />
+              <p className="text-center text-secondary">
                 {formatSessionWhen(entry)} · {entry.durationMinutes} min ·{' '}
                 {formatMySessionScoreDisplay(entry)} · {entry.state}
                 {entry.isFeatured ? ' · Featured' : ''}
@@ -162,6 +178,7 @@ export default function MySessionsPage() {
                 <SendWorkoutToSquad
                   durationMinutes={entry.durationMinutes}
                   workout={entry.workout}
+                  templateId={entry.templateId}
                   ready={entry.workout.length > 0}
                   triggerClassName="link-accent font-normal disabled:text-muted"
                   triggerLabel="Send to a squad friend"

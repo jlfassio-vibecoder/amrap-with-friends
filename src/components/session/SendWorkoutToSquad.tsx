@@ -44,8 +44,17 @@ export function SendWorkoutToSquad({
     }
     let cancelled = false;
     void fetchMySquad().then((result) => {
-      if (!cancelled && result.data) {
+      if (cancelled) {
+        return;
+      }
+      if (result.error) {
+        setError(result.error.message);
+        setFriends([]);
+        return;
+      }
+      if (result.data) {
         setFriends(result.data.friends);
+        setError(null);
       }
     });
     return () => {
@@ -129,7 +138,7 @@ export function SendWorkoutToSquad({
         </select>
       </label>
 
-      {friends.length === 0 ? (
+      {friends.length === 0 && !error ? (
         <p className="text-xs text-muted">
           Your squad is empty. Add someone on the Squad page first.
         </p>
