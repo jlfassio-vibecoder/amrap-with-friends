@@ -9,23 +9,19 @@ import {
   canDeleteMyMission,
   deleteIncompleteMission,
   fetchMyMissions,
+  formatMyMissionExerciseLine,
   formatMyMissionScoreDisplay,
+  formatMyMissionShareText,
   myMissionWorkoutTitle,
   type MyMissionEntry,
 } from '@/lib/api/myMissions';
 import type { WorkoutExercise } from '@/lib/api/missionTypes';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
+import { useCopyFlash } from '@/hooks/useCopyFlash';
 
 function formatMissionWhen(entry: MyMissionEntry): string {
   const when = entry.scheduledAt ?? entry.createdAt;
   return new Date(when).toLocaleString();
-}
-
-function formatExerciseLine(exercise: WorkoutExercise): string {
-  if (exercise.target === undefined) {
-    return exercise.name;
-  }
-  return `${exercise.name} — ${exercise.target}${exercise.unit ? ` ${exercise.unit}` : ''}`;
 }
 
 function confirmDeleteMessage(entry: MyMissionEntry): string {
@@ -35,22 +31,58 @@ function confirmDeleteMessage(entry: MyMissionEntry): string {
   return 'Permanently delete this incomplete mission?';
 }
 
-function MyMissionMovements({ workout }: { workout: WorkoutExercise[] }) {
+function MyMissionMovements({ title, workout }: { title: string; workout: WorkoutExercise[] }) {
   if (workout.length === 0) {
-    return null;
+    return <p className="text-display text-lg text-ink">{title}</p>;
   }
 
   const summary = workout.length === 1 ? '1 movement' : `${workout.length} movements`;
 
   return (
-    <details className="text-center">
-      <summary className="cursor-pointer text-sm text-secondary hover:text-ink">{summary}</summary>
-      <ul className="mt-2 space-y-1 text-left text-sm text-secondary">
+    <details>
+      <summary className="flex cursor-pointer list-none items-baseline gap-x-3 [&::-webkit-details-marker]:hidden">
+        <span className="text-display text-lg text-ink">{title}</span>
+        <span className="ml-auto inline-flex items-baseline gap-1 text-sm text-secondary hover:text-ink">
+          <span aria-hidden="true" className="text-[0.75em] leading-none">
+            ▼
+          </span>
+          {summary}
+        </span>
+      </summary>
+      <ul className="mt-2 space-y-1 text-sm text-secondary">
         {workout.map((exercise, index) => (
-          <li key={`${exercise.name}-${index}`}>{formatExerciseLine(exercise)}</li>
+          <li key={`${exercise.name}-${index}`}>{formatMyMissionExerciseLine(exercise)}</li>
         ))}
       </ul>
     </details>
+  );
+}
+
+function ShareMyMissionButton({ entry }: { entry: MyMissionEntry }) {
+  const { copied, error, copy } = useCopyFlash();
+
+  async function handleShare() {
+    const text = formatMyMissionShareText(entry);
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ text });
+        return;
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          return;
+        }
+      }
+    }
+    await copy(text, 'Could not copy. Select and copy the mission summary manually.');
+  }
+
+  return (
+    <span className="inline-flex flex-col items-start gap-1">
+      <button type="button" className="link-accent" onClick={() => void handleShare()}>
+        {copied ? 'Copied' : 'Share'}
+      </button>
+      {error ? <span className="text-error text-xs">{error}</span> : null}
+    </span>
   );
 }
 
@@ -153,10 +185,7 @@ export default function MyMissionsPage() {
         <ul className="space-y-3">
           {entries.map((entry) => (
             <li key={entry.participantId} className="card space-y-2 p-4 text-sm">
-              <p className="text-display text-center text-lg text-ink">
-                {myMissionWorkoutTitle(entry)}
-              </p>
-              <MyMissionMovements workout={entry.workout} />
+              <MyMissionMovements title={myMissionWorkoutTitle(entry)} workout={entry.workout} />
               <p className="text-center text-secondary">
                 {formatMissionWhen(entry)} · {entry.durationMinutes} min ·{' '}
                 {formatMyMissionScoreDisplay(entry)} · {entry.state}
@@ -175,13 +204,14 @@ export default function MyMissionsPage() {
                     View breakdown
                   </button>
                 ) : null}
+                <ShareMyMissionButton entry={entry} />
                 <SendWorkoutToSquad
                   durationMinutes={entry.durationMinutes}
                   workout={entry.workout}
                   templateId={entry.templateId}
                   ready={entry.workout.length > 0}
                   triggerClassName="link-accent font-normal disabled:text-muted"
-                  triggerLabel="Send to a squad friend"
+                  triggerLabel="Add squad member"
                 />
                 {canDeleteMyMission(entry) ? (
                   <button
