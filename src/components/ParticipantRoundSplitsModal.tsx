@@ -51,7 +51,17 @@ export function ParticipantRoundSplitsModal({
                 key={split.roundNumber}
                 className="flex flex-col items-center rounded-card border border-border bg-page px-2 py-2 text-center tabular-nums"
               >
-                <span className="text-xs font-medium text-muted">Round {split.roundNumber}</span>
+                <span className="text-xs font-medium text-muted">
+                  Round {split.roundNumber}
+                  {split.wasMissedLog ? (
+                    <span
+                      className="ml-2 text-xs uppercase tracking-widest text-accent"
+                      title="Logged late and corrected from the reps you had banked"
+                    >
+                      Adjusted
+                    </span>
+                  ) : null}
+                </span>
                 <span className="text-display text-lg text-accent">
                   {formatSplitDuration(split.durationSec)}
                 </span>

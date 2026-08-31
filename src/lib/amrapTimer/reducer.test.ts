@@ -143,10 +143,10 @@ describe('amrapTimerReducer', () => {
         { type: 'pause' }
       );
 
-      const resumed = reduce(
-        amrapTimerReducer(paused, { type: 'resume' }),
-        { type: 'tick', nowMs: 3_000 }
-      );
+      const resumed = reduce(amrapTimerReducer(paused, { type: 'resume' }), {
+        type: 'tick',
+        nowMs: 3_000,
+      });
 
       expect(resumed.isPaused).toBe(false);
       expect(resumed.timeLeftSec).toBe(paused.timeLeftSec - 1);
@@ -181,6 +181,31 @@ describe('amrapTimerReducer', () => {
         roundIndex: 0,
         elapsedSecAtRound: 2,
         loggedAtMs: 3_000,
+        missedLogReps: null,
+      });
+    });
+
+    it('takes the reconstructed boundary when a missed log supplies one', () => {
+      const inWork = reduce(
+        started,
+        { type: 'start', setupDurationSec: 1, workDurationSec: 100 },
+        { type: 'tick', nowMs: 1_000 },
+        { type: 'tick', nowMs: 2_000 },
+        { type: 'tick', nowMs: 3_000 }
+      );
+
+      const logged = amrapTimerReducer(inWork, {
+        type: 'logRound',
+        nowMs: 3_000,
+        elapsedSecOverride: 1,
+        missedLogReps: 6,
+      });
+
+      expect(logged.rounds[0]).toEqual({
+        roundIndex: 0,
+        elapsedSecAtRound: 1,
+        loggedAtMs: 3_000,
+        missedLogReps: 6,
       });
     });
 
@@ -230,9 +255,7 @@ describe('amrapTimerReducer', () => {
         workDurationSec: workSec,
       });
 
-      expect(
-        amrapTimerReducer(setup, { type: 'logRound', nowMs: 1_000 })
-      ).toEqual(setup);
+      expect(amrapTimerReducer(setup, { type: 'logRound', nowMs: 1_000 })).toEqual(setup);
     });
   });
 

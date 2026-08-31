@@ -28,6 +28,7 @@ import { MissionLoadingModal } from '@/components/mission/MissionLoadingModal';
 import { EditRallyScheduleForm } from '@/components/mission/EditRallyScheduleForm';
 import { ArmedRallyPointControls } from '@/components/mission/ArmedRallyPointControls';
 import { HostRallyPointSteps } from '@/components/mission/HostRallyPointSteps';
+import { LogMissedRound } from '@/components/mission/LogMissedRound';
 import { SafetyNoticeModal } from '@/components/safety/SafetyNoticeModal';
 import { useMissionSafetyNotices } from '@/components/safety/useMissionSafetyNotices';
 import { CoachWalkthrough } from '@/components/walkthrough/CoachWalkthrough';
@@ -1018,6 +1019,20 @@ function LiveMissionView({
                   </button>
                 )}
               </section>
+
+              {showLogRound && live.canLogMissedRound ? (
+                <section className="flex justify-center">
+                  <LogMissedRound
+                    roundNumber={live.myRoundCount + 1}
+                    repsPerRound={live.repsPerRound}
+                    preview={live.previewMissedRound}
+                    onConfirm={(reps) => {
+                      playRoundLogged();
+                      void live.logMissedRound(reps);
+                    }}
+                  />
+                </section>
+              ) : null}
 
               {live.isPractice && live.practiceRounds.length > 0 ? (
                 <section className="rounded-card border border-border bg-page p-4 text-left">

@@ -85,7 +85,7 @@ export function useMissionChannel(
         supabase
           .from('rounds')
           .select(
-            'id, mission_id, participant_id, round_index, elapsed_sec_at_round, segment_index, created_at'
+            'id, mission_id, participant_id, round_index, elapsed_sec_at_round, segment_index, missed_log_reps, created_at'
           )
           .eq('mission_id', missionId),
         supabase

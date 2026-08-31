@@ -134,6 +134,9 @@ export function parseRoundRow(record: Record<string, unknown>): RoundRow | null 
   const elapsedSecAtRound =
     typeof record.elapsed_sec_at_round === 'number' ? record.elapsed_sec_at_round : null;
   const segmentIndex = typeof record.segment_index === 'number' ? record.segment_index : null;
+  // Absent on rows written before the column existed, and absent from a
+  // Realtime payload that filtered it out; both mean "logged live".
+  const missedLogReps = typeof record.missed_log_reps === 'number' ? record.missed_log_reps : null;
   const createdAt = typeof record.created_at === 'string' ? record.created_at : null;
 
   if (
@@ -155,6 +158,7 @@ export function parseRoundRow(record: Record<string, unknown>): RoundRow | null 
     round_index: roundIndex,
     elapsed_sec_at_round: elapsedSecAtRound,
     segment_index: segmentIndex,
+    missed_log_reps: missedLogReps,
     created_at: createdAt,
   };
 }

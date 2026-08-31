@@ -3,6 +3,8 @@ import type { RoundRow } from '@/lib/missionSync/types';
 export interface ParticipantSplitEntry {
   roundNumber: number;
   durationSec: number;
+  /** True when this round's boundary was reconstructed from a missed log. */
+  wasMissedLog: boolean;
 }
 
 export function formatSplitDuration(totalSec: number): string {
@@ -28,6 +30,7 @@ export function computeParticipantSplits(
     return {
       roundNumber: round.round_index + 1,
       durationSec: Math.max(0, round.elapsed_sec_at_round - previousElapsed),
+      wasMissedLog: round.missed_log_reps !== null,
     };
   });
 }
