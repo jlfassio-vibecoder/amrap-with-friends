@@ -417,7 +417,7 @@ export async function startNextLobbySession(input: {
   templateId?: string | null;
   intensityTier?: number | null;
 }): Promise<{
-  data: { sessionId: string; hostToken: string; participantId: string } | null;
+  data: { sessionId: string; hostToken: string; participantId: string; claimToken: string } | null;
   error: LobbyApiError | null;
 }> {
   const { data, error } = await callRpc('start_next_lobby_session', {
@@ -434,7 +434,8 @@ export async function startNextLobbySession(input: {
   const sessionId = readString(raw.session_id);
   const hostToken = readString(raw.host_token);
   const participantId = readString(raw.participant_id);
-  if (!sessionId || !hostToken || !participantId) {
+  const claimToken = readString(raw.claim_token);
+  if (!sessionId || !hostToken || !participantId || !claimToken) {
     return { data: null, error: { message: 'Something went wrong. Please try again.' } };
   }
 
@@ -444,6 +445,7 @@ export async function startNextLobbySession(input: {
     nickname,
     participantId,
     hostToken,
+    claimToken,
   });
   if (memberId) {
     persistLobbyIdentity(input.lobbyId, {
@@ -455,7 +457,7 @@ export async function startNextLobbySession(input: {
 
   track('lobby_next_session', {}, { sessionId, participantId });
 
-  return { data: { sessionId, hostToken, participantId }, error: null };
+  return { data: { sessionId, hostToken, participantId, claimToken }, error: null };
 }
 
 export async function leaveLobby(
