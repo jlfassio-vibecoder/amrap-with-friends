@@ -93,7 +93,7 @@ export interface PublishedCoachWorkout {
 }
 
 export interface CoachWorkoutHistoryEntry {
-  sessionId: string;
+  missionId: string;
   nickname: string;
   role: string;
   state: string;
@@ -133,7 +133,9 @@ function asArray(value: unknown): Record<string, unknown>[] {
 }
 
 function asStringArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : [];
 }
 
 function readString(value: unknown): string | null {
@@ -266,7 +268,14 @@ function parseWorkout(row: Record<string, unknown>): CoachWorkout | null {
   const intensityTier = readNumber(row.intensityTier);
   const createdAt = readString(row.createdAt);
   const updatedAt = readString(row.updatedAt);
-  if (!id || !name || durationMinutes === null || intensityTier === null || !createdAt || !updatedAt) {
+  if (
+    !id ||
+    !name ||
+    durationMinutes === null ||
+    intensityTier === null ||
+    !createdAt ||
+    !updatedAt
+  ) {
     return null;
   }
   const movements = asArray(row.movements)
@@ -290,9 +299,7 @@ function parseWorkout(row: Record<string, unknown>): CoachWorkout | null {
   };
 }
 
-function parsePublishedMovementExercise(
-  value: unknown
-): PublishedCoachWorkoutMovement['exercise'] {
+function parsePublishedMovementExercise(value: unknown): PublishedCoachWorkoutMovement['exercise'] {
   if (!value || typeof value !== 'object') {
     return null;
   }
@@ -361,16 +368,16 @@ function parsePublishedWorkout(row: Record<string, unknown>): PublishedCoachWork
 }
 
 function parseWorkoutHistoryEntry(row: Record<string, unknown>): CoachWorkoutHistoryEntry | null {
-  const sessionId = readString(row.session_id);
+  const missionId = readString(row.mission_id);
   const nickname = readString(row.nickname);
   const role = readString(row.role);
   const state = readString(row.state);
   const createdAt = readString(row.created_at);
-  if (!sessionId || !nickname || !role || !state || !createdAt) {
+  if (!missionId || !nickname || !role || !state || !createdAt) {
     return null;
   }
   return {
-    sessionId,
+    missionId,
     nickname,
     role,
     state,
@@ -444,7 +451,10 @@ export async function deleteCoachExercise(
 
   const raw = asRecord(data);
   if (raw.ok !== true) {
-    return { data: false, error: { message: 'Exercise not found. It may have already been deleted.' } };
+    return {
+      data: false,
+      error: { message: 'Exercise not found. It may have already been deleted.' },
+    };
   }
 
   return { data: true, error: null };
@@ -545,12 +555,14 @@ export async function deleteCoachWorkout(
       return {
         data: false,
         error: {
-          message:
-            'Workout is locked — it has a completed session. Clone it to make changes.',
+          message: 'Workout is locked — it has a completed mission. Clone it to make changes.',
         },
       };
     }
-    return { data: false, error: { message: 'Workout not found. It may have already been deleted.' } };
+    return {
+      data: false,
+      error: { message: 'Workout not found. It may have already been deleted.' },
+    };
   }
 
   return { data: true, error: null };
@@ -671,9 +683,9 @@ export async function fetchCoachWorkoutHistory(
     return { data: null, error: { message: 'Something went wrong. Please try again.' } };
   }
 
-  const sessions = asArray(raw.sessions)
+  const missions = asArray(raw.missions)
     .map(parseWorkoutHistoryEntry)
     .filter((s): s is CoachWorkoutHistoryEntry => s !== null);
 
-  return { data: sessions, error: null };
+  return { data: missions, error: null };
 }

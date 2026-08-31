@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react';
-import { resumeSessionIdentity } from '@/lib/api/resumeSessionIdentity';
+import { resumeMissionIdentity } from '@/lib/api/resumeMissionIdentity';
 import {
   clearStoredHostToken,
   getStoredHostToken,
   setStoredHostToken,
-} from '@/lib/sessionIdentity';
+} from '@/lib/missionIdentity';
 
 /**
  * Keeps local host_token in sync with rallyPoints.host_user_id during waiting/setup.
@@ -12,7 +12,7 @@ import {
  */
 export function useRallyPointHostHandoff(input: {
   hostUserId: string | null | undefined;
-  activeSessionId: string | null | undefined;
+  activeMissionId: string | null | undefined;
   userId: string | null | undefined;
   enabled?: boolean;
   onHostAuthorityChange?: () => void;
@@ -28,13 +28,13 @@ export function useRallyPointHostHandoff(input: {
       return;
     }
     const hostUserId = input.hostUserId;
-    const activeSessionId = input.activeSessionId;
+    const activeMissionId = input.activeMissionId;
     const userId = input.userId;
-    if (!hostUserId || !activeSessionId || !userId) {
+    if (!hostUserId || !activeMissionId || !userId) {
       return;
     }
 
-    const handoffKey = `${activeSessionId}:${hostUserId}`;
+    const handoffKey = `${activeMissionId}:${hostUserId}`;
     if (lastHandledRef.current === handoffKey) {
       return;
     }
@@ -43,12 +43,12 @@ export function useRallyPointHostHandoff(input: {
 
     void (async () => {
       if (hostUserId === userId) {
-        const result = await resumeSessionIdentity(activeSessionId);
+        const result = await resumeMissionIdentity(activeMissionId);
         if (cancelled) {
           return;
         }
         if (result.data?.hostToken) {
-          setStoredHostToken(activeSessionId, result.data.hostToken);
+          setStoredHostToken(activeMissionId, result.data.hostToken);
           lastHandledRef.current = handoffKey;
           onChangeRef.current?.();
           return;
@@ -57,8 +57,8 @@ export function useRallyPointHostHandoff(input: {
         return;
       }
 
-      if (getStoredHostToken(activeSessionId)) {
-        clearStoredHostToken(activeSessionId);
+      if (getStoredHostToken(activeMissionId)) {
+        clearStoredHostToken(activeMissionId);
         onChangeRef.current?.();
       }
       lastHandledRef.current = handoffKey;
@@ -67,5 +67,5 @@ export function useRallyPointHostHandoff(input: {
     return () => {
       cancelled = true;
     };
-  }, [input.activeSessionId, input.enabled, input.hostUserId, input.userId]);
+  }, [input.activeMissionId, input.enabled, input.hostUserId, input.userId]);
 }

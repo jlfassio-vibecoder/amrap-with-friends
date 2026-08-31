@@ -50,7 +50,7 @@ beforeEach(() => {
   createCampaignMock.mockReset();
   navigateMock.mockReset();
   createCampaignMock.mockResolvedValue({
-    data: { campaignId: 'c1', inviteCode: 'ABC', totalSessions: 24, sessionsPerWeek: 3 },
+    data: { campaignId: 'c1', inviteCode: 'ABC', totalMissions: 24, missionsPerWeek: 3 },
     error: null,
   });
 });
@@ -59,20 +59,20 @@ describe('CreateCampaignPage', () => {
   it('previews the default plan before anything is typed', () => {
     renderPage();
     // 8 weeks x the 3 suggested days.
-    expect(screen.getByText(/24 sessions · 3 a week · 8 weeks/)).toBeTruthy();
+    expect(screen.getByText(/24 missions · 3 a week · 8 weeks/)).toBeTruthy();
     expect(screen.getByText(/Measured on Aerobic Blood Shunt · 10 min/)).toBeTruthy();
   });
 
   it('re-previews when the campaign length changes', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: '4 weeks' }));
-    expect(screen.getByText(/12 sessions · 3 a week · 4 weeks/)).toBeTruthy();
+    expect(screen.getByText(/12 missions · 3 a week · 4 weeks/)).toBeTruthy();
   });
 
   it('re-previews when a training day is removed', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Wed' }));
-    expect(screen.getByText(/16 sessions · 2 a week · 8 weeks/)).toBeTruthy();
+    expect(screen.getByText(/16 missions · 2 a week · 8 weeks/)).toBeTruthy();
   });
 
   it('will not let the host schedule more than five days a week', () => {
@@ -80,7 +80,7 @@ describe('CreateCampaignPage', () => {
     // Suggested pattern is Mon/Wed/Fri; add Tue and Thu to reach five.
     fireEvent.click(screen.getByRole('button', { name: 'Tue' }));
     fireEvent.click(screen.getByRole('button', { name: 'Thu' }));
-    expect(screen.getByText(/40 sessions · 5 a week · 8 weeks/)).toBeTruthy();
+    expect(screen.getByText(/40 missions · 5 a week · 8 weeks/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Sat' }).hasAttribute('disabled')).toBe(true);
   });
 
@@ -90,7 +90,7 @@ describe('CreateCampaignPage', () => {
       fireEvent.click(screen.getByRole('button', { name: day }));
     }
     expect(screen.getByText('Pick at least one training day.')).toBeTruthy();
-    expect(screen.queryByText(/sessions ·/)).toBeNull();
+    expect(screen.queryByText(/missions ·/)).toBeNull();
   });
 
   it('keeps submit disabled until the campaign is named', () => {
@@ -117,9 +117,7 @@ describe('CreateCampaignPage', () => {
     expect(input.weekCount).toBe(8);
     expect(input.occurrences).toHaveLength(24);
     // Every occurrence must carry its own resolved workout for the generator.
-    expect(input.occurrences.every((o: { workout: unknown[] }) => o.workout.length > 0)).toBe(
-      true
-    );
+    expect(input.occurrences.every((o: { workout: unknown[] }) => o.workout.length > 0)).toBe(true);
 
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/campaign/c1'));
   });

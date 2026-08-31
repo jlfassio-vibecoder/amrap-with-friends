@@ -21,7 +21,7 @@ const WORKOUT_NAMES = new Map(WORKOUT_TEMPLATES.map((template) => [template.id, 
 interface CampaignScheduleSectionProps {
   occurrences: CampaignOccurrenceEntry[];
   roleBySequence: Map<number, CampaignOccurrenceRole>;
-  /** Which sessions the viewer is allowed to move. */
+  /** Which missions the viewer is allowed to move. */
   canMove: (occurrence: CampaignOccurrenceEntry) => boolean;
   /** Resolves to an error message, or null when the move went through. */
   onMove: (occurrenceId: string, localDate: string, localTime: string) => Promise<string | null>;
@@ -84,8 +84,8 @@ export function CampaignScheduleSection({
                         <span>{WORKOUT_NAMES.get(occurrence.templateId) ?? 'Workout'}</span>
                       ) : null}
                       <span>{occurrence.durationMinutes} min</span>
-                      {occurrence.sessionId ? (
-                        <Link className="link-accent" to={`/session/${occurrence.sessionId}`}>
+                      {occurrence.missionId ? (
+                        <Link className="link-accent" to={`/mission/${occurrence.missionId}`}>
                           {OCCURRENCE_LABEL[occurrence.status] ?? occurrence.status}
                         </Link>
                       ) : (
@@ -144,7 +144,7 @@ export function CampaignScheduleSection({
                         </button>
                       </div>
                       <p className="text-xs text-muted">
-                        Keep it between the sessions either side, so the weeks stay in order.
+                        Keep it between the missions either side, so the weeks stay in order.
                       </p>
                       {error ? <p className="alert-error">{error}</p> : null}
                     </div>

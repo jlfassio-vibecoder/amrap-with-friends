@@ -11,8 +11,8 @@ import {
   type CoachFeaturedSchedule,
   type FeaturedWodAttendee,
 } from '@/lib/api/featuredWodSchedule';
-import { FEATURED_WOD_RALLY_POINT_LEAD_MS } from '@/lib/session/featuredWodCardPresentation';
-import { computeNextFeaturedOccurrences } from '@/lib/session/featuredWodOccurrencePreview';
+import { FEATURED_WOD_RALLY_POINT_LEAD_MS } from '@/lib/mission/featuredWodCardPresentation';
+import { computeNextFeaturedOccurrences } from '@/lib/mission/featuredWodOccurrencePreview';
 
 const PREVIEW_COUNT = 3;
 
@@ -287,9 +287,9 @@ function ScheduleForm({ workouts, schedule, onSaved, onCancel }: ScheduleFormPro
   );
 }
 
-/** Join rally point appears in the same lead window as the public Join session CTA. */
+/** Join rally point appears in the same lead window as the public Join mission CTA. */
 function JoinRallyPointLink({ scheduleActive }: { scheduleActive: boolean }) {
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [missionId, setMissionId] = useState<string | null>(null);
   const [scheduledAt, setScheduledAt] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
@@ -307,11 +307,11 @@ function JoinRallyPointLink({ scheduleActive }: { scheduleActive: boolean }) {
             return;
           }
           if (result.error || !result.data) {
-            setSessionId(null);
+            setMissionId(null);
             setScheduledAt(null);
             return;
           }
-          setSessionId(result.data.sessionId);
+          setMissionId(result.data.missionId);
           setScheduledAt(result.data.scheduledAt);
           setNowMs(Date.now());
         })
@@ -319,7 +319,7 @@ function JoinRallyPointLink({ scheduleActive }: { scheduleActive: boolean }) {
           if (cancelled) {
             return;
           }
-          setSessionId(null);
+          setMissionId(null);
           setScheduledAt(null);
         });
     }
@@ -338,10 +338,10 @@ function JoinRallyPointLink({ scheduleActive }: { scheduleActive: boolean }) {
     };
   }, [scheduleActive]);
 
-  const activeSessionId = scheduleActive ? sessionId : null;
+  const activeMissionId = scheduleActive ? missionId : null;
   const activeScheduledAt = scheduleActive ? scheduledAt : null;
 
-  if (!activeSessionId || !activeScheduledAt) {
+  if (!activeMissionId || !activeScheduledAt) {
     return null;
   }
 
@@ -353,7 +353,7 @@ function JoinRallyPointLink({ scheduleActive }: { scheduleActive: boolean }) {
   return (
     <Link
       className="text-xs uppercase tracking-wide text-accent hover:underline"
-      to={`/session/${activeSessionId}`}
+      to={`/mission/${activeMissionId}`}
     >
       Join rally point
     </Link>
@@ -361,11 +361,11 @@ function JoinRallyPointLink({ scheduleActive }: { scheduleActive: boolean }) {
 }
 
 /** "Who's coming" — the specific athletes who've joined the coach's own
- * live Featured WOD session, not just the bare count already shown on the
- * public card. Only renders once a live session exists (sessionId !=
+ * live Featured WOD mission, not just the bare count already shown on the
+ * public card. Only renders once a live mission exists (missionId !=
  * null); polls while mounted so new joiners show up without a refresh. */
 function AttendeeList() {
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [missionId, setMissionId] = useState<string | null>(null);
   const [attendees, setAttendees] = useState<FeaturedWodAttendee[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -377,7 +377,7 @@ function AttendeeList() {
         if (cancelled || result.error || !result.data) {
           return;
         }
-        setSessionId(result.data.sessionId);
+        setMissionId(result.data.missionId);
         setAttendees(result.data.attendees);
         setLoaded(true);
       });
@@ -394,7 +394,7 @@ function AttendeeList() {
     };
   }, []);
 
-  if (!loaded || !sessionId) {
+  if (!loaded || !missionId) {
     return null;
   }
 
@@ -529,7 +529,7 @@ export function CoachFeaturedWodPanel() {
 
       <p className="text-xs text-secondary">
         Only one featured WOD can be live app-wide at a time. It publishes to the landing page and
-        Create session; the coach starts the AMRAP from the rally point.
+        Create mission; the coach starts the AMRAP from the rally point.
       </p>
 
       {error ? <p className="text-error text-sm">{error}</p> : null}

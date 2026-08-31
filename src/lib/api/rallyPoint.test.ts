@@ -1,23 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   announceNextMission,
-  createRallyPointSession,
+  createRallyPointMission,
   getRallyPoint,
   joinRallyPoint,
   leaveRallyPoint,
   passRallyPointCommand,
-  startNextRallyPointSession,
+  startNextRallyPointMission,
 } from './rallyPoint';
 import { supabase } from '@/lib/supabase';
-import * as sessionIdentity from '@/lib/sessionIdentity';
+import * as missionIdentity from '@/lib/missionIdentity';
 import * as rallyPointIdentity from '@/lib/rallyPointIdentity';
 import { track } from '@/lib/analytics/track';
 
 vi.mock('@/lib/supabase', () => ({
   supabase: { rpc: vi.fn(), from: vi.fn() },
 }));
-vi.mock('@/lib/sessionIdentity', () => ({
-  persistSessionIdentity: vi.fn(),
+vi.mock('@/lib/missionIdentity', () => ({
+  persistMissionIdentity: vi.fn(),
   clearStoredHostToken: vi.fn(),
 }));
 vi.mock('@/lib/rallyPointIdentity', () => ({
@@ -33,7 +33,7 @@ const trackMock = vi.mocked(track);
 const rpcMock = vi.mocked(supabase.rpc);
 
 const RALLY_POINT_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-const SESSION_ID = '11111111-1111-4111-8111-111111111111';
+const MISSION_ID = '11111111-1111-4111-8111-111111111111';
 const PARTICIPANT_ID = '22222222-2222-4222-8222-222222222222';
 const MEMBER_ID = '33333333-3333-4333-8333-333333333333';
 
@@ -42,12 +42,12 @@ describe('rally point API', () => {
     vi.clearAllMocks();
   });
 
-  it('createRallyPointSession persists rallyPoint and session identity', async () => {
+  it('createRallyPointMission persists rallyPoint and mission identity', async () => {
     rpcMock.mockResolvedValue({
       data: {
         rally_point_id: RALLY_POINT_ID,
         rally_point_member_id: MEMBER_ID,
-        session_id: SESSION_ID,
+        mission_id: MISSION_ID,
         host_token: 'host-secret',
         participant_id: PARTICIPANT_ID,
         claim_token: 'claim-1',
@@ -58,14 +58,14 @@ describe('rally point API', () => {
       statusText: 'OK',
     } as never);
 
-    const result = await createRallyPointSession({
+    const result = await createRallyPointMission({
       nickname: 'Host',
       durationMinutes: 12,
       workout: [{ name: 'Burpees', target: 10 }],
     });
 
     expect(rpcMock).toHaveBeenCalledWith(
-      'create_rally_point_session',
+      'create_rally_point_mission',
       expect.objectContaining({
         p_duration_minutes: 12,
         p_nickname: 'Host',
@@ -74,9 +74,9 @@ describe('rally point API', () => {
     expect(rallyPointIdentity.persistRallyPointIdentity).toHaveBeenCalledWith(RALLY_POINT_ID, {
       memberId: MEMBER_ID,
       nickname: 'Host',
-      sessionId: SESSION_ID,
+      missionId: MISSION_ID,
     });
-    expect(sessionIdentity.persistSessionIdentity).toHaveBeenCalled();
+    expect(missionIdentity.persistMissionIdentity).toHaveBeenCalled();
     expect(result.error).toBeNull();
     expect(result.data?.rallyPointId).toBe(RALLY_POINT_ID);
   });
@@ -95,16 +95,16 @@ describe('rally point API', () => {
     expect(result.error?.message).toBe('Rally point not found.');
   });
 
-  it('joinRallyPoint persists rotated claim_token and session_state on reclaim', async () => {
+  it('joinRallyPoint persists rotated claim_token and mission_state on reclaim', async () => {
     rpcMock.mockResolvedValue({
       data: {
         rally_point_id: RALLY_POINT_ID,
         rally_point_member_id: MEMBER_ID,
         host_user_id: 'user-1',
         status: 'open',
-        active_session_id: SESSION_ID,
-        session_id: SESSION_ID,
-        session_state: 'waiting',
+        active_mission_id: MISSION_ID,
+        mission_id: MISSION_ID,
+        mission_state: 'waiting',
         participant_id: PARTICIPANT_ID,
         nickname: 'Jules',
         role: 'joiner',
@@ -119,10 +119,10 @@ describe('rally point API', () => {
 
     const result = await joinRallyPoint({ rallyPointId: RALLY_POINT_ID, nickname: 'Jules' });
     expect(result.error).toBeNull();
-    expect(result.data?.sessionState).toBe('waiting');
+    expect(result.data?.missionState).toBe('waiting');
     expect(result.data?.claimToken).toBe('rotated-claim');
-    expect(sessionIdentity.persistSessionIdentity).toHaveBeenCalledWith(
-      SESSION_ID,
+    expect(missionIdentity.persistMissionIdentity).toHaveBeenCalledWith(
+      MISSION_ID,
       expect.objectContaining({
         participantId: PARTICIPANT_ID,
         claimToken: 'rotated-claim',
@@ -136,7 +136,7 @@ describe('rally point API', () => {
         ok: true,
         host_user_id: 'user-2',
         host_token: null,
-        active_session_id: SESSION_ID,
+        active_mission_id: MISSION_ID,
       },
       error: null,
       count: null,
@@ -152,9 +152,9 @@ describe('rally point API', () => {
     expect(result.data).toEqual({
       hostUserId: 'user-2',
       hostToken: null,
-      activeSessionId: SESSION_ID,
+      activeMissionId: MISSION_ID,
     });
-    expect(sessionIdentity.clearStoredHostToken).toHaveBeenCalledWith(SESSION_ID);
+    expect(missionIdentity.clearStoredHostToken).toHaveBeenCalledWith(MISSION_ID);
   });
 
   it('leaveRallyPoint tracks rally_point_closed when the last host leaves', async () => {
@@ -195,11 +195,11 @@ describe('rally point API', () => {
     expect(trackMock).not.toHaveBeenCalledWith('rally_point_closed', {});
   });
 
-  it('startNextRallyPointSession seeds the new session identity', async () => {
+  it('startNextRallyPointMission seeds the new mission identity', async () => {
     rpcMock.mockResolvedValue({
       data: {
         ok: true,
-        session_id: SESSION_ID,
+        mission_id: MISSION_ID,
         host_token: 'next-host',
         participant_id: PARTICIPANT_ID,
         claim_token: 'next-claim',
@@ -210,7 +210,7 @@ describe('rally point API', () => {
       statusText: 'OK',
     } as never);
 
-    const result = await startNextRallyPointSession({
+    const result = await startNextRallyPointMission({
       rallyPointId: RALLY_POINT_ID,
       durationMinutes: 10,
       workout: [{ name: 'Air Squats', target: 15 }],
@@ -219,16 +219,16 @@ describe('rally point API', () => {
     });
 
     expect(rpcMock).toHaveBeenCalledWith(
-      'start_next_rally_point_session',
+      'start_next_rally_point_mission',
       expect.objectContaining({
         p_template_id: 'blood-shunt-10',
         p_intensity_tier: 3,
       })
     );
     expect(result.error).toBeNull();
-    expect(result.data?.sessionId).toBe(SESSION_ID);
-    expect(sessionIdentity.persistSessionIdentity).toHaveBeenCalledWith(
-      SESSION_ID,
+    expect(result.data?.missionId).toBe(MISSION_ID);
+    expect(missionIdentity.persistMissionIdentity).toHaveBeenCalledWith(
+      MISSION_ID,
       expect.objectContaining({
         hostToken: 'next-host',
         participantId: PARTICIPANT_ID,
@@ -245,9 +245,9 @@ describe('rally point API', () => {
           rally_point_member_id: MEMBER_ID,
           host_user_id: 'user-1',
           status: 'open',
-          active_session_id: SESSION_ID,
-          session_id: SESSION_ID,
-          session_state: 'waiting',
+          active_mission_id: MISSION_ID,
+          mission_id: MISSION_ID,
+          mission_state: 'waiting',
           participant_id: PARTICIPANT_ID,
           nickname: 'Guesty',
           role: 'joiner',
@@ -393,8 +393,8 @@ describe('rally point API', () => {
           ok: true,
           rally_point_id: RALLY_POINT_ID,
           host_user_id: 'user-1',
-          active_session_id: SESSION_ID,
-          active_session_state: 'finished',
+          active_mission_id: MISSION_ID,
+          active_mission_state: 'finished',
           status: 'open',
           created_at: '2026-09-01T10:00:00Z',
           updated_at: '2026-09-01T11:00:00Z',

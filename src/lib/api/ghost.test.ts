@@ -15,14 +15,14 @@ beforeEach(() => {
 });
 
 describe('fetchAvailableGhosts', () => {
-  it('passes forSessionId so makeup sessions can load crew runs', async () => {
+  it('passes forMissionId so makeup missions can load crew runs', async () => {
     rpcMock.mockResolvedValue({
       data: {
         ok: true,
         personal_best: null,
         friends: [
           {
-            session_id: 'live-1',
+            mission_id: 'live-1',
             participant_id: 'p1',
             nickname: 'Maya',
             final_score: 90,
@@ -38,14 +38,14 @@ describe('fetchAvailableGhosts', () => {
     expect(rpcMock).toHaveBeenCalledWith('available_ghosts', {
       p_template_id: 'the-valve',
       p_duration_minutes: 10,
-      p_for_session_id: 'makeup-sess',
+      p_for_mission_id: 'makeup-sess',
     });
     expect(result.error).toBeNull();
     expect(result.data?.friends).toHaveLength(1);
     expect(result.data?.friends[0].nickname).toBe('Maya');
   });
 
-  it('sends null forSessionId when omitted', async () => {
+  it('sends null forMissionId when omitted', async () => {
     rpcMock.mockResolvedValue({
       data: { ok: true, personal_best: null, friends: [] },
       error: null,
@@ -54,7 +54,7 @@ describe('fetchAvailableGhosts', () => {
     expect(rpcMock).toHaveBeenCalledWith('available_ghosts', {
       p_template_id: 'the-valve',
       p_duration_minutes: 10,
-      p_for_session_id: null,
+      p_for_mission_id: null,
     });
   });
 });

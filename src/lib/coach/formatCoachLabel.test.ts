@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  formatCoachEventLabel,
-  formatCoachLabel,
-  formatCoachProps,
-} from './formatCoachLabel';
+import { formatCoachEventLabel, formatCoachLabel, formatCoachProps } from './formatCoachLabel';
 
 describe('formatCoachLabel', () => {
   it('formats snake_case RPC and event names', () => {
@@ -54,12 +50,12 @@ describe('formatCoachProps', () => {
 
   it('leaves UUIDs and free text unchanged', () => {
     const formatted = formatCoachProps({
-      session_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+      mission_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
       error_message: 'Something went wrong. Please try again.',
     });
     expect(formatted).toBe(
       JSON.stringify({
-        'Session id': 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        'Mission id': 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
         'Error message': 'Something went wrong. Please try again.',
       })
     );

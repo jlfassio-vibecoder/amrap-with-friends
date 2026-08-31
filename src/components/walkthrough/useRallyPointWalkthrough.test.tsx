@@ -26,7 +26,7 @@ describe('useRallyPointWalkthrough', () => {
     const { result, rerender } = renderHook(
       ({ enabled }: { enabled: boolean }) =>
         useRallyPointWalkthrough({
-          sessionId: 'session-a',
+          missionId: 'mission-a',
           isHost: true,
           enabled,
           isTargetPresent: () => true,
@@ -48,7 +48,7 @@ describe('useRallyPointWalkthrough', () => {
   it('uses host steps including the countdown and Start', () => {
     const { result } = renderHook(() =>
       useRallyPointWalkthrough({
-        sessionId: 'session-a',
+        missionId: 'mission-a',
         isHost: true,
         enabled: true,
         isTargetPresent: () => true,
@@ -69,7 +69,7 @@ describe('useRallyPointWalkthrough', () => {
   it('uses joiner steps including waiting-on-host and Practice', () => {
     const { result } = renderHook(() =>
       useRallyPointWalkthrough({
-        sessionId: 'session-a',
+        missionId: 'mission-a',
         isHost: false,
         enabled: true,
         isTargetPresent: () => true,
@@ -88,7 +88,7 @@ describe('useRallyPointWalkthrough', () => {
   it('skips steps whose targets are missing', () => {
     const { result } = renderHook(() =>
       useRallyPointWalkthrough({
-        sessionId: 'session-a',
+        missionId: 'mission-a',
         isHost: true,
         enabled: true,
         isTargetPresent: (targetId) => targetId !== 'pacer' && targetId !== 'workout',
@@ -105,14 +105,14 @@ describe('useRallyPointWalkthrough', () => {
 
   it('does not rerun after dismissForever', () => {
     const { result, rerender } = renderHook(
-      ({ sessionId }: { sessionId: string }) =>
+      ({ missionId }: { missionId: string }) =>
         useRallyPointWalkthrough({
-          sessionId,
+          missionId,
           isHost: true,
           enabled: true,
           isTargetPresent: () => true,
         }),
-      { initialProps: { sessionId: 'session-a' } }
+      { initialProps: { missionId: 'mission-a' } }
     );
 
     expect(result.current.active).toBe(true);
@@ -123,7 +123,7 @@ describe('useRallyPointWalkthrough', () => {
     expect(result.current.complete).toBe(true);
     expect(result.current.active).toBe(false);
 
-    rerender({ sessionId: 'session-b' });
+    rerender({ missionId: 'mission-b' });
 
     expect(result.current.complete).toBe(true);
     expect(result.current.active).toBe(false);
@@ -134,7 +134,7 @@ describe('useRallyPointWalkthrough', () => {
 
     const { result } = renderHook(() =>
       useRallyPointWalkthrough({
-        sessionId: 'session-a',
+        missionId: 'mission-a',
         isHost: true,
         enabled: true,
         isTargetPresent: () => true,

@@ -1,6 +1,6 @@
 import { callRpc } from '@/lib/api/callRpc';
 import { parseGhostRunRef } from '@/lib/api/ghost';
-import type { WorkoutExercise } from '@/lib/api/sessionTypes';
+import type { WorkoutExercise } from '@/lib/api/missionTypes';
 import {
   computeCampaignStandings,
   type CampaignStandingRow,
@@ -10,7 +10,7 @@ import {
   type CampaignWeekCount,
   type PlannedCampaignOccurrence,
 } from '@/lib/campaign';
-import { persistSessionIdentity, setStoredGhostSelection } from '@/lib/sessionIdentity';
+import { persistMissionIdentity, setStoredGhostSelection } from '@/lib/missionIdentity';
 
 export type CampaignApiError = { message: string };
 
@@ -23,15 +23,15 @@ export interface CampaignSummary {
   name: string;
   goal: string | null;
   weekCount: number;
-  sessionsPerWeek: number;
+  missionsPerWeek: number;
   startDate: string;
   timezone: string;
   status: CampaignStatus;
   role: CampaignRole;
   /** Host-only: null for members, so they cannot re-share the campaign. */
   inviteCode: string | null;
-  totalSessions: number;
-  completedSessions: number;
+  totalMissions: number;
+  completedMissions: number;
   memberCount: number;
 }
 
@@ -46,7 +46,7 @@ export interface CampaignOccurrenceEntry {
   durationMinutes: number;
   intensityTier: number | null;
   workout: WorkoutExercise[];
-  sessionId: string | null;
+  missionId: string | null;
   status: CampaignOccurrenceStatus;
 }
 
@@ -59,7 +59,7 @@ export interface CampaignMemberEntry {
 
 export interface CampaignMakeupEntry {
   occurrenceId: string;
-  sessionId: string;
+  missionId: string;
 }
 
 export interface CampaignDetail {
@@ -67,7 +67,7 @@ export interface CampaignDetail {
   name: string;
   goal: string | null;
   weekCount: number;
-  sessionsPerWeek: number;
+  missionsPerWeek: number;
   startDate: string;
   timezone: string;
   status: CampaignStatus;
@@ -90,8 +90,8 @@ export interface CreateCampaignInput {
 export interface CreateCampaignResult {
   campaignId: string;
   inviteCode: string;
-  totalSessions: number;
-  sessionsPerWeek: number;
+  totalMissions: number;
+  missionsPerWeek: number;
 }
 
 const ERROR_COPY: Record<string, string> = {
@@ -104,17 +104,17 @@ const ERROR_COPY: Record<string, string> = {
   'Campaign already started':
     'This campaign has already started, so it cannot be deleted. End it instead.',
   'Campaign has other athletes':
-    'Other athletes have joined, so it cannot be deleted. End it instead — their finished sessions stay on their record.',
-  'Not next to make up': 'Make up the oldest session you owe first.',
-  'Host session limit reached':
-    'You already have three sessions open. Finish one before starting a makeup.',
+    'Other athletes have joined, so it cannot be deleted. End it instead — their finished missions stay on their record.',
+  'Not next to make up': 'Make up the oldest mission you owe first.',
+  'Host mission limit reached':
+    'You already have three missions open. Finish one before starting a makeup.',
   'Name the campaign in 80 characters or fewer': 'Name the campaign in 80 characters or fewer.',
   'Keep the goal to 280 characters or fewer': 'Keep the goal to 280 characters or fewer.',
-  'Session already scheduled': 'That session is already open, so its time cannot be changed now.',
+  'Mission already scheduled': 'That mission is already open, so its time cannot be changed now.',
   'Pick a date and a time': 'Pick a date and a time.',
   'Pick a time in the future': 'Pick a time that has not passed yet.',
-  'Move it after the session before it': 'Move it later than the session before it.',
-  'Move it before the session after it': 'Move it earlier than the session after it.',
+  'Move it after the mission before it': 'Move it later than the mission before it.',
+  'Move it before the mission after it': 'Move it earlier than the mission after it.',
   'Campaign not found': 'That campaign is not available.',
   'Pick a squad friend to add': 'Pick a squad friend to add.',
   'Squad friend has no profile': 'That athlete no longer has a profile.',
@@ -167,14 +167,14 @@ function parseSummary(raw: unknown): CampaignSummary | null {
     name,
     goal: readString(row.goal),
     weekCount: readNumber(row.week_count),
-    sessionsPerWeek: readNumber(row.sessions_per_week),
+    missionsPerWeek: readNumber(row.missions_per_week),
     startDate: readString(row.start_date) ?? '',
     timezone: readString(row.timezone) ?? '',
     status: (readString(row.status) ?? 'active') as CampaignStatus,
     role: (readString(row.role) ?? 'member') as CampaignRole,
     inviteCode: readString(row.invite_code),
-    totalSessions: readNumber(row.total_sessions),
-    completedSessions: readNumber(row.completed_sessions),
+    totalMissions: readNumber(row.total_missions),
+    completedMissions: readNumber(row.completed_missions),
     memberCount: readNumber(row.member_count),
   };
 }
@@ -196,7 +196,7 @@ function parseOccurrence(raw: unknown): CampaignOccurrenceEntry | null {
     durationMinutes: readNumber(row.duration_minutes),
     intensityTier: row.intensity_tier === null ? null : readNumber(row.intensity_tier),
     workout: Array.isArray(row.workout) ? (row.workout as WorkoutExercise[]) : [],
-    sessionId: readString(row.session_id),
+    missionId: readString(row.mission_id),
     status: (readString(row.status) ?? 'planned') as CampaignOccurrenceStatus,
   };
 }
@@ -218,11 +218,11 @@ function parseMember(raw: unknown): CampaignMemberEntry | null {
 function parseMakeup(raw: unknown): CampaignMakeupEntry | null {
   const row = readRecord(raw);
   const occurrenceId = readString(row.occurrence_id);
-  const sessionId = readString(row.session_id);
-  if (!occurrenceId || !sessionId) {
+  const missionId = readString(row.mission_id);
+  if (!occurrenceId || !missionId) {
     return null;
   }
-  return { occurrenceId, sessionId };
+  return { occurrenceId, missionId };
 }
 
 /**
@@ -276,8 +276,8 @@ export async function createCampaign(
     data: {
       campaignId,
       inviteCode,
-      totalSessions: readNumber(row.total_sessions),
-      sessionsPerWeek: readNumber(row.sessions_per_week),
+      totalMissions: readNumber(row.total_missions),
+      missionsPerWeek: readNumber(row.missions_per_week),
     },
     error: null,
   };
@@ -327,7 +327,7 @@ export async function fetchCampaignDetail(
       name,
       goal: readString(campaign.goal),
       weekCount: readNumber(campaign.week_count),
-      sessionsPerWeek: readNumber(campaign.sessions_per_week),
+      missionsPerWeek: readNumber(campaign.missions_per_week),
       startDate: readString(campaign.start_date) ?? '',
       timezone: readString(campaign.timezone) ?? '',
       status: (readString(campaign.status) ?? 'active') as CampaignStatus,
@@ -351,13 +351,13 @@ export interface CampaignInvitePreview {
   name: string;
   goal: string | null;
   weekCount: number;
-  sessionsPerWeek: number;
+  missionsPerWeek: number;
   status: CampaignStatus;
   hostNickname: string | null;
   memberCount: number;
   memberLimit: number;
-  firstSessionDate: string | null;
-  lastSessionDate: string | null;
+  firstMissionDate: string | null;
+  lastMissionDate: string | null;
 }
 
 export interface JoinCampaignResult {
@@ -398,13 +398,13 @@ export async function fetchCampaignInvitePreview(
       name,
       goal: readString(row.goal),
       weekCount: readNumber(row.week_count),
-      sessionsPerWeek: readNumber(row.sessions_per_week),
+      missionsPerWeek: readNumber(row.missions_per_week),
       status: (readString(row.status) ?? 'active') as CampaignStatus,
       hostNickname: readString(row.host_nickname),
       memberCount: readNumber(row.member_count),
       memberLimit: readNumber(row.member_limit),
-      firstSessionDate: readString(row.first_session_date),
-      lastSessionDate: readString(row.last_session_date),
+      firstMissionDate: readString(row.first_mission_date),
+      lastMissionDate: readString(row.last_mission_date),
     },
     error: null,
   };
@@ -512,9 +512,9 @@ export async function updateCampaign(
 }
 
 /**
- * Moves one session that has not run yet. The new time has to stay between the
- * sessions either side of it — the whole app reads a campaign in sequence
- * order, so a session that jumped its neighbours would render out of order.
+ * Moves one mission that has not run yet. The new time has to stay between the
+ * missions either side of it — the whole app reads a campaign in sequence
+ * order, so a mission that jumped its neighbours would render out of order.
  */
 export async function rescheduleCampaignOccurrence(
   occurrenceId: string,
@@ -534,7 +534,7 @@ export async function rescheduleCampaignOccurrence(
 
 /**
  * Ends a campaign early. The row survives so members keep their finished
- * sessions and can see why the calendar stopped; remaining planned sessions
+ * missions and can see why the calendar stopped; remaining planned missions
  * become skipped, and the host gets their campaign slot back.
  */
 export async function endCampaign(campaignId: string): Promise<{ error: CampaignApiError | null }> {
@@ -561,15 +561,15 @@ export async function deleteCampaign(
 }
 
 /**
- * Starts (or resumes) a solo makeup session for the oldest owed occurrence.
- * The session never sets campaign_occurrence_id — the link lives in
- * campaign_makeups so the live-session unique index stays intact.
+ * Starts (or resumes) a solo makeup mission for the oldest owed occurrence.
+ * The mission never sets campaign_occurrence_id — the link lives in
+ * campaign_makeups so the live-mission unique index stays intact.
  * When a crewmate recording is available, seeds the ghost pacer selection
  * before navigation so the strip is armed at the rally point.
  */
 export async function startCampaignMakeup(
   occurrenceId: string
-): Promise<{ data: { sessionId: string } | null; error: CampaignApiError | null }> {
+): Promise<{ data: { missionId: string } | null; error: CampaignApiError | null }> {
   const { data, error } = await callRpc('start_campaign_makeup', {
     p_occurrence_id: occurrenceId,
   });
@@ -577,16 +577,16 @@ export async function startCampaignMakeup(
     return { data: null, error: { message: mapError(error.message) } };
   }
   const row = readRecord(data);
-  const sessionId = readString(row.session_id);
+  const missionId = readString(row.mission_id);
   const hostToken = readString(row.host_token);
   const participantId = readString(row.participant_id);
   const claimToken = readString(row.claim_token);
   const nickname = readString(row.nickname) ?? 'Athlete';
-  if (!sessionId || !participantId) {
+  if (!missionId || !participantId) {
     return { data: null, error: { message: 'Something went wrong. Please try again.' } };
   }
 
-  persistSessionIdentity(sessionId, {
+  persistMissionIdentity(missionId, {
     nickname,
     participantId,
     hostToken: hostToken ?? undefined,
@@ -602,8 +602,8 @@ export async function startCampaignMakeup(
     const label = dateLabel
       ? `${pacer.nickname} · ${pacer.finalScore} reps · ${dateLabel}`
       : `${pacer.nickname} · ${pacer.finalScore} reps`;
-    setStoredGhostSelection(sessionId, {
-      sessionId: pacer.sessionId,
+    setStoredGhostSelection(missionId, {
+      missionId: pacer.missionId,
       participantId: pacer.participantId,
       label,
       nickname: pacer.nickname,
@@ -613,7 +613,7 @@ export async function startCampaignMakeup(
     });
   }
 
-  return { data: { sessionId }, error: null };
+  return { data: { missionId }, error: null };
 }
 
 export type { CampaignStandingRow, CampaignStandingsMember, CampaignStandingsScore };

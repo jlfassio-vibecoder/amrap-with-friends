@@ -6,11 +6,11 @@ import { GlobalPresenceBroadcaster } from '@/components/GlobalPresenceBroadcaste
 import { RequireIntake } from '@/components/RequireIntake';
 import { RequireCoach } from '@/components/RequireCoach';
 
-const CreateSessionPage = lazy(() => import('./pages/CreateSessionPage'));
-const JoinSessionPage = lazy(() => import('./pages/JoinSessionPage'));
-const SessionWaitingRoomPage = lazy(() => import('./pages/SessionWaitingRoomPage'));
+const CreateMissionPage = lazy(() => import('./pages/CreateMissionPage'));
+const JoinMissionPage = lazy(() => import('./pages/JoinMissionPage'));
+const MissionWaitingRoomPage = lazy(() => import('./pages/MissionWaitingRoomPage'));
 const RallyPointPage = lazy(() => import('./pages/RallyPointPage'));
-const MySessionsPage = lazy(() => import('./pages/MySessionsPage'));
+const MyMissionsPage = lazy(() => import('./pages/MyMissionsPage'));
 const CreateCampaignPage = lazy(() => import('./pages/CreateCampaignPage'));
 const CampaignDetailPage = lazy(() => import('./pages/CampaignDetailPage'));
 const JoinCampaignPage = lazy(() => import('./pages/JoinCampaignPage'));
@@ -41,11 +41,11 @@ function App() {
             path="/create"
             element={
               <RequireIntake guestMode="sign-in" signedOutPreview={<FeaturedWodCard />}>
-                <CreateSessionPage />
+                <CreateMissionPage />
               </RequireIntake>
             }
           />
-          <Route path="/join" element={<JoinSessionPage />} />
+          <Route path="/join" element={<JoinMissionPage />} />
           <Route path="/rally-point/:rallyPointId" element={<RallyPointPage />} />
           {/* Public: the invite preview is what convinces someone to sign up,
               so it must render before the auth gate. */}
@@ -90,8 +90,8 @@ function App() {
               </RequireIntake>
             }
           />
-          <Route path="/session/:sessionId" element={<SessionWaitingRoomPage />} />
-          <Route path="/my-sessions" element={<MySessionsPage />} />
+          <Route path="/mission/:missionId" element={<MissionWaitingRoomPage />} />
+          <Route path="/my-missions" element={<MyMissionsPage />} />
           <Route path="/intake" element={<IntakePage />} />
           <Route
             path="/hud"

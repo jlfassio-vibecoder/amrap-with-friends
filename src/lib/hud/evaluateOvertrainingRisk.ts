@@ -23,13 +23,11 @@ const ACWR_HIGH_WARNING =
 const REST_DAY_WARNING =
   'System Warning: 5+ consecutive high-intensity days detected. Take a rest day to avoid CNS fatigue.';
 
-export function evaluateOvertrainingRisk(
-  input: OvertrainingInput
-): OvertrainingResult {
+export function evaluateOvertrainingRisk(input: OvertrainingInput): OvertrainingResult {
   // chronicWeeklyLoad28d is a 4-week average that already includes the
   // trailing 7 days, so on its own it can't tell a real baseline apart
   // from "all of this athlete's history is this week." Require some load
-  // to exist outside the acute window too — otherwise a single session
+  // to exist outside the acute window too — otherwise a single mission
   // with no training before it can look like a huge acute:chronic spike.
   const totalLoad28d = input.chronicWeeklyLoad28d * 4;
   const priorPeriodLoad = totalLoad28d - input.acuteLoad7d;
@@ -50,8 +48,7 @@ export function evaluateOvertrainingRisk(
     warnings.push(ACWR_ELEVATED_WARNING);
   }
 
-  const restDayTriggered =
-    input.consecutiveHighIntensityDays >= REST_DAY_CONSECUTIVE_THRESHOLD;
+  const restDayTriggered = input.consecutiveHighIntensityDays >= REST_DAY_CONSECUTIVE_THRESHOLD;
   if (restDayTriggered) {
     warnings.push(REST_DAY_WARNING);
   }

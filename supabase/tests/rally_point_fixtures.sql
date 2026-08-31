@@ -3,11 +3,11 @@
 --   SET request.jwt.claim.sub = '<uuid-a>' so auth.uid() resolves.
 --
 -- Evidence targets:
---   1. create_rally_point_session returns rally point + session + host_token to creator only
+--   1. create_rally_point_mission returns rally point + mission + host_token to creator only
 --   2. Second user join_rally_point → joiner, no host_token
---   3. pass_rally_point_command → host_token null; old host update_session_state with
---      old token fails; new host resume_session_identity gets token and can set countdown
---   4. start_next after finished → new session; guests not pre-inserted; claimed members present
+--   3. pass_rally_point_command → host_token null; old host update_mission_state with
+--      old token fails; new host resume_mission_identity gets token and can set countdown
+--   4. start_next after finished → new mission; guests not pre-inserted; claimed members present
 --   5. Pass during work raises
 --   6. Second start_next while waiting raises “still active”
 --   7. claim_rally_point_command_if_stale after host last_seen aged past 45s → claimed
@@ -25,7 +25,7 @@
 --
 -- -- As host A
 -- SET request.jwt.claim.sub = '<uuid-a>';
--- SELECT public.create_rally_point_session(
+-- SELECT public.create_rally_point_mission(
 --   12,
 --   'HostA',
 --   '[{"name":"Burpees","target":10}]'::jsonb,
@@ -34,21 +34,21 @@
 --   NULL,
 --   NULL
 -- );
--- -- Expect: rally_point_id, session_id, host_token, participant_id, claim_token
+-- -- Expect: rally_point_id, mission_id, host_token, participant_id, claim_token
 --
 -- -- As joiner B
 -- SET request.jwt.claim.sub = '<uuid-b>';
 -- SELECT public.join_rally_point('<rally_point_id>', 'HostB');
 -- -- Expect: role joiner, host_token null
 --
--- -- Pass command (as A, session waiting/setup)
+-- -- Pass command (as A, mission waiting/setup)
 -- SET request.jwt.claim.sub = '<uuid-a>';
 -- SELECT public.pass_rally_point_command('<rally_point_id>', '<uuid-b>');
 -- -- Expect: host_token IS NULL, host_user_id = <uuid-b>
 --
--- -- Old host cannot drive session with stale token
--- SELECT public.update_session_state(
---   '<session_id>',
+-- -- Old host cannot drive mission with stale token
+-- SELECT public.update_mission_state(
+--   '<mission_id>',
 --   '<old_host_token>',
 --   'setup',
 --   NULL,
@@ -59,37 +59,37 @@
 --
 -- -- New host reclaim
 -- SET request.jwt.claim.sub = '<uuid-b>';
--- SELECT public.resume_session_identity('<session_id>');
--- -- Expect: hostToken present; then countdown / update_session_state succeeds
+-- SELECT public.resume_mission_identity('<mission_id>');
+-- -- Expect: hostToken present; then countdown / update_mission_state succeeds
 --
--- -- Finish active session, then start_next
+-- -- Finish active mission, then start_next
 -- -- (host finishes via normal host path, then:)
--- SELECT public.start_next_rally_point_session(
+-- SELECT public.start_next_rally_point_mission(
 --   '<rally_point_id>',
 --   10,
 --   '[{"name":"Air Squats","target":15}]'::jsonb,
 --   NULL,
 --   NULL
 -- );
--- -- Expect: new session_id; participants only for claimed members (user_id NOT NULL);
+-- -- Expect: new mission_id; participants only for claimed members (user_id NOT NULL);
 -- -- guests absent until they join_rally_point again
 --
 -- -- Pass during live work
--- UPDATE public.sessions SET state = 'work' WHERE id = '<active_session_id>';
+-- UPDATE public.missions SET state = 'work' WHERE id = '<active_mission_id>';
 -- SET request.jwt.claim.sub = '<host_uuid>';
 -- SELECT public.pass_rally_point_command('<rally_point_id>', '<other_uuid>');
--- -- Expect: EXCEPTION Cannot pass command during a live session
+-- -- Expect: EXCEPTION Cannot pass command during a live mission
 --
 -- -- Concurrent start_next while waiting
 -- -- (after a successful start_next that left state waiting:)
--- SELECT public.start_next_rally_point_session(
+-- SELECT public.start_next_rally_point_mission(
 --   '<rally_point_id>',
 --   10,
 --   '[{"name":"Air Squats","target":15}]'::jsonb,
 --   NULL,
 --   NULL
 -- );
--- -- Expect: EXCEPTION Current session is still active
+-- -- Expect: EXCEPTION Current mission is still active
 --
 -- -- AFK claim after host last_seen aged past grace
 -- UPDATE public.rally_point_members
@@ -97,16 +97,16 @@
 -- WHERE rally_point_id = '<rally_point_id>' AND user_id = '<host_uuid>';
 -- SET request.jwt.claim.sub = '<successor_uuid>';
 -- SELECT public.claim_rally_point_command_if_stale('<rally_point_id>');
--- -- Expect: claimed true (and host_token when session waiting/setup)
+-- -- Expect: claimed true (and host_token when mission waiting/setup)
 --
 -- -- Claim during live work
--- UPDATE public.sessions SET state = 'work' WHERE id = '<active_session_id>';
+-- UPDATE public.missions SET state = 'work' WHERE id = '<active_mission_id>';
 -- UPDATE public.rally_point_members
 -- SET last_seen_at = now() - interval '60 seconds'
 -- WHERE rally_point_id = '<rally_point_id>' AND user_id = '<host_uuid>';
 -- SET request.jwt.claim.sub = '<successor_uuid>';
 -- SELECT public.claim_rally_point_command_if_stale('<rally_point_id>');
--- -- Expect: EXCEPTION Cannot claim command during a live session
+-- -- Expect: EXCEPTION Cannot claim command during a live mission
 --
 -- -- Stale first-successor skipped: age B, keep C fresh → C is elected
 -- -- (B joined before C; both active claimed members)

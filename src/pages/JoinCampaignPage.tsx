@@ -102,9 +102,9 @@ export default function JoinCampaignPage() {
         <div className="space-y-1">
           <h2 className="text-display text-3xl text-ink">{preview.name}</h2>
           <p className="text-sm text-secondary">
-            {formatCampaignShape(preview.weekCount, preview.sessionsPerWeek)}
-            {preview.firstSessionDate && preview.lastSessionDate
-              ? ` · ${formatCampaignSpan(preview.firstSessionDate, preview.lastSessionDate)}`
+            {formatCampaignShape(preview.weekCount, preview.missionsPerWeek)}
+            {preview.firstMissionDate && preview.lastMissionDate
+              ? ` · ${formatCampaignSpan(preview.firstMissionDate, preview.lastMissionDate)}`
               : ''}
           </p>
         </div>
@@ -134,8 +134,8 @@ export default function JoinCampaignPage() {
         ) : (
           <div className="space-y-2">
             <p className="text-sm text-secondary">
-              Sign in to join. A campaign runs for weeks, so it tracks your
-              sessions against your account.
+              Sign in to join. A campaign runs for weeks, so it tracks your missions against your
+              account.
             </p>
             <button type="button" className="btn-primary" onClick={() => setAuthOpen(true)}>
               Sign in to join

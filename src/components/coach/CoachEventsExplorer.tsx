@@ -8,11 +8,11 @@ import {
 } from '@/lib/coach/formatCoachLabel';
 
 const KNOWN_EVENT_NAMES = [
-  'session_created',
-  'session_joined',
+  'mission_created',
+  'mission_joined',
   'template_selected',
   'audio_unlock_result',
-  'session_abandoned',
+  'mission_abandoned',
   'claim_prompt_shown',
   'claim_completed',
   'claim_conflict',
@@ -108,8 +108,8 @@ export function CoachEventsExplorer({ userId }: CoachEventsExplorerProps) {
             },
             { header: 'Event', render: (row) => formatCoachEventLabel(row.eventName, row.props) },
             {
-              header: 'Session',
-              render: (row) => (row.sessionId ? row.sessionId.slice(0, 8) : '—'),
+              header: 'Mission',
+              render: (row) => (row.missionId ? row.missionId.slice(0, 8) : '—'),
             },
             {
               header: 'Anon',

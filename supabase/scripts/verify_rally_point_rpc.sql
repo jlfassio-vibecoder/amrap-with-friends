@@ -1,8 +1,8 @@
 -- Manual verification for rally point RPCs (run in Supabase SQL editor as postgres / service role).
 -- pgTAP / supabase local can be added later for automated SQL tests.
 
--- 1) Create session
-SELECT public.create_session(
+-- 1) Create mission
+SELECT public.create_mission(
   15,
   'Test Host',
   '[{"name":"Burpees","target":10,"unit":"reps"}]'::jsonb
@@ -10,28 +10,28 @@ SELECT public.create_session(
 
 -- 2) Confirm rows exist (service role can read host_token; anon cannot)
 SELECT id, host_token, duration_minutes, workout, state
-FROM public.sessions
+FROM public.missions
 ORDER BY created_at DESC
 LIMIT 1;
 
-SELECT id, session_id, nickname, role
+SELECT id, mission_id, nickname, role
 FROM public.participants
 ORDER BY joined_at DESC
 LIMIT 2;
 
--- 3) Join session (replace with session_id from create_result)
--- SELECT public.join_session('<session_id>'::uuid, 'Guest One') AS join_result;
+-- 3) Join mission (replace with mission_id from create_result)
+-- SELECT public.join_mission('<mission_id>'::uuid, 'Guest One') AS join_result;
 
 -- 4) Join should never return host_token — inspect join_result JSON keys only:
 -- participant_id, claim_token
 
--- 5) Fill session to test cap (100 participants max; 101st join should raise 'Session is full'):
--- SELECT public.join_session('<session_id>'::uuid, 'Guest N');
+-- 5) Fill mission to test cap (100 participants max; 101st join should raise 'Mission is full'):
+-- SELECT public.join_mission('<mission_id>'::uuid, 'Guest N');
 
--- 6) Submit partial reps after session is in work or finished (replace IDs/tokens from create/join):
+-- 6) Submit partial reps after mission is in work or finished (replace IDs/tokens from create/join):
 -- Direct RPC writes are deprecated in Phase 4 — use the Edge Function instead:
 -- supabase functions invoke submit-participant-result --body '{
---   "sessionId":"<session_id>",
+--   "missionId":"<mission_id>",
 --   "participantId":"<participant_id>",
 --   "claimToken":"<claim_token>",
 --   "partialReps":15,
@@ -43,7 +43,7 @@ LIMIT 2;
 
 -- Legacy RPC should refuse writes:
 -- SELECT public.submit_participant_result(
---   '<session_id>'::uuid,
+--   '<mission_id>'::uuid,
 --   '<participant_id>'::uuid,
 --   '<claim_token>',
 --   5,

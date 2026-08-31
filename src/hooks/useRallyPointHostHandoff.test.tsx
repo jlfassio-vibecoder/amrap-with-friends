@@ -7,17 +7,17 @@ const getStoredHostTokenMock = vi.fn();
 const setStoredHostTokenMock = vi.fn();
 const clearStoredHostTokenMock = vi.fn();
 
-vi.mock('@/lib/api/resumeSessionIdentity', () => ({
-  resumeSessionIdentity: (...args: unknown[]) => resumeMock(...args),
+vi.mock('@/lib/api/resumeMissionIdentity', () => ({
+  resumeMissionIdentity: (...args: unknown[]) => resumeMock(...args),
 }));
 
-vi.mock('@/lib/sessionIdentity', () => ({
+vi.mock('@/lib/missionIdentity', () => ({
   getStoredHostToken: (...args: unknown[]) => getStoredHostTokenMock(...args),
   setStoredHostToken: (...args: unknown[]) => setStoredHostTokenMock(...args),
   clearStoredHostToken: (...args: unknown[]) => clearStoredHostTokenMock(...args),
 }));
 
-const SESSION_ID = '11111111-1111-4111-8111-111111111111';
+const MISSION_ID = '11111111-1111-4111-8111-111111111111';
 
 describe('useRallyPointHostHandoff', () => {
   beforeEach(() => {
@@ -45,7 +45,7 @@ describe('useRallyPointHostHandoff', () => {
     renderHook(() =>
       useRallyPointHostHandoff({
         hostUserId: 'user-b',
-        activeSessionId: SESSION_ID,
+        activeMissionId: MISSION_ID,
         userId: 'user-b',
         enabled: true,
         onHostAuthorityChange,
@@ -53,8 +53,8 @@ describe('useRallyPointHostHandoff', () => {
     );
 
     await waitFor(() => {
-      expect(resumeMock).toHaveBeenCalledWith(SESSION_ID);
-      expect(setStoredHostTokenMock).toHaveBeenCalledWith(SESSION_ID, 'new-host-token');
+      expect(resumeMock).toHaveBeenCalledWith(MISSION_ID);
+      expect(setStoredHostTokenMock).toHaveBeenCalledWith(MISSION_ID, 'new-host-token');
       expect(onHostAuthorityChange).toHaveBeenCalled();
     });
   });
@@ -66,7 +66,7 @@ describe('useRallyPointHostHandoff', () => {
     renderHook(() =>
       useRallyPointHostHandoff({
         hostUserId: 'user-b',
-        activeSessionId: SESSION_ID,
+        activeMissionId: MISSION_ID,
         userId: 'user-a',
         enabled: true,
         onHostAuthorityChange,
@@ -74,7 +74,7 @@ describe('useRallyPointHostHandoff', () => {
     );
 
     await waitFor(() => {
-      expect(clearStoredHostTokenMock).toHaveBeenCalledWith(SESSION_ID);
+      expect(clearStoredHostTokenMock).toHaveBeenCalledWith(MISSION_ID);
       expect(onHostAuthorityChange).toHaveBeenCalled();
     });
     expect(resumeMock).not.toHaveBeenCalled();
@@ -87,7 +87,7 @@ describe('useRallyPointHostHandoff', () => {
     renderHook(() =>
       useRallyPointHostHandoff({
         hostUserId: 'user-b',
-        activeSessionId: SESSION_ID,
+        activeMissionId: MISSION_ID,
         userId: 'user-a',
         enabled: true,
         onHostAuthorityChange,

@@ -58,25 +58,23 @@ export function OvertrainingWarningCard({ overtraining }: OvertrainingWarningCar
           className="space-y-2 rounded-card border border-border bg-surface p-3 text-xs text-secondary"
         >
           <p>
-            <span className="font-semibold text-ink">Load</span> = minutes trained ×
-            how hard it felt (1–5), added up across AMRAP sessions and anything
-            logged as outside activity.
+            <span className="font-semibold text-ink">Load</span> = minutes trained × how hard it
+            felt (1–5), added up across AMRAP missions and anything logged as outside activity.
           </p>
           <p>
-            <span className="font-semibold text-ink">Acute (7d)</span> is that load
-            over the last week. <span className="font-semibold text-ink">Chronic (28d)</span>{' '}
-            is their typical week over the last month — a baseline to compare against.
+            <span className="font-semibold text-ink">Acute (7d)</span> is that load over the last
+            week. <span className="font-semibold text-ink">Chronic (28d)</span> is their typical
+            week over the last month — a baseline to compare against.
           </p>
           <p>
-            <span className="font-semibold text-ink">ACWR</span> is Acute ÷ Chronic.
-            Above 1.5 means training is ramping up faster than the body is used to;
-            above 2.0 is a bigger jump. It&apos;s a rate-of-change warning, not proof
-            of an injury — it flags a good moment to hold volume steady or add a
-            rest day before pushing further.
+            <span className="font-semibold text-ink">ACWR</span> is Acute ÷ Chronic. Above 1.5 means
+            training is ramping up faster than the body is used to; above 2.0 is a bigger jump.
+            It&apos;s a rate-of-change warning, not proof of an injury — it flags a good moment to
+            hold volume steady or add a rest day before pushing further.
           </p>
           <p>
-            Consecutive high-intensity days count hard efforts in a row (5+ is
-            flagged) as a separate early sign of not recovering between sessions.
+            Consecutive high-intensity days count hard efforts in a row (5+ is flagged) as a
+            separate early sign of not recovering between missions.
           </p>
         </div>
       ) : null}
@@ -108,7 +106,7 @@ export function OvertrainingWarningCard({ overtraining }: OvertrainingWarningCar
 
       <p className="text-xs text-secondary">
         {overtraining.consecutiveHighIntensityDays} consecutive high-intensity day
-        {overtraining.consecutiveHighIntensityDays === 1 ? '' : 's'} across AMRAP sessions and
+        {overtraining.consecutiveHighIntensityDays === 1 ? '' : 's'} across AMRAP missions and
         logged activity.
       </p>
     </section>

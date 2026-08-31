@@ -38,7 +38,7 @@ describe('deriveCampaignRoles', () => {
     expect(deriveCampaignRoles([])).toEqual([]);
   });
 
-  it('calls the opening session the benchmark and its repeats retests', () => {
+  it('calls the opening mission the benchmark and its repeats retests', () => {
     const roles = deriveCampaignRoles(rows(2, 2, ['a', 'b', 'c', 'a']));
     expect(roles).toEqual(['benchmark', 'build', 'build', 'retest']);
   });
@@ -62,7 +62,7 @@ describe('deriveCampaignRoles', () => {
     expect(roles).toEqual(['benchmark', 'build', 'build', 'build', 'build', 'retest']);
   });
 
-  it('never treats the opening session as an easy day', () => {
+  it('never treats the opening mission as an easy day', () => {
     // Two tests back to back would otherwise try to deload index -1 and 0.
     // Finale still repeats the benchmark so the schedule reads as a real programme.
     const roles = deriveCampaignRoles(rows(8, 1, ['a', 'a', 'b', 'c', 'd', 'e', 'f', 'a']));
@@ -132,18 +132,18 @@ describe('deriveCampaignRoles', () => {
 });
 
 describe('campaignRoleLabel', () => {
-  it('names the sessions that need explaining', () => {
+  it('names the missions that need explaining', () => {
     expect(campaignRoleLabel('benchmark')).toBe('Benchmark');
     expect(campaignRoleLabel('retest')).toBe('Retest');
     expect(campaignRoleLabel('deload')).toBe('Easy day');
   });
 
-  it('says nothing about an ordinary session', () => {
+  it('says nothing about an ordinary mission', () => {
     expect(campaignRoleLabel('build')).toBeNull();
     expect(campaignRoleDescription('build')).toBeNull();
   });
 
-  it('explains what each labelled session is for', () => {
+  it('explains what each labelled mission is for', () => {
     expect(campaignRoleDescription('benchmark')).toContain('again at the end');
     expect(campaignRoleDescription('retest')).toContain('week one');
     expect(campaignRoleDescription('deload')).toContain('light');

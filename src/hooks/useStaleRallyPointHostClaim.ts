@@ -8,7 +8,7 @@ export type StaleRallyPointHostClaimResult = {
   claimed: boolean;
   hostUserId: string | null;
   hostToken: string | null;
-  activeSessionId: string | null;
+  activeMissionId: string | null;
   reason: string | null;
 };
 

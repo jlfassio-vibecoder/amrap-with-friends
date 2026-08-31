@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { ParticipantsPanel } from './ParticipantsPanel';
-import type { LeaderboardEntry } from '@/lib/sessionSync/types';
+import type { LeaderboardEntry } from '@/lib/missionSync/types';
 
 const SELF_ID = '11111111-1111-4111-8111-111111111111';
 

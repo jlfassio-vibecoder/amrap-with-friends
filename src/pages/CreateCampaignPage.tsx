@@ -98,8 +98,8 @@ export default function CreateCampaignPage() {
 
       trackEvent('campaign_created', {
         week_count: weekCount,
-        sessions_per_week: planned.calendar.sessionsPerWeek,
-        total_sessions: planned.calendar.totalSessions,
+        missions_per_week: planned.calendar.missionsPerWeek,
+        total_missions: planned.calendar.totalMissions,
         track_count: tracks.length,
       });
       navigate(`/campaign/${result.data.campaignId}`);
@@ -190,10 +190,10 @@ export default function CreateCampaignPage() {
             {planned ? (
               <>
                 <p className="text-sm text-secondary">
-                  {formatCampaignShape(weekCount, planned.calendar.sessionsPerWeek)} ·{' '}
+                  {formatCampaignShape(weekCount, planned.calendar.missionsPerWeek)} ·{' '}
                   {formatCampaignSpan(
-                    planned.calendar.firstSessionDate,
-                    planned.calendar.lastSessionDate
+                    planned.calendar.firstMissionDate,
+                    planned.calendar.lastMissionDate
                   )}
                 </p>
                 {tracks[0] ? (
@@ -212,7 +212,7 @@ export default function CreateCampaignPage() {
           {planned ? (
             <>
               <p className="text-sm text-secondary">
-                The first session is your benchmark. You run it again at the end, so the campaign
+                The first mission is your benchmark. You run it again at the end, so the campaign
                 finishes with a number rather than a feeling. Everything in between gets steadily
                 harder.
               </p>

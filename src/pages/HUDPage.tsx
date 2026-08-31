@@ -32,13 +32,13 @@ export default function HUDPage() {
 
       <div className="mx-auto max-w-5xl space-y-8 px-6 pb-10 pt-6 lg:px-8 lg:py-10">
         <p className="text-sm text-secondary lg:hidden">
-          Locked-session volume and pacing for the current local week.
+          Locked-mission volume and pacing for the current local week.
         </p>
 
         <div className="hidden space-y-2 lg:block">
           <h1 className="text-display text-5xl text-ink">HUD</h1>
           <p className="text-sm text-secondary">
-            Locked-session volume and pacing for the current local week.
+            Locked-mission volume and pacing for the current local week.
           </p>
         </div>
 
@@ -47,7 +47,7 @@ export default function HUDPage() {
             className="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
             to="/create"
           >
-            Create session
+            Create mission
           </Link>
           <Link
             className="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
@@ -59,7 +59,7 @@ export default function HUDPage() {
             className="border-b border-accent pb-1.5 text-xs font-bold uppercase tracking-[0.1em] text-ink hover:text-accent"
             to="/join"
           >
-            Join a session
+            Join a mission
           </Link>
         </div>
 
@@ -67,7 +67,7 @@ export default function HUDPage() {
 
         {!isAuthLoading && !isAuthenticated ? (
           <p className="text-sm text-secondary">
-            Sign in to view your HUD. Only sessions saved to your account with a locked score count.
+            Sign in to view your HUD. Only missions saved to your account with a locked score count.
           </p>
         ) : null}
 

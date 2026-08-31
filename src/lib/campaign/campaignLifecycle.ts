@@ -16,7 +16,7 @@ export function isCampaignClosed(status: string): boolean {
 
 export interface LifecycleOccurrence {
   status: string;
-  sessionId: string | null;
+  missionId: string | null;
 }
 
 export interface CampaignLifecycleInput {
@@ -28,10 +28,10 @@ export interface CampaignLifecycleInput {
   activeMemberCount: number;
 }
 
-/** True once any session has been generated or run. */
+/** True once any mission has been generated or run. */
 export function hasCampaignStarted(occurrences: LifecycleOccurrence[]): boolean {
   return occurrences.some(
-    (occurrence) => occurrence.status !== 'planned' || occurrence.sessionId !== null
+    (occurrence) => occurrence.status !== 'planned' || occurrence.missionId !== null
   );
 }
 
@@ -52,15 +52,15 @@ export function canEditCampaign(input: CampaignLifecycleInput): boolean {
 }
 
 /**
- * A session can be moved while it is still only a plan. Once the generator has
- * made it a session the rally point is open and people may be on their way,
+ * A mission can be moved while it is still only a plan. Once the generator has
+ * made it a mission the rally point is open and people may be on their way,
  * so the time stops being the host's to change.
  */
 export function canRescheduleOccurrence(
   input: CampaignLifecycleInput,
   occurrence: LifecycleOccurrence
 ): boolean {
-  return canEditCampaign(input) && occurrence.status === 'planned' && occurrence.sessionId === null;
+  return canEditCampaign(input) && occurrence.status === 'planned' && occurrence.missionId === null;
 }
 
 /**

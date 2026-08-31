@@ -29,7 +29,7 @@ export const RALLY_POINT_WALKTHROUGH_STEPS: RallyPointWalkthroughStep[] = [
     role: 'all',
     targetId: WALKTHROUGH_TARGET.status,
     title: 'This is the rally point',
-    body: 'Waiting means the clock has not started. Realtime shows whether you are connected to the live session.',
+    body: 'Waiting means the clock has not started. Realtime shows whether you are connected to the live mission.',
   },
   {
     id: 'waiting-on-host',
@@ -64,14 +64,14 @@ export const RALLY_POINT_WALKTHROUGH_STEPS: RallyPointWalkthroughStep[] = [
     role: 'host',
     targetId: WALKTHROUGH_TARGET.actions,
     title: 'Start or practice',
-    body: 'Start runs the real session. Practice is a short unrecorded run so you can feel the flow first.',
+    body: 'Start runs the real mission. Practice is a short unrecorded run so you can feel the flow first.',
   },
   {
     id: 'practice',
     role: 'joiner',
     targetId: WALKTHROUGH_TARGET.actions,
     title: 'Practice while you wait',
-    body: 'Practice is a short unrecorded run. It does not start the session for everyone else.',
+    body: 'Practice is a short unrecorded run. It does not start the mission for everyone else.',
   },
   {
     id: 'workout',

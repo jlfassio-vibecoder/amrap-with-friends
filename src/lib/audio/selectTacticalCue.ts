@@ -1,8 +1,8 @@
 import type { TacticalCue } from '@/lib/audio/tacticalSynthesis';
-import type { LiveSessionPhase } from '@/lib/sessionSync/types';
+import type { LiveMissionPhase } from '@/lib/missionSync/types';
 
 export interface TacticalClockSnapshot {
-  phase: LiveSessionPhase;
+  phase: LiveMissionPhase;
   timeLeftSec: number;
   isPaused: boolean;
   workDurationSec: number;
@@ -11,17 +11,11 @@ export interface TacticalClockSnapshot {
 const PREP_SECONDS = new Set([3, 2, 1]);
 const TERMINAL_SECONDS = new Set([5, 4, 3, 2, 1]);
 
-function enteredSetup(
-  prev: TacticalClockSnapshot | null,
-  next: TacticalClockSnapshot
-): boolean {
+function enteredSetup(prev: TacticalClockSnapshot | null, next: TacticalClockSnapshot): boolean {
   return next.phase === 'setup' && (prev === null || prev.phase !== 'setup');
 }
 
-function timeLeftChanged(
-  prev: TacticalClockSnapshot | null,
-  next: TacticalClockSnapshot
-): boolean {
+function timeLeftChanged(prev: TacticalClockSnapshot | null, next: TacticalClockSnapshot): boolean {
   if (prev === null) {
     return true;
   }
@@ -50,11 +44,7 @@ export function selectTacticalCue(
     cues.push('ignition');
   }
 
-  if (
-    next.phase === 'setup' &&
-    PREP_SECONDS.has(next.timeLeftSec) &&
-    timeLeftChanged(prev, next)
-  ) {
+  if (next.phase === 'setup' && PREP_SECONDS.has(next.timeLeftSec) && timeLeftChanged(prev, next)) {
     cues.push('prep');
   }
 

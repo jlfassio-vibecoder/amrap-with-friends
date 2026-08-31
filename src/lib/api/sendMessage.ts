@@ -3,7 +3,7 @@ import { callRpc } from '@/lib/api/callRpc';
 export const MESSAGE_MAX_LENGTH = 500;
 
 export interface SendMessageInput {
-  sessionId: string;
+  missionId: string;
   participantId: string;
   claimToken: string;
   body: string;
@@ -12,7 +12,7 @@ export interface SendMessageInput {
 export interface SendMessageSuccess {
   ok: true;
   messageId: string;
-  sessionId: string;
+  missionId: string;
   participantId: string;
   nickname: string;
   body: string;
@@ -32,8 +32,7 @@ export type SendMessageApiError = {
 };
 
 export type ValidateMessageBodyResult =
-  | { ok: true; body: string }
-  | { ok: false; reason: 'empty_body' | 'body_too_long' };
+  { ok: true; body: string } | { ok: false; reason: 'empty_body' | 'body_too_long' };
 
 function readString(value: unknown): string | null {
   if (typeof value !== 'string') {
@@ -74,8 +73,8 @@ function mapRpcError(message: string | undefined): string {
   if (message.includes('Participant not found')) {
     return 'Participant not found.';
   }
-  if (message.includes('Session not found')) {
-    return 'Session not found.';
+  if (message.includes('Mission not found')) {
+    return 'Mission not found.';
   }
   return 'Something went wrong. Please try again.';
 }
@@ -97,7 +96,7 @@ export async function sendMessage(
   input: SendMessageInput
 ): Promise<{ data: SendMessageResult | null; error: SendMessageApiError | null }> {
   const { data, error } = await callRpc('send_message', {
-    p_session_id: input.sessionId,
+    p_mission_id: input.missionId,
     p_participant_id: input.participantId,
     p_claim_token: input.claimToken,
     p_body: input.body,
@@ -107,8 +106,7 @@ export async function sendMessage(
     return { data: null, error: { message: mapRpcError(error.message) } };
   }
 
-  const raw =
-    data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
   const ok = raw.ok === true;
 
   if (!ok) {
@@ -120,20 +118,18 @@ export async function sendMessage(
   }
 
   const messageId = readString(raw.message_id);
-  const sessionId = readString(raw.session_id);
+  const missionId = readString(raw.mission_id);
   const participantId = readString(raw.participant_id);
   const nickname = readString(raw.nickname);
   const body = readString(raw.body);
   const segmentIndex = readNumber(raw.segment_index);
   const createdAtRaw = raw.created_at;
   const createdAt =
-    createdAtRaw === null || createdAtRaw === undefined
-      ? null
-      : readString(String(createdAtRaw));
+    createdAtRaw === null || createdAtRaw === undefined ? null : readString(String(createdAtRaw));
 
   if (
     !messageId ||
-    !sessionId ||
+    !missionId ||
     !participantId ||
     !nickname ||
     !body ||
@@ -150,7 +146,7 @@ export async function sendMessage(
     data: {
       ok: true,
       messageId,
-      sessionId,
+      missionId,
       participantId,
       nickname,
       body,

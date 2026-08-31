@@ -24,7 +24,7 @@ export type CampaignStandingsScore = {
   occurrenceId: string;
   userId: string;
   finalScore: number | null;
-  /** True when the score came from a makeup session. */
+  /** True when the score came from a makeup mission. */
   madeUp?: boolean;
 };
 
@@ -42,7 +42,7 @@ export type CampaignStandingRow = {
   attended: number;
   eligible: number;
   left: boolean;
-  /** True when at least one counted score came from a makeup session. */
+  /** True when at least one counted score came from a makeup mission. */
   hasMadeUp: boolean;
   /** 1-based rank on normalised average; null averages sort last. */
   rank: number;
@@ -51,7 +51,7 @@ export type CampaignStandingRow = {
 /**
  * A usable score, or null when the row carries no evidence the athlete
  * trained. The scheduler seeds a host participant into every generated
- * session, so a row without a real score means "absent", not "scored zero" —
+ * mission, so a row without a real score means "absent", not "scored zero" —
  * counting those as attendance overstated attendance and averaged the
  * absences in as zeros.
  */
@@ -63,8 +63,8 @@ function scoreValue(finalScore: number | null | undefined): number | null {
 }
 
 function isCountableStatus(status: CampaignStandingsOccurrence['status']): boolean {
-  // Skipped sessions are still makeable; once settled they must count toward
-  // eligibility and attendance the same way a done session does.
+  // Skipped missions are still makeable; once settled they must count toward
+  // eligibility and attendance the same way a done mission does.
   return status === 'generated' || status === 'done' || status === 'skipped';
 }
 

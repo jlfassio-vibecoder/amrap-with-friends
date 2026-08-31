@@ -7,18 +7,18 @@ import {
   rosterEntriesForDisplay,
   type LeaderboardSortMode,
   type ParticipantRosterEntry,
-} from '@/lib/sessionSync/buildParticipantRoster';
+} from '@/lib/missionSync/buildParticipantRoster';
 import type {
   LeaderboardEntry,
-  LiveSessionPhase,
-  SessionPresenceEntry,
-} from '@/lib/sessionSync/types';
+  LiveMissionPhase,
+  MissionPresenceEntry,
+} from '@/lib/missionSync/types';
 
 interface ParticipantsPanelProps {
   leaderboard: LeaderboardEntry[];
-  presence: SessionPresenceEntry[];
+  presence: MissionPresenceEntry[];
   selfParticipantId: string;
-  phase: LiveSessionPhase;
+  phase: LiveMissionPhase;
   className?: string;
 }
 
@@ -30,7 +30,7 @@ function formatMultiplier(multiplier: number): string {
 
 function formatRosterScore(
   entry: ParticipantRosterEntry,
-  phase: LiveSessionPhase,
+  phase: LiveMissionPhase,
   sortMode: LeaderboardSortMode
 ): string {
   if (phase === 'finished' && sortMode === 'discipline' && entry.pvi !== null) {
@@ -89,14 +89,14 @@ function LeaderboardSortToggle({
 function RankBadge({ rank }: { rank: number }) {
   if (rank === 1) {
     return (
-      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center text-sm font-semibold text-accent tabular-nums">
+      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center text-sm font-semibold tabular-nums text-accent">
         {rank}
       </span>
     );
   }
 
   return (
-    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center text-sm font-medium text-muted tabular-nums">
+    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center text-sm font-medium tabular-nums text-muted">
       {rank}
     </span>
   );
@@ -108,7 +108,7 @@ function RosterRow({
   sortMode,
 }: {
   entry: ParticipantRosterEntry;
-  phase: LiveSessionPhase;
+  phase: LiveMissionPhase;
   sortMode: LeaderboardSortMode;
 }) {
   const showPacingBadge = phase === 'finished' && entry.pviVerdict.length > 0;
@@ -128,10 +128,7 @@ function RosterRow({
         {entry.isSelf ? ' (you)' : ''}
       </span>
       {showPacingBadge ? (
-        <PacingBadge
-          classification={entry.pviClassification}
-          verdict={entry.pviVerdict}
-        />
+        <PacingBadge classification={entry.pviClassification} verdict={entry.pviVerdict} />
       ) : null}
       <span className="shrink-0 text-sm font-semibold tabular-nums">{scoreDisplay}</span>
     </div>
@@ -227,7 +224,7 @@ export function ParticipantsPanel({
           ) : (
             <div
               role="list"
-              className="min-h-0 max-h-48 flex-1 space-y-1 overflow-y-auto lg:max-h-none"
+              className="max-h-48 min-h-0 flex-1 space-y-1 overflow-y-auto lg:max-h-none"
             >
               {displayEntries.map((entry) => (
                 <RosterRow

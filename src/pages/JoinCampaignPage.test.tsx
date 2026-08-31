@@ -37,13 +37,13 @@ function preview(overrides = {}) {
     name: 'Winter Engine Build',
     goal: 'Eight rounds by week four.',
     weekCount: 8,
-    sessionsPerWeek: 3,
+    missionsPerWeek: 3,
     status: 'active',
     hostNickname: 'Maya',
     memberCount: 4,
     memberLimit: 50,
-    firstSessionDate: '2026-10-05',
-    lastSessionDate: '2026-11-27',
+    firstMissionDate: '2026-10-05',
+    lastMissionDate: '2026-11-27',
     ...overrides,
   };
 }
@@ -65,14 +65,17 @@ beforeEach(() => {
   navigateMock.mockReset();
   authenticated = true;
   previewMock.mockResolvedValue({ data: preview(), error: null });
-  joinMock.mockResolvedValue({ data: { campaignId: 'c1', name: 'Winter', alreadyMember: false }, error: null });
+  joinMock.mockResolvedValue({
+    data: { campaignId: 'c1', name: 'Winter', alreadyMember: false },
+    error: null,
+  });
 });
 
 describe('JoinCampaignPage', () => {
   it('shows what the invite is for before asking for anything', async () => {
     renderPage();
     await waitFor(() => expect(screen.getByText('Winter Engine Build')).toBeTruthy());
-    expect(screen.getByText(/24 sessions · 3 a week · 8 weeks/)).toBeTruthy();
+    expect(screen.getByText(/24 missions · 3 a week · 8 weeks/)).toBeTruthy();
     expect(screen.getByText('Eight rounds by week four.')).toBeTruthy();
     expect(screen.getByText(/Hosted by Maya/)).toBeTruthy();
   });
@@ -88,7 +91,9 @@ describe('JoinCampaignPage', () => {
   it('opens the auth modal from the sign-in prompt', async () => {
     authenticated = false;
     renderPage();
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign in to join' })).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Sign in to join' })).toBeTruthy()
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Sign in to join' }));
     expect(screen.getByText('Auth modal')).toBeTruthy();
   });

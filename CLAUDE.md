@@ -1,6 +1,6 @@
 # AMRAP With Friends
 
-A standalone web app for running social AMRAP workout sessions in real time.
+A standalone web app for running social AMRAP missions in real time.
 React 19 + Vite + TypeScript + Tailwind on the front end, Supabase (Postgres +
 RLS + RPCs + Realtime) on the back.
 
@@ -26,27 +26,32 @@ opaque verb for one action. Same brand, opposite sides of the line.
 
 | Term            | Means                                                                                              | Where it belongs                                                        |
 | --------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| **Session**     | One AMRAP workout, start to finish. The structural noun.                                           | Buttons, page titles, routes — "Create session", `/session/:id`         |
-| **Mission**     | That same workout's objective. The editorial noun.                                                 | Prose and headings only — "Today's mission", "Mission in progress"      |
-| **Campaign**    | A multi-week programme (2–12 weeks, 1–5 sessions a week) with an end goal.                         | Buttons, page titles, routes. Always with its length: "8-week campaign" |
-| **Squad**       | A persistent friends list for inviting people to train together. Not a session.                    | Buttons, page titles, routes, nav — "Your squad", `/squad`              |
+| **Mission**     | One AMRAP workout, start to finish. The only word for it.                                          | Everywhere — "Create mission", `/mission/:id`, `missions` the table     |
+| **Campaign**    | A multi-week programme (2–12 weeks, 1–5 missions a week) with an end goal.                         | Buttons, page titles, routes. Always with its length: "8-week campaign" |
+| **Squad**       | A persistent friends list for inviting people to train together. Not a mission.                    | Buttons, page titles, routes, nav — "Your squad", `/squad`              |
 | **Rally point** | The pre-workout screen the rally link opens to, where the crew gathers and the mission is started. | Page title, buttons, routes — "Rally point", `/rally-point/:id`         |
 | **Rally link**  | The shared invite URL that opens a rally point. Never a squad invite.                              | The copy button, and prose about sharing                                |
-| **Benchmark**   | A campaign's opening session. Its score is the number the campaign is measured against.            | The badge on that session, and prose about it                           |
-| **Retest**      | The same workout as the benchmark, run again later in the campaign.                                | The badge on those sessions                                             |
-| **Easy day**    | The light session before a retest, so the test measures fitness not fatigue.                       | The badge on that session                                               |
+| **Benchmark**   | A campaign's opening mission. Its score is the number the campaign is measured against.            | The badge on that mission, and prose about it                           |
+| **Retest**      | The same workout as the benchmark, run again later in the campaign.                                | The badge on those missions                                             |
+| **Easy day**    | The light mission before a retest, so the test measures fitness not fatigue.                       | The badge on that mission                                               |
 
-**Benchmark, retest and easy day are the only session badges.** Everything else
-in a campaign is just a session and gets no label — a badge on every row labels
+**Benchmark, retest and easy day are the only mission badges.** Everything else
+in a campaign is just a mission and gets no label — a badge on every row labels
 nothing. They pass the click test because each one changes what the athlete
 should do that day: go hard and record it, compare it, or hold back. Internally
 the fourth role is `build`, which is deliberately never shown.
 
-**Session vs. mission.** Both name one workout, so each has a job. Session is
-what the user creates, joins, and navigates to, so it owns the buttons and the
-routes. Mission names the objective, so it owns the prose. "Today's mission is a
-15-minute Blood Shunt" reads well; "Create mission" on a button does not,
-because what the user is making is a session.
+**Mission is the only word for one workout.** It used to share the job with
+"session": session owned the buttons, routes and columns, mission owned the
+prose, and this paragraph existed to tell you which to reach for. That is the
+same translation step lobby/staging was, and it is retired for the same reason.
+Mission won because it is the word the brand already uses for the thing.
+
+**"Session" now only ever means an auth session.** `supabase.auth.getSession()`,
+the `Session` type, `persistSession`, browser `sessionStorage` — the generic
+sense of the word, and unambiguous precisely because nothing else claims it. If
+you are about to write `session` for anything an athlete does, you want
+`mission`.
 
 **Campaign and mission both need their duration attached.** Neither word
 carries a sense of length on its own. Write "8-week campaign", never a bare
@@ -57,7 +62,7 @@ three: `lobby` in the data layer, "Staging area" in the UI, and "Rally point"
 for the invite you had already been told to call a rally link. The rally link
 now opens the rally point, and the schema says `rally_points` — so there is no
 translation step left to get wrong. "Staging" is retired: staging is what the
-My sessions page does, not what this screen is.
+My missions page does, not what this screen is.
 
 ### UI names that deliberately differ from the data layer
 
@@ -67,7 +72,7 @@ user-visible benefit.
 | Data layer                                            | UI                                        |
 | ----------------------------------------------------- | ----------------------------------------- |
 | `featured_wod_*`, `current_featured_wod()`            | "Today's mission"                         |
-| `sessions.state = 'work'`                             | "Live"                                    |
+| `missions.state = 'work'`                             | "Live"                                    |
 | `rallySchedule.ts`, `buildRallyInviteUrl`, `RallyDay` | (identifiers only — users never see them) |
 
 `lobby` used to head that table. It was paid off in
@@ -79,9 +84,9 @@ correct: a migration is a dated record of what ran, not a description of the
 current schema.
 
 Two `rally` identifiers now sit side by side and mean different things.
-`buildRallyInviteUrl(sessionId)` builds the rally link for one session;
+`buildRallyInviteUrl(missionId)` builds the rally link for one mission;
 `buildRallyPointInviteUrl(rallyPointId)` builds it for a rally point that
-outlives the session. Both are rally links to the user.
+outlives the mission. Both are rally links to the user.
 
 `WOD` is CrossFit jargon: a newcomer cannot expand it. It is fine in coach-facing
 tooling (the WOD Builder is used by coaches who know the term) and in internal
@@ -99,7 +104,7 @@ Kept here so they don't creep back in.
 | Open staging area / Schedule staging      | Open rally point / Schedule rally point     |
 | Enter staging area / Join staging         | Enter rally point / Join rally point        |
 | LINK SECURED / ID SECURED                 | LINK COPIED / ID COPIED                     |
-| Breach lobby / Breaching lobby            | Join session / Joining                      |
+| Breach lobby / Breaching lobby            | Join mission / Joining                      |
 | Callsign (as a field label)               | Your name                                   |
 | Rally point (as the invite-landing title) | You've been invited                         |
 | Featured WOD (on the landing card)        | Today's mission                             |
@@ -107,9 +112,11 @@ Kept here so they don't creep back in.
 | File the dossier / Your dossier was saved | Save profile / Your profile was saved       |
 | Intake / Dossier (page titles)            | Your profile / Athlete details              |
 | Enter temporary callsign (field label)    | Your name                                   |
-| Scheduled rallies                         | Scheduled sessions                          |
-| Return to a lobby you scheduled for later | Return to a session you scheduled for later |
+| Scheduled rallies                         | Scheduled missions                          |
+| Return to a lobby you scheduled for later | Return to a mission you scheduled for later |
 | Staging area not found                    | Rally point not found                       |
+| Session (as the word for one workout)     | Mission                                     |
+| Create session / My sessions              | Create mission / My missions                |
 | T-Minus console                           | Set the countdown                           |
 | Work (phase label)                        | Live                                        |
 
@@ -128,12 +135,12 @@ Workout and classification names are content, not chrome, and are untouched:
   their own `.test.ts` beside them. Put new logic there rather than inside a
   component — it is the repo's strongest convention and the reason the suite is
   large and fast.
-- **A campaign's session roles are derived, never stored.** `campaign_occurrences`
-  carries a `template_id` and nothing about what the session is _for_.
+- **A campaign's mission roles are derived, never stored.** `campaign_occurrences`
+  carries a `template_id` and nothing about what the mission is _for_.
   `planCampaignWorkouts` keeps the benchmark out of the build rotation, so the
-  only sessions running the first workout are the tests, and `deriveCampaignRoles`
+  only missions running the first workout are the tests, and `deriveCampaignRoles`
   recovers benchmark/retest/easy-day from the schedule alone. That is why the
-  create preview and the campaign detail page label sessions identically with no
+  create preview and the campaign detail page label missions identically with no
   column, no migration, and no way for a stored role to drift from the workout
   actually scheduled. The benchmark ids in `campaignBenchmarks.ts` are the one
   thing that must never change: editing one invalidates every result recorded
@@ -146,10 +153,10 @@ Workout and classification names are content, not chrome, and are untouched:
   `benchmarkFingerprints.ts` in the same commit. Do not edit the existing
   template in place: in-flight campaigns keep their stored workout jsonb, but
   comparisons across the edit would silently mix two different tests.
-- **Scheduled sessions are generated, not pre-created.** A recurring rule lives
-  in its own table and a per-minute `pg_cron` job materialises `sessions` rows in
+- **Scheduled missions are generated, not pre-created.** A recurring rule lives
+  in its own table and a per-minute `pg_cron` job materialises `missions` rows in
   a tight window around each occurrence (see `run_featured_wod_scheduler()`).
-  Sessions are never auto-started — the host presses Start.
+  Missions are never auto-started — the host presses Start.
 - **Store local date + local time + timezone**, and resolve to an absolute
   instant only at generation time. Persisting a computed `timestamptz` weeks out
   breaks across a daylight-saving boundary.

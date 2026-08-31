@@ -3,7 +3,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { getSupabaseClient } from '@/lib/supabase';
 import {
   getRallyPoint,
-  type RallyPointSessionState,
+  type RallyPointMissionState,
   type RallyPointSnapshot,
 } from '@/lib/api/rallyPoint';
 
@@ -30,21 +30,21 @@ export function parseRallyPointRow(
   }
   // host_user_id is not in the anon SELECT grant, so a guest's payload carries
   // everything except that column. Dropping the whole row when it is absent
-  // would cost guests every active_session_id change — and with it the forced
+  // would cost guests every active_mission_id change — and with it the forced
   // launch into the next mission.
   const hostUserId = typeof record.host_user_id === 'string' ? record.host_user_id : null;
-  const activeSessionState =
-    record.active_session_state === 'waiting' ||
-    record.active_session_state === 'setup' ||
-    record.active_session_state === 'work' ||
-    record.active_session_state === 'finished'
-      ? (record.active_session_state as RallyPointSessionState)
+  const activeMissionState =
+    record.active_mission_state === 'waiting' ||
+    record.active_mission_state === 'setup' ||
+    record.active_mission_state === 'work' ||
+    record.active_mission_state === 'finished'
+      ? (record.active_mission_state as RallyPointMissionState)
       : undefined;
   return {
     rallyPointId,
     ...(hostUserId !== null ? { hostUserId } : {}),
-    activeSessionId: typeof record.active_session_id === 'string' ? record.active_session_id : null,
-    ...(activeSessionState !== undefined ? { activeSessionState } : {}),
+    activeMissionId: typeof record.active_mission_id === 'string' ? record.active_mission_id : null,
+    ...(activeMissionState !== undefined ? { activeMissionState } : {}),
     status,
     createdAt: typeof record.created_at === 'string' ? record.created_at : '',
     updatedAt: typeof record.updated_at === 'string' ? record.updated_at : '',
@@ -143,9 +143,9 @@ export function useRallyPointChannel(
             if (!prev) {
               return null;
             }
-            const sessionChanged = parsed.activeSessionId !== prev.activeSessionId;
-            if (sessionChanged || parsed.hostUserId === undefined) {
-              // rallyPoints row has no session state; refetch so force-nav sees live
+            const missionChanged = parsed.activeMissionId !== prev.activeMissionId;
+            if (missionChanged || parsed.hostUserId === undefined) {
+              // rallyPoints row has no mission state; refetch so force-nav sees live
               // state. Also refetch when the payload omitted host_user_id — a
               // guest cannot read that column, and get_rally_point is SECURITY DEFINER
               // so it still returns who holds command.
@@ -155,11 +155,11 @@ export function useRallyPointChannel(
               ...prev,
               ...parsed,
               members: prev.members,
-              activeSessionState: sessionChanged
+              activeMissionState: missionChanged
                 ? null
-                : parsed.activeSessionState !== undefined
-                  ? parsed.activeSessionState
-                  : prev.activeSessionState,
+                : parsed.activeMissionState !== undefined
+                  ? parsed.activeMissionState
+                  : prev.activeMissionState,
             };
           });
         }

@@ -17,9 +17,9 @@ export type CampaignTestProgressRow = {
   left: boolean;
   benchmarkScore: number | null;
   retestScore: number | null;
-  /** True when the Week 1 score came from a makeup session. */
+  /** True when the Week 1 score came from a makeup mission. */
   benchmarkMadeUp: boolean;
-  /** True when the latest retest score came from a makeup session. */
+  /** True when the latest retest score came from a makeup mission. */
   retestMadeUp: boolean;
   /** Latest scored retest minus benchmark; null when either side is missing. */
   delta: number | null;

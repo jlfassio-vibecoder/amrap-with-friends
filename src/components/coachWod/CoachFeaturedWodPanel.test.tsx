@@ -64,13 +64,13 @@ afterEach(() => {
   fetchCoachFeaturedWodAttendeesMock.mockReset();
   fetchCurrentFeaturedWodMock.mockReset();
   fetchCoachFeaturedWodAttendeesMock.mockResolvedValue({
-    data: { sessionId: null, attendees: [] },
+    data: { missionId: null, attendees: [] },
     error: null,
   });
   fetchCurrentFeaturedWodMock.mockResolvedValue({ data: null, error: null });
 });
 fetchCoachFeaturedWodAttendeesMock.mockResolvedValue({
-  data: { sessionId: null, attendees: [] },
+  data: { missionId: null, attendees: [] },
   error: null,
 });
 fetchCurrentFeaturedWodMock.mockResolvedValue({ data: null, error: null });
@@ -122,9 +122,9 @@ async function renderWithExistingSchedule() {
 }
 
 describe('CoachFeaturedWodPanel attendee list', () => {
-  it('renders nothing while no live session exists', async () => {
+  it('renders nothing while no live mission exists', async () => {
     fetchCoachFeaturedWodAttendeesMock.mockResolvedValue({
-      data: { sessionId: null, attendees: [] },
+      data: { missionId: null, attendees: [] },
       error: null,
     });
 
@@ -136,10 +136,10 @@ describe('CoachFeaturedWodPanel attendee list', () => {
     expect(screen.queryByText(/Who's coming/)).toBeNull();
   });
 
-  it('shows the attendee list for a live session, host first', async () => {
+  it('shows the attendee list for a live mission, host first', async () => {
     fetchCoachFeaturedWodAttendeesMock.mockResolvedValue({
       data: {
-        sessionId: 'session-1',
+        missionId: 'mission-1',
         attendees: [
           { nickname: 'Coach', role: 'host', joinedAt: '2026-08-29T00:00:00.000Z' },
           { nickname: 'Alice', role: 'joiner', joinedAt: '2026-08-29T00:01:00.000Z' },
@@ -157,9 +157,9 @@ describe('CoachFeaturedWodPanel attendee list', () => {
     expect(screen.getByText('Alice')).toBeTruthy();
   });
 
-  it('shows an empty-state message when the live session has no joiners', async () => {
+  it('shows an empty-state message when the live mission has no joiners', async () => {
     fetchCoachFeaturedWodAttendeesMock.mockResolvedValue({
-      data: { sessionId: 'session-1', attendees: [] },
+      data: { missionId: 'mission-1', attendees: [] },
       error: null,
     });
 
@@ -181,7 +181,7 @@ describe('CoachFeaturedWodPanel join rally point', () => {
         intensityTier: 3,
         tags: [],
         scheduledAt: new Date(Date.now() + 2 * 60 * 60_000).toISOString(),
-        sessionId: 'session-1',
+        missionId: 'mission-1',
         state: 'waiting',
         startedAt: null,
         attendeeCount: 1,
@@ -206,7 +206,7 @@ describe('CoachFeaturedWodPanel join rally point', () => {
         intensityTier: 3,
         tags: [],
         scheduledAt: new Date(Date.now() + 5 * 60_000).toISOString(),
-        sessionId: 'session-1',
+        missionId: 'mission-1',
         state: 'waiting',
         startedAt: null,
         attendeeCount: 1,
@@ -220,7 +220,7 @@ describe('CoachFeaturedWodPanel join rally point', () => {
       expect(screen.getByRole('link', { name: /Join rally point/i })).toBeTruthy();
     });
     expect(screen.getByRole('link', { name: /Join rally point/i }).getAttribute('href')).toBe(
-      '/session/session-1'
+      '/mission/mission-1'
     );
   });
 });

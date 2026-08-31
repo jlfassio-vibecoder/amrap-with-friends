@@ -3,10 +3,10 @@
 -- (scheduler is SECURITY DEFINER and takes no auth.uid()).
 --
 -- Evidence targets:
---   1. In-window planned → one waiting session + generated occurrence
---   2. Second tick is idempotent (no second session)
+--   1. In-window planned → one waiting mission + generated occurrence
+--   2. Second tick is idempotent (no second mission)
 --   3. Past late window → skipped
---   4. Finished session → occurrence done
+--   4. Finished mission → occurrence done
 
 -- Setup (adjust ids if needed)
 DO $$
@@ -15,12 +15,12 @@ DECLARE
   v_campaign uuid;
   v_occ_in uuid;
   v_occ_late uuid;
-  v_session_count int;
+  v_mission_count int;
 BEGIN
   -- Assume host already exists in auth.users + athlete_profiles.
 
   INSERT INTO public.campaigns (
-    id, host_user_id, name, week_count, sessions_per_week,
+    id, host_user_id, name, week_count, missions_per_week,
     start_date, timezone, status, invite_code
   )
   VALUES (
@@ -65,24 +65,24 @@ BEGIN
   PERFORM public.run_campaign_scheduler();
   PERFORM public.run_campaign_scheduler(); -- idempotent
 
-  SELECT count(*) INTO v_session_count
-  FROM public.sessions
+  SELECT count(*) INTO v_mission_count
+  FROM public.missions
   WHERE campaign_occurrence_id = v_occ_in;
 
-  IF v_session_count <> 1 THEN
-    RAISE EXCEPTION 'expected exactly one session for in-window occ, got %', v_session_count;
+  IF v_mission_count <> 1 THEN
+    RAISE EXCEPTION 'expected exactly one mission for in-window occ, got %', v_mission_count;
   END IF;
 
   IF NOT EXISTS (
-    SELECT 1 FROM public.sessions
+    SELECT 1 FROM public.missions
     WHERE campaign_occurrence_id = v_occ_in AND state = 'waiting' AND started_at IS NULL
   ) THEN
-    RAISE EXCEPTION 'generated session must stay waiting';
+    RAISE EXCEPTION 'generated mission must stay waiting';
   END IF;
 
   IF NOT EXISTS (
     SELECT 1 FROM public.campaign_occurrences
-    WHERE id = v_occ_in AND status = 'generated' AND session_id IS NOT NULL
+    WHERE id = v_occ_in AND status = 'generated' AND mission_id IS NOT NULL
   ) THEN
     RAISE EXCEPTION 'in-window occurrence should be generated';
   END IF;
@@ -94,7 +94,7 @@ BEGIN
     RAISE EXCEPTION 'late occurrence should be skipped';
   END IF;
 
-  UPDATE public.sessions
+  UPDATE public.missions
   SET state = 'finished', time_left_sec = 0
   WHERE campaign_occurrence_id = v_occ_in;
 
@@ -104,7 +104,7 @@ BEGIN
     SELECT 1 FROM public.campaign_occurrences
     WHERE id = v_occ_in AND status = 'done'
   ) THEN
-    RAISE EXCEPTION 'finished session should mark occurrence done';
+    RAISE EXCEPTION 'finished mission should mark occurrence done';
   END IF;
 
   RAISE NOTICE 'campaign scheduler fixtures passed for campaign %', v_campaign;

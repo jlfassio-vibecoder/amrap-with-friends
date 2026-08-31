@@ -30,13 +30,13 @@ vi.mock('@/lib/rallyPointIdentity', () => ({
   getStoredRallyPointNickname: () => 'Jules',
 }));
 
-vi.mock('@/lib/sessionIdentity', () => ({
+vi.mock('@/lib/missionIdentity', () => ({
   getStoredNickname: () => null,
 }));
 
 const RALLY_POINT_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-const SESSION_A = '11111111-1111-4111-8111-111111111111';
-const SESSION_B = '22222222-2222-4222-8222-222222222222';
+const MISSION_A = '11111111-1111-4111-8111-111111111111';
+const MISSION_B = '22222222-2222-4222-8222-222222222222';
 
 function wrapper({ children }: { children: ReactNode }) {
   return <MemoryRouter>{children}</MemoryRouter>;
@@ -49,8 +49,8 @@ describe('useRallyPointForceNav', () => {
       data: {
         rallyPointId: RALLY_POINT_ID,
         rallyPointMemberId: 'm1',
-        sessionId: SESSION_B,
-        sessionState: 'waiting',
+        missionId: MISSION_B,
+        missionState: 'waiting',
         participantId: 'p1',
       },
       error: null,
@@ -61,14 +61,14 @@ describe('useRallyPointForceNav', () => {
     vi.useRealTimers();
   });
 
-  it('skips finished active sessions', async () => {
+  it('skips finished active missions', async () => {
     renderHook(
       () =>
         useRallyPointForceNav({
           rallyPointId: RALLY_POINT_ID,
-          activeSessionId: SESSION_B,
-          activeSessionState: 'finished',
-          currentSessionId: SESSION_A,
+          activeMissionId: MISSION_B,
+          activeMissionState: 'finished',
+          currentMissionId: MISSION_A,
           enabled: true,
         }),
       { wrapper }
@@ -88,9 +88,9 @@ describe('useRallyPointForceNav', () => {
       () =>
         useRallyPointForceNav({
           rallyPointId: RALLY_POINT_ID,
-          activeSessionId: SESSION_B,
-          activeSessionState: 'waiting',
-          currentSessionId: SESSION_A,
+          activeMissionId: MISSION_B,
+          activeMissionState: 'waiting',
+          currentMissionId: MISSION_A,
           enabled: true,
         }),
       { wrapper }
@@ -105,14 +105,14 @@ describe('useRallyPointForceNav', () => {
       nickname: 'Jules',
     });
     expect(navigateMock).not.toHaveBeenCalled();
-    expect(result.current.pendingSessionId).toBe(SESSION_B);
+    expect(result.current.pendingMissionId).toBe(MISSION_B);
 
     await act(async () => {
       vi.advanceTimersByTime(FORCE_NAV_DELAY_MS);
     });
 
-    expect(navigateMock).toHaveBeenCalledWith(`/session/${SESSION_B}`, { replace: true });
-    expect(result.current.pendingSessionId).toBeNull();
+    expect(navigateMock).toHaveBeenCalledWith(`/mission/${MISSION_B}`, { replace: true });
+    expect(result.current.pendingMissionId).toBeNull();
   });
 
   it('joinNow skips the remaining soft delay', async () => {
@@ -121,9 +121,9 @@ describe('useRallyPointForceNav', () => {
       () =>
         useRallyPointForceNav({
           rallyPointId: RALLY_POINT_ID,
-          activeSessionId: SESSION_B,
-          activeSessionState: 'waiting',
-          currentSessionId: SESSION_A,
+          activeMissionId: MISSION_B,
+          activeMissionState: 'waiting',
+          currentMissionId: MISSION_A,
           enabled: true,
         }),
       { wrapper }
@@ -133,13 +133,13 @@ describe('useRallyPointForceNav', () => {
       await Promise.resolve();
     });
 
-    expect(result.current.pendingSessionId).toBe(SESSION_B);
+    expect(result.current.pendingMissionId).toBe(MISSION_B);
 
     await act(async () => {
       result.current.joinNow();
     });
 
-    expect(navigateMock).toHaveBeenCalledWith(`/session/${SESSION_B}`, { replace: true });
+    expect(navigateMock).toHaveBeenCalledWith(`/mission/${MISSION_B}`, { replace: true });
   });
 
   it('does not start soft-nav when enabled is false', async () => {
@@ -147,9 +147,9 @@ describe('useRallyPointForceNav', () => {
       () =>
         useRallyPointForceNav({
           rallyPointId: RALLY_POINT_ID,
-          activeSessionId: SESSION_B,
-          activeSessionState: 'waiting',
-          currentSessionId: SESSION_A,
+          activeMissionId: MISSION_B,
+          activeMissionState: 'waiting',
+          currentMissionId: MISSION_A,
           enabled: false,
         }),
       { wrapper }
@@ -175,9 +175,9 @@ describe('useRallyPointForceNav', () => {
       () =>
         useRallyPointForceNav({
           rallyPointId: RALLY_POINT_ID,
-          activeSessionId: SESSION_B,
-          activeSessionState: 'waiting',
-          currentSessionId: SESSION_A,
+          activeMissionId: MISSION_B,
+          activeMissionState: 'waiting',
+          currentMissionId: MISSION_A,
           enabled: true,
           onError,
         }),
@@ -194,7 +194,7 @@ describe('useRallyPointForceNav', () => {
       data: {
         rallyPointId: RALLY_POINT_ID,
         rallyPointMemberId: 'm1',
-        sessionId: SESSION_B,
+        missionId: MISSION_B,
         participantId: 'p1',
       },
       error: null,
@@ -212,7 +212,7 @@ describe('useRallyPointForceNav', () => {
       vi.advanceTimersByTime(FORCE_NAV_DELAY_MS);
     });
 
-    expect(navigateMock).toHaveBeenCalledWith(`/session/${SESSION_B}`, { replace: true });
+    expect(navigateMock).toHaveBeenCalledWith(`/mission/${MISSION_B}`, { replace: true });
   });
 
   it('does not navigate when join succeeds without a participant seat', async () => {
@@ -222,8 +222,8 @@ describe('useRallyPointForceNav', () => {
       data: {
         rallyPointId: RALLY_POINT_ID,
         rallyPointMemberId: 'm1',
-        sessionId: SESSION_B,
-        sessionState: 'waiting',
+        missionId: MISSION_B,
+        missionState: 'waiting',
         participantId: null,
       },
       error: null,
@@ -233,9 +233,9 @@ describe('useRallyPointForceNav', () => {
       () =>
         useRallyPointForceNav({
           rallyPointId: RALLY_POINT_ID,
-          activeSessionId: SESSION_B,
-          activeSessionState: 'waiting',
-          currentSessionId: SESSION_A,
+          activeMissionId: MISSION_B,
+          activeMissionState: 'waiting',
+          currentMissionId: MISSION_A,
           enabled: true,
           onError,
         }),
@@ -246,14 +246,14 @@ describe('useRallyPointForceNav', () => {
       await Promise.resolve();
     });
 
-    expect(onError).toHaveBeenCalledWith('Could not join the next session. Try again.');
+    expect(onError).toHaveBeenCalledWith('Could not join the next mission. Try again.');
     expect(navigateMock).not.toHaveBeenCalled();
 
     joinRallyPointMock.mockResolvedValue({
       data: {
         rallyPointId: RALLY_POINT_ID,
         rallyPointMemberId: 'm1',
-        sessionId: SESSION_B,
+        missionId: MISSION_B,
         participantId: 'p1',
       },
       error: null,
@@ -268,16 +268,16 @@ describe('useRallyPointForceNav', () => {
       vi.advanceTimersByTime(FORCE_NAV_DELAY_MS);
     });
 
-    expect(navigateMock).toHaveBeenCalledWith(`/session/${SESSION_B}`, { replace: true });
+    expect(navigateMock).toHaveBeenCalledWith(`/mission/${MISSION_B}`, { replace: true });
   });
 
-  it('falls back to getRallyPoint when session state is unknown', async () => {
+  it('falls back to getRallyPoint when mission state is unknown', async () => {
     vi.useFakeTimers();
     getRallyPointMock.mockResolvedValue({
       data: {
         rallyPointId: RALLY_POINT_ID,
-        activeSessionId: SESSION_B,
-        activeSessionState: 'setup',
+        activeMissionId: MISSION_B,
+        activeMissionState: 'setup',
         hostUserId: 'u1',
         status: 'open',
         createdAt: '',
@@ -292,9 +292,9 @@ describe('useRallyPointForceNav', () => {
       () =>
         useRallyPointForceNav({
           rallyPointId: RALLY_POINT_ID,
-          activeSessionId: SESSION_B,
-          activeSessionState: null,
-          currentSessionId: null,
+          activeMissionId: MISSION_B,
+          activeMissionState: null,
+          currentMissionId: null,
           enabled: true,
         }),
       { wrapper }
@@ -305,12 +305,12 @@ describe('useRallyPointForceNav', () => {
     });
 
     expect(getRallyPointMock).toHaveBeenCalledWith(RALLY_POINT_ID);
-    expect(result.current.pendingSessionId).toBe(SESSION_B);
+    expect(result.current.pendingMissionId).toBe(MISSION_B);
 
     await act(async () => {
       vi.advanceTimersByTime(FORCE_NAV_DELAY_MS);
     });
 
-    expect(navigateMock).toHaveBeenCalledWith(`/session/${SESSION_B}`, { replace: true });
+    expect(navigateMock).toHaveBeenCalledWith(`/mission/${MISSION_B}`, { replace: true });
   });
 });

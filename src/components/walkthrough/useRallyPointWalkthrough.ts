@@ -45,12 +45,12 @@ function initialState(key: string, role: WalkthroughRole): WalkthroughState {
 }
 
 export function useRallyPointWalkthrough({
-  sessionId,
+  missionId,
   isHost,
   enabled,
   isTargetPresent = defaultIsTargetPresent,
 }: {
-  sessionId: string;
+  missionId: string;
   isHost: boolean;
   enabled: boolean;
   isTargetPresent?: (targetId: string) => boolean;
@@ -66,7 +66,7 @@ export function useRallyPointWalkthrough({
   confirmLetsDoThis: () => void;
 } {
   const role: WalkthroughRole = isHost ? 'host' : 'joiner';
-  const walkthroughKey = `${sessionId}:${role}`;
+  const walkthroughKey = `${missionId}:${role}`;
   const steps = useMemo(() => stepsForRole(isHost), [isHost]);
   const [state, setState] = useState<WalkthroughState>(() => initialState(walkthroughKey, role));
 

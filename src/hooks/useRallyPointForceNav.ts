@@ -2,37 +2,37 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   getRallyPoint,
-  isLiveRallyPointSessionState,
+  isLiveRallyPointMissionState,
   joinRallyPoint,
-  type RallyPointSessionState,
+  type RallyPointMissionState,
 } from '@/lib/api/rallyPoint';
 import { getStoredRallyPointNickname } from '@/lib/rallyPointIdentity';
-import { getStoredNickname } from '@/lib/sessionIdentity';
+import { getStoredNickname } from '@/lib/missionIdentity';
 
 const RETRY_MS = 2_500;
 export const FORCE_NAV_DELAY_MS = 5_000;
 
 export type RallyPointForceNavState = {
-  pendingSessionId: string | null;
+  pendingMissionId: string | null;
   secondsLeft: number;
   joinNow: () => void;
 };
 
 /**
- * When the rally point's active_session_id points at a live session the viewer is
+ * When the rally point's active_mission_id points at a live mission the viewer is
  * not on, join and soft-nav (forced launch / straggler pull).
  *
- * Skips finished sessions so `/rally-point/:id` stays reachable after AAR, and only
+ * Skips finished missions so `/rally-point/:id` stays reachable after AAR, and only
  * starts the countdown after joinRallyPoint succeeds so identity is persisted first.
  * Auto-nav after FORCE_NAV_DELAY_MS; Join now skips the remaining wait.
  */
 export function useRallyPointForceNav(input: {
   rallyPointId: string | null | undefined;
-  activeSessionId: string | null | undefined;
+  activeMissionId: string | null | undefined;
   /** From get_rally_point / snapshot when known; avoids a second round-trip. */
-  activeSessionState?: RallyPointSessionState | null;
-  /** Session the viewer is currently watching; null on the rally point page. */
-  currentSessionId?: string | null;
+  activeMissionState?: RallyPointMissionState | null;
+  /** Mission the viewer is currently watching; null on the rally point page. */
+  currentMissionId?: string | null;
   enabled?: boolean;
   onError?: (message: string) => void;
 }): RallyPointForceNavState {
@@ -41,7 +41,7 @@ export function useRallyPointForceNav(input: {
   const pendingTargetRef = useRef<string | null>(null);
   const delayTimerRef = useRef<number | null>(null);
   const tickTimerRef = useRef<number | null>(null);
-  const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
+  const [pendingMissionId, setPendingMissionId] = useState<string | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
 
   const clearDelayTimers = useCallback(() => {
@@ -63,9 +63,9 @@ export function useRallyPointForceNav(input: {
     clearDelayTimers();
     lastNavigatedRef.current = target;
     pendingTargetRef.current = null;
-    setPendingSessionId(null);
+    setPendingMissionId(null);
     setSecondsLeft(0);
-    navigate(`/session/${target}`, { replace: true });
+    navigate(`/mission/${target}`, { replace: true });
   }, [clearDelayTimers, navigate]);
 
   const joinNow = useCallback(() => {
@@ -77,12 +77,12 @@ export function useRallyPointForceNav(input: {
       return;
     }
     const rallyPointId = input.rallyPointId;
-    const target = input.activeSessionId;
+    const target = input.activeMissionId;
     const onError = input.onError;
     if (!rallyPointId || !target) {
       return;
     }
-    if (input.currentSessionId && input.currentSessionId === target) {
+    if (input.currentMissionId && input.currentMissionId === target) {
       return;
     }
     if (lastNavigatedRef.current === target) {
@@ -108,13 +108,13 @@ export function useRallyPointForceNav(input: {
       }, RETRY_MS);
     }
 
-    function beginSoftNav(sessionId: string) {
+    function beginSoftNav(missionId: string) {
       if (cancelled) {
         return;
       }
       clearDelayTimers();
-      pendingTargetRef.current = sessionId;
-      setPendingSessionId(sessionId);
+      pendingTargetRef.current = missionId;
+      setPendingMissionId(missionId);
       const endsAt = Date.now() + FORCE_NAV_DELAY_MS;
       setSecondsLeft(Math.ceil(FORCE_NAV_DELAY_MS / 1000));
 
@@ -131,9 +131,9 @@ export function useRallyPointForceNav(input: {
       }, FORCE_NAV_DELAY_MS);
     }
 
-    async function attempt(knownState: RallyPointSessionState | null | undefined) {
+    async function attempt(knownState: RallyPointMissionState | null | undefined) {
       let state = knownState;
-      if (!isLiveRallyPointSessionState(state)) {
+      if (!isLiveRallyPointMissionState(state)) {
         if (state === 'finished') {
           return;
         }
@@ -142,14 +142,14 @@ export function useRallyPointForceNav(input: {
           return;
         }
         if (snapshot.error || !snapshot.data) {
-          onError?.(snapshot.error?.message ?? 'Could not join the next session. Try again.');
+          onError?.(snapshot.error?.message ?? 'Could not join the next mission. Try again.');
           return;
         }
-        if (snapshot.data.activeSessionId !== target) {
+        if (snapshot.data.activeMissionId !== target) {
           return;
         }
-        state = snapshot.data.activeSessionState;
-        if (!isLiveRallyPointSessionState(state)) {
+        state = snapshot.data.activeMissionState;
+        if (!isLiveRallyPointMissionState(state)) {
           return;
         }
       }
@@ -159,18 +159,18 @@ export function useRallyPointForceNav(input: {
         return;
       }
       if (joined.error || !joined.data) {
-        onError?.(joined.error?.message ?? 'Could not join the next session. Try again.');
+        onError?.(joined.error?.message ?? 'Could not join the next mission. Try again.');
         scheduleRetry(state);
         return;
       }
       if (!joined.data.participantId) {
-        onError?.('Could not join the next session. Try again.');
+        onError?.('Could not join the next mission. Try again.');
         scheduleRetry(state);
         return;
       }
-      const nextSessionId = joined.data.sessionId ?? target!;
-      if (nextSessionId !== target) {
-        onError?.('Could not join the next session. Try again.');
+      const nextMissionId = joined.data.missionId ?? target!;
+      if (nextMissionId !== target) {
+        onError?.('Could not join the next mission. Try again.');
         scheduleRetry(state);
         return;
       }
@@ -178,7 +178,7 @@ export function useRallyPointForceNav(input: {
       beginSoftNav(target!);
     }
 
-    void attempt(input.activeSessionState);
+    void attempt(input.activeMissionState);
 
     return () => {
       cancelled = true;
@@ -188,20 +188,20 @@ export function useRallyPointForceNav(input: {
       clearDelayTimers();
       if (pendingTargetRef.current === target) {
         pendingTargetRef.current = null;
-        setPendingSessionId(null);
+        setPendingMissionId(null);
         setSecondsLeft(0);
       }
     };
   }, [
     clearDelayTimers,
-    input.activeSessionId,
-    input.activeSessionState,
-    input.currentSessionId,
+    input.activeMissionId,
+    input.activeMissionState,
+    input.currentMissionId,
     input.enabled,
     input.rallyPointId,
     input.onError,
     navigateToPending,
   ]);
 
-  return { pendingSessionId, secondsLeft, joinNow };
+  return { pendingMissionId, secondsLeft, joinNow };
 }

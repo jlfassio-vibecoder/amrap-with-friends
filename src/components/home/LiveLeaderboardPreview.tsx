@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-/** Illustrative roster — labelled preview of the session view, not live data. */
+/** Illustrative roster — labelled preview of the mission view, not live data. */
 const ROSTER = [
   { rank: 1, name: 'Maya', reps: 184, online: true },
   { rank: 2, name: 'Jules', reps: 161, online: true },
@@ -19,7 +19,7 @@ function formatTime(totalSec: number): string {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
-/** Counts the preview clock down and loops it, so the card reads as a session
+/** Counts the preview clock down and loops it, so the card reads as a mission
  * in progress rather than a screenshot. */
 function usePreviewClock() {
   const [remainingSec, setRemainingSec] = useState(PREVIEW_START_SEC);
@@ -47,13 +47,13 @@ export function LiveLeaderboardPreview() {
           The clock is shared. The effort is visible.
         </h2>
         <p className="max-w-[26rem] text-base leading-[1.7] text-secondary">
-          Everyone enters the same timed session on a countdown that&apos;s reconciled in real time.
-          Rep counts update together, turning a personal effort into a session the whole crew can
+          Everyone enters the same timed mission on a countdown that&apos;s reconciled in real time.
+          Rep counts update together, turning a personal effort into a mission the whole crew can
           feel — whether they&apos;re across the gym or across time zones.
         </p>
         <Link className="btn-primary inline-block" to="/create">
-          {/* Copilot suggestion ignored: keep user-specified “Start a Session” CTA on this marketing surface. */}
-          Start a Session
+          {/* Copilot suggestion ignored: keep user-specified “Start a Mission” CTA on this marketing surface. */}
+          Start a Mission
         </Link>
       </div>
 
@@ -70,7 +70,9 @@ export function LiveLeaderboardPreview() {
               Realtime:{' '}
               <span
                 className="font-semibold text-success-text"
-                style={{ textShadow: '0 0 8px color-mix(in srgb, var(--color-success) 45%, transparent)' }}
+                style={{
+                  textShadow: '0 0 8px color-mix(in srgb, var(--color-success) 45%, transparent)',
+                }}
               >
                 connected
               </span>
@@ -113,7 +115,7 @@ export function LiveLeaderboardPreview() {
           </div>
         </div>
         <figcaption className="text-xs text-muted">
-          Example session view — not live data.
+          Example mission view — not live data.
         </figcaption>
       </figure>
     </section>

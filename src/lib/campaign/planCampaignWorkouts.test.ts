@@ -26,7 +26,7 @@ function template(
 // 'flash-flood' is the real benchmark for the 5-minute Blood Shunt track, so
 // the fixture exercises the same lookup production does. It sits mid-pool by
 // volume, which is the point: a benchmark should be neither the easiest nor
-// the hardest session in its track.
+// the hardest mission in its track.
 const BLOOD_SHUNT: WorkoutTemplate[] = [
   template('bs-heavy', 5, 'blood-shunt', 60),
   template('bs-light', 5, 'blood-shunt', 10),
@@ -137,7 +137,7 @@ describe('planCampaignWorkouts', () => {
     expect(tests).toHaveLength(3);
   });
 
-  it('walks the build sessions lightest to heaviest', () => {
+  it('walks the build missions lightest to heaviest', () => {
     const planned = plan(4, 2);
     // Weeks 1-4, 2 a week: index 0 is the benchmark, index 7 the retest.
     const builds = planned.slice(1, 7).map((entry) => entry.templateId);
@@ -157,7 +157,7 @@ describe('planCampaignWorkouts', () => {
     const planned = plan(8, 3);
     planned.forEach((entry, index) => {
       if (index > 0) {
-        expect(entry.templateId, `session ${index + 1}`).not.toBe(planned[index - 1].templateId);
+        expect(entry.templateId, `mission ${index + 1}`).not.toBe(planned[index - 1].templateId);
       }
     });
   });
@@ -179,7 +179,7 @@ describe('planCampaignWorkouts', () => {
     expect(planned.filter((entry) => entry.templateId === 'flash-flood')).toHaveLength(3);
   });
 
-  it('never spends a session going easy in a short campaign', () => {
+  it('never spends a mission going easy in a short campaign', () => {
     // A 4-week campaign trains 8 times; giving up two of those to deloads
     // costs more than the cleaner test is worth.
     const planned = plan(4, 2);
@@ -194,7 +194,7 @@ describe('planCampaignWorkouts', () => {
   });
 
   it('labels an easy day with the workout it actually runs, not the track slot', () => {
-    // The deload can come from a different track than the session it replaces,
+    // The deload can come from a different track than the mission it replaces,
     // so the category has to follow the template.
     const planned = plan(8, 2, [ENGINE_ROOM_TRACK, BLOOD_SHUNT_TRACK]);
     const easy = planned[planned.length - 2];
@@ -203,7 +203,7 @@ describe('planCampaignWorkouts', () => {
     expect(easy.durationMinutes).toBe(5);
   });
 
-  it('rotates build sessions across the tracks the host picked', () => {
+  it('rotates build missions across the tracks the host picked', () => {
     const planned = plan(6, 2, [BLOOD_SHUNT_TRACK, ENGINE_ROOM_TRACK]);
     const builds = planned.slice(1, 5);
     expect(builds.map((entry) => entry.durationMinutes)).toEqual([5, 10, 5, 10]);
@@ -284,8 +284,8 @@ describe('planCampaignWorkouts', () => {
         }).filter((entry) => entry.id !== 'the-hemodynamic')
       );
 
-      // Session 1 is the benchmark; the first pass through the build pool
-      // follows it, one session per template.
+      // Mission 1 is the benchmark; the first pass through the build pool
+      // follows it, one mission per template.
       const firstPass = planned.slice(1, 1 + buildPool.length);
       expect(firstPass.map((entry) => entry.templateId)).toEqual(
         buildPool.map((entry) => entry.id)

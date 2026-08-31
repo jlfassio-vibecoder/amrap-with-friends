@@ -5,7 +5,7 @@ import { parseRallyPointRow } from './useRallyPointChannel';
 const ROW = {
   id: 'rallyPoint-1',
   host_user_id: 'user-1',
-  active_session_id: 'session-1',
+  active_mission_id: 'mission-1',
   status: 'open',
   created_at: '2026-09-01T10:00:00Z',
   updated_at: '2026-09-01T11:00:00Z',
@@ -23,19 +23,19 @@ describe('parseRallyPointRow', () => {
     expect(parseRallyPointRow(ROW)).toMatchObject({
       rallyPointId: 'rallyPoint-1',
       hostUserId: 'user-1',
-      activeSessionId: 'session-1',
+      activeMissionId: 'mission-1',
       status: 'open',
     });
   });
 
   it('keeps the row when host_user_id is withheld', () => {
     // A guest is anon, and anon has no SELECT on rallyPoints.host_user_id. Dropping
-    // the row would cost them every active_session_id change, and with it the
+    // the row would cost them every active_mission_id change, and with it the
     // forced launch into the next mission.
     const parsed = parseRallyPointRow(withheldFromAnon());
 
     expect(parsed).not.toBeNull();
-    expect(parsed?.activeSessionId).toBe('session-1');
+    expect(parsed?.activeMissionId).toBe('mission-1');
     expect(parsed?.status).toBe('open');
   });
 
@@ -48,9 +48,9 @@ describe('parseRallyPointRow', () => {
     expect(parseRallyPointRow({ ...ROW, status: 'wat' })).toBeNull();
   });
 
-  it('treats a missing active session as null rather than dropping the row', () => {
-    const parsed = parseRallyPointRow({ ...ROW, active_session_id: null });
-    expect(parsed?.activeSessionId).toBeNull();
+  it('treats a missing active mission as null rather than dropping the row', () => {
+    const parsed = parseRallyPointRow({ ...ROW, active_mission_id: null });
+    expect(parsed?.activeMissionId).toBeNull();
   });
 
   it('reads next_mission_pending_at when present', () => {

@@ -9,11 +9,7 @@ import { CoachSectionHeader } from '@/components/coach/CoachSectionHeader';
 import { CoachStatGrid } from '@/components/coach/CoachStatGrid';
 import { CoachUserDetailPanel } from '@/components/coach/CoachUserDetailPanel';
 import { CoachUserPicker } from '@/components/coach/CoachUserPicker';
-import {
-  fetchCoachDashboard,
-  type CoachDashboard,
-  type CoachUserListRow,
-} from '@/lib/api/coach';
+import { fetchCoachDashboard, type CoachDashboard, type CoachUserListRow } from '@/lib/api/coach';
 import { formatCoachLabel } from '@/lib/coach/formatCoachLabel';
 
 function pct(value: number | null): string {
@@ -71,9 +67,7 @@ export default function CoachPage() {
           <CoachUserDetailPanel key={selectedUser.userId} userId={selectedUser.userId} />
         ) : null}
 
-        {!selectedUser && loading ? (
-          <p className="text-sm text-secondary">Loading…</p>
-        ) : null}
+        {!selectedUser && loading ? <p className="text-sm text-secondary">Loading…</p> : null}
         {!selectedUser && error ? <p className="text-error text-sm">{error}</p> : null}
 
         {!selectedUser && dashboard ? (
@@ -82,14 +76,20 @@ export default function CoachPage() {
               <CoachSectionHeader title="Overview" />
               <CoachStatGrid
                 stats={[
-                  { label: 'Sessions created (7d)', value: dashboard.topStrip.sessionsCreated7d },
-                  { label: 'Sessions created (30d)', value: dashboard.topStrip.sessionsCreated30d },
-                  { label: 'Sessions finished (7d)', value: dashboard.topStrip.sessionsFinished7d },
-                  { label: 'Sessions finished (30d)', value: dashboard.topStrip.sessionsFinished30d },
+                  { label: 'Missions created (7d)', value: dashboard.topStrip.missionsCreated7d },
+                  { label: 'Missions created (30d)', value: dashboard.topStrip.missionsCreated30d },
+                  { label: 'Missions finished (7d)', value: dashboard.topStrip.missionsFinished7d },
+                  {
+                    label: 'Missions finished (30d)',
+                    value: dashboard.topStrip.missionsFinished30d,
+                  },
                   { label: 'Unique visitors (anon)', value: dashboard.topStrip.uniqueAnonIds },
                   { label: 'Registered users', value: dashboard.topStrip.registeredUsers },
-                  { label: 'Live sessions created', value: dashboard.topStrip.liveSessionsCreated },
-                  { label: 'Practice sessions started', value: dashboard.topStrip.practiceSessionsStarted },
+                  { label: 'Live missions created', value: dashboard.topStrip.liveMissionsCreated },
+                  {
+                    label: 'Practice missions started',
+                    value: dashboard.topStrip.practiceMissionsStarted,
+                  },
                 ]}
               />
             </section>
@@ -134,13 +134,21 @@ export default function CoachPage() {
                 <CoachDataTable
                   rows={dashboard.templatePerformance}
                   rowKey={(row) => `${row.templateId}-${row.durationMinutes}-${row.intensityTier}`}
-                  emptyLabel="No sessions with a template yet."
+                  emptyLabel="No missions with a template yet."
                   columns={[
                     { header: 'Template', render: (row) => formatCoachLabel(row.templateId) },
-                    { header: 'Intensity', render: (row) => row.intensityTier ?? '—', align: 'right' },
-                    { header: 'Duration', render: (row) => `${row.durationMinutes}m`, align: 'right' },
-                    { header: 'Created', render: (row) => row.sessionsCreated, align: 'right' },
-                    { header: 'Completed', render: (row) => row.sessionsCompleted, align: 'right' },
+                    {
+                      header: 'Intensity',
+                      render: (row) => row.intensityTier ?? '—',
+                      align: 'right',
+                    },
+                    {
+                      header: 'Duration',
+                      render: (row) => `${row.durationMinutes}m`,
+                      align: 'right',
+                    },
+                    { header: 'Created', render: (row) => row.missionsCreated, align: 'right' },
+                    { header: 'Completed', render: (row) => row.missionsCompleted, align: 'right' },
                     {
                       header: 'Completion %',
                       render: (row) => pct(row.completionRatePct),
@@ -149,12 +157,12 @@ export default function CoachPage() {
                   ]}
                 />
                 <p className="text-sm text-secondary">
-                  Live-session abandonment:{' '}
+                  Live-mission abandonment:{' '}
                   <span className="font-semibold text-ink">
-                    {pct(dashboard.sessionAbandonment.abandonmentRatePct)}
+                    {pct(dashboard.missionAbandonment.abandonmentRatePct)}
                   </span>{' '}
-                  ({dashboard.sessionAbandonment.sessionsWithAbandonmentEvent} abandoned mid-work
-                  vs. {dashboard.sessionAbandonment.sessionsFinished} finished)
+                  ({dashboard.missionAbandonment.missionsWithAbandonmentEvent} abandoned mid-work
+                  vs. {dashboard.missionAbandonment.missionsFinished} finished)
                 </p>
               </div>
             </section>
@@ -165,13 +173,13 @@ export default function CoachPage() {
                 <CoachDataTable
                   rows={dashboard.hostVsJoinerRetention}
                   rowKey={(row) => row.firstRole}
-                  emptyLabel="No registered users with session history yet."
+                  emptyLabel="No registered users with mission history yet."
                   columns={[
                     { header: 'First role', render: (row) => formatCoachLabel(row.firstRole) },
                     { header: 'Users', render: (row) => row.userCount, align: 'right' },
                     {
-                      header: 'Avg. sessions / user',
-                      render: (row) => row.avgSessionsPerUser ?? '—',
+                      header: 'Avg. missions / user',
+                      render: (row) => row.avgMissionsPerUser ?? '—',
                       align: 'right',
                     },
                     {
@@ -192,9 +200,16 @@ export default function CoachPage() {
                   rowKey={(row) => row.audioContextState}
                   emptyLabel="No audio unlock attempts logged yet."
                   columns={[
-                    { header: 'AudioContext state', render: (row) => formatCoachLabel(row.audioContextState) },
+                    {
+                      header: 'AudioContext state',
+                      render: (row) => formatCoachLabel(row.audioContextState),
+                    },
                     { header: 'Count', render: (row) => row.unlockCount, align: 'right' },
-                    { header: '% of unlocks', render: (row) => pct(row.pctOfUnlocks), align: 'right' },
+                    {
+                      header: '% of unlocks',
+                      render: (row) => pct(row.pctOfUnlocks),
+                      align: 'right',
+                    },
                   ]}
                 />
               </div>
@@ -216,8 +231,16 @@ export default function CoachPage() {
                       { header: 'Calls', render: (row) => row.callCount, align: 'right' },
                       { header: 'Errors', render: (row) => row.errorCount, align: 'right' },
                       { header: 'Error %', render: (row) => pct(row.errorRatePct), align: 'right' },
-                      { header: 'p50 ms', render: (row) => row.p50LatencyMs ?? '—', align: 'right' },
-                      { header: 'p95 ms', render: (row) => row.p95LatencyMs ?? '—', align: 'right' },
+                      {
+                        header: 'p50 ms',
+                        render: (row) => row.p50LatencyMs ?? '—',
+                        align: 'right',
+                      },
+                      {
+                        header: 'p95 ms',
+                        render: (row) => row.p95LatencyMs ?? '—',
+                        align: 'right',
+                      },
                     ]}
                   />
                 </div>

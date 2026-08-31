@@ -115,7 +115,7 @@ export function selectCampaignPreviewWeekNumbers(input: {
 export interface CampaignProgress {
   done: number;
   total: number;
-  /** 0-100, rounded. 0 when the campaign has no sessions rather than NaN. */
+  /** 0-100, rounded. 0 when the campaign has no missions rather than NaN. */
   percent: number;
 }
 
@@ -147,14 +147,14 @@ const SUGGESTED_WEEKDAYS: Record<number, number[]> = {
   5: [1, 2, 3, 4, 5],
 };
 
-export function suggestedSlots(sessionsPerWeek: number, timeLocal = '18:00'): CampaignSlot[] {
-  const weekdays = SUGGESTED_WEEKDAYS[sessionsPerWeek] ?? SUGGESTED_WEEKDAYS[3];
+export function suggestedSlots(missionsPerWeek: number, timeLocal = '18:00'): CampaignSlot[] {
+  const weekdays = SUGGESTED_WEEKDAYS[missionsPerWeek] ?? SUGGESTED_WEEKDAYS[3];
   return weekdays.map((weekday) => ({ weekday, timeLocal }));
 }
 
-/** "24 sessions · 3 a week · 8 weeks" */
-export function formatCampaignShape(weekCount: number, sessionsPerWeek: number): string {
-  const total = weekCount * sessionsPerWeek;
-  const perWeek = sessionsPerWeek === 1 ? '1 a week' : `${sessionsPerWeek} a week`;
-  return `${total} sessions · ${perWeek} · ${weekCount} weeks`;
+/** "24 missions · 3 a week · 8 weeks" */
+export function formatCampaignShape(weekCount: number, missionsPerWeek: number): string {
+  const total = weekCount * missionsPerWeek;
+  const perWeek = missionsPerWeek === 1 ? '1 a week' : `${missionsPerWeek} a week`;
+  return `${total} missions · ${perWeek} · ${weekCount} weeks`;
 }

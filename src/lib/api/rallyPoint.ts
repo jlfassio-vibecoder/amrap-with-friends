@@ -1,12 +1,12 @@
 import { callRpc } from '@/lib/api/callRpc';
-import type { WorkoutExercise } from '@/lib/api/sessionTypes';
+import type { WorkoutExercise } from '@/lib/api/missionTypes';
 import {
   getStoredRallyPointMemberId,
   getStoredRallyPointNickname,
   getStoredRallyPointSeatClaim,
   persistRallyPointIdentity,
 } from '@/lib/rallyPointIdentity';
-import { clearStoredHostToken, persistSessionIdentity } from '@/lib/sessionIdentity';
+import { clearStoredHostToken, persistMissionIdentity } from '@/lib/missionIdentity';
 import { track } from '@/lib/analytics/track';
 
 export type RallyPointApiError = { message: string };
@@ -20,14 +20,14 @@ export type RallyPointMember = {
   joinedAt: string;
 };
 
-export type RallyPointSessionState = 'waiting' | 'setup' | 'work' | 'finished';
+export type RallyPointMissionState = 'waiting' | 'setup' | 'work' | 'finished';
 
 export type RallyPointSnapshot = {
   rallyPointId: string;
   /** Null for anonymous get_rally_point responses (auth UUIDs redacted). */
   hostUserId: string | null;
-  activeSessionId: string | null;
-  activeSessionState: RallyPointSessionState | null;
+  activeMissionId: string | null;
+  activeMissionState: RallyPointMissionState | null;
   status: 'open' | 'closed';
   createdAt: string;
   updatedAt: string;
@@ -36,10 +36,10 @@ export type RallyPointSnapshot = {
   members: RallyPointMember[];
 };
 
-export type CreateRallyPointSessionResult = {
+export type CreateRallyPointMissionResult = {
   rallyPointId: string;
   rallyPointMemberId: string;
-  sessionId: string;
+  missionId: string;
   hostToken: string;
   participantId: string;
   claimToken: string;
@@ -50,9 +50,9 @@ export type JoinRallyPointResult = {
   rallyPointMemberId: string;
   hostUserId: string;
   status: string;
-  activeSessionId: string | null;
-  sessionId: string | null;
-  sessionState: RallyPointSessionState | null;
+  activeMissionId: string | null;
+  missionId: string | null;
+  missionState: RallyPointMissionState | null;
   participantId: string | null;
   nickname: string;
   role: 'host' | 'joiner' | null;
@@ -60,13 +60,13 @@ export type JoinRallyPointResult = {
   hostToken: string | null;
 };
 
-export function isLiveRallyPointSessionState(
+export function isLiveRallyPointMissionState(
   state: string | null | undefined
 ): state is 'waiting' | 'setup' | 'work' {
   return state === 'waiting' || state === 'setup' || state === 'work';
 }
 
-function parseRallyPointSessionState(value: unknown): RallyPointSessionState | null {
+function parseRallyPointMissionState(value: unknown): RallyPointMissionState | null {
   if (value === 'waiting' || value === 'setup' || value === 'work' || value === 'finished') {
     return value;
   }
@@ -98,14 +98,14 @@ function mapRpcError(message: string | undefined): string {
   if (message.includes('Rally point closed')) {
     return 'This rally point is closed.';
   }
-  if (message.includes('Rally point is full') || message.includes('Session is full')) {
+  if (message.includes('Rally point is full') || message.includes('Mission is full')) {
     return 'This rally point is full.';
   }
   if (message.includes('Only the host can pass command')) {
     return 'Only the host can pass command.';
   }
-  if (message.includes('Only the host can start the next session')) {
-    return 'Only the host can start the next session.';
+  if (message.includes('Only the host can start the next mission')) {
+    return 'Only the host can start the next mission.';
   }
   if (message.includes('Only the host can close')) {
     return 'Only the host can close the rally point.';
@@ -117,16 +117,16 @@ function mapRpcError(message: string | undefined): string {
     return 'Pick someone else to pass command to.';
   }
   if (
-    message.includes('Cannot pass command during a live session') ||
-    message.includes('Cannot claim command during a live session')
+    message.includes('Cannot pass command during a live mission') ||
+    message.includes('Cannot claim command during a live mission')
   ) {
-    return 'Cannot change host during a live session.';
+    return 'Cannot change host during a live mission.';
   }
-  if (message.includes('Current session is still active')) {
-    return 'Finish the current session before starting the next one.';
+  if (message.includes('Current mission is still active')) {
+    return 'Finish the current mission before starting the next one.';
   }
-  if (message.includes('Host session limit reached')) {
-    return 'You already have 3 active sessions.';
+  if (message.includes('Host mission limit reached')) {
+    return 'You already have 3 active missions.';
   }
   if (message.includes('Authentication required')) {
     return 'Sign in to continue.';
@@ -165,21 +165,21 @@ function parseMember(raw: Record<string, unknown>): RallyPointMember | null {
   };
 }
 
-export async function createRallyPointSession(input: {
+export async function createRallyPointMission(input: {
   nickname: string;
   durationMinutes: number;
   workout: WorkoutExercise[];
   templateId?: string | null;
   intensityTier?: number | null;
   scheduledAt?: string | null;
-}): Promise<{ data: CreateRallyPointSessionResult | null; error: RallyPointApiError | null }> {
+}): Promise<{ data: CreateRallyPointMissionResult | null; error: RallyPointApiError | null }> {
   const nickname = input.nickname.trim();
   if (!nickname) {
     return { data: null, error: { message: 'Enter your name or a nickname.' } };
   }
 
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const { data, error } = await callRpc('create_rally_point_session', {
+  const { data, error } = await callRpc('create_rally_point_mission', {
     p_duration_minutes: input.durationMinutes,
     p_nickname: nickname,
     p_workout: input.workout,
@@ -196,7 +196,7 @@ export async function createRallyPointSession(input: {
   const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
   const rallyPointId = readString(raw.rally_point_id);
   const rallyPointMemberId = readString(raw.rally_point_member_id);
-  const sessionId = readString(raw.session_id);
+  const missionId = readString(raw.mission_id);
   const hostToken = readString(raw.host_token);
   const participantId = readString(raw.participant_id);
   const claimToken = readString(raw.claim_token);
@@ -204,7 +204,7 @@ export async function createRallyPointSession(input: {
   if (
     !rallyPointId ||
     !rallyPointMemberId ||
-    !sessionId ||
+    !missionId ||
     !hostToken ||
     !participantId ||
     !claimToken
@@ -212,18 +212,18 @@ export async function createRallyPointSession(input: {
     return { data: null, error: { message: 'Something went wrong. Please try again.' } };
   }
 
-  persistRallyPointIdentity(rallyPointId, { memberId: rallyPointMemberId, nickname, sessionId });
-  persistSessionIdentity(sessionId, {
+  persistRallyPointIdentity(rallyPointId, { memberId: rallyPointMemberId, nickname, missionId });
+  persistMissionIdentity(missionId, {
     nickname,
     participantId,
     hostToken,
     claimToken,
   });
 
-  track('rally_point_created', { session_id: sessionId }, { sessionId, participantId });
+  track('rally_point_created', { mission_id: missionId }, { missionId, participantId });
 
   return {
-    data: { rallyPointId, rallyPointMemberId, sessionId, hostToken, participantId, claimToken },
+    data: { rallyPointId, rallyPointMemberId, missionId, hostToken, participantId, claimToken },
     error: null,
   };
 }
@@ -245,7 +245,7 @@ export async function joinRallyPoint(input: {
 
   // A guest has no user_id for the server to match on, so hand back the member
   // id + seat_claim we were given the first time. Without the member id every
-  // re-join minted a new seat, and start_next_rally_point_session makes the force-nav
+  // re-join minted a new seat, and start_next_rally_point_mission makes the force-nav
   // hook re-join on every chained mission. Member ids alone are visible in
   // get_rally_point and are not proof of ownership — seat_claim is the secret.
   const knownMemberId =
@@ -270,15 +270,15 @@ export async function joinRallyPoint(input: {
   const rallyPointMemberId = readString(raw.rally_point_member_id);
   const hostUserId = readString(raw.host_user_id);
   const status = readString(raw.status) ?? 'open';
-  const activeSessionId = readString(raw.active_session_id);
-  const sessionId = readString(raw.session_id);
+  const activeMissionId = readString(raw.active_mission_id);
+  const missionId = readString(raw.mission_id);
   const participantId = readString(raw.participant_id);
   const roleRaw = readString(raw.role);
   const role = roleRaw === 'host' || roleRaw === 'joiner' ? roleRaw : null;
   const claimToken = readString(raw.claim_token);
   const hostToken = readString(raw.host_token);
   const seatClaimOut = readString(raw.seat_claim);
-  const sessionState = parseRallyPointSessionState(raw.session_state);
+  const missionState = parseRallyPointMissionState(raw.mission_state);
 
   if (!rallyPointId || !rallyPointMemberId || !hostUserId) {
     return { data: null, error: { message: 'Something went wrong. Please try again.' } };
@@ -287,12 +287,12 @@ export async function joinRallyPoint(input: {
   persistRallyPointIdentity(rallyPointId, {
     memberId: rallyPointMemberId,
     nickname: readString(raw.nickname) ?? nickname,
-    sessionId,
+    missionId,
     seatClaim: seatClaimOut,
   });
 
-  if (sessionId && participantId) {
-    persistSessionIdentity(sessionId, {
+  if (missionId && participantId) {
+    persistMissionIdentity(missionId, {
       nickname: readString(raw.nickname) ?? nickname,
       participantId,
       ...(hostToken ? { hostToken } : {}),
@@ -302,8 +302,8 @@ export async function joinRallyPoint(input: {
 
   track(
     'rally_point_joined',
-    { has_session: Boolean(sessionId), role },
-    { sessionId, participantId }
+    { has_mission: Boolean(missionId), role },
+    { missionId, participantId }
   );
 
   return {
@@ -312,9 +312,9 @@ export async function joinRallyPoint(input: {
       rallyPointMemberId,
       hostUserId,
       status,
-      activeSessionId,
-      sessionId,
-      sessionState,
+      activeMissionId,
+      missionId,
+      missionState,
       participantId,
       nickname: readString(raw.nickname) ?? nickname,
       role,
@@ -354,8 +354,8 @@ export async function getRallyPoint(
     data: {
       rallyPointId: id,
       hostUserId,
-      activeSessionId: readString(raw.active_session_id),
-      activeSessionState: parseRallyPointSessionState(raw.active_session_state),
+      activeMissionId: readString(raw.active_mission_id),
+      activeMissionState: parseRallyPointMissionState(raw.active_mission_state),
       status,
       createdAt,
       updatedAt,
@@ -393,7 +393,7 @@ export async function passRallyPointCommand(input: {
   rallyPointId: string;
   toUserId: string;
 }): Promise<{
-  data: { hostUserId: string; hostToken: string | null; activeSessionId: string | null } | null;
+  data: { hostUserId: string; hostToken: string | null; activeMissionId: string | null } | null;
   error: RallyPointApiError | null;
 }> {
   const { data, error } = await callRpc('pass_rally_point_command', {
@@ -408,33 +408,33 @@ export async function passRallyPointCommand(input: {
   if (!hostUserId) {
     return { data: null, error: { message: 'Something went wrong. Please try again.' } };
   }
-  const activeSessionId = readString(raw.active_session_id);
+  const activeMissionId = readString(raw.active_mission_id);
   // Rotated token is never returned to the outgoing host; clear any stale local copy.
-  if (activeSessionId) {
-    clearStoredHostToken(activeSessionId);
+  if (activeMissionId) {
+    clearStoredHostToken(activeMissionId);
   }
   track('command_passed', { to_user_id: input.toUserId });
   return {
     data: {
       hostUserId,
       hostToken: readString(raw.host_token),
-      activeSessionId,
+      activeMissionId,
     },
     error: null,
   };
 }
 
-export async function startNextRallyPointSession(input: {
+export async function startNextRallyPointMission(input: {
   rallyPointId: string;
   durationMinutes: number;
   workout: WorkoutExercise[];
   templateId?: string | null;
   intensityTier?: number | null;
 }): Promise<{
-  data: { sessionId: string; hostToken: string; participantId: string; claimToken: string } | null;
+  data: { missionId: string; hostToken: string; participantId: string; claimToken: string } | null;
   error: RallyPointApiError | null;
 }> {
-  const { data, error } = await callRpc('start_next_rally_point_session', {
+  const { data, error } = await callRpc('start_next_rally_point_mission', {
     p_rally_point_id: input.rallyPointId,
     p_duration_minutes: input.durationMinutes,
     p_workout: input.workout,
@@ -445,17 +445,17 @@ export async function startNextRallyPointSession(input: {
     return { data: null, error: { message: mapRpcError(error.message) } };
   }
   const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
-  const sessionId = readString(raw.session_id);
+  const missionId = readString(raw.mission_id);
   const hostToken = readString(raw.host_token);
   const participantId = readString(raw.participant_id);
   const claimToken = readString(raw.claim_token);
-  if (!sessionId || !hostToken || !participantId || !claimToken) {
+  if (!missionId || !hostToken || !participantId || !claimToken) {
     return { data: null, error: { message: 'Something went wrong. Please try again.' } };
   }
 
   const nickname = getStoredRallyPointNickname(input.rallyPointId) ?? 'Athlete';
   const memberId = getStoredRallyPointMemberId(input.rallyPointId);
-  persistSessionIdentity(sessionId, {
+  persistMissionIdentity(missionId, {
     nickname,
     participantId,
     hostToken,
@@ -465,13 +465,13 @@ export async function startNextRallyPointSession(input: {
     persistRallyPointIdentity(input.rallyPointId, {
       memberId,
       nickname,
-      sessionId,
+      missionId,
     });
   }
 
-  track('rally_point_next_session', {}, { sessionId, participantId });
+  track('rally_point_next_mission', {}, { missionId, participantId });
 
-  return { data: { sessionId, hostToken, participantId, claimToken }, error: null };
+  return { data: { missionId, hostToken, participantId, claimToken }, error: null };
 }
 
 export async function leaveRallyPoint(
@@ -537,7 +537,7 @@ export async function claimRallyPointCommandIfStale(rallyPointId: string): Promi
     claimed: boolean;
     hostUserId: string | null;
     hostToken: string | null;
-    activeSessionId: string | null;
+    activeMissionId: string | null;
     reason: string | null;
   } | null;
   error: RallyPointApiError | null;
@@ -557,7 +557,7 @@ export async function claimRallyPointCommandIfStale(rallyPointId: string): Promi
       claimed: raw.claimed === true,
       hostUserId: readString(raw.host_user_id),
       hostToken: readString(raw.host_token),
-      activeSessionId: readString(raw.active_session_id),
+      activeMissionId: readString(raw.active_mission_id),
       reason: readString(raw.reason),
     },
     error: null,

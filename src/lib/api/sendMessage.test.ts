@@ -15,7 +15,7 @@ vi.mock('@/lib/supabase', () => ({
 
 const rpcMock = vi.mocked(supabase.rpc);
 
-const SESSION_ID = '11111111-1111-4111-8111-111111111111';
+const MISSION_ID = '11111111-1111-4111-8111-111111111111';
 const PARTICIPANT_ID = '22222222-2222-4222-8222-222222222222';
 const MESSAGE_ID = 'aaaa1111-1111-4111-8111-111111111111';
 
@@ -54,7 +54,7 @@ describe('sendMessage API', () => {
       data: {
         ok: true,
         message_id: MESSAGE_ID,
-        session_id: SESSION_ID,
+        mission_id: MISSION_ID,
         participant_id: PARTICIPANT_ID,
         nickname: 'Host',
         body: 'hello',
@@ -69,14 +69,14 @@ describe('sendMessage API', () => {
     });
 
     const result = await sendMessage({
-      sessionId: SESSION_ID,
+      missionId: MISSION_ID,
       participantId: PARTICIPANT_ID,
       claimToken: 'claim-token',
       body: '  hello  ',
     });
 
     expect(rpcMock).toHaveBeenCalledWith('send_message', {
-      p_session_id: SESSION_ID,
+      p_mission_id: MISSION_ID,
       p_participant_id: PARTICIPANT_ID,
       p_claim_token: 'claim-token',
       p_body: '  hello  ',
@@ -85,7 +85,7 @@ describe('sendMessage API', () => {
     expect(result.data).toEqual({
       ok: true,
       messageId: MESSAGE_ID,
-      sessionId: SESSION_ID,
+      missionId: MISSION_ID,
       participantId: PARTICIPANT_ID,
       nickname: 'Host',
       body: 'hello',
@@ -105,7 +105,7 @@ describe('sendMessage API', () => {
     });
 
     const result = await sendMessage({
-      sessionId: SESSION_ID,
+      missionId: MISSION_ID,
       participantId: PARTICIPANT_ID,
       claimToken: 'claim-token',
       body: 'hello',
@@ -126,7 +126,7 @@ describe('sendMessage API', () => {
     });
 
     const result = await sendMessage({
-      sessionId: SESSION_ID,
+      missionId: MISSION_ID,
       participantId: PARTICIPANT_ID,
       claimToken: 'wrong',
       body: 'hello',
@@ -159,7 +159,7 @@ describe('sendMessage API', () => {
     });
 
     const result = await sendMessage({
-      sessionId: SESSION_ID,
+      missionId: MISSION_ID,
       participantId: PARTICIPANT_ID,
       claimToken: 'claim-token',
       body: 'hello',

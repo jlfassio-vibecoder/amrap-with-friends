@@ -5,13 +5,7 @@ import {
 } from '@/lib/audio/vaultSamples';
 
 export type TacticalCue =
-  | 'ignition'
-  | 'prep'
-  | 'go'
-  | 'minute'
-  | 'finalMinute'
-  | 'terminal'
-  | 'end';
+  'ignition' | 'prep' | 'go' | 'minute' | 'finalMinute' | 'terminal' | 'end';
 
 const MINUTE_GAIN = 0.14;
 const FINAL_MINUTE_GAIN = 0.22;
@@ -26,9 +20,8 @@ function getAudioContextConstructor(): typeof AudioContext | null {
   if (fromWindow) {
     return fromWindow;
   }
-  const webkit = (
-    window as unknown as { webkitAudioContext?: typeof AudioContext }
-  ).webkitAudioContext;
+  const webkit = (window as unknown as { webkitAudioContext?: typeof AudioContext })
+    .webkitAudioContext;
   return webkit ?? null;
 }
 
@@ -51,10 +44,7 @@ export function resetTacticalAudioForTests(): void {
 }
 
 /** Pure white noise buffer — foundation for impacts and mechanical scrapes. */
-export function createNoiseBuffer(
-  context: AudioContext,
-  durationSec: number
-): AudioBuffer {
+export function createNoiseBuffer(context: AudioContext, durationSec: number): AudioBuffer {
   const sampleRate = context.sampleRate;
   const frameCount = Math.max(1, Math.floor(sampleRate * durationSec));
   const buffer = context.createBuffer(1, frameCount, sampleRate);
@@ -157,10 +147,7 @@ function playNoiseBurst(
     filter.type = options.filterType;
     filter.frequency.setValueAtTime(options.filterFrequency, startAt);
     if (options.filterFrequencyEnd !== undefined) {
-      filter.frequency.exponentialRampToValueAtTime(
-        options.filterFrequencyEnd,
-        endAt
-      );
+      filter.frequency.exponentialRampToValueAtTime(options.filterFrequencyEnd, endAt);
     }
     source.connect(filter);
     filter.connect(gain);
@@ -189,13 +176,13 @@ function createDriveShaper(context: AudioContext, amount = 2.5): WaveShaperNode 
   return shaper;
 }
 
-/** Session start vault sample for all clients entering setup; synth fallback. */
+/** Mission start vault sample for all clients entering setup; synth fallback. */
 export function playIgnition(): void {
   const context = audioContext;
   if (!context) {
     return;
   }
-  if (playVaultSample(context, 'sessionStart')) {
+  if (playVaultSample(context, 'missionStart')) {
     return;
   }
   playPitchedOscillator(context, {

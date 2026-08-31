@@ -1,8 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  claimParticipant,
-  fetchParticipantClaimStatus,
-} from '@/lib/api/claimParticipant';
+import { claimParticipant, fetchParticipantClaimStatus } from '@/lib/api/claimParticipant';
 import type { ClaimStatus } from '@/lib/claim/resolveClaimStatus';
 import { shouldShowClaimPrompt } from '@/lib/claim/shouldShowClaimPrompt';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
@@ -10,17 +7,16 @@ import {
   clearStoredClaimToken,
   getStoredClaimToken,
   getStoredParticipantId,
-} from '@/lib/sessionIdentity';
+} from '@/lib/missionIdentity';
 import { track } from '@/lib/analytics/track';
 
-export function useParticipantClaim(sessionId: string) {
+export function useParticipantClaim(missionId: string) {
   const { user, isAuthenticated, isAuthLoading } = useAmrapAuth();
   const userId = user?.id ?? null;
-  const participantId = getStoredParticipantId(sessionId);
-  const claimToken = getStoredClaimToken(sessionId);
+  const participantId = getStoredParticipantId(missionId);
+  const claimToken = getStoredClaimToken(missionId);
 
-  const [claimStatusFromServer, setClaimStatusFromServer] =
-    useState<ClaimStatus>('unknown');
+  const [claimStatusFromServer, setClaimStatusFromServer] = useState<ClaimStatus>('unknown');
   const [isClaiming, setIsClaiming] = useState(false);
   const [claimMessage, setClaimMessage] = useState<string | null>(null);
   const [claimError, setClaimError] = useState<string | null>(null);
@@ -65,13 +61,9 @@ export function useParticipantClaim(sessionId: string) {
   useEffect(() => {
     if (showClaimPrompt && !promptShownRef.current) {
       promptShownRef.current = true;
-      track(
-        'claim_prompt_shown',
-        {},
-        { userId, sessionId, participantId }
-      );
+      track('claim_prompt_shown', {}, { userId, missionId, participantId });
     }
-  }, [showClaimPrompt, userId, sessionId, participantId]);
+  }, [showClaimPrompt, userId, missionId, participantId]);
 
   async function saveToAccount() {
     if (!participantId || !claimToken) {
@@ -99,29 +91,29 @@ export function useParticipantClaim(sessionId: string) {
         track(
           'claim_conflict',
           { reason: result.data.reason },
-          { userId, sessionId, participantId }
+          { userId, missionId, participantId }
         );
-        setClaimError('This session was already saved to another account.');
+        setClaimError('This mission was already saved to another account.');
       } else if (result.data.reason === 'invalid_claim_token') {
         setClaimError('Save link expired. Rejoin from this device if you still have access.');
       } else {
-        setClaimError(`Could not save session: ${result.data.reason}`);
+        setClaimError(`Could not save mission: ${result.data.reason}`);
       }
       return;
     }
 
     if (result.data?.ok === true) {
-      clearStoredClaimToken(sessionId);
+      clearStoredClaimToken(missionId);
       setClaimStatusFromServer('claimed');
       track(
         'claim_completed',
         { already_claimed: result.data.alreadyClaimed ?? false },
-        { userId, sessionId, participantId }
+        { userId, missionId, participantId }
       );
       setClaimMessage(
         result.data.alreadyClaimed
-          ? 'This session is already on your account.'
-          : 'Session saved to your account.'
+          ? 'This mission is already on your account.'
+          : 'Mission saved to your account.'
       );
     }
   }

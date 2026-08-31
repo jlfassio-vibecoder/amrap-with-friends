@@ -61,7 +61,7 @@ function lastIndexInWeek(occurrences: CampaignOccurrence[], week: number): numbe
  *      in this function matters as much.
  *   2. **Building volume.** Each track's pool is walked lightest to heaviest
  *      rather than in library order, which ran downhill.
- *   3. **Backing off before a test.** Long campaigns drop the session before
+ *   3. **Backing off before a test.** Long campaigns drop the mission before
  *      each retest to the lightest work available, so the test measures fitness
  *      rather than fatigue.
  */
@@ -123,7 +123,7 @@ export function planCampaignWorkouts(
     }
   }
 
-  // The lightest sessions available, used to back off before a retest. The
+  // The lightest missions available, used to back off before a retest. The
   // benchmark is never one of them: an easy day running the test workout would
   // read as a third test, both to the crew and to deriveCampaignRoles.
   const deloadCandidates = orderPoolByVolume(pools.flat()).filter(
@@ -155,7 +155,7 @@ export function planCampaignWorkouts(
       if (deloadIndices.has(index)) {
         // The lightest workout that is not the one just done — the build
         // rotation can wrap back to its own lightest right before a deload,
-        // and two identical sessions in a row look like a mistake.
+        // and two identical missions in a row look like a mistake.
         const template =
           deloadCandidates.find((candidate) => candidate.id !== previousId) ?? deloadCandidates[0];
         return withTemplate(occurrence, template, tracks[0]);
@@ -197,7 +197,7 @@ function withTemplate(
     workoutName: template.name,
     durationMinutes: template.durationMinutes,
     // The template's own category, not the track's: a deload may come from a
-    // different track than the session it replaces.
+    // different track than the mission it replaces.
     category: template.category ?? track.category,
     intensityTier: template.intensityTier,
     workout: templateToExercises(template),

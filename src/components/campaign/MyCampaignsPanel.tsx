@@ -15,12 +15,12 @@ const CLOSED_STATUS_LABEL: Record<string, string> = {
 };
 
 interface MyCampaignsPanelProps {
-  /** When false, omit the header New campaign button (e.g. My Sessions already has page CTAs). */
+  /** When false, omit the header New campaign button (e.g. My Missions already has page CTAs). */
   showCreateCta?: boolean;
 }
 
 /**
- * Account-gated campaign list. Used on Home and My Sessions. Renders nothing
+ * Account-gated campaign list. Used on Home and My Missions. Renders nothing
  * for signed-out visitors — campaigns need an account, and a sign-in prompt
  * here would just be noise.
  */
@@ -99,7 +99,7 @@ export function MyCampaignsPanel({ showCreateCta = true }: MyCampaignsPanelProps
       {!loading && !error && campaigns.length > 0 ? (
         <ul className="divide-y divide-divider">
           {campaigns.map((campaign) => {
-            const progress = campaignProgress(campaign.completedSessions, campaign.totalSessions);
+            const progress = campaignProgress(campaign.completedMissions, campaign.totalMissions);
             return (
               <li key={campaign.campaignId} className="py-3 first:pt-0 last:pb-0">
                 <Link
@@ -115,7 +115,7 @@ export function MyCampaignsPanel({ showCreateCta = true }: MyCampaignsPanelProps
                     ) : null}
                   </span>
                   <span className="text-xs text-secondary">
-                    {formatCampaignShape(campaign.weekCount, campaign.sessionsPerWeek)} ·{' '}
+                    {formatCampaignShape(campaign.weekCount, campaign.missionsPerWeek)} ·{' '}
                     {progress.done}/{progress.total} done
                   </span>
                 </Link>

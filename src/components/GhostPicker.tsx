@@ -3,12 +3,12 @@ import { AuthModal } from '@/components/AuthModal';
 import { fetchAvailableGhosts, type GhostRunRef } from '@/lib/api/ghost';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { ghostRunRefToStoredSelection } from '@/hooks/useGhostPacer';
-import { setStoredGhostSelection, type StoredGhostSelection } from '@/lib/sessionIdentity';
+import { setStoredGhostSelection, type StoredGhostSelection } from '@/lib/missionIdentity';
 
 export type GhostPickerValue = 'none' | 'personal-best' | `crew:${string}`;
 
 interface GhostPickerProps {
-  sessionId: string;
+  missionId: string;
   templateId: string;
   durationMinutes: number;
   value: StoredGhostSelection | null;
@@ -47,7 +47,7 @@ function crewOptionValue(participantId: string): GhostPickerValue {
 }
 
 export function GhostPicker({
-  sessionId,
+  missionId,
   templateId,
   durationMinutes,
   value,
@@ -77,7 +77,7 @@ export function GhostPicker({
       }
     });
 
-    fetchAvailableGhosts(templateId, durationMinutes, sessionId).then((result) => {
+    fetchAvailableGhosts(templateId, durationMinutes, missionId).then((result) => {
       if (cancelled) {
         return;
       }
@@ -98,7 +98,7 @@ export function GhostPicker({
     return () => {
       cancelled = true;
     };
-  }, [canFetchGhosts, templateId, durationMinutes, sessionId]);
+  }, [canFetchGhosts, templateId, durationMinutes, missionId]);
 
   const displayedPersonalBest = canFetchGhosts ? personalBest : null;
   const displayedCrew = canFetchGhosts ? crewRuns : [];
@@ -106,7 +106,7 @@ export function GhostPicker({
   let selectedValue: GhostPickerValue = 'none';
   if (value) {
     const crewMatch = displayedCrew.find(
-      (run) => run.participantId === value.participantId && run.sessionId === value.sessionId
+      (run) => run.participantId === value.participantId && run.missionId === value.missionId
     );
     if (crewMatch) {
       selectedValue = crewOptionValue(crewMatch.participantId);
@@ -117,7 +117,7 @@ export function GhostPicker({
 
   function handleSelect(nextValue: GhostPickerValue) {
     if (nextValue === 'none') {
-      setStoredGhostSelection(sessionId, null);
+      setStoredGhostSelection(missionId, null);
       onChange(null);
       return;
     }
@@ -128,7 +128,7 @@ export function GhostPicker({
       }
       const label = personalBestLabel(displayedPersonalBest);
       const selection = ghostRunRefToStoredSelection(displayedPersonalBest, label);
-      setStoredGhostSelection(sessionId, selection);
+      setStoredGhostSelection(missionId, selection);
       onChange(selection);
       return;
     }
@@ -141,14 +141,14 @@ export function GhostPicker({
       }
       const label = crewGhostLabel(run);
       const selection = ghostRunRefToStoredSelection(run, label);
-      setStoredGhostSelection(sessionId, selection);
+      setStoredGhostSelection(missionId, selection);
       onChange(selection);
     }
   }
 
   const intro =
     displayedCrew.length > 0
-      ? 'Race a crewmate from the session you missed, or your personal best.'
+      ? 'Race a crewmate from the mission you missed, or your personal best.'
       : 'Race your personal best pacing curve in real time.';
 
   return (

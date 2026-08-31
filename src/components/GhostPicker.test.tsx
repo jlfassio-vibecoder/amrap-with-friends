@@ -9,7 +9,7 @@ const onChange = vi.fn();
 vi.mock('@/lib/api/ghost', () => ({
   fetchAvailableGhosts: (...args: unknown[]) => fetchAvailableGhostsMock(...args),
 }));
-vi.mock('@/lib/sessionIdentity', () => ({
+vi.mock('@/lib/missionIdentity', () => ({
   setStoredGhostSelection: (...args: unknown[]) => setStoredGhostSelectionMock(...args),
 }));
 vi.mock('@/hooks/useAmrapAuth', () => ({
@@ -27,13 +27,13 @@ afterEach(() => {
 });
 
 describe('GhostPicker', () => {
-  it('lists crew runs from the missed session and writes a selection', async () => {
+  it('lists crew runs from the missed mission and writes a selection', async () => {
     fetchAvailableGhostsMock.mockResolvedValue({
       data: {
         personalBest: null,
         friends: [
           {
-            sessionId: 'live-1',
+            missionId: 'live-1',
             participantId: 'crew-1',
             nickname: 'Maya',
             finalScore: 120,
@@ -47,7 +47,7 @@ describe('GhostPicker', () => {
 
     render(
       <GhostPicker
-        sessionId="makeup-1"
+        missionId="makeup-1"
         templateId="the-valve"
         durationMinutes={10}
         value={null}
@@ -60,7 +60,7 @@ describe('GhostPicker', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/Race a crewmate from the session you missed/)).toBeTruthy();
+      expect(screen.getByText(/Race a crewmate from the mission you missed/)).toBeTruthy();
     });
 
     const select = screen.getByRole('combobox');

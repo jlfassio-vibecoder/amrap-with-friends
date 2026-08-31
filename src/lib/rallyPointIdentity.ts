@@ -1,5 +1,5 @@
 const STORAGE_PREFIX = {
-  rallyPointIdForSession: 'amrap_rally_point_id',
+  rallyPointIdForMission: 'amrap_rally_point_id',
   rallyPointMemberId: 'amrap_rally_point_member_id',
   rallyPointNickname: 'amrap_rally_point_nickname',
   rallyPointSeatClaim: 'amrap_rally_point_seat_claim',
@@ -25,12 +25,12 @@ function writeItem(key: string, value: string): void {
   }
 }
 
-export function getStoredRallyPointIdForSession(sessionId: string): string | null {
-  return readItem(storageKey(STORAGE_PREFIX.rallyPointIdForSession, sessionId));
+export function getStoredRallyPointIdForMission(missionId: string): string | null {
+  return readItem(storageKey(STORAGE_PREFIX.rallyPointIdForMission, missionId));
 }
 
-export function setStoredRallyPointIdForSession(sessionId: string, rallyPointId: string): void {
-  writeItem(storageKey(STORAGE_PREFIX.rallyPointIdForSession, sessionId), rallyPointId);
+export function setStoredRallyPointIdForMission(missionId: string, rallyPointId: string): void {
+  writeItem(storageKey(STORAGE_PREFIX.rallyPointIdForMission, missionId), rallyPointId);
 }
 
 export function getStoredRallyPointMemberId(rallyPointId: string): string | null {
@@ -62,7 +62,7 @@ export function persistRallyPointIdentity(
   input: {
     memberId: string;
     nickname: string;
-    sessionId?: string | null;
+    missionId?: string | null;
     seatClaim?: string | null;
   }
 ): void {
@@ -71,8 +71,8 @@ export function persistRallyPointIdentity(
   if (input.seatClaim) {
     setStoredRallyPointSeatClaim(rallyPointId, input.seatClaim);
   }
-  if (input.sessionId) {
-    setStoredRallyPointIdForSession(input.sessionId, rallyPointId);
+  if (input.missionId) {
+    setStoredRallyPointIdForMission(input.missionId, rallyPointId);
   }
 }
 

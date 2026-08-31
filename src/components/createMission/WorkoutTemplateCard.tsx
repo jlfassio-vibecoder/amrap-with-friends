@@ -1,0 +1,104 @@
+import type { KeyboardEvent } from 'react';
+import type { WorkoutTemplate } from '@/data/workoutTemplates';
+import { ExerciseInfoTrigger } from '@/components/exerciseInfo/ExerciseInfoTrigger';
+import { getTemplatePrescription } from '@/lib/hud/getTemplatePrescription';
+import type { ClassificationQuotas } from '@/lib/hud/classificationQuotas';
+import { ALPHA_MALE_QUOTAS } from '@/lib/hud/classificationQuotas';
+import type { ClassificationRank, HudClassification } from '@/lib/hud/types';
+import { formatTemplateMovementLine } from '@/lib/workout/templateToExercises';
+
+interface WorkoutTemplateCardProps {
+  template: WorkoutTemplate;
+  selected: boolean;
+  onSelect: (template: WorkoutTemplate) => void;
+  classification?: HudClassification | null;
+  perceivedClassification?: ClassificationRank | null;
+  quotas?: ClassificationQuotas;
+}
+
+export function WorkoutTemplateCard({
+  template,
+  selected,
+  onSelect,
+  classification = null,
+  perceivedClassification = null,
+  quotas = ALPHA_MALE_QUOTAS,
+}: WorkoutTemplateCardProps) {
+  const intensityTier = template.intensityTier;
+  const prescription = classification
+    ? getTemplatePrescription(
+        template,
+        classification.current,
+        classification.progress,
+        quotas,
+        perceivedClassification
+      )
+    : { required: false as const };
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onSelect(template);
+    }
+  }
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      aria-pressed={selected}
+      className={
+        selected
+          ? 'card relative w-full cursor-pointer space-y-3 border-2 border-accent p-4 text-left shadow-card'
+          : 'card hover:border-accent/40 relative w-full cursor-pointer space-y-3 p-4 text-left'
+      }
+      onClick={() => onSelect(template)}
+      onKeyDown={handleKeyDown}
+    >
+      {selected ? (
+        <span
+          className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-xs font-bold text-on-accent"
+          aria-hidden="true"
+        >
+          ✓
+        </span>
+      ) : null}
+      <div className="space-y-1">
+        <div className="flex items-baseline justify-between gap-2 pr-8">
+          <h3 className="text-display text-base text-ink">{template.name}</h3>
+          <span
+            className="shrink-0 font-mono text-xs tabular-nums text-secondary"
+            title={`Intensity ${intensityTier}`}
+          >
+            I{intensityTier}
+          </span>
+        </div>
+        {prescription.required ? (
+          <span
+            className="inline-block bg-accent px-2 py-1 text-xs font-bold uppercase tracking-widest text-page"
+            data-testid="mandate-badge"
+          >
+            {prescription.label}
+          </span>
+        ) : null}
+        {template.focus ? (
+          <span className="inline-block rounded-full border border-border bg-page px-2 py-0.5 text-xs font-semibold text-secondary">
+            {template.focus}
+          </span>
+        ) : null}
+      </div>
+      <ul className="space-y-1 text-sm text-ink">
+        {template.movements.map((movement) => (
+          <li
+            key={`${template.id}-${movement.name}`}
+            className="flex items-center justify-between gap-2"
+          >
+            <span>{formatTemplateMovementLine(movement)}</span>
+            <ExerciseInfoTrigger name={movement.name} size="sm" />
+          </li>
+        ))}
+      </ul>
+      <p className="text-xs italic text-secondary">{template.tacticalNote}</p>
+    </div>
+  );
+}

@@ -8,7 +8,7 @@ afterEach(() => {
 });
 
 describe('WeeklyBaselineBar', () => {
-  it('shows empty fill and locked-session copy when weekMinutes is 0', () => {
+  it('shows empty fill and locked-mission copy when weekMinutes is 0', () => {
     render(
       <WeeklyBaselineBar
         weekMinutes={0}
@@ -18,9 +18,7 @@ describe('WeeklyBaselineBar', () => {
     );
 
     expect(screen.getByText('0 / 150 Min')).toBeDefined();
-    expect(screen.getByTestId('weekly-baseline-fill').getAttribute('style')).toContain(
-      'width: 0%'
-    );
+    expect(screen.getByTestId('weekly-baseline-fill').getAttribute('style')).toContain('width: 0%');
     expect(screen.getByText(/only locked scores count/i)).toBeDefined();
     expect(screen.getByText('N/A')).toBeDefined();
   });

@@ -80,8 +80,8 @@ describe('computeCampaignStandings', () => {
   });
 
   it('does not treat an unscored row as attendance', () => {
-    // The scheduler seeds a host participant into every generated session, so
-    // the host used to ship a score row for sessions they skipped. Counting
+    // The scheduler seeds a host participant into every generated mission, so
+    // the host used to ship a score row for missions they skipped. Counting
     // those overstated attendance and averaged the absences in as zeros.
     const rows = computeCampaignStandings(
       input({

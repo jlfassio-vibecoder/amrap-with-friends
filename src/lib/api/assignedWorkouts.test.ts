@@ -13,7 +13,7 @@ vi.mock('@/lib/analytics/track', () => ({ track: vi.fn() }));
 const rpcMock = vi.mocked(supabase.rpc);
 const TO = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
-const SESSION = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+const MISSION = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const WORKOUT = [{ name: 'Burpees', target: 12, unit: 'reps' }];
 
 function ok(data: unknown) {
@@ -146,12 +146,12 @@ describe('dismiss and start', () => {
     expect(rpcMock).toHaveBeenCalledWith('dismiss_assigned_workout', { p_assigned_workout_id: ID });
   });
 
-  it('links a start to the session that was created', async () => {
+  it('links a start to the mission that was created', async () => {
     ok({ ok: true });
-    await startAssignedWorkout(ID, SESSION);
+    await startAssignedWorkout(ID, MISSION);
     expect(rpcMock).toHaveBeenCalledWith('start_assigned_workout', {
       p_assigned_workout_id: ID,
-      p_session_id: SESSION,
+      p_mission_id: MISSION,
     });
   });
 

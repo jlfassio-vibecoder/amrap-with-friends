@@ -54,8 +54,8 @@ describe('useRallyPointChannel', () => {
       data: {
         rallyPointId: RALLY_POINT_ID,
         hostUserId: 'user-1',
-        activeSessionId: null,
-        activeSessionState: null,
+        activeMissionId: null,
+        activeMissionState: null,
         status: 'open',
         createdAt: '',
         updatedAt: '',

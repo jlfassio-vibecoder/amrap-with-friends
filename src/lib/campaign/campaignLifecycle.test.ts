@@ -9,7 +9,7 @@ import {
 } from './campaignLifecycle';
 
 function planned(count: number) {
-  return Array.from({ length: count }, () => ({ status: 'planned', sessionId: null }));
+  return Array.from({ length: count }, () => ({ status: 'planned', missionId: null }));
 }
 
 function input(overrides: Partial<CampaignLifecycleInput> = {}): CampaignLifecycleInput {
@@ -23,28 +23,28 @@ function input(overrides: Partial<CampaignLifecycleInput> = {}): CampaignLifecyc
 }
 
 describe('hasCampaignStarted', () => {
-  it('is false while every session is still planned', () => {
+  it('is false while every mission is still planned', () => {
     expect(hasCampaignStarted(planned(4))).toBe(false);
   });
 
-  it('is true once a session has been generated', () => {
-    expect(hasCampaignStarted([...planned(3), { status: 'generated', sessionId: 'sess-1' }])).toBe(
+  it('is true once a mission has been generated', () => {
+    expect(hasCampaignStarted([...planned(3), { status: 'generated', missionId: 'sess-1' }])).toBe(
       true
     );
   });
 
-  it('is true for a done or skipped session', () => {
-    expect(hasCampaignStarted([{ status: 'done', sessionId: 'sess-1' }])).toBe(true);
-    expect(hasCampaignStarted([{ status: 'skipped', sessionId: null }])).toBe(true);
+  it('is true for a done or skipped mission', () => {
+    expect(hasCampaignStarted([{ status: 'done', missionId: 'sess-1' }])).toBe(true);
+    expect(hasCampaignStarted([{ status: 'skipped', missionId: null }])).toBe(true);
   });
 
-  it('is true for a session id on a still-planned row', () => {
+  it('is true for a mission id on a still-planned row', () => {
     // Belt and braces: the generator stamps both, so one without the other is
     // a state we should refuse to delete through rather than reason about.
-    expect(hasCampaignStarted([{ status: 'planned', sessionId: 'sess-1' }])).toBe(true);
+    expect(hasCampaignStarted([{ status: 'planned', missionId: 'sess-1' }])).toBe(true);
   });
 
-  it('is false for a campaign with no sessions at all', () => {
+  it('is false for a campaign with no missions at all', () => {
     expect(hasCampaignStarted([])).toBe(false);
   });
 });
@@ -55,7 +55,7 @@ describe('canEndCampaign', () => {
   });
 
   it('lets the host end one that is already under way', () => {
-    expect(canEndCampaign(input({ occurrences: [{ status: 'done', sessionId: 'sess-1' }] }))).toBe(
+    expect(canEndCampaign(input({ occurrences: [{ status: 'done', missionId: 'sess-1' }] }))).toBe(
       true
     );
   });
@@ -79,10 +79,10 @@ describe('canDeleteCampaign', () => {
     expect(canDeleteCampaign(input())).toBe(true);
   });
 
-  it('refuses once a session has been generated', () => {
+  it('refuses once a mission has been generated', () => {
     expect(
       canDeleteCampaign(
-        input({ occurrences: [...planned(3), { status: 'generated', sessionId: 'sess-1' }] })
+        input({ occurrences: [...planned(3), { status: 'generated', missionId: 'sess-1' }] })
       )
     ).toBe(false);
   });
@@ -108,7 +108,7 @@ describe('canDeleteCampaign', () => {
 describe('canEditCampaign', () => {
   it('lets the host rename a live campaign, however far along it is', () => {
     expect(canEditCampaign(input())).toBe(true);
-    expect(canEditCampaign(input({ occurrences: [{ status: 'done', sessionId: 's1' }] }))).toBe(
+    expect(canEditCampaign(input({ occurrences: [{ status: 'done', missionId: 's1' }] }))).toBe(
       true
     );
   });
@@ -124,23 +124,23 @@ describe('canEditCampaign', () => {
 });
 
 describe('canRescheduleOccurrence', () => {
-  const planned_ = { status: 'planned', sessionId: null };
+  const planned_ = { status: 'planned', missionId: null };
 
-  it('moves a session that is still only a plan', () => {
+  it('moves a mission that is still only a plan', () => {
     expect(canRescheduleOccurrence(input(), planned_)).toBe(true);
   });
 
   it('refuses one whose rally point is already open', () => {
-    expect(canRescheduleOccurrence(input(), { status: 'generated', sessionId: 's1' })).toBe(false);
+    expect(canRescheduleOccurrence(input(), { status: 'generated', missionId: 's1' })).toBe(false);
   });
 
   it('refuses one that has been run or missed', () => {
-    expect(canRescheduleOccurrence(input(), { status: 'done', sessionId: 's1' })).toBe(false);
-    expect(canRescheduleOccurrence(input(), { status: 'skipped', sessionId: null })).toBe(false);
+    expect(canRescheduleOccurrence(input(), { status: 'done', missionId: 's1' })).toBe(false);
+    expect(canRescheduleOccurrence(input(), { status: 'skipped', missionId: null })).toBe(false);
   });
 
-  it('refuses a planned row that somehow already has a session', () => {
-    expect(canRescheduleOccurrence(input(), { status: 'planned', sessionId: 's1' })).toBe(false);
+  it('refuses a planned row that somehow already has a mission', () => {
+    expect(canRescheduleOccurrence(input(), { status: 'planned', missionId: 's1' })).toBe(false);
   });
 
   it('offers nothing to a member, or on a closed campaign', () => {

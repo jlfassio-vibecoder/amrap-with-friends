@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
-import { WorkoutTemplatePicker } from '@/components/createSession/WorkoutTemplatePicker';
-import { SendWorkoutToSquad } from '@/components/session/SendWorkoutToSquad';
+import { WorkoutTemplatePicker } from '@/components/createMission/WorkoutTemplatePicker';
+import { SendWorkoutToSquad } from '@/components/mission/SendWorkoutToSquad';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { useRallyPointForceNav } from '@/hooks/useRallyPointForceNav';
@@ -13,7 +13,7 @@ import {
   joinRallyPoint,
   leaveRallyPoint,
   passRallyPointCommand,
-  startNextRallyPointSession,
+  startNextRallyPointMission,
   touchRallyPointPresence,
 } from '@/lib/api/rallyPoint';
 import {
@@ -23,14 +23,14 @@ import {
   persistRallyPointIdentity,
 } from '@/lib/rallyPointIdentity';
 import { canPassRallyPointCommand } from '@/lib/rallyPoint/canPassRallyPointCommand';
-import { setStoredHostToken } from '@/lib/sessionIdentity';
-import { buildRallyPointInviteUrl } from '@/lib/session/buildRallyPointInviteUrl';
+import { setStoredHostToken } from '@/lib/missionIdentity';
+import { buildRallyPointInviteUrl } from '@/lib/mission/buildRallyPointInviteUrl';
 import { ogCardFromSex } from '@/lib/share/ogCard';
 import { parseWorkoutText } from '@/lib/workout/parseWorkoutLines';
 import { applyTemplate } from '@/lib/workout/templateToExercises';
 import { firstAvailableCategoryForDuration } from '@/lib/workout/filterWorkoutTemplates';
-import { callsignFromEmail } from '@/lib/sessionIdentity';
-import { resumeSessionIdentity } from '@/lib/api/resumeSessionIdentity';
+import { callsignFromEmail } from '@/lib/missionIdentity';
+import { resumeMissionIdentity } from '@/lib/api/resumeMissionIdentity';
 import {
   WORKOUT_CATEGORIES,
   WORKOUT_TEMPLATES,
@@ -64,7 +64,7 @@ export default function RallyPointPage() {
     WORKOUT_TEMPLATES.find((template) => template.id === selectedTemplateId) ?? null;
 
   // Same text the host would start, so what a friend receives cannot drift from
-  // what "Start next session" would run.
+  // what "Start next mission" would run.
   const stagedWorkout = useMemo(() => {
     try {
       return parseWorkoutText(workoutText);
@@ -82,9 +82,9 @@ export default function RallyPointPage() {
 
   const forceNav = useRallyPointForceNav({
     rallyPointId,
-    activeSessionId: rallyPoint?.activeSessionId,
-    activeSessionState: rallyPoint?.activeSessionState,
-    currentSessionId: null,
+    activeMissionId: rallyPoint?.activeMissionId,
+    activeMissionState: rallyPoint?.activeMissionState,
+    currentMissionId: null,
     enabled: Boolean(rallyPoint && rallyPoint.status === 'open'),
     onError: setActionError,
   });
@@ -158,8 +158,8 @@ export default function RallyPointPage() {
     presenceByMemberId,
     enabled: Boolean(rallyPoint && rallyPoint.status === 'open' && user?.id),
     onClaimed: (result) => {
-      if (result.hostToken && result.activeSessionId) {
-        setStoredHostToken(result.activeSessionId, result.hostToken);
+      if (result.hostToken && result.activeMissionId) {
+        setStoredHostToken(result.activeMissionId, result.hostToken);
       }
       void refresh();
     },
@@ -170,13 +170,13 @@ export default function RallyPointPage() {
       !rallyPoint ||
       !user?.id ||
       rallyPoint.hostUserId !== user.id ||
-      !rallyPoint.activeSessionId
+      !rallyPoint.activeMissionId
     ) {
       return;
     }
-    void resumeSessionIdentity(rallyPoint.activeSessionId).then((result) => {
+    void resumeMissionIdentity(rallyPoint.activeMissionId).then((result) => {
       if (result.data?.hostToken) {
-        setStoredHostToken(rallyPoint.activeSessionId!, result.data.hostToken);
+        setStoredHostToken(rallyPoint.activeMissionId!, result.data.hostToken);
       }
     });
   }, [rallyPoint, user?.id]);
@@ -194,7 +194,7 @@ export default function RallyPointPage() {
         return;
       }
       // Outgoing host token is cleared in passRallyPointCommand. New host picks up via
-      // resumeSessionIdentity when host_user_id matches after refresh/realtime.
+      // resumeMissionIdentity when host_user_id matches after refresh/realtime.
       await refresh();
     } finally {
       setBusy(false);
@@ -205,13 +205,13 @@ export default function RallyPointPage() {
     event.preventDefault();
     setActionError(null);
     if (!selectedTemplate) {
-      setActionError('Select a workout from the library before starting the next session.');
+      setActionError('Select a workout from the library before starting the next mission.');
       return;
     }
     setBusy(true);
     try {
       const workout = parseWorkoutText(workoutText);
-      const result = await startNextRallyPointSession({
+      const result = await startNextRallyPointMission({
         rallyPointId,
         durationMinutes,
         workout,
@@ -226,12 +226,12 @@ export default function RallyPointPage() {
         persistRallyPointIdentity(rallyPointId, {
           memberId: memberId || getStoredRallyPointMemberId(rallyPointId) || '',
           nickname,
-          sessionId: result.data.sessionId,
+          missionId: result.data.missionId,
         });
-        navigate(`/session/${result.data.sessionId}`, { replace: true });
+        navigate(`/mission/${result.data.missionId}`, { replace: true });
       }
     } catch (e) {
-      setActionError(e instanceof Error ? e.message : 'Could not start the next session.');
+      setActionError(e instanceof Error ? e.message : 'Could not start the next mission.');
     } finally {
       setBusy(false);
     }
@@ -331,13 +331,13 @@ export default function RallyPointPage() {
     <main className="min-h-screen bg-page">
       <AppHeader title="Rally point" subtitle="Next mission with the crew" />
       <div className="mx-auto max-w-lg space-y-6 px-6 pb-10 pt-4">
-        {forceNav.pendingSessionId ? (
+        {forceNav.pendingMissionId ? (
           <div
             className="border-accent/40 flex flex-wrap items-center justify-between gap-3 border bg-surface px-4 py-3"
             role="status"
           >
             <p className="text-sm text-ink">
-              Next session starting
+              Next mission starting
               {forceNav.secondsLeft > 0 ? ` in ${forceNav.secondsLeft}s` : ''} —{' '}
               <button
                 type="button"
@@ -353,9 +353,9 @@ export default function RallyPointPage() {
           <button type="button" className="btn-secondary" onClick={() => void handleCopyInvite()}>
             {copied ? 'LINK COPIED' : 'Copy rally link'}
           </button>
-          {rallyPoint?.activeSessionId ? (
-            <Link className="link-accent text-sm" to={`/session/${rallyPoint.activeSessionId}`}>
-              Open current session
+          {rallyPoint?.activeMissionId ? (
+            <Link className="link-accent text-sm" to={`/mission/${rallyPoint.activeMissionId}`}>
+              Open current mission
             </Link>
           ) : null}
         </div>
@@ -409,14 +409,14 @@ export default function RallyPointPage() {
           )}
           {!isAuthenticated ? (
             <p className="text-xs text-muted">
-              Save to your account to keep your spot between sessions.
+              Save to your account to keep your spot between missions.
             </p>
           ) : null}
         </section>
 
         {isHost ? (
           <section className="card space-y-4 p-5">
-            <h2 className="text-display text-xl text-ink">Next session</h2>
+            <h2 className="text-display text-xl text-ink">Next mission</h2>
             <form className="space-y-4" onSubmit={(e) => void handleStartNext(e)}>
               <WorkoutTemplatePicker
                 durationMinutes={durationMinutes}
@@ -435,7 +435,7 @@ export default function RallyPointPage() {
                 </p>
               ) : (
                 <p className="text-sm text-secondary">
-                  Select a workout to start the next session.
+                  Select a workout to start the next mission.
                 </p>
               )}
               {displayError ? <p className="text-error text-sm">{displayError}</p> : null}
@@ -444,7 +444,7 @@ export default function RallyPointPage() {
                 className="btn-primary w-full"
                 disabled={busy || !selectedTemplate}
               >
-                {busy ? 'Starting…' : 'Start next session'}
+                {busy ? 'Starting…' : 'Start next mission'}
               </button>
             </form>
             {isAuthenticated ? (
@@ -469,7 +469,7 @@ export default function RallyPointPage() {
           </section>
         ) : (
           <section className="card space-y-2 p-5">
-            <p className="text-sm text-secondary">Waiting for host to pick the next session.</p>
+            <p className="text-sm text-secondary">Waiting for host to pick the next mission.</p>
             {displayError ? <p className="text-error text-sm">{displayError}</p> : null}
           </section>
         )}
