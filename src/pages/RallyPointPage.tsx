@@ -10,6 +10,7 @@ import { useStaleRallyPointHostClaim } from '@/hooks/useStaleRallyPointHostClaim
 import { useRallyPointChannel } from '@/lib/realtime/useRallyPointChannel';
 import {
   closeRallyPoint,
+  isCloseBlockedByLiveMission,
   joinRallyPoint,
   leaveRallyPoint,
   passRallyPointCommand,
@@ -318,7 +319,7 @@ export default function RallyPointPage() {
   if (error && !rallyPoint) {
     return (
       <main className="min-h-screen bg-page p-6">
-        <AppHeader title="Rally point" />
+        <AppHeader title="Next Mission" />
         <p className="text-error mt-6">{displayError}</p>
         <Link className="link-accent mt-4 inline-block" to="/">
           Back home
@@ -327,9 +328,11 @@ export default function RallyPointPage() {
     );
   }
 
+  const liveMissionBlocksClose = isCloseBlockedByLiveMission(rallyPoint?.activeMissionState);
+
   return (
     <main className="min-h-screen bg-page">
-      <AppHeader title="Rally point" subtitle="Next mission with the crew" />
+      <AppHeader title="Next Mission" subtitle="Pick the next workout with your squad" />
       <div className="mx-auto max-w-lg space-y-6 px-6 pb-10 pt-4">
         {forceNav.pendingMissionId ? (
           <div
@@ -361,7 +364,7 @@ export default function RallyPointPage() {
         </div>
 
         <section className="card space-y-3 p-5">
-          <h2 className="text-display text-xl text-ink">The crew</h2>
+          <h2 className="text-display text-xl text-ink">Your squad</h2>
           {!rallyPoint ? (
             <p className="text-sm text-secondary">Loading…</p>
           ) : (
@@ -460,12 +463,15 @@ export default function RallyPointPage() {
             ) : null}
             <button
               type="button"
-              className="text-sm text-muted hover:text-ink"
-              disabled={busy}
+              className="text-sm text-muted hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={busy || liveMissionBlocksClose}
               onClick={() => void handleClose()}
             >
-              Close rally point
+              Close
             </button>
+            {liveMissionBlocksClose ? (
+              <p className="text-xs text-secondary">Finish the live mission before closing.</p>
+            ) : null}
           </section>
         ) : (
           <section className="card space-y-2 p-5">

@@ -115,7 +115,7 @@ export function HostScheduledMissionsPanel() {
               ) : (
                 <div className="flex flex-wrap items-center gap-3">
                   <Link className="link-accent" to={`/mission/${entry.missionId}`}>
-                    Enter rally point
+                    Enter mission
                   </Link>
                   <button
                     type="button"

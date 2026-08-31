@@ -24,16 +24,17 @@ opaque verb for one action. Same brand, opposite sides of the line.
 
 ### The nouns
 
-| Term            | Means                                                                                              | Where it belongs                                                        |
-| --------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| **Mission**     | One AMRAP workout, start to finish. The only word for it.                                          | Everywhere — "Create mission", `/mission/:id`, `missions` the table     |
-| **Campaign**    | A multi-week programme (2–12 weeks, 1–5 missions a week) with an end goal.                         | Buttons, page titles, routes. Always with its length: "8-week campaign" |
-| **Squad**       | A persistent friends list for inviting people to train together. Not a mission.                    | Buttons, page titles, routes, nav — "Your squad", `/squad`              |
-| **Rally point** | The pre-workout screen the rally link opens to, where the crew gathers and the mission is started. | Page title, buttons, routes — "Rally point", `/rally-point/:id`         |
-| **Rally link**  | The shared invite URL that opens a rally point. Never a squad invite.                              | The copy button, and prose about sharing                                |
-| **Benchmark**   | A campaign's opening mission. Its score is the number the campaign is measured against.            | The badge on that mission, and prose about it                           |
-| **Retest**      | The same workout as the benchmark, run again later in the campaign.                                | The badge on those missions                                             |
-| **Easy day**    | The light mission before a retest, so the test measures fitness not fatigue.                       | The badge on that mission                                               |
+| Term             | Means                                                                                                                            | Where it belongs                                                            |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| **Mission**      | One AMRAP workout, start to finish. The only word for it.                                                                        | Everywhere — "Create mission", `/mission/:id`, `missions` the table         |
+| **Campaign**     | A multi-week programme (2–12 weeks, 1–5 missions a week) with an end goal.                                                       | Buttons, page titles, routes. Always with its length: "8-week campaign"     |
+| **Squad**        | A persistent friends list for inviting people to train together. Not a mission. Prefer this over "crew" on mission/hub surfaces. | Buttons, page titles, routes, nav — "Your squad", `/squad`                  |
+| **Rally point**  | The gather/start screen for **this** mission — countdown, Start, Practice. Route `/mission/:id`.                                 | Waiting-room page title, walkthrough, featured "opens shortly before start" |
+| **Next Mission** | Durable hub UI for daisy-chain / start the next workout with the squad. Route `/rally-point/:id` (data layer: `rally_points`).   | Hub page title only — not the waiting room                                  |
+| **Rally link**   | The shared invite URL. May open a mission (`?m=`) or the Next Mission hub (`?r=`). Never a squad invite.                         | The copy button, and prose about sharing                                    |
+| **Benchmark**    | A campaign's opening mission. Its score is the number the campaign is measured against.                                          | The badge on that mission, and prose about it                               |
+| **Retest**       | The same workout as the benchmark, run again later in the campaign.                                                              | The badge on those missions                                                 |
+| **Easy day**     | The light mission before a retest, so the test measures fitness not fatigue.                                                     | The badge on that mission                                                   |
 
 **Benchmark, retest and easy day are the only mission badges.** Everything else
 in a campaign is just a mission and gets no label — a badge on every row labels
@@ -57,12 +58,16 @@ you are about to write `session` for anything an athlete does, you want
 carries a sense of length on its own. Write "8-week campaign", never a bare
 "Campaign" on a button.
 
-**Rally point is one word for one screen, all the way down.** It used to be
-three: `lobby` in the data layer, "Staging area" in the UI, and "Rally point"
-for the invite you had already been told to call a rally link. The rally link
-now opens the rally point, and the schema says `rally_points` — so there is no
-translation step left to get wrong. "Staging" is retired: staging is what the
-My missions page does, not what this screen is.
+**Rally point and Next Mission are two screens.** Rally point is `/mission/:id`
+(gather, countdown, Start). Next Mission is the hub title on `/rally-point/:id`
+(daisy-chain, Start next mission, Pass Command, Close). The schema still says
+`rally_points` — do not rename the data layer for the hub title. "Staging" is
+retired: staging is what the My missions page does, not either of these screens.
+
+CTAs that open `/mission/:id` say **Enter mission** / **Join mission** / **Mission
+open** — not "Enter rally point" — so athletes do not think they are opening the
+hub. Featured copy **Rally point opens shortly before start** is correct: that
+gate opens the waiting room.
 
 ### UI names that deliberately differ from the data layer
 
@@ -73,6 +78,7 @@ user-visible benefit.
 | ----------------------------------------------------- | ----------------------------------------- |
 | `featured_wod_*`, `current_featured_wod()`            | "Today's mission"                         |
 | `missions.state = 'work'`                             | "Live"                                    |
+| `rally_points` / `/rally-point/:id`                   | "Next Mission" (hub page title)           |
 | `rallySchedule.ts`, `buildRallyInviteUrl`, `RallyDay` | (identifiers only — users never see them) |
 
 `lobby` used to head that table. It was paid off in
@@ -83,10 +89,10 @@ migration files written before it keep `lobby` in their **filenames**, which is
 correct: a migration is a dated record of what ran, not a description of the
 current schema.
 
-Two `rally` identifiers now sit side by side and mean different things.
-`buildRallyInviteUrl(missionId)` builds the rally link for one mission;
-`buildRallyPointInviteUrl(rallyPointId)` builds it for a rally point that
-outlives the mission. Both are rally links to the user.
+Two `rally` invite builders sit side by side and mean different things.
+`buildRallyInviteUrl(missionId)` builds `?m=` for one mission (waiting room);
+`buildRallyPointInviteUrl(rallyPointId)` builds `?r=` for the durable hub. Both
+are rally links to the user.
 
 `WOD` is CrossFit jargon: a newcomer cannot expand it. It is fine in coach-facing
 tooling (the WOD Builder is used by coaches who know the term) and in internal
@@ -100,9 +106,14 @@ Kept here so they don't creep back in.
 | ----------------------------------------- | ------------------------------------------- |
 | Engage staging area countdown timer       | Start countdown                             |
 | Staging area (page title)                 | Rally point                                 |
-| Close staging area / Leave staging        | Close rally point / Leave rally point       |
 | Open staging area / Schedule staging      | Open rally point / Schedule rally point     |
-| Enter staging area / Join staging         | Enter rally point / Join rally point        |
+| Enter staging area / Join staging         | Enter mission / Join mission (waiting room) |
+| Close staging area / Leave staging        | Close (Next Mission hub) / Leave            |
+| Enter rally point (CTA to `/mission/:id`) | Enter mission                               |
+| Rally point open (campaign generated)     | Mission open                                |
+| Join rally point (coach featured CTA)     | Join mission                                |
+| The crew (Next Mission hub roster)        | Your squad                                  |
+| Close rally point (hub button)            | Close                                       |
 | LINK SECURED / ID SECURED                 | LINK COPIED / ID COPIED                     |
 | Breach lobby / Breaching lobby            | Join mission / Joining                      |
 | Callsign (as a field label)               | Your name                                   |
