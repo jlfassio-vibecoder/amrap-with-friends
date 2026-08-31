@@ -18,6 +18,7 @@
     "generate:og-images": "tsx scripts/generate-og-images.ts",
     "generate:favicons": "tsx scripts/generate-favicons.ts",
     "seed:exercise-media": "tsx scripts/seed-exercise-media-folders.ts",
+    "seo:indexnow": "tsx scripts/indexnow-ping.ts",
     "supabase:push": "supabase db push",
     "supabase:deploy:functions": "supabase functions deploy submit-participant-result",
     "supabase:deploy": "supabase db push && supabase functions deploy submit-participant-result"

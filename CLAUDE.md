@@ -173,6 +173,15 @@ Workout and classification names are content, not chrome, and are untouched:
 - **Store local date + local time + timezone**, and resolve to an absolute
   instant only at generation time. Persisting a computed `timestamptz` weeks out
   breaks across a daylight-saving boundary.
+- **Per-route search metadata lives in `src/lib/seo/routes.ts`.** One table, two
+  consumers: the SPA (`useSeo`) writes title/description/canonical/robots into
+  the head, and the edge middleware reads the same table to send `X-Robots-Tag`
+  and to answer unknown paths with a real 404 — which is what crawlers that never
+  run JavaScript actually see. Adding a route means adding a row: `index: false`
+  for anything signed-in, private or ephemeral. Never put a canonical in
+  `index.html`; it is served for every route, so one there claims every URL is a
+  duplicate of the homepage. `sitemap.test.ts` fails CI if `public/sitemap.xml`
+  drifts from the indexable rows.
 - **Design tokens only.** Edit hex values in `src/index.css`; components use
   `var(--color-*)` or the semantic Tailwind utilities that map to them. Never
   hard-code a colour in a component.

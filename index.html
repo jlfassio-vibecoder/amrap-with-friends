@@ -34,7 +34,14 @@
       name="description"
       content="AMRAP With Friends is a live group workout timer for As Many Rounds As Possible sessions. Host or join a session, stay on a synced countdown, and race the leaderboard together."
     />
-    <link rel="canonical" href="https://amrapwithfriends.com/" />
+    <!--
+      No canonical here. This file is served for every route, so a hard-coded
+      canonical told search engines every URL was a duplicate of the homepage.
+      Canonicals are per-route now: see src/lib/seo/routes.ts (rendered clients)
+      and middleware.ts (X-Robots-Tag, for crawlers that never run JavaScript).
+      The title, description and OG tags below are the homepage defaults; useSeo
+      replaces them on navigation.
+    -->
     <meta property="og:title" content="AMRAP With Friends — Live Group AMRAP Workout Timer" />
     <meta
       property="og:description"

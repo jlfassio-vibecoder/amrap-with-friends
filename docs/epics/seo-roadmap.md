@@ -2,7 +2,7 @@
 
 **Branch:** `claude/amrap-seo-roadmap-xwf1sk`
 **Status:** Draft — strategy for discussion, not yet approved
-**Last updated:** 2026-08-31
+**Last updated:** 2026-08-31 (Phase 0 shipped)
 
 ---
 
@@ -16,18 +16,18 @@ and AI assistants cannot see a single word of a client-rendered React SPA.
 
 ## Current state — the honest baseline
 
-| Area | Today | Verdict |
-| --- | --- | --- |
-| Rendering | Vite SPA, `vercel.json` rewrites `/(.*)` → `index.html` | Content is invisible to every non-Google crawler |
-| `<title>` / description | One set, hard-coded in `index.html`, identical on every route | Every URL competes with itself |
-| Canonical | `<link rel="canonical" href="https://amrapwithfriends.com/">` on **every** URL | **Actively harmful** — tells Google `/join`, `/create`, everything, is a duplicate of `/` |
-| Sitemap | 3 hand-written URLs (`/`, `/create`, `/join`) | No content URLs; will drift the moment anything ships |
-| `robots.txt` | `User-agent: * / Allow: /` | Permissive, but names no AI agent explicitly |
-| Structured data | One `WebApplication` block | No `ExercisePlan`, `HowTo`, `FAQPage`, `BreadcrumbList`, `Organization` |
-| Bot handling | [`middleware.ts`](../../middleware.ts) serves OG-only HTML to social unfurlers on 3 invite routes | Solves social cards, not search |
-| Content pages | Zero. `HomeSeoContent.tsx` is the only prose on the site | Nothing to rank |
-| 404s | No catch-all route + catch-all rewrite → `/anything` returns **HTTP 200** with an empty shell | Soft-404s at scale; a real crawl-quality problem |
-| Fonts | 4 Google Fonts families loaded render-blocking from `fonts.googleapis.com` | LCP tax on the page that matters most |
+| Area                    | Today                                                                                                     | Verdict                                                                      |
+| ----------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Rendering               | Vite SPA, `vercel.json` rewrites `/(.*)` → `index.html`                                                   | Content is invisible to every non-Google crawler                             |
+| `<title>` / description | ~~One set, hard-coded, identical on every route~~                                                         | **Fixed in Phase 0** — per-route via `useSeo`                                |
+| Canonical               | ~~Site-wide canonical to `/` on **every** URL~~                                                           | **Fixed in Phase 0** — self-referencing per route, dropped on noindex routes |
+| Sitemap                 | 3 hand-written URLs (`/`, `/create`, `/join`)                                                             | No content URLs; will drift the moment anything ships                        |
+| `robots.txt`            | ~~`User-agent: * / Allow: /`~~                                                                            | **Fixed in Phase 0** — every AI agent named explicitly                       |
+| Structured data         | One `WebApplication` block                                                                                | No `ExercisePlan`, `HowTo`, `FAQPage`, `BreadcrumbList`, `Organization`      |
+| Bot handling            | [`middleware.ts`](../../middleware.ts) serves OG HTML to unfurlers, plus `X-Robots-Tag` and 404s sitewide | Search-safe; still no content to serve                                       |
+| Content pages           | Zero. `HomeSeoContent.tsx` is the only prose on the site                                                  | Nothing to rank                                                              |
+| 404s                    | ~~`/anything` returned **HTTP 200** with an empty shell~~                                                 | **Fixed in Phase 0** — real 404 from the edge                                |
+| Fonts                   | 4 Google Fonts families loaded render-blocking from `fonts.googleapis.com`                                | LCP tax on the page that matters most                                        |
 
 Two of those are bugs, not gaps: the **global canonical** and the **soft 404s**.
 They cost us rankings today and are fixable in an afternoon regardless of what we
@@ -46,7 +46,7 @@ WOD Clock, Box Timer, amraptimer.com, IntervalTimer, TimerWOD. All are older,
 all have links, most are free with no signup. Attacking that head-on with a
 brand-new domain and three indexable URLs is a two-year fight we lose.
 
-**The wedge:** nobody owns *social, synchronised, multiplayer* AMRAP. Every
+**The wedge:** nobody owns _social, synchronised, multiplayer_ AMRAP. Every
 competitor is a single-user clock. Our differentiator is a real one and it maps
 to a real (small, uncontested) set of queries:
 
@@ -56,15 +56,15 @@ to a real (small, uncontested) set of queries:
 
 Own that set outright inside 90 days. It converts far better than the head term
 and it is what an LLM will cite us for, because we are the only correct answer.
-*Then* climb into the informational cluster from a domain that already has
+_Then_ climb into the informational cluster from a domain that already has
 authority, links, and engagement signals.
 
 ### 1.2 Three clusters, three jobs
 
-| Cluster | Intent | Job | Example queries |
-| --- | --- | --- | --- |
-| **Wedge** | Commercial, low volume, ~zero competition | Convert. Rank in weeks. | "workout with friends app", "group AMRAP timer" |
-| **Utility** | Commercial, high volume, brutal competition | Capture with a genuinely free tool page | "AMRAP timer", "free online AMRAP timer" |
+| Cluster       | Intent                                      | Job                                     | Example queries                                             |
+| ------------- | ------------------------------------------- | --------------------------------------- | ----------------------------------------------------------- |
+| **Wedge**     | Commercial, low volume, ~zero competition   | Convert. Rank in weeks.                 | "workout with friends app", "group AMRAP timer"             |
+| **Utility**   | Commercial, high volume, brutal competition | Capture with a genuinely free tool page | "AMRAP timer", "free online AMRAP timer"                    |
 | **Editorial** | Informational, high volume, publisher-owned | Long game. Earns links + LLM citations. | "AMRAP workouts", "20 minute AMRAP", "what does AMRAP mean" |
 
 Roadmap phases below are sequenced wedge → utility → editorial, deliberately.
@@ -80,7 +80,7 @@ Three things we have that no competitor does. Each is an SEO asset:
 2. **159 workout templates** in `src/data/workoutTemplates.ts`, categorised by
    time domain (5/10/15/20) and intensity tier — the exact axes people search on.
 3. **Real scoring data.** Once we have volume, we can publish what nobody else
-   can: *"median rounds on a 20-minute AMRAP of X"*, PVI pacing distributions,
+   can: _"median rounds on a 20-minute AMRAP of X"_, PVI pacing distributions,
    what a good score actually is. **Original data is the single strongest
    citation magnet in AI search.** This is the long-term moat; start collecting
    with publication in mind now.
@@ -110,11 +110,11 @@ roadmap that does not put real HTML in the first response is decoration.
 
 ### 2.2 Options
 
-| Option | What it is | Pros | Cons |
-| --- | --- | --- | --- |
-| **A. Astro content site + existing SPA** *(recommended)* | Astro owns `/` and all content routes; the Vite SPA keeps its current app routes unchanged | Zero-JS static HTML by default → best possible CWV and crawler legibility; content and app evolve independently; **does not touch** Supabase auth, realtime, or RLS assumptions; standard industry split | Two builds and two dependency trees; design tokens must be shared, not duplicated; the homepage gets rebuilt in Astro |
-| **B. Migrate to SSR (React Router 7 framework mode, or Next.js)** | One app, server-rendered | One codebase; per-route meta comes free; every page indexable | Touches every page; `persistSession`, the `localStorage` theme script, Realtime subscriptions and the guest/intake gates all assume a browser; highest risk for content we could ship statically |
-| **C. Prerender the SPA** (Prerender.io, or extend `middleware.ts`) | Serve HTML snapshots to bots | Cheapest; the middleware already does a crude version | Cloaking-adjacent; a snapshot of a page with no content is still a page with no content. **Solves the wrong problem** — our issue is missing content, not missing rendering |
+| Option                                                             | What it is                                                                                 | Pros                                                                                                                                                                                                     | Cons                                                                                                                                                                                             |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **A. Astro content site + existing SPA** _(recommended)_           | Astro owns `/` and all content routes; the Vite SPA keeps its current app routes unchanged | Zero-JS static HTML by default → best possible CWV and crawler legibility; content and app evolve independently; **does not touch** Supabase auth, realtime, or RLS assumptions; standard industry split | Two builds and two dependency trees; design tokens must be shared, not duplicated; the homepage gets rebuilt in Astro                                                                            |
+| **B. Migrate to SSR (React Router 7 framework mode, or Next.js)**  | One app, server-rendered                                                                   | One codebase; per-route meta comes free; every page indexable                                                                                                                                            | Touches every page; `persistSession`, the `localStorage` theme script, Realtime subscriptions and the guest/intake gates all assume a browser; highest risk for content we could ship statically |
+| **C. Prerender the SPA** (Prerender.io, or extend `middleware.ts`) | Serve HTML snapshots to bots                                                               | Cheapest; the middleware already does a crude version                                                                                                                                                    | Cloaking-adjacent; a snapshot of a page with no content is still a page with no content. **Solves the wrong problem** — our issue is missing content, not missing rendering                      |
 
 ### 2.3 Recommendation: A
 
@@ -175,13 +175,13 @@ are generated from data we already have.
 
 **Indexation policy for existing app routes:**
 
-| Route | Policy | Why |
-| --- | --- | --- |
-| `/`, `/create`, `/join` | index | Public entry points |
+| Route                                               | Policy            | Why                                                                                |
+| --------------------------------------------------- | ----------------- | ---------------------------------------------------------------------------------- |
+| `/`, `/create`, `/join`                             | index             | Public entry points                                                                |
 | `/rally-point/:id`, `/mission/:id`, `/campaign/:id` | `noindex, follow` | Ephemeral, private, infinite URL space. Keep OG tags — social unfurl still matters |
-| `/squad`, `/hud`, `/my-missions`, `/intake` | `noindex` | Signed-in surfaces |
-| `/coach`, `/coach/wods` | `noindex` | Internal tooling |
-| unknown paths | real **404** | Kills the soft-404 problem |
+| `/squad`, `/hud`, `/my-missions`, `/intake`         | `noindex`         | Signed-in surfaces                                                                 |
+| `/coach`, `/coach/wods`                             | `noindex`         | Internal tooling                                                                   |
+| unknown paths                                       | real **404**      | Kills the soft-404 problem                                                         |
 
 ---
 
@@ -193,12 +193,12 @@ Ranked by actual impact. Note items 6 and 7 are deliberately marked low-value.
 2. **Name the retrieval bots explicitly in `robots.txt`.** `Allow: /` already
    permits them, but explicit groups are the documented control surface and
    protect us against a future default-deny. Distinguish the two kinds:
-   - *Retrieval / citation* — **always allow**: `OAI-SearchBot`, `ChatGPT-User`
+   - _Retrieval / citation_ — **always allow**: `OAI-SearchBot`, `ChatGPT-User`
      (ChatGPT), `Claude-SearchBot`, `Claude-User` (Claude), `PerplexityBot`,
      `Perplexity-User`, `Applebot` (Siri/Spotlight/Safari suggestions),
      `Bingbot` (feeds Copilot and DuckDuckGo), `Googlebot` (feeds AI Overviews
      and Gemini grounding).
-   - *Training* — `GPTBot`, `ClaudeBot`, `Google-Extended`, `Meta-ExternalAgent`,
+   - _Training_ — `GPTBot`, `ClaudeBot`, `Google-Extended`, `Meta-ExternalAgent`,
      `Applebot-Extended`, `CCBot`, `Bytespider`. **Recommend allowing these
      too.** We are an unknown brand; being in the weights is upside, and the
      content we would be protecting is content we want distributed.
@@ -216,11 +216,11 @@ Ranked by actual impact. Note items 6 and 7 are deliberately marked low-value.
 6. **`llms.txt` — ship it, expect nothing.** As of Q1 2026 no major provider
    (OpenAI, Google, Anthropic, Meta, Mistral) has committed to reading it in
    production; measured traffic to the file is ~0.1% of AI bot hits, and at
-   least one citation model got *more* accurate with it removed. It is absent
+   least one citation model got _more_ accurate with it removed. It is absent
    from Google's own generative-AI guidance. Thirty minutes of work, filed under
    cheap insurance. **Not a workstream.**
 7. **Grok / X.** No documented public crawler contract to optimise for. Grok
-   grounds heavily in X itself, so the lever is *presence on X*, not markup.
+   grounds heavily in X itself, so the lever is _presence on X_, not markup.
    Treat as off-site (Part 6), not technical.
 8. **Off-site is disproportionately powerful for LLMs.** Ask any assistant for
    "best AMRAP timer" and the answer is assembled from listicles and Reddit
@@ -229,17 +229,17 @@ Ranked by actual impact. Note items 6 and 7 are deliberately marked low-value.
 
 ### Per-surface summary
 
-| Surface | How we reach it | Action |
-| --- | --- | --- |
-| Google Search / AI Overviews / Gemini | Googlebot, `Google-Extended` | Classic technical SEO + GSC. Google's guidance is explicit: normal SEO is what feeds AI features |
-| ChatGPT Search | `OAI-SearchBot`, `ChatGPT-User`, plus the Bing index | Allow both; register with Bing Webmaster Tools |
-| Claude | `Claude-SearchBot`, `Claude-User`, `ClaudeBot` | Allow all three |
-| Perplexity | `PerplexityBot`, `Perplexity-User` | Allow |
-| Meta AI | `Meta-ExternalAgent` | Allow |
-| Copilot / DuckDuckGo | Bing index | Bing Webmaster Tools + **IndexNow** |
-| Safari | Google default; Applebot for Siri/Spotlight/suggestions | Allow `Applebot` |
-| Firefox | Google default | No extra work |
-| Grok | X ecosystem | Off-site presence on X |
+| Surface                               | How we reach it                                         | Action                                                                                           |
+| ------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Google Search / AI Overviews / Gemini | Googlebot, `Google-Extended`                            | Classic technical SEO + GSC. Google's guidance is explicit: normal SEO is what feeds AI features |
+| ChatGPT Search                        | `OAI-SearchBot`, `ChatGPT-User`, plus the Bing index    | Allow both; register with Bing Webmaster Tools                                                   |
+| Claude                                | `Claude-SearchBot`, `Claude-User`, `ClaudeBot`          | Allow all three                                                                                  |
+| Perplexity                            | `PerplexityBot`, `Perplexity-User`                      | Allow                                                                                            |
+| Meta AI                               | `Meta-ExternalAgent`                                    | Allow                                                                                            |
+| Copilot / DuckDuckGo                  | Bing index                                              | Bing Webmaster Tools + **IndexNow**                                                              |
+| Safari                                | Google default; Applebot for Siri/Spotlight/suggestions | Allow `Applebot`                                                                                 |
+| Firefox                               | Google default                                          | No extra work                                                                                    |
+| Grok                                  | X ecosystem                                             | Off-site presence on X                                                                           |
 
 ---
 
@@ -247,16 +247,16 @@ Ranked by actual impact. Note items 6 and 7 are deliberately marked low-value.
 
 Stand this up in Phase 0. We cannot report on what we never baselined.
 
-| Tool | Purpose |
-| --- | --- |
-| **Google Search Console** | Verify domain property; submit sitemap; watch Coverage for the soft-404 fallout as it clears |
-| **Bing Webmaster Tools** | Feeds Copilot + DuckDuckGo; also gives free IndexNow |
-| **IndexNow** | Ping on deploy. Instant submission to Bing/Yandex/Seznam. Genuine, cheap win |
-| **GA4** (or Plausible) | Conversion tracking. GA4 needs a consent story; Plausible is lighter if we don't need the depth |
+| Tool                          | Purpose                                                                                                                                                                       |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Google Search Console**     | Verify domain property; submit sitemap; watch Coverage for the soft-404 fallout as it clears                                                                                  |
+| **Bing Webmaster Tools**      | Feeds Copilot + DuckDuckGo; also gives free IndexNow                                                                                                                          |
+| **IndexNow**                  | Ping on deploy. Instant submission to Bing/Yandex/Seznam. Genuine, cheap win                                                                                                  |
+| **GA4** (or Plausible)        | Conversion tracking. GA4 needs a consent story; Plausible is lighter if we don't need the depth                                                                               |
 | **AI-referral channel group** | GA4 does **not** segment these by default. Build a custom group for `chatgpt.com`, `perplexity.ai`, `claude.ai`, `gemini.google.com`, `copilot.microsoft.com`, `x.com/i/grok` |
-| **AI bot-hit log** | Parse Vercel logs for the user agents in Part 4. Proves the crawlers are actually getting in |
-| **Rank tracking** | ~30 terms across the three clusters |
-| **LLM citation audit** | Monthly: run 20 fixed prompts against ChatGPT, Claude, Gemini, Perplexity and Grok; record whether we appear. This is the only real AEO KPI |
+| **AI bot-hit log**            | Parse Vercel logs for the user agents in Part 4. Proves the crawlers are actually getting in                                                                                  |
+| **Rank tracking**             | ~30 terms across the three clusters                                                                                                                                           |
+| **LLM citation audit**        | Monthly: run 20 fixed prompts against ChatGPT, Claude, Gemini, Perplexity and Grok; record whether we appear. This is the only real AEO KPI                                   |
 
 **North-star metrics:** non-brand organic sessions → mission created; AI-referred
 sessions; LLM citation rate on the 20 audit prompts.
@@ -283,21 +283,52 @@ input to LLM answers about "best" anything.
 
 ## Part 7 — Phased roadmap
 
-### Phase 0 — Stop the bleeding *(week 1, no framework work)*
+### Phase 0 — Stop the bleeding _(week 1, no framework work)_ — **shipped, partly**
 
-- [ ] Remove the global canonical from `index.html`; per-route canonicals
-- [ ] Catch-all route + a real 404 status (fixes soft-404s)
-- [ ] `robots.txt`: explicit AI agent groups (Part 4.2)
-- [ ] `noindex` the app surfaces per Part 3
-- [ ] Verify GSC + Bing Webmaster Tools; submit the sitemap
-- [ ] IndexNow key + deploy ping
-- [ ] Analytics + AI-referral channel group; **record the baseline**
-- [ ] Confirm no CDN-level bot blocking of AI agents
-- [ ] Self-host the four font families; drop the render-blocking third-party CSS
+**Done in code:**
 
-*Exit criteria: no self-inflicted penalties, and we can measure.*
+- [x] Global canonical removed from `index.html`; per-route canonicals from
+      [`src/lib/seo/routes.ts`](../../src/lib/seo/routes.ts)
+- [x] Catch-all route + a real 404 status. `middleware.ts` answers unknown paths
+      with HTTP 404 before the rewrite runs; `NotFoundPage` covers client-side
+      navigation and local dev, which never reach the server
+- [x] `robots.txt`: explicit AI agent groups (Part 4.2)
+- [x] App surfaces `noindex`ed, via the `X-Robots-Tag` header rather than a meta
+      tag — authoritative for crawlers that never render
+- [x] IndexNow key file + `npm run seo:indexnow`
+- [x] `middleware.ts` is now typechecked (`tsconfig.node.json`) and unit tested
 
-### Phase 1 — Content layer *(weeks 2–4)*
+**One source of truth.** `src/lib/seo/routes.ts` is read by both the SPA
+(`useSeo`) and the edge middleware, so a route's title, canonical and index
+policy cannot disagree between what a browser sees and what a crawler sees.
+`sitemap.test.ts` fails CI if `public/sitemap.xml` drifts from the indexable set.
+
+**Needs a human with account access:**
+
+- [ ] Verify Google Search Console; submit the sitemap
+- [ ] Verify Bing Webmaster Tools (feeds Copilot + DuckDuckGo)
+- [ ] Wire `npm run seo:indexnow` to a Vercel post-deploy hook
+- [ ] Confirm no CDN- or platform-level bot blocking of the AI agents in Part 4
+- [ ] Watch GSC Coverage as the soft-404 backlog clears
+
+**Blocked / deferred:**
+
+- [ ] Analytics + AI-referral channel group — blocked on open question 4 (GA4 vs
+      Plausible). Note `src/lib/analytics/` already writes product events to
+      Supabase; the gap is _acquisition_ analytics, not product analytics
+- [ ] Self-host the four font families — the sandbox that did this work cannot
+      reach `fonts.googleapis.com`, so the files could not be fetched. Unchanged
+      for now: Bebas Neue 400, Work Sans 400/600/700, Rubik 700, DM Sans
+      400/600/700, latin subset. Load exactly those weights when self-hosting —
+      `.home-marketing .text-display` asks for `font-extrabold` against a Rubik
+      700 file today, so adding a 800 file would change how the page looks
+- [ ] `scripts/` is still outside typechecking: two scripts have pre-existing
+      Supabase generic errors. Worth fixing separately
+
+_Exit criteria: no self-inflicted penalties, and we can measure._ Code half met;
+the measurement half needs the account work above.
+
+### Phase 1 — Content layer _(weeks 2–4)_
 
 - [ ] Astro app in the monorepo; Vercel routing by path prefix
 - [ ] Shared design tokens (`src/index.css`) — imported, not duplicated
@@ -310,19 +341,19 @@ input to LLM answers about "best" anything.
 - [ ] `/about/`, `/privacy/`, `/terms/`
 - [ ] `llms.txt` (30 min, then forget about it)
 
-*Exit criteria: static HTML on every content URL; per-page meta; AI bots
-recorded fetching real content.*
+_Exit criteria: static HTML on every content URL; per-page meta; AI bots
+recorded fetching real content._
 
-### Phase 2 — Programmatic content *(weeks 4–8)*
+### Phase 2 — Programmatic content _(weeks 4–8)_
 
 - [ ] `/exercises/` + 75 pages from `exerciseLibrary.ts` (`HowTo` schema)
 - [ ] `/amrap-workouts/` hub + 4 duration pages + 3 equipment pages
 - [ ] Top 20 workout pages, gated on the §1.4 quality bar
 - [ ] Internal linking: workout ↔ exercise ↔ guide ↔ "run this live" CTA
 
-*Exit criteria: ~90 quality-gated indexed URLs; first non-brand impressions.*
+_Exit criteria: ~90 quality-gated indexed URLs; first non-brand impressions._
 
-### Phase 3 — Editorial & authority *(weeks 8–16)*
+### Phase 3 — Editorial & authority _(weeks 8–16)_
 
 - [ ] The `/guides/` set, answer-first throughout
 - [ ] `/campaigns/`
@@ -330,7 +361,7 @@ recorded fetching real content.*
 - [ ] Roundup and press outreach begins
 - [ ] Widen workout pages based on what Phase 2 proved
 
-### Phase 4 — Compounding *(ongoing)*
+### Phase 4 — Compounding _(ongoing)_
 
 - [ ] Monthly LLM citation audit
 - [ ] Quarterly content refresh on decaying pages
