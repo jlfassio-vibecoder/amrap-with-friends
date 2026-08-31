@@ -20,21 +20,17 @@ vi.mock('@/hooks/useAmrapAuth', () => ({
 }));
 
 vi.mock('@/lib/api/mySessions', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/api/mySessions')>(
-    '@/lib/api/mySessions'
-  );
+  const actual =
+    await vi.importActual<typeof import('@/lib/api/mySessions')>('@/lib/api/mySessions');
   return {
     ...actual,
     fetchMySessions: (...args: unknown[]) => fetchMySessionsMock(...args),
-    deleteIncompleteSession: (...args: unknown[]) =>
-      deleteIncompleteSessionMock(...args),
+    deleteIncompleteSession: (...args: unknown[]) => deleteIncompleteSessionMock(...args),
   };
 });
 
 vi.mock('@/lib/api/campaigns', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/api/campaigns')>(
-    '@/lib/api/campaigns'
-  );
+  const actual = await vi.importActual<typeof import('@/lib/api/campaigns')>('@/lib/api/campaigns');
   return {
     ...actual,
     fetchMyCampaigns: (...args: unknown[]) => fetchMyCampaignsMock(...args),
@@ -53,6 +49,7 @@ function entry(overrides: Partial<MySessionEntry> = {}): MySessionEntry {
     isFeatured: false,
     durationMinutes: 5,
     workout: [{ name: 'Mountain Climbers', target: 20, unit: 'reps' }],
+    templateId: null,
     state: 'waiting',
     segmentIndex: 0,
     roundCount: 0,
@@ -103,12 +100,15 @@ function renderPage() {
 }
 
 describe('MySessionsPage workout summary', () => {
-  it('renders coachWorkoutName when present instead of the exercise summary', async () => {
+  it('centers the coach workout name and lists movements under a disclosure', async () => {
     fetchMySessionsMock.mockResolvedValue({
       data: [
         entry({
           coachWorkoutName: 'Crimp Conditioning',
-          workout: [{ name: 'Dead Hang', target: 30, unit: 'seconds' }],
+          workout: [
+            { name: 'Dead Hang', target: 30, unit: 'seconds' },
+            { name: 'Pull-ups', target: 10, unit: 'reps' },
+          ],
           state: 'finished',
           finalScore: 42,
         }),
@@ -121,7 +121,28 @@ describe('MySessionsPage workout summary', () => {
     await waitFor(() => {
       expect(screen.getByText('Crimp Conditioning')).toBeTruthy();
     });
-    expect(screen.queryByText('Dead Hang')).toBeNull();
+    expect(screen.getByText('2 movements')).toBeTruthy();
+    expect(screen.getByText('Dead Hang — 30 seconds')).toBeTruthy();
+    expect(screen.getByText('Pull-ups — 10 reps')).toBeTruthy();
+  });
+
+  it('resolves a library template name when there is no coach name', async () => {
+    fetchMySessionsMock.mockResolvedValue({
+      data: [
+        entry({
+          templateId: 'the-pendulum',
+          workout: [{ name: 'Burpees', target: 10, unit: 'reps' }],
+        }),
+      ],
+      error: null,
+    });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('The Pendulum')).toBeTruthy();
+    });
+    expect(screen.getByText('1 movement')).toBeTruthy();
   });
 });
 
@@ -186,9 +207,7 @@ describe('MySessionsPage delete', () => {
         '22222222-2222-4222-8222-222222222222'
       );
       expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
-      expect(
-        screen.getByText(/No saved sessions yet/)
-      ).toBeTruthy();
+      expect(screen.getByText(/No saved sessions yet/)).toBeTruthy();
     });
   });
 
@@ -215,9 +234,7 @@ describe('MySessionsPage delete', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
-    expect(confirmMock).toHaveBeenCalledWith(
-      expect.stringMatching(/this date and time only/i)
-    );
+    expect(confirmMock).toHaveBeenCalledWith(expect.stringMatching(/this date and time only/i));
   });
 });
 
@@ -227,12 +244,12 @@ describe('MySessionsPage CTAs', () => {
     renderPage();
 
     await waitFor(() => {
-      expect(
-        screen.getByRole('link', { name: 'Create session' }).getAttribute('href')
-      ).toBe('/create');
-      expect(
-        screen.getByRole('link', { name: 'New campaign' }).getAttribute('href')
-      ).toBe('/campaign/new');
+      expect(screen.getByRole('link', { name: 'Create session' }).getAttribute('href')).toBe(
+        '/create'
+      );
+      expect(screen.getByRole('link', { name: 'New campaign' }).getAttribute('href')).toBe(
+        '/campaign/new'
+      );
     });
   });
 });
@@ -255,9 +272,9 @@ describe('MySessionsPage campaigns', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Your campaigns')).toBeTruthy();
-      expect(
-        screen.getByRole('link', { name: /Spring Build/ }).getAttribute('href')
-      ).toBe('/campaign/33333333-3333-4333-8333-333333333333');
+      expect(screen.getByRole('link', { name: /Spring Build/ }).getAttribute('href')).toBe(
+        '/campaign/33333333-3333-4333-8333-333333333333'
+      );
     });
   });
 });
