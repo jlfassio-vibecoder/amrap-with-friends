@@ -24,6 +24,7 @@ import {
 } from '@/data/workoutTemplates';
 import { fetchHostActiveSessionCount } from '@/lib/api/sessions';
 import { createLobbySession } from '@/lib/api/lobby';
+import { SendWorkoutToSquad } from '@/components/session/SendWorkoutToSquad';
 import { getSupabaseConfigError } from '@/lib/supabase';
 import { track } from '@/lib/analytics/track';
 import { quotasFromProfile } from '@/lib/hud/classificationQuotas';
@@ -76,10 +77,7 @@ export default function CreateSessionPage() {
   const [scheduleMode, setScheduleMode] = useState<CreateScheduleMode>('now');
   const [rallyDay, setRallyDay] = useState<RallyDay>('today');
   const [rallyTime, setRallyTime] = useState(() =>
-    defaultRallyTime(
-      new Date(),
-      Intl.DateTimeFormat().resolvedOptions().timeZone
-    )
+    defaultRallyTime(new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone)
   );
   const [activeCount, setActiveCount] = useState<number | null>(null);
 
@@ -171,6 +169,30 @@ export default function CreateSessionPage() {
     () => WORKOUT_TEMPLATES.find((template) => template.id === selectedTemplateId) ?? null,
     [selectedTemplateId]
   );
+
+  // What Start would send. Derived once so sending a workout to a squad friend
+  // and starting it here can never disagree about what "it" is.
+  const configuredWorkout = useMemo(() => {
+    let movements: ReturnType<typeof parseWorkoutText> = [];
+    try {
+      movements = parseWorkoutText(workoutText);
+    } catch {
+      movements = [];
+    }
+    const intensityTier =
+      workoutSource === 'library' && selectedTemplate
+        ? selectedTemplate.intensityTier
+        : workoutSource === 'coach' && selectedCoachWorkout
+          ? selectedCoachWorkout.intensityTier
+          : CUSTOM_WORKOUT_INTENSITY_TIER;
+    const templateId =
+      workoutSource === 'library' && selectedTemplateId
+        ? selectedTemplateId
+        : workoutSource === 'coach' && selectedCoachWorkout
+          ? `coach:${selectedCoachWorkout.id}`
+          : null;
+    return { movements, intensityTier, templateId };
+  }, [workoutText, workoutSource, selectedTemplate, selectedCoachWorkout, selectedTemplateId]);
 
   function handleDurationChange(duration: TimeDomain) {
     setDurationMinutes(duration);
@@ -347,61 +369,71 @@ export default function CreateSessionPage() {
           {profileLoading ? (
             <p className="text-sm text-secondary">Loading athlete profile…</p>
           ) : (
-          <div className="space-y-6 lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start lg:gap-6 lg:space-y-0">
-            <div className="card space-y-6 p-6">
-              <WorkoutSourceToggle value={workoutSource} onChange={handleWorkoutSourceChange} />
+            <div className="space-y-6 lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start lg:gap-6 lg:space-y-0">
+              <div className="card space-y-6 p-6">
+                <WorkoutSourceToggle value={workoutSource} onChange={handleWorkoutSourceChange} />
 
-              {workoutSource === 'custom' ? (
-                <label className="block space-y-1">
-                  <span className="text-sm font-semibold">Workout (one exercise per line)</span>
-                  <textarea
-                    className="input-field min-h-48"
-                    value={workoutText}
-                    onChange={(event) => handleWorkoutTextChange(event.target.value)}
-                    placeholder="10 Burpees&#10;Row 200m&#10;Squats"
-                    required
+                {workoutSource === 'custom' ? (
+                  <label className="block space-y-1">
+                    <span className="text-sm font-semibold">Workout (one exercise per line)</span>
+                    <textarea
+                      className="input-field min-h-48"
+                      value={workoutText}
+                      onChange={(event) => handleWorkoutTextChange(event.target.value)}
+                      placeholder="10 Burpees&#10;Row 200m&#10;Squats"
+                      required
+                    />
+                  </label>
+                ) : workoutSource === 'library' ? (
+                  <WorkoutTemplatePicker
+                    durationMinutes={durationMinutes as TimeDomain}
+                    selectedCategory={selectedCategory}
+                    selectedTemplateId={selectedTemplateId}
+                    classification={telemetry?.classification ?? null}
+                    perceivedClassification={profile?.perceivedClassification ?? null}
+                    quotas={quotas}
+                    onDurationChange={handleDurationChange}
+                    onCategoryChange={setSelectedCategory}
+                    onTemplateSelect={handleTemplateSelect}
                   />
-                </label>
-              ) : workoutSource === 'library' ? (
-                <WorkoutTemplatePicker
-                  durationMinutes={durationMinutes as TimeDomain}
-                  selectedCategory={selectedCategory}
-                  selectedTemplateId={selectedTemplateId}
-                  classification={telemetry?.classification ?? null}
-                  perceivedClassification={profile?.perceivedClassification ?? null}
-                  quotas={quotas}
-                  onDurationChange={handleDurationChange}
-                  onCategoryChange={setSelectedCategory}
-                  onTemplateSelect={handleTemplateSelect}
-                />
-              ) : (
-                <CoachWodPicker
-                  selectedWorkoutId={selectedCoachWorkout?.id ?? null}
-                  onSelect={handleCoachWorkoutSelect}
-                />
-              )}
-            </div>
+                ) : (
+                  <CoachWodPicker
+                    selectedWorkoutId={selectedCoachWorkout?.id ?? null}
+                    onSelect={handleCoachWorkoutSelect}
+                  />
+                )}
+              </div>
 
-            <CreateSessionSummaryPanel
-              nickname={nickname}
-              durationMinutes={durationMinutes}
-              workoutSource={workoutSource}
-              selectedTemplate={selectedTemplate}
-              selectedCoachWorkout={selectedCoachWorkout}
-              scheduleMode={scheduleMode}
-              rallyDay={rallyDay}
-              rallyTime={rallyTime}
-              capReached={capReached}
-              error={error}
-              loading={loading}
-              onNicknameChange={setNickname}
-              onDurationChange={handleSummaryDurationChange}
-              onScheduleModeChange={setScheduleMode}
-              onRallyDayChange={setRallyDay}
-              onRallyTimeChange={setRallyTime}
-              onSubmit={handleSubmit}
-            />
-          </div>
+              <CreateSessionSummaryPanel
+                nickname={nickname}
+                durationMinutes={durationMinutes}
+                workoutSource={workoutSource}
+                selectedTemplate={selectedTemplate}
+                selectedCoachWorkout={selectedCoachWorkout}
+                scheduleMode={scheduleMode}
+                rallyDay={rallyDay}
+                rallyTime={rallyTime}
+                capReached={capReached}
+                error={error}
+                loading={loading}
+                onNicknameChange={setNickname}
+                onDurationChange={handleSummaryDurationChange}
+                onScheduleModeChange={setScheduleMode}
+                onRallyDayChange={setRallyDay}
+                onRallyTimeChange={setRallyTime}
+                onSubmit={handleSubmit}
+              />
+
+              <div className="pt-4">
+                <SendWorkoutToSquad
+                  durationMinutes={durationMinutes}
+                  workout={configuredWorkout.movements}
+                  templateId={configuredWorkout.templateId}
+                  intensityTier={configuredWorkout.intensityTier}
+                  ready={configuredWorkout.movements.length > 0}
+                />
+              </div>
+            </div>
           )}
 
           <p className="text-center text-sm">

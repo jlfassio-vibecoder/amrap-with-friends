@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { MySessionScoreBreakdownModal } from '@/components/MySessionScoreBreakdownModal';
+import { AssignedWorkoutsPanel } from '@/components/session/AssignedWorkoutsPanel';
 import { MyCampaignsPanel } from '@/components/campaign/MyCampaignsPanel';
 import {
   canDeleteMySession,
@@ -90,9 +91,7 @@ export default function MySessionsPage() {
         setError(result.error.message);
         return;
       }
-      setEntries((prev) =>
-        prev.filter((item) => item.sessionId !== entry.sessionId)
-      );
+      setEntries((prev) => prev.filter((item) => item.sessionId !== entry.sessionId));
     } catch {
       setError('Something went wrong. Please try again.');
     } finally {
@@ -102,15 +101,11 @@ export default function MySessionsPage() {
 
   return (
     <NarrowPageLayout title="My sessions" subtitle="Saved to your account">
-      <p className="text-sm text-secondary lg:hidden">
-        Sessions you saved to your account.
-      </p>
+      <p className="text-sm text-secondary lg:hidden">Sessions you saved to your account.</p>
 
       <div className="hidden space-y-2 lg:block">
         <h1 className="text-display text-5xl text-ink">My sessions</h1>
-        <p className="text-sm text-secondary">
-          Sessions you saved to your account.
-        </p>
+        <p className="text-sm text-secondary">Sessions you saved to your account.</p>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -122,14 +117,14 @@ export default function MySessionsPage() {
         </Link>
       </div>
 
+      <AssignedWorkoutsPanel />
+
       <MyCampaignsPanel showCreateCta={false} />
 
       {loading ? <p className="text-sm text-secondary">Loading…</p> : null}
 
       {!isAuthLoading && !isAuthenticated ? (
-        <p className="text-sm text-secondary">
-          Sign in to see sessions saved to your account.
-        </p>
+        <p className="text-sm text-secondary">Sign in to see sessions saved to your account.</p>
       ) : null}
 
       {error && <p className="text-error">Error: {error}</p>}
@@ -151,10 +146,7 @@ export default function MySessionsPage() {
                 {entry.isFeatured ? ' · Featured' : ''}
               </p>
               <div className="flex flex-wrap items-center gap-3">
-                <Link
-                  className="link-accent"
-                  to={`/session/${entry.sessionId}`}
-                >
+                <Link className="link-accent" to={`/session/${entry.sessionId}`}>
                   View session
                 </Link>
                 {entry.scoreBreakdown ? (
@@ -190,7 +182,9 @@ export default function MySessionsPage() {
       ) : null}
 
       <p className="text-center text-sm">
-        <Link className="link-accent" to="/">Back home</Link>
+        <Link className="link-accent" to="/">
+          Back home
+        </Link>
       </p>
     </NarrowPageLayout>
   );
