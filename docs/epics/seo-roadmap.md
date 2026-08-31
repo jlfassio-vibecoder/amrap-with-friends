@@ -18,20 +18,21 @@ and AI assistants cannot see a single word of a client-rendered React SPA.
 
 | Area                    | Today                                                                                                     | Verdict                                                                      |
 | ----------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Rendering               | Vite SPA, `vercel.json` rewrites `/(.*)` → `index.html`                                                   | Content is invisible to every non-Google crawler                             |
+| Rendering               | Astro for content pages; the SPA keeps its own routes                                                     | **Phase 1** — content pages are real HTML. `/` is still the SPA              |
 | `<title>` / description | ~~One set, hard-coded, identical on every route~~                                                         | **Fixed in Phase 0** — per-route via `useSeo`                                |
 | Canonical               | ~~Site-wide canonical to `/` on **every** URL~~                                                           | **Fixed in Phase 0** — self-referencing per route, dropped on noindex routes |
-| Sitemap                 | 3 hand-written URLs (`/`, `/create`, `/join`)                                                             | No content URLs; will drift the moment anything ships                        |
+| Sitemap                 | ~~3 hand-written URLs~~                                                                                   | **Phase 1** — generated at build from the route table                        |
 | `robots.txt`            | ~~`User-agent: * / Allow: /`~~                                                                            | **Fixed in Phase 0** — every AI agent named explicitly                       |
-| Structured data         | One `WebApplication` block                                                                                | No `ExercisePlan`, `HowTo`, `FAQPage`, `BreadcrumbList`, `Organization`      |
+| Structured data         | Helpers on content pages; app shell unchanged                                                             | No `ExercisePlan`, `HowTo`, `FAQPage`, `BreadcrumbList`, `Organization`      |
 | Bot handling            | [`middleware.ts`](../../middleware.ts) serves OG HTML to unfurlers, plus `X-Robots-Tag` and 404s sitewide | Search-safe; still no content to serve                                       |
-| Content pages           | Zero. `HomeSeoContent.tsx` is the only prose on the site                                                  | Nothing to rank                                                              |
+| Content pages           | ~~Zero~~                                                                                                  | **Phase 1** — `/amrap-timer`, `/about`, `/privacy`, `/terms` are static HTML |
 | 404s                    | ~~`/anything` returned **HTTP 200** with an empty shell~~                                                 | **Fixed in Phase 0** — real 404 from the edge                                |
 | Fonts                   | 4 Google Fonts families loaded render-blocking from `fonts.googleapis.com`                                | LCP tax on the page that matters most                                        |
 
-Two of those are bugs, not gaps: the **global canonical** and the **soft 404s**.
-They cost us rankings today and are fixable in an afternoon regardless of what we
-decide about frameworks.
+Both of the outright bugs — the global canonical and the soft 404s — were fixed
+in Phase 0. The structured-data row is now covered by
+`src/lib/seo/structuredData.ts` on the content pages; the app shell still carries
+only its original `WebApplication` block.
 
 ---
 
