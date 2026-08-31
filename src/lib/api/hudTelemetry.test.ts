@@ -41,6 +41,12 @@ const overtraining = {
   consecutiveHighIntensityDays: 0,
 };
 
+const activity7d = {
+  missionCount: 2,
+  minutes: 40,
+  avgIntensity: 2.5,
+};
+
 describe('parseHudTelemetryPayload', () => {
   it('parses a valid Phase 4 payload with classification', () => {
     expect(
@@ -52,6 +58,7 @@ describe('parseHudTelemetryPayload', () => {
         attrition: attrition12,
         domainMinutes30d,
         classification,
+        activity7d,
         overtraining,
       })
     ).toEqual({
@@ -62,6 +69,7 @@ describe('parseHudTelemetryPayload', () => {
       attrition: attrition12,
       domainMinutes30d,
       classification,
+      activity7d,
       overtraining,
     });
   });
@@ -77,6 +85,7 @@ describe('parseHudTelemetryPayload', () => {
         marathon20Count: 0,
       },
     };
+    const emptyActivity7d = { missionCount: 0, minutes: 0, avgIntensity: null };
     expect(
       parseHudTelemetryPayload({
         weekMinutes: 0,
@@ -86,6 +95,7 @@ describe('parseHudTelemetryPayload', () => {
         attrition: Array.from({ length: 12 }, () => false),
         domainMinutes30d: { 5: 0, 10: 0, 15: 0, 20: 0, other: 0 },
         classification: emptyClassification,
+        activity7d: emptyActivity7d,
         overtraining: { acuteLoad7d: 0, chronicWeeklyLoad28d: 0, consecutiveHighIntensityDays: 0 },
       })
     ).toEqual({
@@ -96,6 +106,7 @@ describe('parseHudTelemetryPayload', () => {
       attrition: Array.from({ length: 12 }, () => false),
       domainMinutes30d: { 5: 0, 10: 0, 15: 0, 20: 0, other: 0 },
       classification: emptyClassification,
+      activity7d: emptyActivity7d,
       overtraining: { acuteLoad7d: 0, chronicWeeklyLoad28d: 0, consecutiveHighIntensityDays: 0 },
     });
   });
@@ -109,6 +120,7 @@ describe('parseHudTelemetryPayload', () => {
         lastLockedAt: null,
         attrition: Array.from({ length: 12 }, () => false),
         domainMinutes30d,
+        activity7d,
         overtraining,
       })
     ).toBeNull();
@@ -130,6 +142,36 @@ describe('parseHudTelemetryPayload', () => {
             marathon20Count: 0,
           },
         },
+        activity7d,
+        overtraining,
+      })
+    ).toBeNull();
+  });
+
+  it('rejects missing or invalid activity7d', () => {
+    expect(
+      parseHudTelemetryPayload({
+        weekMinutes: 10,
+        weekPviAverage: null,
+        weekEndsAt: '2026-08-25T07:00:00.000Z',
+        lastLockedAt: null,
+        attrition: Array.from({ length: 12 }, () => false),
+        domainMinutes30d,
+        classification,
+        overtraining,
+      })
+    ).toBeNull();
+    expect(
+      parseHudTelemetryPayload({
+        weekMinutes: 10,
+        weekPviAverage: null,
+        weekEndsAt: '2026-08-25T07:00:00.000Z',
+        lastLockedAt: null,
+        attrition: Array.from({ length: 12 }, () => false),
+        domainMinutes30d,
+        classification,
+        activity7d: { missionCount: 0, minutes: 0, avgIntensity: 2 },
+        overtraining,
       })
     ).toBeNull();
   });
@@ -145,6 +187,8 @@ describe('parseHudTelemetryPayload', () => {
         attrition: Array.from({ length: 12 }, () => false),
         domainMinutes30d,
         classification,
+        activity7d,
+        overtraining,
       })
     ).toBeNull();
     expect(
@@ -156,6 +200,8 @@ describe('parseHudTelemetryPayload', () => {
         attrition: [true, false],
         domainMinutes30d,
         classification,
+        activity7d,
+        overtraining,
       })
     ).toBeNull();
     expect(
@@ -167,6 +213,8 @@ describe('parseHudTelemetryPayload', () => {
         attrition: Array.from({ length: 12 }, () => false),
         domainMinutes30d: { 5: 1, 10: 1, 15: 1 },
         classification,
+        activity7d,
+        overtraining,
       })
     ).toBeNull();
   });

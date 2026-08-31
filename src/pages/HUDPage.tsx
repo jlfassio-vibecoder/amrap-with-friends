@@ -1,14 +1,17 @@
 import { Link } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
+import { ActivityAttributionCard } from '@/components/hud/ActivityAttributionCard';
 import { AttritionGrid } from '@/components/hud/AttritionGrid';
 import { ClassificationBadge } from '@/components/hud/ClassificationBadge';
 import { DailyTelemetry } from '@/components/hud/DailyTelemetry';
 import { DomainMatrixChart } from '@/components/hud/DomainMatrixChart';
+import { InAppActivitySummaryCard } from '@/components/hud/InAppActivitySummaryCard';
 import { OutsideActivitySummaryCard } from '@/components/hud/OutsideActivitySummaryCard';
 import { OvertrainingWarningCard } from '@/components/hud/OvertrainingWarningCard';
 import { PhysicalActivityList } from '@/components/hud/PhysicalActivityList';
 import { PhysicalActivityLogForm } from '@/components/hud/PhysicalActivityLogForm';
 import { WeeklyBaselineBar } from '@/components/hud/WeeklyBaselineBar';
+import { summarizePhysicalActivityWindow } from '@/lib/hud/activityWindowSummary';
 import { evaluateOvertrainingRisk } from '@/lib/hud/evaluateOvertrainingRisk';
 import { quotasFromProfile } from '@/lib/hud/classificationQuotas';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
@@ -22,6 +25,7 @@ export default function HUDPage() {
   const showTelemetry = !loading && !profileLoading && isAuthenticated && telemetry;
 
   const activityLog = usePhysicalActivityLog();
+  const outsideSummary = summarizePhysicalActivityWindow(activityLog.entries);
   const overtrainingRisk = telemetry ? evaluateOvertrainingRisk(telemetry.overtraining) : null;
   const showOvertrainingWarning =
     overtrainingRisk !== null && overtrainingRisk.riskLevel !== 'normal';
@@ -81,12 +85,18 @@ export default function HUDPage() {
               quotas={quotas}
             />
 
-            <div className={showOvertrainingWarning ? 'grid gap-4 lg:grid-cols-2' : ''}>
-              {showOvertrainingWarning ? (
-                <OvertrainingWarningCard overtraining={telemetry.overtraining} />
-              ) : null}
-              <OutsideActivitySummaryCard entries={activityLog.entries} />
-            </div>
+            {showOvertrainingWarning ? (
+              <OvertrainingWarningCard overtraining={telemetry.overtraining} />
+            ) : null}
+
+            <InAppActivitySummaryCard activity7d={telemetry.activity7d} />
+            <OutsideActivitySummaryCard entries={activityLog.entries} />
+            <ActivityAttributionCard
+              inAppMissions={telemetry.activity7d.missionCount}
+              outsideMissions={outsideSummary.missionCount}
+              inAppMinutes={telemetry.activity7d.minutes}
+              outsideMinutes={outsideSummary.totalMinutes}
+            />
 
             <div className="grid gap-4 lg:grid-cols-2">
               <DailyTelemetry lastLockedAt={telemetry.lastLockedAt} />
