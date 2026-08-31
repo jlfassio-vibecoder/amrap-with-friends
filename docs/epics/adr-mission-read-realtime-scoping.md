@@ -1,9 +1,9 @@
 # ADR: Mission read + Realtime scoping
 
-**Status:** Accepted (Phase 0 spike complete)  
+**Status:** Accepted (Phases 0–2 complete)  
 **Date:** 2026-08-31  
 **Epic:** [`mission-realtime-read-scoping.md`](./mission-realtime-read-scoping.md)  
-**Decision makers:** Phase 0 spike (threat model + anon PostgREST proof)
+**Decision makers:** Phase 0 spike (threat model + anon PostgREST proof); Phase 2 cutover
 
 ---
 
@@ -54,6 +54,19 @@ Product lock for this epic: **no spectators**. Being on the mission (host path, 
 Mission id prefix recorded only: `d1551134…` (full UUID omitted from this ADR).
 
 **Conclusion:** Today anon entitlement for mission **reads** is “know the UUID / can hit the table.” Path A (claim-aware RLS for anon) cannot close this hole without putting claim into request context PostgREST/RLS can see — which the current guest model does not do.
+
+### Phase 2 acceptance proof — anon SELECT after revoke
+
+**Ran:** 2026-08-31T22:52:23.284Z  
+**Env:** same hosted project after `20260902130000_mission_live_state_rls.sql`.  
+**Method:** anon JWT only (no claim / user header).
+
+| Check | Result |
+| --- | --- |
+| `GET /rest/v1/missions?select=id,state,duration_minutes&limit=1` | **401** `permission denied for table missions` (`42501`) |
+| `GET …/missions?id=eq.<uuid>` | **401** same |
+
+UUID alone is no longer sufficient for PostgREST SELECT.
 
 ---
 
@@ -128,11 +141,11 @@ Pointing back to [`mission-realtime-read-scoping.md`](./mission-realtime-read-sc
 
 ### Phase 2 — SELECT / RLS + RPC bootstrap
 
-- [ ] Implement `get_mission_live_state` (or final name); authorize like `log_round`.
-- [ ] Cut `useMissionChannel` bootstrap to RPC.
-- [ ] Replace `USING (true)` / revoke open SELECT as designed.
-- [ ] Ship guest Realtime mitigation: prefer (a)+(b) above; document choice in epic.
-- [ ] Acceptance: anon **without** join/claim cannot SELECT another mission’s rows; joined guest still loads waiting room.
+- [x] Implement `get_mission_live_state` (or final name); authorize like `log_round` (+ host token).
+- [x] Cut `useMissionChannel` bootstrap to RPC.
+- [x] Replace `USING (true)` / revoke open SELECT as designed.
+- [x] Ship guest Realtime mitigation: **(a)** authenticated membership Realtime + **(b)** guest poll of live-state RPC (5s); JWT minting out of epic.
+- [x] Acceptance: anon **without** join/claim cannot SELECT another mission’s rows; joined guest still loads waiting room.
 
 ### Explicitly out of Phase 0
 

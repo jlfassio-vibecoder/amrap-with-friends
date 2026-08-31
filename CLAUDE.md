@@ -141,6 +141,10 @@ Workout and classification names are content, not chrome, and are untouched:
 - **All database access goes through RPCs.** Tables are RLS-locked and revoked
   from `anon`/`authenticated`; the client calls `SECURITY DEFINER` functions via
   `callRpc`. Do not add direct table queries from the client.
+  **Live mission exception:** signed-in athletes may receive membership-scoped
+  `postgres_changes` on mission live tables (`is_mission_participant`); bootstrap
+  and guests still use `get_mission_live_state` (claim / host token / `auth.uid()`),
+  not open SELECT.
 - **Pure logic lives in `src/lib/` and is unit tested.** Scoring, timer
   reduction, schedule maths, and presentation decisions are pure functions with
   their own `.test.ts` beside them. Put new logic there rather than inside a

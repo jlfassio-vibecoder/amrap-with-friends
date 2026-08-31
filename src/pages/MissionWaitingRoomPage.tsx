@@ -430,7 +430,13 @@ function LiveMissionView({
     confirmSafetyNotice,
   } = useMissionSafetyNotices(missionId);
 
-  const channel = useMissionChannel(missionId, { participantId, nickname });
+  const channel = useMissionChannel(
+    missionId,
+    { participantId, nickname },
+    {
+      realtimeTables: isAuthenticated,
+    }
+  );
   const live = useLiveAmrapMission(missionId, channel);
   const { isHost, start: startMission, phase: livePhase } = live;
 

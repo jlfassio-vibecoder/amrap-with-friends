@@ -1,6 +1,6 @@
 # Epic: Mission read + Realtime scoping
 
-**Status:** Phase 1 complete — segment-results scoped; Phase 2 (SELECT/RPC) pending  
+**Status:** Phase 2 complete — SELECT hardened; Phase 3 (dual-channel hygiene) pending  
 **Last updated:** 2026-08-31  
 **Follows:** Close policy + Rally point / Next Mission vocabulary pass  
 **Phase 0 ADR:** [`adr-mission-read-realtime-scoping.md`](./adr-mission-read-realtime-scoping.md)  
@@ -24,7 +24,7 @@ Architectural review of `/mission/:id` and `/rally-point/:id` ranked these as **
 
 | Gap | Risk |
 | --- | --- |
-| Mission / participants / rounds / messages SELECT `USING (true)` | Anyone with a UUID (or who enumerates) can bootstrap full public columns via PostgREST |
+| ~~Mission / participants / rounds / messages SELECT `USING (true)`~~ (Phase 2 fixed) | Was: UUID enumeration; now RPC entitlement + membership Realtime |
 | ~~`participant_segment_results` Realtime with **no** `mission_id` filter~~ (Phase 1 fixed) | Was: every live client received all segment-result changes; now filtered by `mission_id` |
 | Dual channels (mission + rally point) when linked | Cost/opacity; secondary to scoping but note fan-out while linked |
 
@@ -46,9 +46,9 @@ USING (true);
 
 | Area | Today |
 | --- | --- |
-| Mission bootstrap | Direct `.from('missions' \| 'participants' \| 'rounds' \| 'messages')` in [`useMissionChannel`](../../src/lib/realtime/useMissionChannel.ts) |
-| RLS | Permissive SELECT for anon/authenticated on those tables (renamed from sessions) |
-| Realtime filters | `missions`, `participants`, `rounds`, `messages` filtered by `mission_id` / `id` |
+| Mission bootstrap | [`get_mission_live_state`](../../supabase/migrations/20260902130000_mission_live_state_rls.sql) via [`useMissionChannel`](../../src/lib/realtime/useMissionChannel.ts) |
+| RLS | Anon SELECT revoked on live tables; authenticated membership via `is_mission_participant` |
+| Realtime filters | Auth: filtered `postgres_changes`; guests: 5s poll of live-state RPC (hub pattern) |
 | Segment results | `mission_id` denorm + Realtime/bootstrap `mission_id=eq.…` (Phase 1); JS roster guard kept as defense-in-depth |
 | Writes | Still RPC-only (`update_mission_state`, `log_round`, claim, chat, etc.) — **do not regress** |
 | Hub tables | `rally_points` / members: RPC + membership-gated Realtime — better model to emulate where possible |
@@ -123,11 +123,12 @@ Lock one entitlement model before writing migrations:
 - Fan-out model: [`segmentResultsFanOut.ts`](../../src/lib/realtime/segmentResultsFanOut.ts); log with `npx tsx scripts/log-segment-results-fanout.ts` (offline; O(events in this mission) at 10+ concurrent missions). Optional live Realtime soak against preview is out of CI.
 - Acceptance: [`useMissionChannel.test.tsx`](../../src/lib/realtime/useMissionChannel.test.tsx) asserts every `participant_segment_results` listener has a non-empty `mission_id` filter.
 
-### Phase 2 — SELECT / RLS hardening for mission tables (P0)
+### Phase 2 — SELECT / RLS hardening for mission tables (P0) — **complete**
 
-- Replace `USING (true)` with entitlement-aware policies (or RPC-only snapshot + revoke SELECT).
-- Update [`useMissionChannel`](../../src/lib/realtime/useMissionChannel.ts) bootstrap accordingly.
-- Acceptance: unauthenticated request **without** join/claim cannot `SELECT` another mission’s rows; joined guest still loads waiting room; host push/joiner tick still work.
+- `get_mission_live_state` (claim / `auth.uid()` / host token); [`useMissionChannel`](../../src/lib/realtime/useMissionChannel.ts) bootstrap cut over.
+- Anon SELECT revoked; authenticated membership RLS via `is_mission_participant`.
+- Guest mitigation **(a)+(b):** auth Realtime when `realtimeTables: isAuthenticated`; guests poll every 5s (`GUEST_MISSION_POLL_MS`).
+- Acceptance: anon without join/claim cannot SELECT mission rows; joined guest loads waiting room via RPC.
 
 ### Phase 3 — Ops / dual-channel hygiene (P1)
 
@@ -141,12 +142,12 @@ Lock one entitlement model before writing migrations:
 
 - [x] Design spike ADR recorded (entitlement + segment-results approach) — [`adr-mission-read-realtime-scoping.md`](./adr-mission-read-realtime-scoping.md).
 - [x] No unfiltered Realtime subscription on `participant_segment_results` (or successor path).
-- [ ] Mission table reads are entitlement-scoped; UUID alone is insufficient.
+- [x] Mission table reads are entitlement-scoped; UUID alone is insufficient.
 - [ ] Guest join → live waiting room → work still works without sign-in.
 - [ ] Host Start / countdown / `log_round` / score lock unchanged in product behavior.
 - [ ] Next Mission hub force-nav and daisy-chain still pull athletes into `/mission/:id`.
 - [ ] Migration(s) + client tests; `npm run lint && npm run typecheck && npm run test` green.
-- [ ] CLAUDE.md architecture note: live mission reads are scoped (exception to “RPC-only” called out honestly if SELECT remains).
+- [x] CLAUDE.md architecture note: live mission reads are scoped (exception to “RPC-only” called out honestly if SELECT remains).
 
 ---
 
