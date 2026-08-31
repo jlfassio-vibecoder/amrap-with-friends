@@ -13,7 +13,7 @@ const updateUserMock = vi.fn();
 vi.mock('@/lib/supabase', () => ({
   getSupabaseClient: vi.fn(() => ({
     auth: {
-      onAuthStateChange: (callback: (event: string, mission: null) => void) => {
+      onAuthStateChange: (callback: (event: string, session: null) => void) => {
         callback('INITIAL_SESSION', null);
         return { data: { subscription: { unsubscribe: vi.fn() } } };
       },
@@ -92,11 +92,11 @@ describe('AmrapAuthProvider password auth', () => {
     expect(result.error).toBe('Invalid login credentials');
   });
 
-  it('signUpWithPassword sets needsEmailConfirmation when mission is null', async () => {
+  it('signUpWithPassword sets needsEmailConfirmation when session is null', async () => {
     signUpMock.mockResolvedValue({
       data: {
         user: { id: 'user-1', email: 'user@example.com' },
-        mission: null,
+        session: null,
       },
       error: null,
     });
@@ -115,7 +115,7 @@ describe('AmrapAuthProvider password auth', () => {
 
   it('signUpWithPassword surfaces duplicate signup error verbatim', async () => {
     signUpMock.mockResolvedValue({
-      data: { user: null, mission: null },
+      data: { user: null, session: null },
       error: { message: 'User already registered' },
     });
 
