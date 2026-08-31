@@ -82,6 +82,15 @@ describe('LogMissedRound', () => {
     expect(onConfirm).toHaveBeenCalledWith(2);
   });
 
+  it('does not allow confirming at 0 reps (would flag Adjusted with no correction)', () => {
+    const onConfirm = renderControl();
+    fireEvent.click(screen.getByRole('button', { name: 'Forgot to log a round?' }));
+
+    expect(screen.getByRole('button', { name: 'Log round 3' }).hasAttribute('disabled')).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Log round 3' }));
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
   it('closes without logging when cancelled', () => {
     const onConfirm = renderControl();
     fireEvent.click(screen.getByRole('button', { name: 'Forgot to log a round?' }));
