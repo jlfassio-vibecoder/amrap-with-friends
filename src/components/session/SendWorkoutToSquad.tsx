@@ -10,6 +10,10 @@ interface SendWorkoutToSquadProps {
   intensityTier?: number | null;
   /** False while the form has no usable workout yet. */
   ready: boolean;
+  /** Button classes for the collapsed trigger. Defaults to a prominent outline button. */
+  triggerClassName?: string;
+  /** Collapsed trigger label. Shorten it where space is tight. */
+  triggerLabel?: string;
 }
 
 /**
@@ -23,6 +27,8 @@ export function SendWorkoutToSquad({
   templateId,
   intensityTier,
   ready,
+  triggerClassName = 'btn-outline text-sm font-semibold',
+  triggerLabel = 'Send this to a squad friend',
 }: SendWorkoutToSquadProps) {
   const [friends, setFriends] = useState<SquadAthlete[]>([]);
   const [open, setOpen] = useState(false);
@@ -76,7 +82,7 @@ export function SendWorkoutToSquad({
 
   if (sentTo) {
     return (
-      <p className="text-sm text-secondary">
+      <p className="w-full text-sm text-secondary">
         Sent to {sentTo}. It is on their My sessions page now.{' '}
         <button
           type="button"
@@ -96,17 +102,17 @@ export function SendWorkoutToSquad({
     return (
       <button
         type="button"
-        className="text-sm font-semibold text-accent disabled:text-muted"
+        className={triggerClassName}
         disabled={!ready}
         onClick={() => setOpen(true)}
       >
-        Send this to a squad friend
+        {triggerLabel}
       </button>
     );
   }
 
   return (
-    <div className="space-y-3 rounded-card bg-surface-muted p-4">
+    <div className="w-full space-y-3 rounded-card bg-surface-muted p-4">
       <label className="block space-y-1">
         <span className="text-sm font-semibold text-ink">Send to</span>
         <select

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { MySessionScoreBreakdownModal } from '@/components/MySessionScoreBreakdownModal';
 import { AssignedWorkoutsPanel } from '@/components/session/AssignedWorkoutsPanel';
+import { SendWorkoutToSquad } from '@/components/session/SendWorkoutToSquad';
 import { MyCampaignsPanel } from '@/components/campaign/MyCampaignsPanel';
 import {
   canDeleteMySession,
@@ -158,10 +159,17 @@ export default function MySessionsPage() {
                     View breakdown
                   </button>
                 ) : null}
+                <SendWorkoutToSquad
+                  durationMinutes={entry.durationMinutes}
+                  workout={entry.workout}
+                  ready={entry.workout.length > 0}
+                  triggerClassName="link-accent font-normal disabled:text-muted"
+                  triggerLabel="Send to a squad friend"
+                />
                 {canDeleteMySession(entry) ? (
                   <button
                     type="button"
-                    className="text-error"
+                    className="text-error ml-auto"
                     disabled={deletingSessionId === entry.sessionId}
                     onClick={() => void handleDelete(entry)}
                   >

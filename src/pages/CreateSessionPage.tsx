@@ -431,6 +431,7 @@ export default function CreateSessionPage() {
                   templateId={configuredWorkout.templateId}
                   intensityTier={configuredWorkout.intensityTier}
                   ready={configuredWorkout.movements.length > 0}
+                  triggerClassName="btn-outline w-full font-semibold"
                 />
               </div>
             </div>
