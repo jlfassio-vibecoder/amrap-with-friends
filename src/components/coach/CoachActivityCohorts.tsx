@@ -55,15 +55,20 @@ export function CoachActivityCohorts({ selectedUser, onSelect }: CoachActivityCo
     if (next === cohort) {
       return;
     }
-    setLoading(true);
+
     setCohort(next);
+
+    if (next === 'anon_now') {
+      setLoading(false);
+      setError(null);
+      setUsers([]);
+    } else {
+      setLoading(true);
+    }
   }
 
   useEffect(() => {
     if (cohort === 'anon_now') {
-      setLoading(false);
-      setError(null);
-      setUsers([]);
       return;
     }
 
