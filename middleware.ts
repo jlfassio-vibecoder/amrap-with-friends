@@ -10,15 +10,22 @@ const OG_ROUTES = new Set(['/join', '/campaign/join', '/squad/join']);
 /**
  * Everything except build output and files with an extension (`/favicon.ico`,
  * `/robots.txt`, `/audio/*.mp3`). Those are real static assets and must fall
- * through untouched.
+ * through untouched. `_app-shell` is the SPA HTML that `vercel.json` rewrites
+ * app routes onto — with `cleanUrls` the destination is `/_app-shell`, not
+ * `/_app-shell/index.html`, so the matcher must not treat it as unknown.
  */
 export const config = {
-  matcher: ['/((?!_vercel|assets/|.*\\.[a-zA-Z0-9]+$).*)'],
+  matcher: ['/((?!_vercel|assets/|_app-shell(?:/|$)|.*\\.[a-zA-Z0-9]+$).*)'],
 };
 
 export default function middleware(request: Request): Response | Promise<Response> {
   const url = new URL(request.url);
   const pathname = url.pathname;
+
+  // SPA shell file: vercel.json rewrites /create etc. here under cleanUrls.
+  if (pathname === '/_app-shell' || pathname.startsWith('/_app-shell/')) {
+    return next();
+  }
 
   // A catch-all rewrite to index.html answers every typo with HTTP 200 and an
   // empty shell. At the scale of an unbounded URL space that is a soft-404

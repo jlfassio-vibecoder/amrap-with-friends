@@ -37,6 +37,12 @@ describe('middleware', () => {
     expect(response.headers.get('x-robots-tag')).toBe('index, follow');
   });
 
+  it('lets the SPA shell through so cleanUrls rewrites can resolve', async () => {
+    const response = await middleware(request('/_app-shell'));
+    expect(response.status).not.toBe(404);
+    expect(response.headers.get('x-middleware-next')).toBe('1');
+  });
+
   it('marks private and ephemeral surfaces noindex without needing a render', async () => {
     for (const path of ['/rally-point/abc-123', '/mission/abc-123', '/hud', '/coach/wods']) {
       const response = await middleware(request(path));

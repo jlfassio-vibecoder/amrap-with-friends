@@ -139,10 +139,10 @@ describe('generatedContentPages', () => {
     expect(new Set(pages.map((page) => page.description)).size).toBe(pages.length);
   });
 
-  it('keeps descriptions inside the length a search result will show', () => {
+  it('keeps descriptions inside Bing and Google snippet length', () => {
     for (const page of pages) {
-      expect(page.description.length, page.path).toBeGreaterThan(70);
-      expect(page.description.length, page.path).toBeLessThan(200);
+      expect(page.description.length, page.path).toBeGreaterThanOrEqual(50);
+      expect(page.description.length, page.path).toBeLessThanOrEqual(160);
     }
   });
 
