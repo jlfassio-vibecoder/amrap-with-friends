@@ -33,7 +33,7 @@ const publishedIds = new Set(featuredWorkouts().map((template) => template.id));
 
 // What a given time cap actually asks of an athlete. This is the part of the
 // page that is not a list, and the reason the page is worth reading.
-const PACING: Record<number, string> = {
+const PACING: Record<TimeDomain, string> = {
   5: 'Five minutes is short enough to go out hard and hold on. There is no real pacing decision — pick a cadence you can sustain for the whole cap and start immediately. The cost of a slow first thirty seconds is a round you never get back.',
   10: 'Ten minutes is where pacing starts to matter. The first two rounds should feel comfortably fast rather than maximal; if you are already breathing raggedly at minute three, the back half will cost you more than the front half gained.',
   15: 'Fifteen minutes is a pacing test wearing a workout costume. Pick a round time you think you can repeat, then repeat it. Athletes who negative-split a fifteen — second half at the same pace or faster — almost always beat the ones who sprinted the opening.',

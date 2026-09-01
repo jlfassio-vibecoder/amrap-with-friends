@@ -52,6 +52,11 @@ describe('matchRoutePath', () => {
     // invite page must not be resolved as a campaign id.
     expect(resolveSeo('/campaign/join').title).toBe("You've been invited");
   });
+
+  it('matches style collections before the workout-detail pattern', () => {
+    expect(resolveSeo('/amrap-workouts/style/blood-shunt').title).toBe('AMRAP workout style');
+    expect(resolveSeo('/amrap-workouts/5-minute/the-hull-breach').title).toBe('AMRAP workout');
+  });
 });
 
 describe('resolveSeo', () => {

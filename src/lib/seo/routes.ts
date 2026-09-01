@@ -134,6 +134,14 @@ export const DYNAMIC_CONTENT_ROUTES: RouteSeo[] = [
     description: '',
     index: true,
   },
+  // Literal `style` before `:duration/:workoutSlug`, or `/amrap-workouts/style/x`
+  // would classify as a workout detail with duration "style".
+  {
+    path: '/amrap-workouts/style/:style',
+    title: 'AMRAP workout style',
+    description: '',
+    index: true,
+  },
   {
     path: '/amrap-workouts/:duration',
     title: 'AMRAP workouts',
