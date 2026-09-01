@@ -5,6 +5,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { WorkoutTemplatePicker } from '@/components/createMission/WorkoutTemplatePicker';
 import { SendWorkoutToSquad } from '@/components/mission/SendWorkoutToSquad';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
+import { useSmartRecovery } from '@/hooks/useSmartRecovery';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { useRallyPointForceNav } from '@/hooks/useRallyPointForceNav';
 import { useStaleRallyPointHostClaim } from '@/hooks/useStaleRallyPointHostClaim';
@@ -184,7 +185,18 @@ export default function RallyPointPage() {
   }, [rallyPoint, user?.id]);
 
   const isHost = Boolean(user?.id && rallyPoint && rallyPoint.hostUserId === user.id);
+  const smartRecovery = useSmartRecovery({ active: isHost });
   const displayError = actionError ?? error;
+
+  useEffect(() => {
+    if (
+      smartRecovery.enabled &&
+      selectedTemplateId &&
+      smartRecovery.locks.has(selectedTemplateId)
+    ) {
+      setSelectedTemplateId(null);
+    }
+  }, [smartRecovery.enabled, smartRecovery.locks, selectedTemplateId]);
 
   async function handlePassCommand(toUserId: string) {
     setActionError(null);
@@ -426,6 +438,13 @@ export default function RallyPointPage() {
                 durationMinutes={durationMinutes}
                 selectedCategory={selectedCategory}
                 selectedTemplateId={selectedTemplateId}
+                smartRecoveryEnabled={smartRecovery.enabled}
+                onSmartRecoveryEnabledChange={smartRecovery.setEnabled}
+                recoveryLocks={smartRecovery.locks}
+                smartRecoveryActive={smartRecovery.enabled && isAuthenticated}
+                smartRecoveryLoading={smartRecovery.loading}
+                smartRecoveryError={smartRecovery.error}
+                isAuthenticated={isAuthenticated}
                 onDurationChange={handleDurationChange}
                 onCategoryChange={(category) => {
                   setSelectedCategory(category);

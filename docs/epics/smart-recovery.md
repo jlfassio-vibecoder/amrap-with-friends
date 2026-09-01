@@ -359,6 +359,8 @@ export const SEVERE_INTENSITY_THRESHOLD = 4 as const;
 
 ## Phase 4 — Frontend UI (SPA library picker)
 
+**Status:** Complete — 2026-09-01. Hook [`useSmartRecovery.ts`](../../src/hooks/useSmartRecovery.ts); toggle [`SmartRecoveryToggle.tsx`](../../src/components/createMission/SmartRecoveryToggle.tsx); wired in [`CreateMissionPage.tsx`](../../src/pages/CreateMissionPage.tsx) and [`RallyPointPage.tsx`](../../src/pages/RallyPointPage.tsx).
+
 **Goal:** Toggle + locked cards on `/create` (and `/rally-point/:id` if it reuses the picker).
 
 ### 4.1 Hook: `useSmartRecovery`
@@ -415,7 +417,7 @@ Extend [`filterWorkoutTemplates.ts`](../../src/lib/workout/filterWorkoutTemplate
 - [ ] Manual: complete a tier-5 mission → tier 4/5 templates lock for 72h with toggle on
 - [ ] Manual: toggle off → immediate unlock
 - [ ] Manual: signed-out → no erroneous locks
-- [ ] Component tests for card locked vs unlocked click behavior
+- [x] Component tests for card locked vs unlocked click behavior
 
 ---
 
