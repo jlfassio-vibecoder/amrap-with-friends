@@ -124,6 +124,10 @@
     background-color: var(--color-surface-muted);
   }
 
+  .input-field-compact {
+    @apply input-field py-1.5 text-sm;
+  }
+
   .text-display {
     @apply font-display tracking-wide;
   }
