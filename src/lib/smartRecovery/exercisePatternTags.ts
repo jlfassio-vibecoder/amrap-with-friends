@@ -1,5 +1,5 @@
 /**
- * Phase 0 draft — merge into ExerciseInfo.primaryPatterns in Phase 1.
+ * Canonical movement-pattern tags keyed by exercise library id.
  *
  * Tagging rubric (primary mover under fatigue):
  * - upper-push: horizontal/vertical push (push-ups, dips, pike)
@@ -10,10 +10,9 @@
  *
  * Multi-pattern entries are allowed when two patterns share load equally.
  */
-import { EXERCISE_LIBRARY } from '@/data/exerciseLibrary';
 import type { MovementPattern } from '@/lib/smartRecovery/movementPatterns';
 
-export const DRAFT_EXERCISE_PATTERNS: Record<string, MovementPattern[]> = {
+export const EXERCISE_PATTERN_TAGS: Record<string, MovementPattern[]> = {
   burpees: ['full-body-conditioning'],
   'air-squat': ['lower-body'],
   'alternating-lunges': ['lower-body'],
@@ -88,16 +87,3 @@ export const DRAFT_EXERCISE_PATTERNS: Record<string, MovementPattern[]> = {
   'strict-reverse-lunges': ['lower-body'],
   'walking-lunges': ['lower-body'],
 };
-
-export function assertDraftCoversExerciseLibrary(): void {
-  const missing = EXERCISE_LIBRARY.map((entry) => entry.id).filter(
-    (id) => !(id in DRAFT_EXERCISE_PATTERNS)
-  );
-  if (missing.length > 0) {
-    throw new Error(`DRAFT_EXERCISE_PATTERNS missing exercise ids: ${missing.join(', ')}`);
-  }
-}
-
-export function draftPatternsForExerciseId(exerciseId: string): MovementPattern[] | undefined {
-  return DRAFT_EXERCISE_PATTERNS[exerciseId];
-}

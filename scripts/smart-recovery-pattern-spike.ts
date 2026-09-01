@@ -2,13 +2,12 @@
  * Phase 0 spike — compare category-only vs exercise-enriched template pattern coverage.
  * Run: npx tsx scripts/smart-recovery-pattern-spike.ts
  */
-import { getExerciseInfo } from '../src/data/exerciseLibrary.ts';
 import {
   WORKOUT_TEMPLATES,
   type WorkoutCategory,
   type WorkoutTemplate,
 } from '../src/data/workoutTemplates.ts';
-import { DRAFT_EXERCISE_PATTERNS } from '../src/lib/smartRecovery/draftExercisePatterns.ts';
+import { deriveTemplatePrimaryPatterns } from '../src/lib/smartRecovery/deriveTemplatePatterns.ts';
 import {
   CATEGORY_DEFAULT_PATTERNS,
   type MovementPattern,
@@ -42,27 +41,6 @@ function deriveCategoryOnlyPatterns(template: WorkoutTemplate): MovementPattern[
   return capToTop(CATEGORY_DEFAULT_PATTERNS[category]);
 }
 
-function deriveExerciseEnrichedPatterns(template: WorkoutTemplate): MovementPattern[] {
-  const counts = new Map<MovementPattern, number>();
-
-  for (const movement of template.movements) {
-    const exercise = getExerciseInfo(movement.name);
-    const patterns = exercise ? DRAFT_EXERCISE_PATTERNS[exercise.id] : undefined;
-    if (!patterns) {
-      continue;
-    }
-    for (const pattern of patterns) {
-      counts.set(pattern, (counts.get(pattern) ?? 0) + 1);
-    }
-  }
-
-  if (counts.size === 0) {
-    return deriveCategoryOnlyPatterns(template);
-  }
-
-  return topPatternsByFrequency(counts);
-}
-
 function formatPatterns(patterns: MovementPattern[]): string {
   return patterns.length > 0 ? patterns.join(', ') : '(empty)';
 }
@@ -87,7 +65,7 @@ function coverageReport(
 function main(): void {
   const templates = WORKOUT_TEMPLATES;
   const categoryOnly = coverageReport(templates, deriveCategoryOnlyPatterns);
-  const enriched = coverageReport(templates, deriveExerciseEnrichedPatterns);
+  const enriched = coverageReport(templates, deriveTemplatePrimaryPatterns);
 
   const mismatches: Array<{
     id: string;
@@ -99,7 +77,7 @@ function main(): void {
 
   for (const template of templates) {
     const categoryPatterns = deriveCategoryOnlyPatterns(template);
-    const enrichedPatterns = deriveExerciseEnrichedPatterns(template);
+    const enrichedPatterns = deriveTemplatePrimaryPatterns(template);
     const topCategory = categoryPatterns[0] ?? null;
     const topEnriched = enrichedPatterns[0] ?? null;
     if (topCategory !== topEnriched) {
@@ -123,7 +101,7 @@ function main(): void {
     const row = byCategory.get(key) ?? { total: 0, mismatches: 0, enrichedEmpty: 0 };
     row.total += 1;
     const categoryPatterns = deriveCategoryOnlyPatterns(template);
-    const enrichedPatterns = deriveExerciseEnrichedPatterns(template);
+    const enrichedPatterns = deriveTemplatePrimaryPatterns(template);
     if ((categoryPatterns[0] ?? null) !== (enrichedPatterns[0] ?? null)) {
       row.mismatches += 1;
     }

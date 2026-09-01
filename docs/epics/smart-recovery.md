@@ -178,6 +178,8 @@ Sample mismatches: *The Piston* (blood-shunt) → category `full-body-conditioni
 
 **Goal:** Structured tags so lock rules can run without NLP on movement names.
 
+**Status:** Complete — 2026-09-01. Canonical exercise tags live in [`exercisePatternTags.ts`](../../src/lib/smartRecovery/exercisePatternTags.ts); merged onto `ExerciseInfo.primaryPatterns` via `libEntry()` in the exercise library.
+
 ### 1.1 Exercise library
 
 Extend [`ExerciseInfo`](../../src/data/exerciseLibrary.ts):
@@ -226,8 +228,8 @@ Phase 5 — derive from `coach_workouts.movements` + coach exercise links, or re
 
 ### Exit criteria
 
-- [ ] `deriveTemplatePatterns.test.ts` covers each category + unknown exercise fallback
-- [ ] No changes to Supabase schema in Phase 1
+- [x] `deriveTemplatePatterns.test.ts` covers each category + unknown exercise fallback
+- [x] No changes to Supabase schema in Phase 1
 
 ---
 
