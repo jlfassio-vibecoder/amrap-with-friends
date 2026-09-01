@@ -237,6 +237,8 @@ Phase 5 — derive from `coach_workouts.movements` + coach exercise links, or re
 
 **Goal:** Slim, auth-scoped completion slice for lock calculation.
 
+**Status:** Complete — 2026-09-01. Migration [`20260902200000_smart_recovery_history.sql`](../../supabase/migrations/20260902200000_smart_recovery_history.sql); client wrapper [`smartRecovery.ts`](../../src/lib/api/smartRecovery.ts).
+
 ### 2.1 New RPC: `smart_recovery_history()`
 
 **Migration:** new file e.g. `supabase/migrations/YYYYMMDD_smart_recovery_history.sql`
@@ -275,9 +277,9 @@ Add `intensity_tier` and `completed_at` to `MyMissionEntry` for My Missions UI �
 
 ### Exit criteria
 
-- [ ] RPC + RLS: anon revoked, authenticated granted
-- [ ] SQL test or migration comment with example row shape
-- [ ] Client types + fetch wrapper
+- [x] RPC + RLS: anon revoked, authenticated granted
+- [x] SQL test or migration comment with example row shape
+- [x] Client types + fetch wrapper
 
 ---
 
