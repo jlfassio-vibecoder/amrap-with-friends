@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { AppLink } from '@/components/AppLink';
 import { AuthModal } from '@/components/AuthModal';
 import { EditRallyScheduleForm } from '@/components/mission/EditRallyScheduleForm';
 import {
@@ -114,9 +114,9 @@ export function HostScheduledMissionsPanel() {
                 />
               ) : (
                 <div className="flex flex-wrap items-center gap-3">
-                  <Link className="link-accent" to={`/mission/${entry.missionId}`}>
+                  <AppLink className="link-accent" to={`/mission/${entry.missionId}`}>
                     Enter rally point
-                  </Link>
+                  </AppLink>
                   <button
                     type="button"
                     className="link-accent"
@@ -133,9 +133,9 @@ export function HostScheduledMissionsPanel() {
 
       {isAuthenticated && !loading ? (
         <p className="text-sm">
-          <Link className="link-accent" to="/my-missions">
+          <AppLink className="link-accent" to="/my-missions">
             All my missions
-          </Link>
+          </AppLink>
         </p>
       ) : null}
 

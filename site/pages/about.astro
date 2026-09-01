@@ -1,0 +1,83 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { breadcrumbList, webApplication } from '@/lib/seo/structuredData';
+
+const jsonLd = [
+  webApplication(),
+  breadcrumbList([
+    { name: 'Home', path: '/' },
+    { name: 'About', path: '/about' },
+  ]),
+];
+---
+
+<BaseLayout jsonLd={jsonLd}>
+  <div class="mx-auto w-full max-w-[42rem] space-y-12 px-6 py-12 lg:px-10 lg:py-16">
+    <header class="space-y-4">
+      <p class="eyebrow text-accent">About</p>
+      <h1 class="text-display text-[clamp(2.5rem,7vw,4rem)] leading-[0.9] text-ink">
+        Built for training together
+      </h1>
+    </header>
+
+    <section class="space-y-4">
+      <p class="text-base leading-[1.7] text-secondary">
+        Every workout timer we could find was built for one person. You start your clock, your
+        friend starts theirs, and the two drift apart within a minute. Comparing scores afterwards
+        means trusting that everyone really did start at the same moment and really did count the
+        same way.
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        AMRAP With Friends puts everyone on one clock. The host sets the mission, shares a rally
+        link, and every phone that opens it counts down together — reconciled in real time so no
+        device runs ahead. Rounds are logged with a single tap and the leaderboard updates while you
+        are still working.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-[clamp(1.75rem,4vw,2.5rem)] leading-[0.95] text-ink">
+        What you get
+      </h2>
+      <ul class="space-y-3 text-base leading-[1.7] text-secondary">
+        <li>
+          <strong class="font-semibold text-ink">A synced countdown.</strong> One clock for the whole
+          crew, whether you are in the same gym or three time zones apart.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">A live leaderboard.</strong> Log a round with one tap
+          and watch the board move.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">A real workout library.</strong> Programmed AMRAPs across
+          5, 10, 15 and 20 minute time domains, with coaching cues for every movement.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">Campaigns.</strong> Multi-week programmes that open with
+          a benchmark workout and retest it later, so you can see whether the work actually moved the
+          number.
+        </li>
+      </ul>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-[clamp(1.75rem,4vw,2.5rem)] leading-[0.95] text-ink">
+        Start a mission
+      </h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        Setting one up takes about a minute, and the people you invite do not need an account to
+        join.
+      </p>
+      <div class="flex flex-wrap gap-3">
+        <a
+          class="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
+          href="/create">Create mission</a
+        >
+        <a
+          class="rounded-card border border-border bg-surface px-6 py-3.5 font-semibold text-ink"
+          href="/amrap-timer">Try the free timer</a
+        >
+      </div>
+    </section>
+  </div>
+</BaseLayout>

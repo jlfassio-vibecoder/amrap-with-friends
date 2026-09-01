@@ -1,10 +1,10 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import HomePage from './pages/HomePage';
 import { FeaturedWodCard } from '@/components/home/FeaturedWodCard';
 import { GlobalPresenceBroadcaster } from '@/components/GlobalPresenceBroadcaster';
 import { RequireIntake } from '@/components/RequireIntake';
 import { RequireCoach } from '@/components/RequireCoach';
+import { useSeo } from '@/hooks/useSeo';
 
 const CreateMissionPage = lazy(() => import('./pages/CreateMissionPage'));
 const JoinMissionPage = lazy(() => import('./pages/JoinMissionPage'));
@@ -21,6 +21,7 @@ const IntakePage = lazy(() => import('./pages/IntakePage'));
 const CoachPage = lazy(() => import('./pages/CoachPage'));
 const CoachWodsPage = lazy(() => import('./pages/CoachWodsPage'));
 const TimerDevPage = lazy(() => import('./pages/dev/TimerDevPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 function RouteFallback() {
   return (
@@ -31,12 +32,13 @@ function RouteFallback() {
 }
 
 function App() {
+  useSeo();
+
   return (
     <>
       <GlobalPresenceBroadcaster />
       <Suspense fallback={<RouteFallback />}>
         <Routes>
-          <Route path="/" element={<HomePage />} />
           <Route
             path="/create"
             element={
@@ -119,6 +121,7 @@ function App() {
             }
           />
           {import.meta.env.DEV && <Route path="/dev/timer" element={<TimerDevPage />} />}
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
     </>

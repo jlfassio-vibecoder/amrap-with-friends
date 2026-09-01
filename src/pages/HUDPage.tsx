@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { AppLink } from '@/components/AppLink';
 import { AppHeader } from '@/components/AppHeader';
 import { ActivityAttributionCard } from '@/components/hud/ActivityAttributionCard';
 import { AttritionGrid } from '@/components/hud/AttritionGrid';
@@ -146,9 +147,9 @@ export default function HUDPage() {
               Edit dossier
             </Link>
           ) : null}
-          <Link className="link-accent" to="/">
+          <AppLink className="link-accent" to="/">
             Back home
-          </Link>
+          </AppLink>
         </p>
       </div>
     </main>
