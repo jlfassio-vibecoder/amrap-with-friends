@@ -116,9 +116,14 @@ const jsonLd = [webApplication(), faqPage(faqs)];
     </section>
 
     <div class="mx-auto w-full max-w-[1240px] px-6 pb-14 lg:px-10 lg:pb-20">
-      <div class="rounded-card border border-night-border bg-surface p-5 text-ink shadow-card">
-        <ScheduledMissions client:only="react" />
-      </div>
+      {
+        /*
+        Card chrome lives inside the island. client:only leaves an empty shell
+        until React mounts — a filled card here was a permanent blank bar when
+        the visitor is signed out or the island is still loading.
+      */
+      }
+      <ScheduledMissions client:only="react" />
     </div>
   </div>
 
