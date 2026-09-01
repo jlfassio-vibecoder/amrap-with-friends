@@ -1,5 +1,7 @@
 import type { SmartRecoveryHistoryEntry } from '@/lib/api/smartRecovery';
+import type { PublishedCoachWorkout } from '@/lib/api/coachWod';
 import type { WorkoutTemplate } from '@/data/workoutTemplates';
+import { coachWorkoutLockId } from '@/lib/smartRecovery/deriveCoachWorkoutPatterns';
 import type { MovementPattern } from '@/lib/smartRecovery/movementPatterns';
 import {
   EXACT_MATCH_LOCK_MS,
@@ -20,12 +22,35 @@ export type TemplateRecoveryLock = {
   pattern?: MovementPattern;
 };
 
+export type RecoveryLockTarget = {
+  id: string;
+  intensityTier: number;
+};
+
 type RecoveryLockCandidate = {
   templateId: string;
   reason: RecoveryLockReason;
   expiresAt: Date;
   pattern?: MovementPattern;
 };
+
+export function recoveryLockTargetsFromTemplates(
+  templates: WorkoutTemplate[]
+): RecoveryLockTarget[] {
+  return templates.map((template) => ({
+    id: template.id,
+    intensityTier: template.intensityTier,
+  }));
+}
+
+export function recoveryLockTargetsFromCoachWorkouts(
+  workouts: PublishedCoachWorkout[]
+): RecoveryLockTarget[] {
+  return workouts.map((workout) => ({
+    id: coachWorkoutLockId(workout.id),
+    intensityTier: workout.intensityTier,
+  }));
+}
 
 function patternsOverlap(
   templatePatterns: MovementPattern[],
@@ -90,14 +115,14 @@ function mergeCandidatesForTemplate(
 
 function buildRecoveryLockCandidates(
   completion: SmartRecoveryHistoryEntry,
-  templates: WorkoutTemplate[],
+  targets: RecoveryLockTarget[],
   patternIndex: Map<string, MovementPattern[]>,
-  libraryTemplateIds: Set<string>
+  lockableIds: Set<string>
 ): RecoveryLockCandidate[] {
   const candidates: RecoveryLockCandidate[] = [];
   const completedAt = completion.completedAt;
 
-  if (completion.templateId && libraryTemplateIds.has(completion.templateId)) {
+  if (completion.templateId && lockableIds.has(completion.templateId)) {
     candidates.push({
       templateId: completion.templateId,
       reason: 'exact-match',
@@ -107,10 +132,10 @@ function buildRecoveryLockCandidates(
 
   if (completion.intensityTier >= SEVERE_INTENSITY_THRESHOLD) {
     const severeExpiresAt = lockExpiresAt(completedAt, SEVERE_INTENSITY_LOCK_MS);
-    for (const template of templates) {
-      if (template.intensityTier >= SEVERE_INTENSITY_THRESHOLD) {
+    for (const target of targets) {
+      if (target.intensityTier >= SEVERE_INTENSITY_THRESHOLD) {
         candidates.push({
-          templateId: template.id,
+          templateId: target.id,
           reason: 'severe-intensity',
           expiresAt: severeExpiresAt,
         });
@@ -124,11 +149,11 @@ function buildRecoveryLockCandidates(
   if (historicalPatterns && historicalPatterns.length > 0) {
     const patternExpiresAt = lockExpiresAt(completedAt, MOVEMENT_PATTERN_LOCK_MS);
     for (const historicalPattern of historicalPatterns) {
-      for (const template of templates) {
-        const templatePatterns = patternIndex.get(template.id) ?? [];
-        if (patternsOverlap(templatePatterns, [historicalPattern])) {
+      for (const target of targets) {
+        const targetPatterns = patternIndex.get(target.id) ?? [];
+        if (patternsOverlap(targetPatterns, [historicalPattern])) {
           candidates.push({
-            templateId: template.id,
+            templateId: target.id,
             reason: 'movement-pattern',
             expiresAt: patternExpiresAt,
             pattern: historicalPattern,
@@ -143,20 +168,15 @@ function buildRecoveryLockCandidates(
 
 export function computeRecoveryLocks(
   completions: SmartRecoveryHistoryEntry[],
-  templates: WorkoutTemplate[],
+  targets: RecoveryLockTarget[],
   now: Date,
   patternIndex: Map<string, MovementPattern[]>
 ): Map<string, TemplateRecoveryLock> {
-  const libraryTemplateIds = new Set(templates.map((template) => template.id));
+  const lockableIds = new Set(targets.map((target) => target.id));
   const candidatesByTemplate = new Map<string, RecoveryLockCandidate[]>();
 
   for (const completion of completions) {
-    const candidates = buildRecoveryLockCandidates(
-      completion,
-      templates,
-      patternIndex,
-      libraryTemplateIds
-    );
+    const candidates = buildRecoveryLockCandidates(completion, targets, patternIndex, lockableIds);
 
     for (const candidate of candidates) {
       const existing = candidatesByTemplate.get(candidate.templateId) ?? [];

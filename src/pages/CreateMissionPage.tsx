@@ -31,6 +31,7 @@ import { quotasFromProfile } from '@/lib/hud/classificationQuotas';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { useHudTelemetry } from '@/hooks/useHudTelemetry';
 import { useSmartRecovery } from '@/hooks/useSmartRecovery';
+import { coachWorkoutLockId } from '@/lib/smartRecovery/deriveCoachWorkoutPatterns';
 import { firstAvailableCategoryForDuration } from '@/lib/workout/filterWorkoutTemplates';
 import { CUSTOM_WORKOUT_INTENSITY_TIER } from '@/lib/workout/resolveTemplateIntensity';
 import { applyTemplate } from '@/lib/workout/templateToExercises';
@@ -65,7 +66,9 @@ export default function CreateMissionPage() {
   const quotas = quotasFromProfile(profile);
   const [intakeNotices, setIntakeNotices] = useState<string[]>([]);
   const [workoutSource, setWorkoutSource] = useState<WorkoutSource>('library');
-  const smartRecovery = useSmartRecovery({ active: workoutSource === 'library' });
+  const smartRecovery = useSmartRecovery({
+    active: workoutSource === 'library' || workoutSource === 'coach',
+  });
   const [nickname, setNickname] = useState('');
   const [durationMinutes, setDurationMinutes] = useState<number>(5);
   const [selectedCategory, setSelectedCategory] = useState<WorkoutCategory>('blood-shunt');
@@ -182,8 +185,16 @@ export default function CreateMissionPage() {
     }
   }, [smartRecovery.enabled, smartRecovery.locks, selectedTemplateId]);
 
-  // What Start would send. Derived once so sending a workout to a squad friend
-  // and starting it here can never disagree about what "it" is.
+  useEffect(() => {
+    if (!smartRecovery.enabled || !selectedCoachWorkout) {
+      return;
+    }
+    if (smartRecovery.locks.has(coachWorkoutLockId(selectedCoachWorkout.id))) {
+      setSelectedCoachWorkout(null);
+    }
+  }, [smartRecovery.enabled, smartRecovery.locks, selectedCoachWorkout]);
+
+  // What Start would send.
   const configuredWorkout = useMemo(() => {
     let movements: ReturnType<typeof parseWorkoutText> = [];
     try {
@@ -418,6 +429,13 @@ export default function CreateMissionPage() {
                 ) : (
                   <CoachWodPicker
                     selectedWorkoutId={selectedCoachWorkout?.id ?? null}
+                    smartRecoveryEnabled={smartRecovery.enabled}
+                    onSmartRecoveryEnabledChange={smartRecovery.setEnabled}
+                    recoveryLocks={smartRecovery.locks}
+                    smartRecoveryActive={smartRecovery.enabled && isAuthenticated}
+                    smartRecoveryLoading={smartRecovery.loading}
+                    smartRecoveryError={smartRecovery.error}
+                    isAuthenticated={isAuthenticated}
                     onSelect={handleCoachWorkoutSelect}
                   />
                 )}

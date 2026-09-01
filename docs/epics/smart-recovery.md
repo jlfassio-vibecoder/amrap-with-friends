@@ -423,6 +423,8 @@ Extend [`filterWorkoutTemplates.ts`](../../src/lib/workout/filterWorkoutTemplate
 
 ## Phase 5 — Coach library & edge cases
 
+**Status:** Complete — 2026-09-01. Coach pattern derivation in [`deriveCoachWorkoutPatterns.ts`](../../src/lib/smartRecovery/deriveCoachWorkoutPatterns.ts); generalized lock targets in [`computeRecoveryLocks.ts`](../../src/lib/smartRecovery/computeRecoveryLocks.ts); coach picker wired in [`CoachWodPicker.tsx`](../../src/components/createMission/CoachWodPicker.tsx).
+
 **Goal:** Parity for coach-authored templates and harden edge cases.
 
 | Item | Approach |
@@ -435,8 +437,8 @@ Extend [`filterWorkoutTemplates.ts`](../../src/lib/workout/filterWorkoutTemplate
 
 ### Exit criteria
 
-- [ ] Coach workout completion triggers severe-intensity lock
-- [ ] Documented limitations in this epic’s “Known limits” section
+- [x] Coach workout completion triggers severe-intensity lock
+- [x] Documented limitations in this epic’s “Known limits” section
 
 ---
 
@@ -464,10 +466,13 @@ Run `npm run lint && npm run typecheck && npm run test` each phase.
 ## Known limits (v1)
 
 - **Advisory only** — no enforcement in `create_mission()` RPC
-- **Library templates only** on `/create` — coach picker in Phase 5
+- **Create-flow pickers only** — library and coach tabs on `/create`, plus library picker on Next Mission (`/rally-point/:id` host); campaign-assigned missions and featured flows are not gated
 - **Auth required** — guest completions invisible until claim
-- **Pattern accuracy** depends on exercise tagging quality
-- **No tier-1 library templates** today (0 in catalog) — pattern/ intensity locks still work; “recovery workout” recommendations are a separate feature
+- **Pattern accuracy** depends on exercise tagging quality; coach workouts derive patterns from movement names and linked exercise names (no category fallback)
+- **Custom workouts** (`template_id: null`) — no exact-match lock; severe-intensity still applies when `intensity_tier >= 4` was snapshotted on the mission
+- **`physical_activity_log`** — out of scope v1; only locked AMRAP missions feed history
+- **Lock windows** compare UTC instants (`completedAt` timestamptz vs `now`) — no local-calendar rounding
+- **No tier-1 library templates** today (0 in catalog) — pattern/intensity locks still work; “recovery workout” recommendations are a separate feature
 - **Toggle persistence** is localStorage only — clearing browser data resets preference
 
 ---

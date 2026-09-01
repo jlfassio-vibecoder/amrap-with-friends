@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { SmartRecoveryHistoryEntry } from '@/lib/api/smartRecovery';
 import type { WorkoutTemplate } from '@/data/workoutTemplates';
 import type { MovementPattern } from '@/lib/smartRecovery/movementPatterns';
-import { computeRecoveryLocks } from './computeRecoveryLocks';
+import { computeRecoveryLocks, recoveryLockTargetsFromTemplates } from './computeRecoveryLocks';
+import { coachWorkoutLockId } from './deriveCoachWorkoutPatterns';
 import {
   EXACT_MATCH_LOCK_MS,
   MOVEMENT_PATTERN_LOCK_MS,
@@ -48,6 +49,8 @@ describe('computeRecoveryLocks', () => {
     template('the-baseline', 4),
   ];
 
+  const targets = recoveryLockTargetsFromTemplates(templates);
+
   const index = patternIndex({
     'the-piston': ['lower-body', 'upper-push'],
     'the-gas-pedal': ['full-body-conditioning'],
@@ -56,13 +59,13 @@ describe('computeRecoveryLocks', () => {
   });
 
   it('returns an empty map for empty completion history', () => {
-    expect(computeRecoveryLocks([], templates, BASE_TIME, index).size).toBe(0);
+    expect(computeRecoveryLocks([], targets, BASE_TIME, index).size).toBe(0);
   });
 
   it('locks only the exact-match template', () => {
     const locks = computeRecoveryLocks(
       [completion({ templateId: 'the-piston', completedAt: '2026-09-01T10:00:00.000Z' })],
-      templates,
+      targets,
       BASE_TIME,
       index
     );
@@ -74,7 +77,7 @@ describe('computeRecoveryLocks', () => {
   it('does not exact-match a different library template', () => {
     const locks = computeRecoveryLocks(
       [completion({ templateId: 'the-piston', completedAt: '2026-09-01T10:00:00.000Z' })],
-      templates,
+      targets,
       BASE_TIME,
       index
     );
@@ -86,7 +89,7 @@ describe('computeRecoveryLocks', () => {
     const completedAt = '2026-08-26T12:00:00.000Z';
     const locks = computeRecoveryLocks(
       [completion({ templateId: 'the-piston', completedAt })],
-      templates,
+      targets,
       new Date(new Date(completedAt).getTime() + EXACT_MATCH_LOCK_MS),
       index
     );
@@ -103,7 +106,7 @@ describe('computeRecoveryLocks', () => {
           completedAt: '2026-09-01T10:00:00.000Z',
         }),
       ],
-      templates,
+      targets,
       BASE_TIME,
       index
     );
@@ -128,7 +131,7 @@ describe('computeRecoveryLocks', () => {
           completedAt: '2026-09-01T10:00:00.000Z',
         }),
       ],
-      templates,
+      targets,
       BASE_TIME,
       isolatedIndex
     );
@@ -147,7 +150,7 @@ describe('computeRecoveryLocks', () => {
           completedAt,
         }),
       ],
-      templates,
+      targets,
       new Date(new Date(completedAt).getTime() + SEVERE_INTENSITY_LOCK_MS),
       index
     );
@@ -164,7 +167,7 @@ describe('computeRecoveryLocks', () => {
           completedAt: '2026-09-01T10:00:00.000Z',
         }),
       ],
-      templates,
+      targets,
       BASE_TIME,
       index
     );
@@ -181,7 +184,7 @@ describe('computeRecoveryLocks', () => {
           completedAt: '2026-09-01T10:00:00.000Z',
         }),
       ],
-      templates,
+      targets,
       BASE_TIME,
       index
     );
@@ -198,7 +201,7 @@ describe('computeRecoveryLocks', () => {
           completedAt,
         }),
       ],
-      templates,
+      targets,
       new Date(new Date(completedAt).getTime() + MOVEMENT_PATTERN_LOCK_MS),
       index
     );
@@ -215,7 +218,7 @@ describe('computeRecoveryLocks', () => {
           completedAt: '2026-09-01T10:00:00.000Z',
         }),
       ],
-      templates,
+      targets,
       BASE_TIME,
       index
     );
@@ -236,7 +239,7 @@ describe('computeRecoveryLocks', () => {
           completedAt: '2026-09-01T10:00:00.000Z',
         }),
       ],
-      templates,
+      targets,
       BASE_TIME,
       index
     );
@@ -253,7 +256,7 @@ describe('computeRecoveryLocks', () => {
           completedAt: '2026-09-01T10:00:00.000Z',
         }),
       ],
-      templates,
+      targets,
       BASE_TIME,
       index
     );
@@ -271,7 +274,7 @@ describe('computeRecoveryLocks', () => {
           completedAt: '2026-09-01T10:00:00.000Z',
         }),
       ],
-      templates,
+      targets,
       BASE_TIME,
       index
     );
@@ -292,7 +295,7 @@ describe('computeRecoveryLocks', () => {
           completedAt: '2026-09-01T10:00:00.000Z',
         }),
       ],
-      templates,
+      targets,
       BASE_TIME,
       index
     );
@@ -311,7 +314,7 @@ describe('computeRecoveryLocks', () => {
           completedAt: '2026-09-01T10:00:00.000Z',
         }),
       ],
-      templates,
+      targets,
       BASE_TIME,
       index
     );
@@ -319,5 +322,102 @@ describe('computeRecoveryLocks', () => {
     const lock = locks.get('the-baseline');
     expect(lock?.reason).toBe('movement-pattern');
     expect(lock?.pattern).toBe('core');
+  });
+
+  it('locks coach tier-4+ targets after a coach tier-5 completion', () => {
+    const coachId = '550e8400-e29b-41d4-a716-446655440000';
+    const coachTargets = [
+      ...targets,
+      { id: coachWorkoutLockId(coachId), intensityTier: 5 },
+      { id: coachWorkoutLockId('other-coach'), intensityTier: 3 },
+    ];
+
+    const locks = computeRecoveryLocks(
+      [
+        completion({
+          templateId: coachWorkoutLockId(coachId),
+          intensityTier: 5,
+          completedAt: '2026-09-01T10:00:00.000Z',
+        }),
+      ],
+      coachTargets,
+      BASE_TIME,
+      index
+    );
+
+    expect(locks.get(coachWorkoutLockId(coachId))?.reason).toBe('exact-match');
+    expect(locks.get(coachWorkoutLockId('other-coach'))).toBeUndefined();
+    expect(locks.get('the-stronghold')?.reason).toBe('severe-intensity');
+  });
+
+  it('exact-matches a coach completion to the same coach target only', () => {
+    const coachId = '550e8400-e29b-41d4-a716-446655440000';
+    const coachTargets = [
+      { id: coachWorkoutLockId(coachId), intensityTier: 3 },
+      { id: coachWorkoutLockId('other-coach'), intensityTier: 3 },
+    ];
+
+    const locks = computeRecoveryLocks(
+      [
+        completion({
+          templateId: coachWorkoutLockId(coachId),
+          intensityTier: 3,
+          completedAt: '2026-09-01T10:00:00.000Z',
+        }),
+      ],
+      coachTargets,
+      BASE_TIME,
+      index
+    );
+
+    expect(locks.get(coachWorkoutLockId(coachId))?.reason).toBe('exact-match');
+    expect(locks.get(coachWorkoutLockId('other-coach'))).toBeUndefined();
+  });
+
+  it('pattern-locks coach targets from a library completion', () => {
+    const coachTargets = [...targets, { id: coachWorkoutLockId('coach-core'), intensityTier: 3 }];
+    const mergedIndex = patternIndex({
+      ...Object.fromEntries(index),
+      [coachWorkoutLockId('coach-core')]: ['core', 'upper-push'],
+    });
+
+    const locks = computeRecoveryLocks(
+      [
+        completion({
+          templateId: 'the-stronghold',
+          intensityTier: 3,
+          completedAt: '2026-09-01T10:00:00.000Z',
+        }),
+      ],
+      coachTargets,
+      BASE_TIME,
+      mergedIndex
+    );
+
+    expect(locks.get(coachWorkoutLockId('coach-core'))?.reason).toBe('movement-pattern');
+  });
+
+  it('pattern-locks library targets from a coach completion', () => {
+    const coachId = '550e8400-e29b-41d4-a716-446655440000';
+    const coachTargets = [...targets, { id: coachWorkoutLockId(coachId), intensityTier: 3 }];
+    const mergedIndex = patternIndex({
+      ...Object.fromEntries(index),
+      [coachWorkoutLockId(coachId)]: ['lower-body', 'core'],
+    });
+
+    const locks = computeRecoveryLocks(
+      [
+        completion({
+          templateId: coachWorkoutLockId(coachId),
+          intensityTier: 3,
+          completedAt: '2026-09-01T10:00:00.000Z',
+        }),
+      ],
+      coachTargets,
+      BASE_TIME,
+      mergedIndex
+    );
+
+    expect(locks.get('the-piston')?.reason).toBe('movement-pattern');
   });
 });

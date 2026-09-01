@@ -7,9 +7,14 @@ import {
 } from '@/lib/smartRecovery/smartRecoveryPrefs';
 
 const fetchSmartRecoveryHistory = vi.fn();
+const fetchPublishedCoachWorkouts = vi.fn();
 
 vi.mock('@/lib/api/smartRecovery', () => ({
   fetchSmartRecoveryHistory: (...args: unknown[]) => fetchSmartRecoveryHistory(...args),
+}));
+
+vi.mock('@/lib/api/coachWod', () => ({
+  fetchPublishedCoachWorkouts: (...args: unknown[]) => fetchPublishedCoachWorkouts(...args),
 }));
 
 vi.mock('@/hooks/useAmrapAuth', () => ({
@@ -24,6 +29,8 @@ describe('useSmartRecovery', () => {
   beforeEach(() => {
     resetSmartRecoveryPrefs();
     fetchSmartRecoveryHistory.mockReset();
+    fetchPublishedCoachWorkouts.mockReset();
+    fetchPublishedCoachWorkouts.mockResolvedValue({ data: [], error: null });
     mockUseAmrapAuth.mockReturnValue({
       user: { id: 'user-1', email: 'athlete@example.com' } as import('@supabase/supabase-js').User,
       session: null,
@@ -71,6 +78,7 @@ describe('useSmartRecovery', () => {
 
     await waitFor(() => {
       expect(fetchSmartRecoveryHistory).toHaveBeenCalledTimes(1);
+      expect(fetchPublishedCoachWorkouts).toHaveBeenCalledTimes(1);
       expect(result.current.loading).toBe(false);
     });
   });
