@@ -1,17 +1,8 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { validatePasswordLength } from '@/lib/auth/passwordPolicy';
 import { isMagicLinkAuthEnabled } from '@/lib/auth/authFeatures';
 import { getSupabaseClient } from '@/lib/supabase';
-import {
-  AmrapAuthContext,
-  type AmrapAuthContextValue,
-} from '@/contexts/AmrapAuthContext';
+import { AmrapAuthContext, type AmrapAuthContextValue } from '@/contexts/AmrapAuthContext';
 
 function trimEmail(email: string): string {
   return email.trim();
@@ -23,25 +14,49 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
-    const supabase = getSupabaseClient();
     let initialResolved = false;
+    let subscription: { unsubscribe: () => void } | undefined;
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
-
-      // Resolve loading on the first auth event so UI is never stuck waiting for
-      // INITIAL_SESSION alone (SIGNED_IN / TOKEN_REFRESHED can arrive first).
+    const resolveLoading = () => {
       if (!initialResolved) {
         initialResolved = true;
         setIsAuthLoading(false);
       }
-    });
+    };
+
+    try {
+      const supabase = getSupabaseClient();
+
+      void supabase.auth
+        .getSession()
+        .then(({ data: { session: initialSession } }) => {
+          setSession(initialSession);
+          setUser(initialSession?.user ?? null);
+          resolveLoading();
+        })
+        .catch(() => {
+          setSession(null);
+          setUser(null);
+          resolveLoading();
+        });
+
+      const {
+        data: { subscription: authSubscription },
+      } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+        setSession(nextSession);
+        setUser(nextSession?.user ?? null);
+
+        // Resolve loading on the first auth event so UI is never stuck waiting for
+        // INITIAL_SESSION alone (SIGNED_IN / TOKEN_REFRESHED can arrive first).
+        resolveLoading();
+      });
+      subscription = authSubscription;
+    } catch {
+      resolveLoading();
+    }
 
     return () => {
-      subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
   }, []);
 
@@ -142,8 +157,7 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
       return { error: error.message, needsEmailConfirmation: false };
     }
 
-    const pendingEmail =
-      typeof data.user?.new_email === 'string' && data.user.new_email.length > 0;
+    const pendingEmail = typeof data.user?.new_email === 'string' && data.user.new_email.length > 0;
 
     return {
       error: null,
@@ -198,7 +212,5 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
     ]
   );
 
-  return (
-    <AmrapAuthContext.Provider value={value}>{children}</AmrapAuthContext.Provider>
-  );
+  return <AmrapAuthContext.Provider value={value}>{children}</AmrapAuthContext.Provider>;
 }

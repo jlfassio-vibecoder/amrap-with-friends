@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
-import { AuthModal } from './AuthModal';
+import { AuthForm } from './AuthForm';
 
 const authState = vi.hoisted(() => ({
   isAuthenticated: false,
@@ -28,11 +28,11 @@ afterEach(() => {
   isMagicLinkAuthEnabledMock.mockReturnValue(true);
 });
 
-describe('AuthModal', () => {
+describe('AuthForm', () => {
   it('shows magic link and password tabs when magic link is enabled', () => {
     isMagicLinkAuthEnabledMock.mockReturnValue(true);
 
-    render(<AuthModal onClose={() => {}} />);
+    render(<AuthForm showHeading />);
 
     expect(screen.getByRole('tab', { name: 'Magic link' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Password' })).toBeTruthy();
@@ -42,7 +42,7 @@ describe('AuthModal', () => {
   it('shows password-only sign-in when magic link is disabled', () => {
     isMagicLinkAuthEnabledMock.mockReturnValue(false);
 
-    render(<AuthModal onClose={() => {}} />);
+    render(<AuthForm showHeading />);
 
     expect(screen.queryByRole('tab', { name: 'Magic link' })).toBeNull();
     expect(screen.queryByText('Email and password')).toBeNull();
@@ -57,10 +57,31 @@ describe('AuthModal', () => {
   it('opens on create-account password mode when requested', () => {
     isMagicLinkAuthEnabledMock.mockReturnValue(false);
 
-    render(<AuthModal onClose={() => {}} initialPasswordMode="sign-up" />);
+    render(<AuthForm showHeading initialPasswordMode="sign-up" />);
 
     expect(screen.getByRole('heading', { name: 'Create account' })).toBeTruthy();
     const createButtons = screen.getAllByRole('button', { name: 'Create account' });
     expect(createButtons.some((button) => button.getAttribute('type') === 'submit')).toBe(true);
+  });
+
+  it('compact variant uses a segmented pill toggle for sign-in mode', () => {
+    isMagicLinkAuthEnabledMock.mockReturnValue(false);
+
+    render(<AuthForm variant="compact" showAuthMethodSelector={false} />);
+
+    expect(screen.getByRole('tablist', { name: 'Account action' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Sign in' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Create account' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Sign in' }).getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('compact variant uses placeholders and hides the password length hint', () => {
+    isMagicLinkAuthEnabledMock.mockReturnValue(false);
+
+    render(<AuthForm variant="compact" showAuthMethodSelector={false} />);
+
+    expect(screen.getByPlaceholderText('Email')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Password (6+ characters)')).toBeTruthy();
+    expect(screen.queryByText('At least 6 characters.')).toBeNull();
   });
 });
