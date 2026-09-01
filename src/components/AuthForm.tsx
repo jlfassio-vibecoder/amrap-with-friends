@@ -250,14 +250,14 @@ export function AuthForm({
       ) : null}
 
       {magicLinkEnabled && authMethod === 'magic-link' ? (
-        <form className="space-y-3" onSubmit={handleMagicLinkSubmit}>
+        <form className={passwordFormSpacing} onSubmit={handleMagicLinkSubmit}>
           <label className="block space-y-1 text-sm">
             <span className="font-semibold">Email</span>
             <input
               type="email"
               required
               autoComplete="email"
-              className="input-field"
+              className={inputClass}
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               disabled={isBusy || isSuccessLocked}
@@ -272,7 +272,7 @@ export function AuthForm({
 
           <button
             type="submit"
-            className="btn-neutral w-full text-sm"
+            className={submitClass}
             disabled={isBusy || isSuccessLocked}
           >
             {isBusy ? 'Sending…' : 'Send magic link'}

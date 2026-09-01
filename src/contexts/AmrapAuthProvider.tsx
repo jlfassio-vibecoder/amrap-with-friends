@@ -27,11 +27,18 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
     try {
       const supabase = getSupabaseClient();
 
-      void supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
-        setSession(initialSession);
-        setUser(initialSession?.user ?? null);
-        resolveLoading();
-      });
+      void supabase.auth
+        .getSession()
+        .then(({ data: { session: initialSession } }) => {
+          setSession(initialSession);
+          setUser(initialSession?.user ?? null);
+          resolveLoading();
+        })
+        .catch(() => {
+          setSession(null);
+          setUser(null);
+          resolveLoading();
+        });
 
       const {
         data: { subscription: authSubscription },

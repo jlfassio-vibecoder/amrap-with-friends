@@ -18,7 +18,11 @@ export default function HeroBelowLogo() {
 }
 
 function HeroBelowLogoGate() {
-  const { isAuthenticated } = useAmrapAuth();
+  const { isAuthenticated, isAuthLoading } = useAmrapAuth();
+
+  if (isAuthLoading) {
+    return null;
+  }
 
   return (
     <div className={CARD_CLASS}>
