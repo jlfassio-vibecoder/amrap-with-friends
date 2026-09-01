@@ -132,4 +132,11 @@ describe('ROUTE_SEO', () => {
     const titles = ROUTE_SEO.filter((r) => r.index && !isRoutePattern(r.path)).map((r) => r.title);
     expect(new Set(titles).size).toBe(titles.length);
   });
+
+  it('keeps hand-written indexable descriptions in the 50–160 character band Bing expects', () => {
+    for (const route of ROUTE_SEO.filter((r) => r.index && !isRoutePattern(r.path))) {
+      expect(route.description.length, route.path).toBeGreaterThanOrEqual(50);
+      expect(route.description.length, route.path).toBeLessThanOrEqual(160);
+    }
+  });
 });

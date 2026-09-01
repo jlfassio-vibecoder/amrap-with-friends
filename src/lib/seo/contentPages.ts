@@ -29,8 +29,8 @@ const norm = (name: string) =>
     .trim()
     .toLowerCase();
 
-/** Google shows roughly 155-160 characters; past ~185 the tail is certainly cut. */
-const MAX_DESCRIPTION = 185;
+/** Bing and Google both prefer ~50–160 characters; we clamp at Bing's upper bound. */
+const MAX_DESCRIPTION = 160;
 
 /** Trim to a word boundary rather than mid-word, and never leave dangling punctuation. */
 export function clampDescription(text: string): string {
