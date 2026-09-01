@@ -1,0 +1,181 @@
+---
+import type { GetStaticPaths } from 'astro';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { breadcrumbList, exercisePlan } from '@/lib/seo/structuredData';
+import {
+  categoryLabel,
+  categoryPath,
+  durationPath,
+  durationSegment,
+  exercisePath,
+  featuredWorkouts,
+  publishableExercises,
+  workoutPages,
+  workoutPath,
+} from '@/lib/seo/contentPages';
+import { getExerciseInfo } from '@/data/exerciseLibrary';
+import type { WorkoutTemplate } from '@/data/workoutTemplates';
+
+export const getStaticPaths = (() => {
+  const pages = new Map(workoutPages().map((page) => [page.path, page]));
+  return featuredWorkouts().map((template) => ({
+    params: { duration: durationSegment(template.durationMinutes), slug: template.id },
+    props: { template, page: pages.get(workoutPath(template))! },
+  }));
+}) satisfies GetStaticPaths;
+
+const { template, page } = Astro.props as {
+  template: WorkoutTemplate;
+  page: { title: string; description: string };
+};
+
+// Only movements with a page of their own get linked.
+const linkable = new Set(publishableExercises().map((exercise) => exercise.id));
+
+const movements = template.movements.map((movement) => {
+  const info = getExerciseInfo(movement.name);
+  return {
+    movement,
+    info,
+    href: info && linkable.has(info.id) ? exercisePath(info) : null,
+  };
+});
+
+const jsonLd = [
+  exercisePlan({
+    name: template.name,
+    description: page.description,
+    durationMinutes: template.durationMinutes,
+    movements: template.movements.map((movement) =>
+      movement.reps === undefined
+        ? movement.name
+        : `${movement.reps}${movement.unit === 'sec' ? 's' : ''} ${movement.name}`
+    ),
+    path: workoutPath(template),
+  }),
+  breadcrumbList([
+    { name: 'Home', path: '/' },
+    { name: 'AMRAP workouts', path: '/amrap-workouts' },
+    { name: `${template.durationMinutes} minute`, path: durationPath(template.durationMinutes) },
+    { name: template.name, path: workoutPath(template) },
+  ]),
+];
+---
+
+<BaseLayout jsonLd={jsonLd} title={page.title} description={page.description}>
+  <div class="mx-auto w-full max-w-[44rem] space-y-12 px-6 py-12 lg:px-10 lg:py-16">
+    <nav aria-label="Breadcrumb" class="text-xs text-muted">
+      <a class="link-accent" href="/amrap-workouts">AMRAP workouts</a> /
+      <a class="link-accent" href={durationPath(template.durationMinutes)}>
+        {template.durationMinutes} minute
+      </a> / {template.name}
+    </nav>
+
+    <header class="space-y-4">
+      <p class="eyebrow text-accent">{template.durationMinutes} minute AMRAP</p>
+      <h1 class="text-display text-[clamp(2.5rem,7vw,4rem)] leading-[0.9] text-ink">
+        {template.name}
+      </h1>
+      {
+        template.category && (
+          <p class="text-sm text-secondary">
+            <a class="link-accent" href={categoryPath(template.category)}>
+              {categoryLabel(template.category, template.durationMinutes)}
+            </a>{' '}
+            · intensity {template.intensityTier} of 5
+          </p>
+        )
+      }
+    </header>
+
+    <section class="card space-y-4 p-6">
+      <h2 class="text-display text-2xl text-ink">The workout</h2>
+      <p class="text-sm text-secondary">
+        As many rounds as possible in {template.durationMinutes} minutes of:
+      </p>
+      <ul class="space-y-2">
+        {
+          movements.map(({ movement, href }) => (
+            <li class="text-display text-xl text-ink">
+              {movement.reps !== undefined && (
+                <span>
+                  {movement.reps}
+                  {movement.unit === 'sec' ? 's' : ''}{' '}
+                </span>
+              )}
+              {href ? (
+                <a class="hover:text-accent" href={href}>
+                  {movement.name}
+                </a>
+              ) : (
+                movement.name
+              )}
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">How to run it</h2>
+      <p class="text-base leading-[1.7] text-secondary">{template.tacticalNote}</p>
+      <p class="text-base leading-[1.7] text-secondary">
+        Work through the movements in the order listed, then start the next round. Your score is the
+        number of complete rounds plus any reps of the round you were partway through when the clock
+        hit zero — written as rounds plus reps, so seven full rounds and twelve reps is
+        <strong class="font-semibold text-ink">7+12</strong>.
+      </p>
+    </section>
+
+    <section class="space-y-6">
+      <h2 class="text-display text-2xl text-ink">The movements</h2>
+      {
+        movements.map(({ movement, info, href }) => (
+          <div class="space-y-2">
+            <h3 class="text-base font-semibold text-ink">
+              {href ? (
+                <a class="hover:text-accent" href={href}>
+                  {movement.name}
+                </a>
+              ) : (
+                movement.name
+              )}
+            </h3>
+            {info && <p class="text-base leading-[1.7] text-secondary">{info.coachingCue}</p>}
+            {info?.amrapTip && <p class="text-sm leading-[1.6] text-muted">{info.amrapTip}</p>}
+          </div>
+        ))
+      }
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Scaling it</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        Every movement here is bodyweight, so the scaling lever is volume rather than load. If a
+        round is taking longer than about ninety seconds, halve the reps and keep the round count
+        moving — the point of an AMRAP is continuous work, and a round you grind through in four
+        minutes teaches you less than three rounds at a pace you can repeat.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Run it with friends</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        {template.name} runs on a shared countdown: share a rally link, everyone gets the same
+        {template.durationMinutes}-minute clock, and the leaderboard updates as people log rounds.
+      </p>
+      <div class="flex flex-wrap gap-3">
+        <a
+          class="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
+          href="/create">Create a mission</a
+        >
+        <a
+          class="rounded-card border border-border bg-surface px-6 py-3.5 font-semibold text-ink"
+          href={durationPath(template.durationMinutes)}
+        >
+          More {template.durationMinutes} minute AMRAPs
+        </a>
+      </div>
+    </section>
+  </div>
+</BaseLayout>

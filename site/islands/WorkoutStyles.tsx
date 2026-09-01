@@ -1,20 +1,17 @@
 import { useState } from 'react';
 import { WorkoutStyleInfoModal } from '@/components/workoutStyle/WorkoutStyleInfoModal';
-import { WORKOUT_CATEGORIES, type TimeDomain, type WorkoutCategory } from '@/data/workoutTemplates';
+import { WORKOUT_CATEGORIES, type WorkoutCategory } from '@/data/workoutTemplates';
+import { categoryPath } from '@/lib/seo/contentPages';
 
 /**
- * The style chips and their modal. There is no Router here, so browsing a style
- * is a real navigation into the SPA rather than a client-side route change.
+ * The style chips and their modal. Browse goes to the Astro style collection
+ * page (full navigation — no Router in this island).
  */
 export default function WorkoutStyles() {
   const [infoCategory, setInfoCategory] = useState<WorkoutCategory | null>(null);
 
-  function handleBrowse(category: WorkoutCategory, durationMinutes?: TimeDomain) {
-    const params = new URLSearchParams({ category });
-    if (durationMinutes !== undefined) {
-      params.set('duration', String(durationMinutes));
-    }
-    window.location.assign(`/create?${params.toString()}`);
+  function handleBrowse(category: WorkoutCategory) {
+    window.location.assign(categoryPath(category));
   }
 
   return (

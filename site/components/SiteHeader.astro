@@ -2,6 +2,7 @@
 // Static markup on purpose. The app's AppHeader is auth-aware and would drag the
 // whole Supabase client onto a page that is meant to ship no JavaScript at all.
 const links = [
+  { href: '/amrap-workouts', label: 'The Library' },
   { href: '/amrap-timer', label: 'AMRAP timer' },
   { href: '/about', label: 'About' },
 ];
@@ -21,7 +22,12 @@ const pathname = Astro.url.pathname.replace(/\/$/, '') || '/';
               <a
                 class="text-night-secondary hover:text-gold"
                 href={link.href}
-                aria-current={pathname === link.href ? 'page' : undefined}
+                aria-current={
+                  pathname === link.href ||
+                  (link.href !== '/' && pathname.startsWith(`${link.href}/`))
+                    ? 'page'
+                    : undefined
+                }
               >
                 {link.label}
               </a>

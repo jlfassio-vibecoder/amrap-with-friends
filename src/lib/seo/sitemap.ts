@@ -1,10 +1,17 @@
-import { ROUTE_SEO, SITE_ORIGIN, normalizePathname } from '@/lib/seo/routes';
+import { ROUTE_SEO, SITE_ORIGIN, isRoutePattern, normalizePathname } from '@/lib/seo/routes';
+import { generatedContentPages } from '@/lib/seo/contentPages';
 
-/** Absolute URLs for every route we want in the index, in table order. */
+/**
+ * Absolute URLs for every page we want in the index: the hand-written rows
+ * first, then everything generated from the workout and exercise data. Pattern
+ * rows are skipped — `/exercises/:exerciseSlug` is not a URL.
+ */
 export function indexableUrls(): string[] {
-  return ROUTE_SEO.filter((route) => route.index).map(
+  const fixed = ROUTE_SEO.filter((route) => route.index && !isRoutePattern(route.path)).map(
     (route) => `${SITE_ORIGIN}${normalizePathname(route.path)}`
   );
+  const generated = generatedContentPages().map((page) => `${SITE_ORIGIN}${page.path}`);
+  return [...fixed, ...generated];
 }
 
 /**
