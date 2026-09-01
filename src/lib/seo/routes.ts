@@ -51,6 +51,20 @@ export const CONTENT_ROUTES: RouteSeo[] = [
     index: true,
   },
   {
+    path: '/amrap-workouts',
+    title: 'AMRAP Workouts — 150 Bodyweight Sessions, 5 to 20 Minutes',
+    description:
+      'A library of AMRAP workouts you can run today. Browse by time domain or by training stimulus, see every movement with coaching cues, and run any of them on a shared timer.',
+    index: true,
+  },
+  {
+    path: '/exercises',
+    title: 'AMRAP Exercise Library — Form and Coaching Cues',
+    description:
+      'Every movement in the AMRAP workout library, with setup and execution, the coaching cue that matters under fatigue, and the workouts that programme it.',
+    index: true,
+  },
+  {
     path: '/about',
     title: 'About AMRAP With Friends',
     description:
@@ -102,10 +116,48 @@ export const APP_ROUTES: RouteSeo[] = [
 ];
 
 /**
- * Content routes come first: they are all literal, so a literal page can never
- * be shadowed by a parameterised app route at the same depth.
+ * Generated content pages, as patterns.
+ *
+ * The pages themselves are enumerated in `contentPages.ts`, which reads the
+ * exercise library and the workout templates — far too much data to pull into
+ * the edge middleware just to answer "is this a real path". Patterns are enough
+ * there: an unknown slug matches the pattern, passes through, and Vercel answers
+ * with a real 404 because no file was built for it.
+ *
+ * The titles are placeholders. Each generated page passes its own title and
+ * description to the Astro layout; only `index` and the canonical are read here.
  */
-export const ROUTE_SEO: RouteSeo[] = [...CONTENT_ROUTES, ...APP_ROUTES];
+export const DYNAMIC_CONTENT_ROUTES: RouteSeo[] = [
+  {
+    path: '/exercises/:exerciseSlug',
+    title: 'Exercise',
+    description: '',
+    index: true,
+  },
+  {
+    path: '/amrap-workouts/:duration',
+    title: 'AMRAP workouts',
+    description: '',
+    index: true,
+  },
+  {
+    path: '/amrap-workouts/:duration/:workoutSlug',
+    title: 'AMRAP workout',
+    description: '',
+    index: true,
+  },
+];
+
+/**
+ * Literals first, then app routes, then patterns last — so a real page is never
+ * shadowed by a pattern that happens to match at the same depth.
+ */
+export const ROUTE_SEO: RouteSeo[] = [...CONTENT_ROUTES, ...APP_ROUTES, ...DYNAMIC_CONTENT_ROUTES];
+
+/** True for a `:param` pattern rather than a real URL — never sitemap these. */
+export function isRoutePattern(path: string): boolean {
+  return path.includes(':');
+}
 
 /** True when this path is served by the SPA shell rather than a static page. */
 export function isAppRoute(pathname: string): boolean {

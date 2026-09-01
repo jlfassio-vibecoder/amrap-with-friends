@@ -1,18 +1,41 @@
 import { describe, it, expect } from 'vitest';
-import { ROUTE_SEO, SITE_ORIGIN, resolveSeo } from '@/lib/seo/routes';
+import { ROUTE_SEO, SITE_ORIGIN, isRoutePattern, resolveSeo } from '@/lib/seo/routes';
+import { generatedContentPages } from '@/lib/seo/contentPages';
 import { buildLlmsTxt, buildSitemapXml, indexableUrls } from '@/lib/seo/sitemap';
 
 describe('indexableUrls', () => {
-  it('lists exactly the indexable routes as absolute URLs', () => {
-    const expected = ROUTE_SEO.filter((route) => route.index).map(
+  it('lists the hand-written pages followed by every generated one', () => {
+    const fixed = ROUTE_SEO.filter((route) => route.index && !isRoutePattern(route.path)).map(
       (route) => `${SITE_ORIGIN}${route.path}`
     );
-    expect(indexableUrls()).toEqual(expected);
+    const generated = generatedContentPages().map((page) => `${SITE_ORIGIN}${page.path}`);
+    expect(indexableUrls()).toEqual([...fixed, ...generated]);
   });
 
-  it('matches the canonical the page itself declares, so the two cannot disagree', () => {
-    for (const route of ROUTE_SEO.filter((r) => r.index)) {
-      expect(indexableUrls(), route.path).toContain(resolveSeo(route.path).canonical);
+  it('never lists a route pattern, which is not a URL', () => {
+    for (const url of indexableUrls()) {
+      expect(url.startsWith(`${SITE_ORIGIN}/`), url).toBe(true);
+      // The scheme's own colon is the only one a real URL has here.
+      expect(url.slice(SITE_ORIGIN.length), url).not.toContain(':');
+    }
+  });
+
+  it('includes the generated workout and exercise pages', () => {
+    const urls = indexableUrls();
+    expect(urls).toContain(`${SITE_ORIGIN}/exercises/burpees`);
+    expect(urls.some((url) => url.includes('/amrap-workouts/5-minute/'))).toBe(true);
+    expect(urls).toContain(`${SITE_ORIGIN}/amrap-workouts/style/engine-room`);
+  });
+
+  it('matches the canonical each page declares, so the two cannot disagree', () => {
+    const urls = indexableUrls();
+    for (const route of ROUTE_SEO.filter((r) => r.index && !isRoutePattern(r.path))) {
+      expect(urls, route.path).toContain(resolveSeo(route.path).canonical);
+    }
+    // A generated page's canonical comes from the pattern row it matches.
+    for (const page of generatedContentPages()) {
+      expect(resolveSeo(page.path).canonical, page.path).toBe(`${SITE_ORIGIN}${page.path}`);
+      expect(resolveSeo(page.path).robots, page.path).toBe('index, follow');
     }
   });
 
@@ -51,10 +74,21 @@ describe('buildSitemapXml', () => {
 });
 
 describe('buildLlmsTxt', () => {
-  it('links every indexable page with its description', () => {
+  // Deliberately the hand-written pages only: a hundred generated URLs is a
+  // sitemap, and this file is meant to be read.
+  const fixed = ROUTE_SEO.filter(
+    (route) => route.index && !isRoutePattern(route.path) && route.description
+  );
+
+  it('links every hand-written page with its description', () => {
     const txt = buildLlmsTxt();
-    for (const url of indexableUrls()) {
-      expect(txt, url).toContain(`(${url})`);
+    for (const route of fixed) {
+      expect(txt, route.path).toContain(`(${SITE_ORIGIN}${route.path})`);
     }
+  });
+
+  it('does not try to enumerate the generated pages', () => {
+    const txt = buildLlmsTxt();
+    expect(txt).not.toContain('/exercises/burpees');
   });
 });

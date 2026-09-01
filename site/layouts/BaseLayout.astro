@@ -10,14 +10,26 @@ interface Props {
   jsonLd?: JsonLd[];
   /** The home page carries its own nav inside the hero's dark ground. */
   hideHeader?: boolean;
+  /**
+   * Generated pages (a movement, a workout, a collection) are not rows in the
+   * route table — there are a hundred of them — so they pass their own title and
+   * description. The canonical and robots still come from the table's pattern row.
+   */
+  title?: string;
+  description?: string;
 }
 
-const { jsonLd = [], hideHeader = false } = Astro.props;
+const { jsonLd = [], hideHeader = false, title, description } = Astro.props;
 
 // Title, description, canonical and robots all come from src/lib/seo/routes.ts —
 // the same table the SPA and the edge middleware read, so a page cannot describe
 // itself one way to a browser and another way to a crawler.
-const seo = resolveSeo(Astro.url.pathname);
+const resolved = resolveSeo(Astro.url.pathname);
+const seo = {
+  ...resolved,
+  title: title ?? resolved.title,
+  description: description ?? resolved.description,
+};
 const ogImage = new URL('/og-image-f.png', Astro.site).href;
 const graph = serializeJsonLd([organization(), ...jsonLd]);
 ---

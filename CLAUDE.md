@@ -190,6 +190,17 @@ Workout and classification names are content, not chrome, and are untouched:
   `scripts/merge-build.ts`, and `vercel.json` rewrites each app route to
   `_app-shell/index.html`. Astro imports `src/index.css`, so the design tokens
   are shared, not duplicated.
+- **Generated content pages are derived, never hand-written.**
+  `src/lib/seo/contentPages.ts` turns the exercise library and the workout
+  templates into pages, so a page cannot describe a workout the product does not
+  have. `hasEnoughToSay` is the quality gate — a movement page ships only with
+  setup text, a coaching cue, an AMRAP tip and at least one workout using it —
+  and `featuredWorkouts` buckets templates by duration × category so the
+  published set spreads instead of stacking. Slugs are the existing data ids.
+  The edge middleware matches these with the patterns in
+  `DYNAMIC_CONTENT_ROUTES` rather than importing the data; unknown slugs fall
+  through to a real 404 because no file was built. `merge-build.ts` fails the
+  build if the sitemap lists a URL with no page behind it.
 - **Link with `AppLink`, not `Link`, whenever the target might be a content
   page.** An Astro island has no Router, and `<Link to="/about">` from inside the
   SPA would push a route the SPA cannot render. `AppLink` renders a `<Link>` only

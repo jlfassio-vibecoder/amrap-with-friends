@@ -76,6 +76,63 @@ export function faqPage(entries: FaqEntry[]): JsonLd {
   };
 }
 
+export interface HowToStep {
+  name: string;
+  text: string;
+}
+
+/**
+ * A movement page. `HowTo` rather than `ExerciseAction` because the page is
+ * instructions for performing something, which is what HowTo describes and what
+ * search engines actually consume.
+ */
+export function howTo(input: {
+  name: string;
+  description: string;
+  steps: HowToStep[];
+  path: string;
+}): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: input.name,
+    description: input.description,
+    url: `${SITE_ORIGIN}${input.path}`,
+    publisher: { '@id': `${SITE_ORIGIN}/#organization` },
+    step: input.steps.map((step, i) => ({
+      '@type': 'HowToStep',
+      position: i + 1,
+      name: step.name,
+      text: step.text,
+    })),
+  };
+}
+
+/**
+ * A workout page. `ExercisePlan` carries the two things that make an AMRAP an
+ * AMRAP — a fixed duration and a repeating set of movements — so the duration
+ * goes in as an ISO 8601 period rather than prose.
+ */
+export function exercisePlan(input: {
+  name: string;
+  description: string;
+  durationMinutes: number;
+  movements: string[];
+  path: string;
+}): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ExercisePlan',
+    name: input.name,
+    description: input.description,
+    url: `${SITE_ORIGIN}${input.path}`,
+    activityDuration: `PT${input.durationMinutes}M`,
+    exerciseType: 'AMRAP',
+    workload: input.movements.join(', '),
+    publisher: { '@id': `${SITE_ORIGIN}/#organization` },
+  };
+}
+
 /** `</script>` inside a JSON string would close the tag early and inject markup. */
 export function serializeJsonLd(data: JsonLd | JsonLd[]): string {
   return JSON.stringify(data).replace(/</g, '\\u003c');

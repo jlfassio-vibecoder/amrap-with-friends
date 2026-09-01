@@ -1,0 +1,70 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { breadcrumbList } from '@/lib/seo/structuredData';
+import { exercisePath, publishableExercises, workoutsUsingMovement } from '@/lib/seo/contentPages';
+
+const exercises = publishableExercises()
+  .map((exercise) => ({
+    exercise,
+    uses: workoutsUsingMovement(exercise.name).length,
+  }))
+  .sort((a, b) => a.exercise.name.localeCompare(b.exercise.name));
+
+const jsonLd = [
+  breadcrumbList([
+    { name: 'Home', path: '/' },
+    { name: 'Exercises', path: '/exercises' },
+  ]),
+];
+---
+
+<BaseLayout jsonLd={jsonLd}>
+  <div class="mx-auto w-full max-w-[52rem] space-y-12 px-6 py-12 lg:px-10 lg:py-16">
+    <header class="space-y-4">
+      <p class="eyebrow text-accent">The library</p>
+      <h1 class="text-display text-[clamp(2.5rem,7vw,4rem)] leading-[0.9] text-ink">
+        AMRAP exercise library
+      </h1>
+      <p class="text-base leading-[1.7] text-secondary">
+        Every movement programmed in the workout library, with how to set it up, the coaching cue
+        that holds up when you are tired, and what changes about the movement inside an AMRAP. All
+        {exercises.length} are bodyweight — no equipment, no gym.
+      </p>
+    </header>
+
+    <ul class="grid gap-3 sm:grid-cols-2">
+      {
+        exercises.map(({ exercise, uses }) => (
+          <li class="card p-4">
+            <a class="font-semibold text-ink hover:text-accent" href={exercisePath(exercise)}>
+              {exercise.name}
+            </a>
+            <p class="mt-1 text-xs text-muted">
+              In {uses} {uses === 1 ? 'workout' : 'workouts'}
+            </p>
+          </li>
+        ))
+      }
+    </ul>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-[clamp(1.75rem,4vw,2.5rem)] leading-[0.95] text-ink">
+        Put them together
+      </h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        These movements are the building blocks of the AMRAP workouts in the library. Browse the
+        workouts by time domain, or run one with your friends on a shared clock.
+      </p>
+      <div class="flex flex-wrap gap-3">
+        <a
+          class="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
+          href="/amrap-workouts">Browse AMRAP workouts</a
+        >
+        <a
+          class="rounded-card border border-border bg-surface px-6 py-3.5 font-semibold text-ink"
+          href="/amrap-timer">Free AMRAP timer</a
+        >
+      </div>
+    </section>
+  </div>
+</BaseLayout>

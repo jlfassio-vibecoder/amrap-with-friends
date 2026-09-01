@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { SITE_ORIGIN } from '@/lib/seo/routes';
 import {
   breadcrumbList,
+  exercisePlan,
   faqPage,
+  howTo,
   organization,
   serializeJsonLd,
   webApplication,
@@ -39,6 +41,40 @@ describe('structured data', () => {
         acceptedAnswer: { '@type': 'Answer', text: 'As many rounds as possible.' },
       },
     ]);
+  });
+});
+
+describe('howTo', () => {
+  it('numbers steps from one and absolutises the url', () => {
+    const node = howTo({
+      name: 'Burpees',
+      description: 'How to do burpees.',
+      steps: [
+        { name: 'Setup', text: 'Drop into a squat.' },
+        { name: 'Cue', text: 'Drop fast, snap up faster.' },
+      ],
+      path: '/exercises/burpees',
+    });
+    expect(node.url).toBe(`${SITE_ORIGIN}/exercises/burpees`);
+    expect(node.step).toEqual([
+      { '@type': 'HowToStep', position: 1, name: 'Setup', text: 'Drop into a squat.' },
+      { '@type': 'HowToStep', position: 2, name: 'Cue', text: 'Drop fast, snap up faster.' },
+    ]);
+  });
+});
+
+describe('exercisePlan', () => {
+  it('writes the time cap as an ISO 8601 duration', () => {
+    const node = exercisePlan({
+      name: 'The Piston',
+      description: 'A five minute AMRAP.',
+      durationMinutes: 5,
+      movements: ['10 Air Squats', '10 Hand-Release Push-ups'],
+      path: '/amrap-workouts/5-minute/the-piston',
+    });
+    expect(node.activityDuration).toBe('PT5M');
+    expect(node.workload).toBe('10 Air Squats, 10 Hand-Release Push-ups');
+    expect(node.exerciseType).toBe('AMRAP');
   });
 });
 

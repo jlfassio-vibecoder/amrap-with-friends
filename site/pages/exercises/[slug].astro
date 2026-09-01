@@ -1,0 +1,145 @@
+---
+import type { GetStaticPaths } from 'astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { breadcrumbList, howTo, type HowToStep } from '@/lib/seo/structuredData';
+import {
+  durationPath,
+  exercisePages,
+  exercisePath,
+  movementSummary,
+  publishableExercises,
+  workoutPath,
+  workoutsUsingMovement,
+} from '@/lib/seo/contentPages';
+import { featuredWorkouts } from '@/lib/seo/contentPages';
+
+export const getStaticPaths = (() => {
+  const pages = new Map(exercisePages().map((page) => [page.path, page]));
+  return publishableExercises().map((exercise) => ({
+    params: { slug: exercise.id },
+    props: { exercise, page: pages.get(exercisePath(exercise))! },
+  }));
+}) satisfies GetStaticPaths;
+
+const { exercise, page } = Astro.props;
+
+const usedIn = workoutsUsingMovement(exercise.name);
+// Only workouts that have a page of their own can be linked.
+const publishedIds = new Set(featuredWorkouts().map((template) => template.id));
+
+const steps: HowToStep[] = [
+  ...exercise.setupAndExecution.map((text, i) => ({
+    name: exercise.setupAndExecution.length > 1 ? `Step ${i + 1}` : 'Setup and execution',
+    text,
+  })),
+  { name: 'Coaching cue', text: exercise.coachingCue },
+  ...(exercise.amrapTip ? [{ name: 'Inside an AMRAP', text: exercise.amrapTip }] : []),
+];
+
+const jsonLd = [
+  howTo({
+    name: exercise.name,
+    description: page.description,
+    steps,
+    path: exercisePath(exercise),
+  }),
+  breadcrumbList([
+    { name: 'Home', path: '/' },
+    { name: 'Exercises', path: '/exercises' },
+    { name: exercise.name, path: exercisePath(exercise) },
+  ]),
+];
+---
+
+<BaseLayout jsonLd={jsonLd} title={page.title} description={page.description}>
+  <div class="mx-auto w-full max-w-[44rem] space-y-12 px-6 py-12 lg:px-10 lg:py-16">
+    <nav aria-label="Breadcrumb" class="text-xs text-muted">
+      <a class="link-accent" href="/exercises">Exercises</a> / {exercise.name}
+    </nav>
+
+    <header class="space-y-4">
+      <h1 class="text-display text-[clamp(2.5rem,7vw,4rem)] leading-[0.9] text-ink">
+        {exercise.name}
+      </h1>
+      <p class="text-base leading-[1.7] text-secondary">
+        A bodyweight movement used in {usedIn.length}
+        {usedIn.length === 1 ? 'AMRAP workout' : 'AMRAP workouts'} in the library.
+      </p>
+    </header>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">How to do it</h2>
+      {
+        exercise.setupAndExecution.map((text) => (
+          <p class="text-base leading-[1.7] text-secondary">{text}</p>
+        ))
+      }
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">The coaching cue</h2>
+      <p class="text-base leading-[1.7] text-secondary">{exercise.coachingCue}</p>
+    </section>
+
+    {
+      exercise.amrapTip && (
+        <section class="space-y-4">
+          <h2 class="text-display text-2xl text-ink">What changes inside an AMRAP</h2>
+          <p class="text-base leading-[1.7] text-secondary">{exercise.amrapTip}</p>
+        </section>
+      )
+    }
+
+    {
+      exercise.commonMistakes.length > 0 && (
+        <section class="space-y-4">
+          <h2 class="text-display text-2xl text-ink">Common mistakes</h2>
+          <ul class="space-y-2 text-base leading-[1.7] text-secondary">
+            {exercise.commonMistakes.map((mistake) => (
+              <li>{mistake}</li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">
+        Workouts that use {exercise.name.toLowerCase()}
+      </h2>
+      <ul class="space-y-3">
+        {
+          usedIn.map((template) => (
+            <li class="card p-4">
+              {publishedIds.has(template.id) ? (
+                <a class="font-semibold text-ink hover:text-accent" href={workoutPath(template)}>
+                  {template.name}
+                </a>
+              ) : (
+                <span class="font-semibold text-ink">{template.name}</span>
+              )}
+              <p class="mt-1 text-sm text-secondary">
+                <a class="link-accent" href={durationPath(template.durationMinutes)}>
+                  {template.durationMinutes} minute AMRAP
+                </a>{' '}
+                — {movementSummary(template)}
+              </p>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Run one with your friends</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        Every workout above runs on a shared countdown — one clock for the whole crew, one
+        leaderboard, wherever everyone is training.
+      </p>
+      <a
+        class="inline-block rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
+        href="/create">Create a mission</a
+      >
+    </section>
+  </div>
+</BaseLayout>

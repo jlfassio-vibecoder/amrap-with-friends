@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   ROUTE_SEO,
+  isRoutePattern,
   SITE_ORIGIN,
   isKnownRoute,
   matchRoutePath,
@@ -108,8 +109,10 @@ describe('resolveSeo', () => {
 });
 
 describe('ROUTE_SEO', () => {
-  it('gives every indexable route a title and description of its own', () => {
-    for (const route of ROUTE_SEO.filter((r) => r.index)) {
+  it('gives every indexable page a title and description of its own', () => {
+    // Pattern rows carry placeholders: each generated page passes its own title
+    // and description to the Astro layout.
+    for (const route of ROUTE_SEO.filter((r) => r.index && !isRoutePattern(r.path))) {
       expect(route.title, route.path).not.toBe('');
       expect(route.description, route.path).not.toBe('');
     }
@@ -120,8 +123,8 @@ describe('ROUTE_SEO', () => {
     expect(new Set(paths).size).toBe(paths.length);
   });
 
-  it('gives each indexable route a distinct title, so no two URLs compete', () => {
-    const titles = ROUTE_SEO.filter((r) => r.index).map((r) => r.title);
+  it('gives each indexable page a distinct title, so no two URLs compete', () => {
+    const titles = ROUTE_SEO.filter((r) => r.index && !isRoutePattern(r.path)).map((r) => r.title);
     expect(new Set(titles).size).toBe(titles.length);
   });
 });

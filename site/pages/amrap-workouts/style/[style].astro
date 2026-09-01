@@ -1,0 +1,110 @@
+---
+import type { GetStaticPaths } from 'astro';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { breadcrumbList } from '@/lib/seo/structuredData';
+import {
+  categoryPages,
+  categoryPath,
+  durationPath,
+  featuredWorkouts,
+  movementSummary,
+  workoutPath,
+  workoutsForCategory,
+} from '@/lib/seo/contentPages';
+import { WORKOUT_CATEGORIES, type WorkoutCategoryMeta } from '@/data/workoutTemplates';
+
+export const getStaticPaths = (() => {
+  const pages = new Map(categoryPages().map((page) => [page.path, page]));
+  return WORKOUT_CATEGORIES.map((category) => ({
+    params: { style: category.id },
+    props: { category, page: pages.get(categoryPath(category.id))! },
+  }));
+}) satisfies GetStaticPaths;
+
+const { category, page } = Astro.props as {
+  category: WorkoutCategoryMeta;
+  page: { title: string; description: string };
+};
+
+const workouts = workoutsForCategory(category.id);
+const publishedIds = new Set(featuredWorkouts().map((template) => template.id));
+
+const jsonLd = [
+  breadcrumbList([
+    { name: 'Home', path: '/' },
+    { name: 'AMRAP workouts', path: '/amrap-workouts' },
+    { name: category.label, path: categoryPath(category.id) },
+  ]),
+];
+---
+
+<BaseLayout jsonLd={jsonLd} title={page.title} description={page.description}>
+  <div class="mx-auto w-full max-w-[52rem] space-y-12 px-6 py-12 lg:px-10 lg:py-16">
+    <nav aria-label="Breadcrumb" class="text-xs text-muted">
+      <a class="link-accent" href="/amrap-workouts">AMRAP workouts</a> / {category.label}
+    </nav>
+
+    <header class="space-y-4">
+      <h1 class="text-display text-[clamp(2.5rem,7vw,4rem)] leading-[0.9] text-ink">
+        {category.label} AMRAPs
+      </h1>
+      <p class="text-base leading-[1.7] text-secondary">{category.description}</p>
+    </header>
+
+    {
+      category.overridesByDuration && (
+        <section class="space-y-4">
+          <h2 class="text-display text-2xl text-ink">How it changes with the clock</h2>
+          {Object.entries(category.overridesByDuration).map(([minutes, override]) => (
+            <div class="space-y-1">
+              <h3 class="text-base font-semibold text-ink">
+                {override.label} — {minutes} minutes
+              </h3>
+              <p class="text-base leading-[1.7] text-secondary">{override.description}</p>
+            </div>
+          ))}
+        </section>
+      )
+    }
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">
+        {workouts.length}
+        {category.label} workouts
+      </h2>
+      <ul class="space-y-3">
+        {
+          workouts.map((template) => (
+            <li class="card p-4">
+              {publishedIds.has(template.id) ? (
+                <a class="font-semibold text-ink hover:text-accent" href={workoutPath(template)}>
+                  {template.name}
+                </a>
+              ) : (
+                <span class="font-semibold text-ink">{template.name}</span>
+              )}
+              <p class="mt-1 text-sm text-secondary">{movementSummary(template)}</p>
+              <p class="mt-2 text-xs text-muted">
+                <a class="link-accent" href={durationPath(template.durationMinutes)}>
+                  {template.durationMinutes} minute AMRAP
+                </a>
+              </p>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Train it with your squad</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        Share a rally link and everyone runs the same clock, with the leaderboard updating live as
+        rounds get logged.
+      </p>
+      <a
+        class="inline-block rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
+        href="/create">Create a mission</a
+      >
+    </section>
+  </div>
+</BaseLayout>

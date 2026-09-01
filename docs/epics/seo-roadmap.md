@@ -2,7 +2,7 @@
 
 **Branch:** `claude/amrap-seo-roadmap-xwf1sk`
 **Status:** Approved — Astro content site + existing SPA (option A, Part 2)
-**Last updated:** 2026-09-01 (Phase 0 and Phase 1 shipped)
+**Last updated:** 2026-09-01 (Phases 0–2 shipped)
 
 ---
 
@@ -25,7 +25,7 @@ and AI assistants cannot see a single word of a client-rendered React SPA.
 | `robots.txt`            | ~~`User-agent: * / Allow: /`~~                                                                            | **Fixed in Phase 0** — every AI agent named explicitly                       |
 | Structured data         | Helpers on content pages; app shell unchanged                                                             | No `ExercisePlan`, `HowTo`, `FAQPage`, `BreadcrumbList`, `Organization`      |
 | Bot handling            | [`middleware.ts`](../../middleware.ts) serves OG HTML to unfurlers, plus `X-Robots-Tag` and 404s sitewide | Search-safe; still no content to serve                                       |
-| Content pages           | ~~Zero~~                                                                                                  | **Phase 1** — `/amrap-timer`, `/about`, `/privacy`, `/terms` are static HTML |
+| Content pages           | 108 static pages                                                                                          | **Phase 2** — workouts, movements and collections, all zero-JS               |
 | 404s                    | ~~`/anything` returned **HTTP 200** with an empty shell~~                                                 | **Fixed in Phase 0** — real 404 from the edge                                |
 | Fonts                   | 4 Google Fonts families loaded render-blocking from `fonts.googleapis.com`                                | LCP tax on the page that matters most                                        |
 
@@ -393,14 +393,60 @@ the h1, the AMRAP definition, seven `<h2>`s, the workout style names and an
 answer-first FAQ with matching `FAQPage` markup. An AI crawler previously saw
 none of it.
 
-### Phase 2 — Programmatic content _(weeks 4–8)_
+### Phase 2 — Programmatic content _(weeks 4–8)_ — **shipped**
 
-- [ ] `/exercises/` + 75 pages from `exerciseLibrary.ts` (`HowTo` schema)
-- [ ] `/amrap-workouts/` hub + 4 duration pages + 3 equipment pages
-- [ ] Top 20 workout pages, gated on the §1.4 quality bar
-- [ ] Internal linking: workout ↔ exercise ↔ guide ↔ "run this live" CTA
+- [x] `/exercises` + 69 movement pages (`HowTo` schema)
+- [x] `/amrap-workouts` hub, 4 duration pages, 7 training-stimulus pages
+- [x] 20 workout pages (`ExercisePlan` schema), nested under their duration
+- [x] Internal linking: workout ↔ exercise ↔ collection ↔ "run this live"
+- [x] A real `/404` page, now that `vercel.json` no longer rewrites everything
 
-_Exit criteria: ~90 quality-gated indexed URLs; first non-brand impressions._
+**108 pages built, 109 URLs in the sitemap** (the extra is the SPA's `/create`,
+served by a rewrite rather than a file). Every page carries its own title,
+description, canonical and schema, and ships **zero JavaScript**. Measured text
+per page: ~1,750 characters on a movement or workout page, ~3,500–4,000 on a
+collection page.
+
+**The quality gate is real, not decorative.** `hasEnoughToSay` publishes a
+movement only when it has setup text, a coaching cue, an AMRAP-specific tip, and
+at least one workout that programmes it — 69 of 73 pass, 4 do not. Workout pages
+require two or more movements, a tactical note, a category, and a library entry
+for every movement, so the page can actually explain the workout it describes.
+
+**Twenty workouts, spread rather than skimmed.** `featuredWorkouts` buckets the
+150 templates by duration × category and takes one from each in turn, so the
+published set covers all four time domains and all seven stimuli instead of
+twenty variations on the same five-minute sprint. Benchmarks sort first within
+their bucket. It is deterministic and asserted as such.
+
+**URL shape.** Workouts nest under their duration —
+`/amrap-workouts/5-minute/flash-flood` — which gives clean breadcrumbs and avoids
+a collision between `[duration]` and `[slug]` at the same level. Styles live
+under `/amrap-workouts/style/…` for the same reason. Slugs are the existing data
+ids, which for benchmarks are the one thing that must never change.
+
+**How 100 generated pages stay out of the middleware.** `contentPages.ts` reads
+the exercise library and the workout templates — far too much to bundle into the
+edge. `DYNAMIC_CONTENT_ROUTES` carries three patterns instead; an unknown slug
+matches a pattern, passes through, and Vercel answers with a real 404 because no
+file was built for it. The sitemap gets the exhaustive list, because it is
+generated in Node at build time.
+
+**A sitemap that lists an unbuilt URL is a pile of soft 404s handed to Google**,
+so `merge-build.ts` now fails the build if any sitemap URL has no corresponding
+file. Verified against a deliberately broken route, not just assumed.
+
+#### The content gap worth fixing first
+
+**72 of the 73 exercises have an empty `commonMistakes` array.** Only `burpees`
+is filled in. The page template renders the section whenever it is populated, so
+this is pure content entry with no engineering attached — and it is the single
+highest-leverage improvement available, because "common mistakes" is exactly the
+shape of question people ask an assistant about a movement.
+
+Two smaller ones: no exercise has a `videoUrl`, and the photos in the library
+live in a Supabase Storage bucket, so the static pages do not yet show them —
+worth wiring up, since a movement page without an image is weaker than one with.
 
 ### Phase 3 — Editorial & authority _(weeks 8–16)_
 

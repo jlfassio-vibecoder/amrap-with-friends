@@ -1,0 +1,128 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { breadcrumbList, faqPage } from '@/lib/seo/structuredData';
+import {
+  categoryPath,
+  durationPath,
+  featuredWorkouts,
+  movementSummary,
+  workoutPath,
+  workoutsForCategory,
+  workoutsForDuration,
+} from '@/lib/seo/contentPages';
+import { TIME_DOMAINS, WORKOUT_CATEGORIES, WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
+
+const featured = featuredWorkouts();
+
+const faqs = [
+  {
+    question: 'What is an AMRAP workout?',
+    answer:
+      'An AMRAP workout gives you a fixed time cap and a short list of movements. You cycle through them in order, completing as many full rounds as possible before the clock hits zero. Your score is rounds completed plus the reps of the round you were partway through.',
+  },
+  {
+    question: 'Are these AMRAP workouts bodyweight only?',
+    answer:
+      'Yes. Every workout in this library uses bodyweight movements only, so you can run them at home, in a hotel room or in a garage gym with no equipment at all. The scaling comes from pace and range of motion rather than load.',
+  },
+];
+
+const jsonLd = [
+  faqPage(faqs),
+  breadcrumbList([
+    { name: 'Home', path: '/' },
+    { name: 'AMRAP workouts', path: '/amrap-workouts' },
+  ]),
+];
+---
+
+<BaseLayout jsonLd={jsonLd}>
+  <div class="mx-auto w-full max-w-[52rem] space-y-14 px-6 py-12 lg:px-10 lg:py-16">
+    <header class="space-y-4">
+      <p class="eyebrow text-accent">The library</p>
+      <h1 class="text-display text-[clamp(2.5rem,7vw,4rem)] leading-[0.9] text-ink">
+        AMRAP workouts
+      </h1>
+      <p class="text-base leading-[1.7] text-secondary">
+        {WORKOUT_TEMPLATES.length} bodyweight AMRAP workouts across 5, 10, 15 and 20 minute time domains.
+        No equipment, no gym. Pick a time cap, or pick the kind of work you want to do.
+      </p>
+    </header>
+
+    <section class="space-y-5">
+      <h2 class="text-display text-[clamp(1.75rem,4vw,2.5rem)] leading-[0.95] text-ink">
+        By time domain
+      </h2>
+      <div class="grid gap-3 sm:grid-cols-2">
+        {
+          TIME_DOMAINS.map((minutes) => (
+            <a class="card block p-5 hover:border-accent" href={durationPath(minutes)}>
+              <span class="text-display text-2xl text-ink">{minutes} minute AMRAPs</span>
+              <p class="mt-1 text-sm text-secondary">
+                {workoutsForDuration(minutes).length} workouts
+              </p>
+            </a>
+          ))
+        }
+      </div>
+    </section>
+
+    <section class="space-y-5">
+      <h2 class="text-display text-[clamp(1.75rem,4vw,2.5rem)] leading-[0.95] text-ink">
+        By training stimulus
+      </h2>
+      <div class="space-y-3">
+        {
+          WORKOUT_CATEGORIES.map((category) => (
+            <a class="card block p-5 hover:border-accent" href={categoryPath(category.id)}>
+              <span class="font-semibold text-ink">{category.label}</span>
+              <p class="mt-1 text-sm text-secondary">{category.description}</p>
+              <p class="mt-2 text-xs text-muted">
+                {workoutsForCategory(category.id).length} workouts ·{' '}
+                {category.availableForDurations.join(', ')} minutes
+              </p>
+            </a>
+          ))
+        }
+      </div>
+    </section>
+
+    <section class="space-y-5">
+      <h2 class="text-display text-[clamp(1.75rem,4vw,2.5rem)] leading-[0.95] text-ink">
+        Workouts in detail
+      </h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        {featured.length} of them written up in full — how to pace it, how to scale it, and coaching cues
+        for every movement.
+      </p>
+      <ul class="space-y-3">
+        {
+          featured.map((template) => (
+            <li class="card p-4">
+              <a class="font-semibold text-ink hover:text-accent" href={workoutPath(template)}>
+                {template.name}
+              </a>
+              <p class="mt-1 text-sm text-secondary">
+                {template.durationMinutes} minute AMRAP — {movementSummary(template)}
+              </p>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="space-y-8">
+      <h2 class="text-display text-[clamp(1.75rem,4vw,2.5rem)] leading-[0.95] text-ink">
+        AMRAP questions, answered
+      </h2>
+      {
+        faqs.map((faq) => (
+          <div class="space-y-3">
+            <h3 class="text-base font-semibold text-ink">{faq.question}</h3>
+            <p class="text-base leading-[1.7] text-secondary">{faq.answer}</p>
+          </div>
+        ))
+      }
+    </section>
+  </div>
+</BaseLayout>

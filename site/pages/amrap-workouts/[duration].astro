@@ -1,0 +1,113 @@
+---
+import type { GetStaticPaths } from 'astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { breadcrumbList } from '@/lib/seo/structuredData';
+import {
+  categoryLabel,
+  categoryPath,
+  durationPath,
+  durationPages,
+  durationSegment,
+  featuredWorkouts,
+  movementSummary,
+  workoutPath,
+  workoutsForDuration,
+} from '@/lib/seo/contentPages';
+import { TIME_DOMAINS, type TimeDomain } from '@/data/workoutTemplates';
+
+export const getStaticPaths = (() => {
+  const pages = new Map(durationPages().map((page) => [page.path, page]));
+  return TIME_DOMAINS.map((minutes) => ({
+    params: { duration: durationSegment(minutes) },
+    props: { minutes, page: pages.get(durationPath(minutes))! },
+  }));
+}) satisfies GetStaticPaths;
+
+const { minutes, page } = Astro.props as {
+  minutes: TimeDomain;
+  page: { title: string; description: string };
+};
+
+const workouts = workoutsForDuration(minutes);
+const publishedIds = new Set(featuredWorkouts().map((template) => template.id));
+
+// What a given time cap actually asks of an athlete. This is the part of the
+// page that is not a list, and the reason the page is worth reading.
+const PACING: Record<number, string> = {
+  5: 'Five minutes is short enough to go out hard and hold on. There is no real pacing decision — pick a cadence you can sustain for the whole cap and start immediately. The cost of a slow first thirty seconds is a round you never get back.',
+  10: 'Ten minutes is where pacing starts to matter. The first two rounds should feel comfortably fast rather than maximal; if you are already breathing raggedly at minute three, the back half will cost you more than the front half gained.',
+  15: 'Fifteen minutes is a pacing test wearing a workout costume. Pick a round time you think you can repeat, then repeat it. Athletes who negative-split a fifteen — second half at the same pace or faster — almost always beat the ones who sprinted the opening.',
+  20: 'Twenty minutes rewards consistency over intensity. Break the movements into planned sets before you start rather than going to failure and improvising. The score is decided in minutes twelve to twenty, and that is entirely a function of what you did in the first five.',
+};
+
+const jsonLd = [
+  breadcrumbList([
+    { name: 'Home', path: '/' },
+    { name: 'AMRAP workouts', path: '/amrap-workouts' },
+    { name: `${minutes} minute`, path: durationPath(minutes) },
+  ]),
+];
+---
+
+<BaseLayout jsonLd={jsonLd} title={page.title} description={page.description}>
+  <div class="mx-auto w-full max-w-[52rem] space-y-12 px-6 py-12 lg:px-10 lg:py-16">
+    <nav aria-label="Breadcrumb" class="text-xs text-muted">
+      <a class="link-accent" href="/amrap-workouts">AMRAP workouts</a> / {minutes} minute
+    </nav>
+
+    <header class="space-y-4">
+      <h1 class="text-display text-[clamp(2.5rem,7vw,4rem)] leading-[0.9] text-ink">
+        {minutes} minute AMRAP workouts
+      </h1>
+      <p class="text-base leading-[1.7] text-secondary">
+        {workouts.length} bodyweight AMRAP workouts with a {minutes}-minute cap. Set the clock, work
+        through the movements in order, and count every round you complete before it hits zero.
+      </p>
+    </header>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">How to pace a {minutes} minute AMRAP</h2>
+      <p class="text-base leading-[1.7] text-secondary">{PACING[minutes]}</p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">The workouts</h2>
+      <ul class="space-y-3">
+        {
+          workouts.map((template) => (
+            <li class="card p-4">
+              {publishedIds.has(template.id) ? (
+                <a class="font-semibold text-ink hover:text-accent" href={workoutPath(template)}>
+                  {template.name}
+                </a>
+              ) : (
+                <span class="font-semibold text-ink">{template.name}</span>
+              )}
+              <p class="mt-1 text-sm text-secondary">{movementSummary(template)}</p>
+              {template.category && (
+                <p class="mt-2 text-xs text-muted">
+                  <a class="link-accent" href={categoryPath(template.category)}>
+                    {categoryLabel(template.category, minutes)}
+                  </a>
+                </p>
+              )}
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Run one on a shared clock</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        Pick a workout, share a rally link, and everyone runs the same {minutes}-minute countdown
+        with a live leaderboard. Or use the
+        <a class="link-accent" href="/amrap-timer">free AMRAP timer</a> on your own.
+      </p>
+      <a
+        class="inline-block rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
+        href="/create">Create a mission</a
+      >
+    </section>
+  </div>
+</BaseLayout>
