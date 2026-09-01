@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { AppLink } from '@/components/AppLink';
+import { useNavigate, useParams } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { CampaignEditForm } from '@/components/campaign/CampaignEditForm';
 import { CampaignScheduleSection } from '@/components/campaign/CampaignScheduleSection';
@@ -144,9 +145,9 @@ export default function CampaignDetailPage() {
       <NarrowPageLayout title="Campaign" contentMaxWidthClassName="max-w-3xl">
         <p className="text-error">{error ?? 'That campaign is not available.'}</p>
         <p className="text-center text-sm">
-          <Link className="link-accent" to="/">
+          <AppLink className="link-accent" to="/">
             Back home
-          </Link>
+          </AppLink>
         </p>
       </NarrowPageLayout>
     );
@@ -642,9 +643,9 @@ export default function CampaignDetailPage() {
       />
 
       <p className="text-center text-sm">
-        <Link className="link-accent" to="/">
+        <AppLink className="link-accent" to="/">
           Back home
-        </Link>
+        </AppLink>
       </p>
     </NarrowPageLayout>
   );

@@ -1,9 +1,10 @@
 import type { LeaderboardEntry } from '@/lib/missionSync/types';
+import { AppLink } from '@/components/AppLink';
 import { resolvePacingData } from '@/lib/scoring/resolvePacingData';
 import { ScoreBreakdownDisplay } from '@/components/ScoreBreakdownDisplay';
 import { DaisyChainCta } from '@/components/mission/DaisyChainCta';
 import { announceNextMission } from '@/lib/api/rallyPoint';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
 export type MissionScorecardSaveState = 'idle' | 'saving' | 'saved' | 'unavailable';
@@ -145,9 +146,9 @@ export function MissionScorecard({
             <button type="button" className="btn-neutral w-full text-sm" onClick={onClose}>
               Close
             </button>
-            <Link className="link-accent block text-center text-sm" to="/">
+            <AppLink className="link-accent block text-center text-sm" to="/">
               Back home
-            </Link>
+            </AppLink>
           </div>
         ) : (
           <button type="button" className="btn-neutral w-full text-sm" onClick={onClose}>

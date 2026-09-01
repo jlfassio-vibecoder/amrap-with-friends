@@ -4,10 +4,6 @@
   "trailingSlash": false,
   "rewrites": [
     {
-      "source": "/",
-      "destination": "/_app-shell/index.html"
-    },
-    {
       "source": "/create",
       "destination": "/_app-shell/index.html"
     },

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AppLink } from '@/components/AppLink';
 import { Link } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { MyMissionScoreBreakdownModal } from '@/components/MyMissionScoreBreakdownModal';
@@ -207,9 +208,9 @@ export default function MyMissionsPage() {
       ) : null}
 
       <p className="text-center text-sm">
-        <Link className="link-accent" to="/">
+        <AppLink className="link-accent" to="/">
           Back home
-        </Link>
+        </AppLink>
       </p>
     </NarrowPageLayout>
   );

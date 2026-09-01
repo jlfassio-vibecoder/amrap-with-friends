@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { AppLink } from '@/components/AppLink';
 import { AuthHeaderActions } from '@/components/AuthHeaderActions';
 import type { HeaderTone } from '@/components/headerTone';
 
@@ -41,9 +41,9 @@ export function AppHeader({
       <header
         className={`hidden items-center justify-between gap-4 px-8 py-4 lg:flex ${desktopBarClassName}`}
       >
-        <Link className={brandClassName} to="/">
+        <AppLink className={brandClassName} to="/">
           AMRAP With Friends
-        </Link>
+        </AppLink>
         <div className="text-center">
           {!hidePageTitle ? (
             desktopTitleAsPageHeading ? (

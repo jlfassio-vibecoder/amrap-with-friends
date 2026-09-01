@@ -8,9 +8,11 @@ import SiteFooter from '../components/SiteFooter.astro';
 interface Props {
   /** Extra schema.org nodes for this page. Organization is always included. */
   jsonLd?: JsonLd[];
+  /** The home page carries its own nav inside the hero's dark ground. */
+  hideHeader?: boolean;
 }
 
-const { jsonLd = [] } = Astro.props;
+const { jsonLd = [], hideHeader = false } = Astro.props;
 
 // Title, description, canonical and robots all come from src/lib/seo/routes.ts —
 // the same table the SPA and the edge middleware read, so a page cannot describe
@@ -61,7 +63,7 @@ const graph = serializeJsonLd([organization(), ...jsonLd]);
     <script type="application/ld+json" is:inline set:html={graph} />
   </head>
   <body class="home-marketing bg-page text-ink">
-    <SiteHeader />
+    {!hideHeader && <SiteHeader />}
     <main>
       <slot />
     </main>

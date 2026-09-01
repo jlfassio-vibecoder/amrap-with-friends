@@ -2,7 +2,7 @@
 
 **Branch:** `claude/amrap-seo-roadmap-xwf1sk`
 **Status:** Approved — Astro content site + existing SPA (option A, Part 2)
-**Last updated:** 2026-08-31 (Phase 0 shipped; Phase 1 mostly shipped)
+**Last updated:** 2026-09-01 (Phase 0 and Phase 1 shipped)
 
 ---
 
@@ -18,7 +18,7 @@ and AI assistants cannot see a single word of a client-rendered React SPA.
 
 | Area                    | Today                                                                                                     | Verdict                                                                      |
 | ----------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Rendering               | Astro for content pages; the SPA keeps its own routes                                                     | **Phase 1** — content pages are real HTML. `/` is still the SPA              |
+| Rendering               | Astro for `/` and content pages; the SPA keeps its app routes                                             | **Phase 1** — content pages are real HTML. `/` is still the SPA              |
 | `<title>` / description | ~~One set, hard-coded, identical on every route~~                                                         | **Fixed in Phase 0** — per-route via `useSeo`                                |
 | Canonical               | ~~Site-wide canonical to `/` on **every** URL~~                                                           | **Fixed in Phase 0** — self-referencing per route, dropped on noindex routes |
 | Sitemap                 | ~~3 hand-written URLs~~                                                                                   | **Phase 1** — generated at build from the route table                        |
@@ -329,7 +329,7 @@ policy cannot disagree between what a browser sees and what a crawler sees.
 _Exit criteria: no self-inflicted penalties, and we can measure._ Code half met;
 the measurement half needs the account work above.
 
-### Phase 1 — Content layer _(weeks 2–4)_ — **mostly shipped**
+### Phase 1 — Content layer _(weeks 2–4)_ — **shipped**
 
 Architecture decision taken: **option A, Astro content site + existing SPA.**
 
@@ -359,37 +359,39 @@ Architecture decision taken: **option A, Astro content site + existing SPA.**
 description, canonical and robots; `/about` ships zero JavaScript; the CSS bundle
 carries the shared `--color-*` tokens.
 
-**Not done — needs a decision (see below):**
-
-- [ ] Homepage moves to Astro
+- [x] Homepage moves to Astro, with islands for the auth and data panels
 
 **Needs a human:** `/privacy` and `/terms` describe what the app actually does
 and are accurate, but they have not had legal review. They are drafts.
 
-### The homepage question
+### How the homepage moved
 
-Moving `/` is not like the other pages, for one concrete reason: **every dynamic
-component on it navigates with react-router `<Link>`** — `FeaturedWodCard`,
-`LiveLeaderboardPreview`, `MyCampaignsPanel`, `HostScheduledMissionsPanel`,
-`AppHeader`. On an Astro page there is no Router, so an island containing one of
-these either crashes or, with a `BrowserRouter` wrapped around it, pushes a
-history entry that renders nothing — a dead click.
+Option A was taken. The problem was that every dynamic component on `/` navigates
+with react-router `<Link>`, and an Astro island has no Router — a `<Link>` there
+throws, and a `<Link to="/">` from inside the SPA would push a history entry the
+SPA can no longer render, because Astro owns `/` now.
 
-Three ways out:
+[`AppLink`](../../src/components/AppLink.tsx) resolves both with one rule: render
+a `<Link>` only when we are inside a Router **and** `isAppRoute(to)` says the SPA
+serves the target. Everything else is a real anchor. So an island link works, and
+so does a link back to a content page from deep inside the app.
 
-| Option                                       | What it costs                                                                                                                                                                               | What it buys                                                                                           |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| **A. Router-agnostic links** _(recommended)_ | An `AppLink` that renders `<Link>` inside a Router and `<a href>` outside (`useInRouterContext`), swapped into ~5 shared components. Signed-in links on the homepage become full page loads | Static HTML homepage, **nothing removed** for signed-in users, SPA behaviour unchanged everywhere else |
-| **B. Static marketing homepage only**        | The signed-in panels (scheduled missions, campaigns) come off `/`. That is a product change, not an SEO one                                                                                 | Simplest build, zero JS on `/`                                                                         |
-| **C. Leave `/` on the SPA for now**          | The most valuable URL stays invisible to AI crawlers                                                                                                                                        | Phase 2's ~90 content URLs land sooner                                                                 |
+`linkTargets.test.ts` fails CI if any `<Link>` in `src/` points at a page Astro
+builds — the failure mode is otherwise silent, and it will recur every time
+Phase 2 adds content routes.
 
-Recommendation: **A**. It removes nothing, and the only real cost is that a
-signed-in athlete clicking "My missions" from the homepage does a full page load
-instead of a client-side transition — a fair trade for making the site's most
-valuable URL readable by every crawler.
+What this cost: a signed-in athlete clicking a link back to `/` from inside the
+app gets a full page load rather than a client-side transition. Nothing was
+removed — scheduled missions and campaigns still render on the home page, as
+`client:only` islands, because they mount `ThemeProvider`, which reads `document`.
 
-Worth weighing against C: `/` is one URL and Phase 2 is roughly ninety. If
-capacity is the constraint, doing Phase 2 first is defensible.
+The SPA's `HomePage`, `LandingHero`, `RallyCta` and `HomeSeoContent` are deleted.
+Keeping them would have meant two homepages drifting apart.
+
+**Result:** `/` now serves about 4.5 KB of real text before any JavaScript runs —
+the h1, the AMRAP definition, seven `<h2>`s, the workout style names and an
+answer-first FAQ with matching `FAQPage` markup. An AI crawler previously saw
+none of it.
 
 ### Phase 2 — Programmatic content _(weeks 4–8)_
 

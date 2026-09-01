@@ -1,4 +1,5 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { AppLink } from '@/components/AppLink';
 import { useEffect, useRef, useState } from 'react';
 import {
   getStoredParticipantId,
@@ -340,9 +341,9 @@ export default function MissionWaitingRoomPage() {
     return (
       <main className="mx-auto max-w-lg space-y-4 p-6">
         <p className="text-error">Error: Missing mission ID.</p>
-        <Link className="link-accent" to="/">
+        <AppLink className="link-accent" to="/">
           Back home
-        </Link>
+        </AppLink>
       </main>
     );
   }
@@ -1182,14 +1183,14 @@ function LiveMissionView({
             {rallyPointHref ? (
               <DaisyChainCta className="link-accent text-sm" onActivate={handleDaisyChainExit} />
             ) : (
-              <Link className="link-accent" to="/">
+              <AppLink className="link-accent" to="/">
                 Back home
-              </Link>
+              </AppLink>
             )}
             {rallyPointHref ? (
-              <Link className="link-accent" to="/">
+              <AppLink className="link-accent" to="/">
                 Back home
-              </Link>
+              </AppLink>
             ) : null}
           </div>
         </section>
@@ -1207,14 +1208,14 @@ function LiveMissionView({
             {rallyPointHref ? (
               <DaisyChainCta className="link-accent text-sm" onActivate={handleDaisyChainExit} />
             ) : (
-              <Link className="link-accent" to="/">
+              <AppLink className="link-accent" to="/">
                 Back home
-              </Link>
+              </AppLink>
             )}
             {rallyPointHref ? (
-              <Link className="link-accent" to="/">
+              <AppLink className="link-accent" to="/">
                 Back home
-              </Link>
+              </AppLink>
             ) : null}
           </span>
         </footer>

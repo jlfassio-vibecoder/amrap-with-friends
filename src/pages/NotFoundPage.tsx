@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { AppLink } from '@/components/AppLink';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 
 /**
@@ -14,9 +15,9 @@ function NotFoundPage() {
         rally link will land here too.
       </p>
       <div className="flex flex-wrap gap-3">
-        <Link className="link-accent" to="/">
+        <AppLink className="link-accent" to="/">
           Back to the home page
-        </Link>
+        </AppLink>
         <Link className="link-accent" to="/create">
           Create a mission
         </Link>

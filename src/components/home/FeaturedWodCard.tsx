@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { AppLink } from '@/components/AppLink';
 import { fetchCurrentFeaturedWod, type FeaturedWod } from '@/lib/api/featuredWod';
 import { getFeaturedWodCardPresentation } from '@/lib/mission/featuredWodCardPresentation';
 import { track } from '@/lib/analytics/track';
@@ -162,7 +162,7 @@ export function FeaturedWodCard() {
         </a>
       </p>
       {presentation.showJoinRallyPoint ? (
-        <Link
+        <AppLink
           className="btn-primary inline-block"
           to={`/join?m=${featured.missionId}`}
           onClick={() =>
@@ -174,7 +174,7 @@ export function FeaturedWodCard() {
           }
         >
           Join mission
-        </Link>
+        </AppLink>
       ) : presentation.showRallyPointOpensSoon ? (
         <p className="text-xs text-secondary">Rally point opens shortly before start.</p>
       ) : null}

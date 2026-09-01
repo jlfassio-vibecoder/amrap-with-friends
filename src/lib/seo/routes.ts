@@ -38,6 +38,12 @@ export interface RouteSeo {
  */
 export const CONTENT_ROUTES: RouteSeo[] = [
   {
+    path: '/',
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    index: true,
+  },
+  {
     path: '/amrap-timer',
     title: 'Free AMRAP Timer — Online, No Signup',
     description:
@@ -67,12 +73,6 @@ export const CONTENT_ROUTES: RouteSeo[] = [
 
 /** Routes served by the React SPA shell. */
 export const APP_ROUTES: RouteSeo[] = [
-  {
-    path: '/',
-    title: DEFAULT_TITLE,
-    description: DEFAULT_DESCRIPTION,
-    index: true,
-  },
   {
     path: '/create',
     title: 'Create an AMRAP mission — AMRAP With Friends',
@@ -115,14 +115,17 @@ export function isAppRoute(pathname: string): boolean {
 /**
  * Trailing slashes, repeated slashes and a `.html` suffix are all the same URL
  * to us; the canonical carries none of them. The `.html` case is not theoretical:
- * Astro's file-format build reports `/about.html` as the page's pathname, and
- * `cleanUrls` redirects that suffix away in production.
+ * Astro's file-format build reports `/about.html` as the page's pathname and
+ * `/index.html` for the home page, and `cleanUrls` redirects those away in
+ * production.
  */
 export function normalizePathname(pathname: string): string {
   const withoutQuery = pathname.split(/[?#]/)[0];
   const collapsed = withoutQuery.replace(/\/{2,}/g, '/');
   const withoutSuffix = collapsed.replace(/\.html$/i, '');
-  const trimmed = withoutSuffix.replace(/\/+$/, '');
+  // `/index` is the directory's own document, not a page called "index".
+  const withoutIndex = withoutSuffix.replace(/\/index$/i, '/');
+  const trimmed = withoutIndex.replace(/\/+$/, '');
   return trimmed === '' ? '/' : trimmed;
 }
 

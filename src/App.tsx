@@ -1,6 +1,5 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import HomePage from './pages/HomePage';
 import { FeaturedWodCard } from '@/components/home/FeaturedWodCard';
 import { GlobalPresenceBroadcaster } from '@/components/GlobalPresenceBroadcaster';
 import { RequireIntake } from '@/components/RequireIntake';
@@ -40,7 +39,6 @@ function App() {
       <GlobalPresenceBroadcaster />
       <Suspense fallback={<RouteFallback />}>
         <Routes>
-          <Route path="/" element={<HomePage />} />
           <Route
             path="/create"
             element={

@@ -21,7 +21,11 @@ describe('normalizePathname', () => {
 
   it("treats a .html suffix as the same URL, which is how Astro's build reports it", () => {
     expect(normalizePathname('/about.html')).toBe('/about');
-    expect(normalizePathname('/index.html')).toBe('/index');
+  });
+
+  it('treats /index.html as the root document, which is what Astro reports for the home page', () => {
+    expect(normalizePathname('/index.html')).toBe('/');
+    expect(normalizePathname('/index')).toBe('/');
   });
 
   it('collapses repeated slashes and never returns an empty string', () => {

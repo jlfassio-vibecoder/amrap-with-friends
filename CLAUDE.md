@@ -182,6 +182,19 @@ Workout and classification names are content, not chrome, and are untouched:
   `index.html`; it is served for every route, so one there claims every URL is a
   duplicate of the homepage. `sitemap.test.ts` fails CI if `public/sitemap.xml`
   drifts from the indexable rows.
+- **Astro owns the content pages, the SPA owns the app.** `site/` builds `/`,
+  `/amrap-timer`, `/about`, `/privacy` and `/terms` as static HTML — most
+  crawlers, and every AI crawler, never run JavaScript. `src/` is unchanged and
+  keeps its own routes, because rally links are shared into group chats and must
+  never move. Two builds (`dist-app`, `dist-site`) are assembled into `dist/` by
+  `scripts/merge-build.ts`, and `vercel.json` rewrites each app route to
+  `_app-shell/index.html`. Astro imports `src/index.css`, so the design tokens
+  are shared, not duplicated.
+- **Link with `AppLink`, not `Link`, whenever the target might be a content
+  page.** An Astro island has no Router, and `<Link to="/about">` from inside the
+  SPA would push a route the SPA cannot render. `AppLink` renders a `<Link>` only
+  inside a Router _and_ when `isAppRoute(to)`; otherwise a real anchor.
+  `linkTargets.test.ts` fails CI if a `<Link>` points at a page Astro builds.
 - **Design tokens only.** Edit hex values in `src/index.css`; components use
   `var(--color-*)` or the semantic Tailwind utilities that map to them. Never
   hard-code a colour in a component.
