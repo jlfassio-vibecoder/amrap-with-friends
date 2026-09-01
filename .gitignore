@@ -31,3 +31,8 @@ dist-ssr
 # Test coverage
 coverage
 .vercel
+
+# Build outputs merged into dist/ by scripts/merge-build.ts
+dist-app
+dist-site
+.astro

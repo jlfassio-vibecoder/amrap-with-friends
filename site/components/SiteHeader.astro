@@ -1,0 +1,40 @@
+---
+// Static markup on purpose. The app's AppHeader is auth-aware and would drag the
+// whole Supabase client onto a page that is meant to ship no JavaScript at all.
+const links = [
+  { href: '/amrap-timer', label: 'AMRAP timer' },
+  { href: '/about', label: 'About' },
+];
+const pathname = Astro.url.pathname.replace(/\/$/, '') || '/';
+---
+
+<header class="night-panel bg-night text-night-ink">
+  <div
+    class="mx-auto flex w-full max-w-[1240px] flex-wrap items-center justify-between gap-4 px-6 py-5 lg:px-10"
+  >
+    <a class="text-display text-xl tracking-wide text-night-ink" href="/">AMRAP With Friends</a>
+    <nav aria-label="Main">
+      <ul class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+        {
+          links.map((link) => (
+            <li>
+              <a
+                class="text-night-secondary hover:text-gold"
+                href={link.href}
+                aria-current={pathname === link.href ? 'page' : undefined}
+              >
+                {link.label}
+              </a>
+            </li>
+          ))
+        }
+        <li>
+          <a
+            class="rounded-card bg-accent px-4 py-2 font-semibold text-on-accent hover:bg-accent-hover"
+            href="/create">Create mission</a
+          >
+        </li>
+      </ul>
+    </nav>
+  </div>
+</header>

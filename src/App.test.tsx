@@ -24,24 +24,31 @@ vi.mock('@/lib/supabase', () => ({
         data: { subscription: { unsubscribe: vi.fn() } },
       })),
     },
-    // HomePage renders FeaturedWodCard, which fetches unconditionally
-    // (even signed-out) — mock rpc so that call resolves instead of
+    // /create renders FeaturedWodCard as its signed-out preview, and that
+    // fetches unconditionally — mock rpc so the call resolves instead of
     // throwing "supabase.rpc is not a function".
     rpc: vi.fn(() => Promise.resolve({ data: { ok: true, featured: null }, error: null })),
   },
 }));
 
+function renderAt(path: string) {
+  render(
+    <MemoryRouter initialEntries={[path]}>
+      <ThemeProvider>
+        <AmrapAuthProvider>
+          <App />
+        </AmrapAuthProvider>
+      </ThemeProvider>
+    </MemoryRouter>
+  );
+}
+
 describe('App', () => {
-  it('renders the home page heading', () => {
-    render(
-      <MemoryRouter>
-        <ThemeProvider>
-          <AmrapAuthProvider>
-            <App />
-          </AmrapAuthProvider>
-        </ThemeProvider>
-      </MemoryRouter>
-    );
-    expect(screen.getByRole('heading', { name: 'AMRAP With Friends' })).toBeDefined();
+  // `/` is no longer an app route: Astro builds the home page and the SPA is
+  // never served there, so this is what the router does with anything it does
+  // not own. It exercises Routes, the lazy boundary and the catch-all together.
+  it('renders the not-found page for a path the SPA does not serve', async () => {
+    renderAt('/not-a-real-page');
+    expect(await screen.findByRole('heading', { name: /page not found/i })).toBeDefined();
   });
 });

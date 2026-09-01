@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { AppLink } from '@/components/AppLink';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
 import { WorkoutTemplatePicker } from '@/components/createMission/WorkoutTemplatePicker';
@@ -321,9 +322,9 @@ export default function RallyPointPage() {
       <main className="min-h-screen bg-page p-6">
         <AppHeader title="Next Mission" />
         <p className="text-error mt-6">{displayError}</p>
-        <Link className="link-accent mt-4 inline-block" to="/">
+        <AppLink className="link-accent mt-4 inline-block" to="/">
           Back home
-        </Link>
+        </AppLink>
       </main>
     );
   }
@@ -489,9 +490,9 @@ export default function RallyPointPage() {
           >
             Leave rally point
           </button>
-          <Link className="link-accent" to="/">
+          <AppLink className="link-accent" to="/">
             Back home
-          </Link>
+          </AppLink>
         </div>
       </div>
     </main>

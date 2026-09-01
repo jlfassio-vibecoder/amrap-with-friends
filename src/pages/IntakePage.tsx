@@ -1,12 +1,6 @@
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type FormEvent,
-  type RefObject,
-} from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type RefObject } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { AppLink } from '@/components/AppLink';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { track, trackBeacon } from '@/lib/analytics/track';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
@@ -80,14 +74,7 @@ function nicknameValidationMessage(value: string): string | null {
 }
 
 type IntakeFieldKey =
-  | 'email'
-  | 'username'
-  | 'nickname'
-  | 'height'
-  | 'weight'
-  | 'age'
-  | 'biologicalSex'
-  | 'declaration';
+  'email' | 'username' | 'nickname' | 'height' | 'weight' | 'age' | 'biologicalSex' | 'declaration';
 
 type IntakeFieldError = { key: IntakeFieldKey; message: string };
 
@@ -201,8 +188,7 @@ function IntakeForm({
     }
     const inches = cmToIn(initial.heightCm);
     const pounds = kgToLb(initial.weightKg);
-    const preferImperial =
-      isValidHeight(inches, 'imperial') && isValidWeight(pounds, 'imperial');
+    const preferImperial = isValidHeight(inches, 'imperial') && isValidWeight(pounds, 'imperial');
     return String(preferImperial ? inches : initial.heightCm);
   });
   const [weight, setWeight] = useState(() => {
@@ -211,8 +197,7 @@ function IntakeForm({
     }
     const inches = cmToIn(initial.heightCm);
     const pounds = kgToLb(initial.weightKg);
-    const preferImperial =
-      isValidHeight(inches, 'imperial') && isValidWeight(pounds, 'imperial');
+    const preferImperial = isValidHeight(inches, 'imperial') && isValidWeight(pounds, 'imperial');
     return String(preferImperial ? pounds : initial.weightKg);
   });
   const [age, setAge] = useState(
@@ -387,10 +372,8 @@ function IntakeForm({
     try {
       const heightValue = Number(height);
       const weightValue = Number(weight);
-      const heightCm =
-        unitSystem === 'imperial' ? inToCm(heightValue) : heightValue;
-      const weightKg =
-        unitSystem === 'imperial' ? lbToKg(weightValue) : weightValue;
+      const heightCm = unitSystem === 'imperial' ? inToCm(heightValue) : heightValue;
+      const weightKg = unitSystem === 'imperial' ? lbToKg(weightValue) : weightValue;
       const profileResult = await onSaveProfile({
         heightCm,
         weightKg,
@@ -462,12 +445,8 @@ function IntakeForm({
   }
 
   const emailError = shouldShowFieldError('email', email) ? errorByField.email : null;
-  const usernameError = shouldShowFieldError('username', username)
-    ? errorByField.username
-    : null;
-  const nicknameError = shouldShowFieldError('nickname', nickname)
-    ? errorByField.nickname
-    : null;
+  const usernameError = shouldShowFieldError('username', username) ? errorByField.username : null;
+  const nicknameError = shouldShowFieldError('nickname', nickname) ? errorByField.nickname : null;
   const heightError = shouldShowFieldError('height', height) ? errorByField.height : null;
   const weightError = shouldShowFieldError('weight', weight) ? errorByField.weight : null;
   const ageError = shouldShowFieldError('age', age) ? errorByField.age : null;
@@ -479,9 +458,7 @@ function IntakeForm({
   return (
     <form className="card space-y-6 p-6" onSubmit={handleSubmit} noValidate>
       <div className="space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-secondary">
-          Account
-        </p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-secondary">Account</p>
         <label className="block space-y-1">
           <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
             Email
@@ -493,11 +470,14 @@ function IntakeForm({
             autoComplete="email"
             aria-invalid={Boolean(emailError)}
             value={email}
-            onChange={(event) => { setEmail(event.target.value); markDirty(); }}
+            onChange={(event) => {
+              setEmail(event.target.value);
+              markDirty();
+            }}
           />
         </label>
         {emailError ? (
-          <p className="text-xs text-error" role="alert">
+          <p className="text-error text-xs" role="alert">
             {emailError}
           </p>
         ) : null}
@@ -511,7 +491,10 @@ function IntakeForm({
             autoComplete="new-password"
             placeholder="Leave blank to keep current"
             value={password}
-            onChange={(event) => { setPassword(event.target.value); markDirty(); }}
+            onChange={(event) => {
+              setPassword(event.target.value);
+              markDirty();
+            }}
           />
         </label>
         <label className="block space-y-1">
@@ -531,7 +514,7 @@ function IntakeForm({
           />
         </label>
         {usernameError ? (
-          <p className="text-xs text-error" role="alert">
+          <p className="text-error text-xs" role="alert">
             {usernameError}
           </p>
         ) : (
@@ -548,32 +531,29 @@ function IntakeForm({
             className="input-field"
             aria-invalid={Boolean(nicknameError)}
             value={nickname}
-            onChange={(event) => { setNickname(event.target.value); markDirty(); }}
+            onChange={(event) => {
+              setNickname(event.target.value);
+              markDirty();
+            }}
           />
         </label>
         {nicknameError ? (
-          <p className="text-xs text-error" role="alert">
+          <p className="text-error text-xs" role="alert">
             {nicknameError}
           </p>
         ) : (
-          <p className="text-xs text-muted">
-            Default workout callsign (max 50 characters)
-          </p>
+          <p className="text-xs text-muted">Default workout callsign (max 50 characters)</p>
         )}
       </div>
 
-      <div
-        className="flex gap-2"
-        role="group"
-        aria-label="Measurement units"
-      >
+      <div className="flex gap-2" role="group" aria-label="Measurement units">
         <button
           type="button"
           aria-pressed={unitSystem === 'imperial'}
           className={
             unitSystem === 'imperial'
               ? 'rounded-card bg-accent px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-on-accent'
-              : 'rounded-card border border-border px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-ink hover:border-accent/40'
+              : 'hover:border-accent/40 rounded-card border border-border px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-ink'
           }
           onClick={() => switchUnitSystem('imperial')}
         >
@@ -585,7 +565,7 @@ function IntakeForm({
           className={
             unitSystem === 'metric'
               ? 'rounded-card bg-accent px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-on-accent'
-              : 'rounded-card border border-border px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-ink hover:border-accent/40'
+              : 'hover:border-accent/40 rounded-card border border-border px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-ink'
           }
           onClick={() => switchUnitSystem('metric')}
         >
@@ -605,11 +585,14 @@ function IntakeForm({
               inputMode="numeric"
               aria-invalid={Boolean(heightError)}
               value={height}
-              onChange={(event) => { setHeight(event.target.value); markDirty(); }}
+              onChange={(event) => {
+                setHeight(event.target.value);
+                markDirty();
+              }}
             />
           </label>
           {heightError ? (
-            <p className="text-xs text-error" role="alert">
+            <p className="text-error text-xs" role="alert">
               {heightError}
             </p>
           ) : null}
@@ -625,11 +608,14 @@ function IntakeForm({
               inputMode="decimal"
               aria-invalid={Boolean(weightError)}
               value={weight}
-              onChange={(event) => { setWeight(event.target.value); markDirty(); }}
+              onChange={(event) => {
+                setWeight(event.target.value);
+                markDirty();
+              }}
             />
           </label>
           {weightError ? (
-            <p className="text-xs text-error" role="alert">
+            <p className="text-error text-xs" role="alert">
               {weightError}
             </p>
           ) : null}
@@ -645,11 +631,14 @@ function IntakeForm({
               inputMode="numeric"
               aria-invalid={Boolean(ageError)}
               value={age}
-              onChange={(event) => { setAge(event.target.value); markDirty(); }}
+              onChange={(event) => {
+                setAge(event.target.value);
+                markDirty();
+              }}
             />
           </label>
           {ageError ? (
-            <p className="text-xs text-error" role="alert">
+            <p className="text-error text-xs" role="alert">
               {ageError}
             </p>
           ) : null}
@@ -676,9 +665,12 @@ function IntakeForm({
                 className={
                   selected
                     ? 'rounded-card bg-accent px-4 py-3 text-sm font-bold uppercase tracking-widest text-on-accent'
-                    : 'rounded-card border border-border px-4 py-3 text-sm font-bold uppercase tracking-widest text-ink hover:border-accent/40'
+                    : 'hover:border-accent/40 rounded-card border border-border px-4 py-3 text-sm font-bold uppercase tracking-widest text-ink'
                 }
-                onClick={() => { setBiologicalSex(option.id); markDirty(); }}
+                onClick={() => {
+                  setBiologicalSex(option.id);
+                  markDirty();
+                }}
               >
                 {option.label}
               </button>
@@ -686,16 +678,14 @@ function IntakeForm({
           })}
         </div>
         {biologicalSexError ? (
-          <p className="text-xs text-error" role="alert">
+          <p className="text-error text-xs" role="alert">
             {biologicalSexError}
           </p>
         ) : null}
       </div>
 
       <div className="space-y-3" ref={declarationRef}>
-        <p className="text-xs font-semibold uppercase tracking-wide text-secondary">
-          Declaration
-        </p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-secondary">Declaration</p>
         <div className="space-y-3">
           {RANKS.map((option) => {
             const disabled = !canSetPerceivedClassification(
@@ -714,9 +704,12 @@ function IntakeForm({
                       ? 'w-full rounded-card bg-accent px-4 py-3 text-left text-sm font-bold uppercase tracking-widest text-on-accent'
                       : disabled
                         ? 'w-full rounded-card border border-border px-4 py-3 text-left text-sm font-bold uppercase tracking-widest text-muted opacity-50'
-                        : 'w-full rounded-card border border-border px-4 py-3 text-left text-sm font-bold uppercase tracking-widest text-ink hover:border-accent/40'
+                        : 'hover:border-accent/40 w-full rounded-card border border-border px-4 py-3 text-left text-sm font-bold uppercase tracking-widest text-ink'
                   }
-                  onClick={() => { setRank(option.id); markDirty(); }}
+                  onClick={() => {
+                    setRank(option.id);
+                    markDirty();
+                  }}
                 >
                   {option.label}
                 </button>
@@ -728,7 +721,7 @@ function IntakeForm({
           })}
         </div>
         {declarationError ? (
-          <p className="text-xs text-error" role="alert">
+          <p className="text-error text-xs" role="alert">
             {declarationError}
           </p>
         ) : null}
@@ -765,8 +758,7 @@ function IntakeForm({
 export default function IntakePage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const { isAuthenticated, isAuthLoading, user, updateEmail, updatePassword } =
-    useAmrapAuth();
+  const { isAuthenticated, isAuthLoading, user, updateEmail, updatePassword } = useAmrapAuth();
   const { profile, loading, save } = useAthleteProfile();
   const nowYear = new Date().getFullYear();
 
@@ -783,9 +775,9 @@ export default function IntakePage() {
       <NarrowPageLayout title="Your profile" subtitle="Athlete details">
         <p className="text-sm text-secondary">Sign in to set up your profile.</p>
         <p className="text-center text-sm">
-          <Link className="link-accent" to="/">
+          <AppLink className="link-accent" to="/">
             Back home
-          </Link>
+          </AppLink>
         </p>
       </NarrowPageLayout>
     );

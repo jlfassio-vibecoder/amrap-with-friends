@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { AppLink } from '@/components/AppLink';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AuthModal } from '@/components/AuthModal';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import {
@@ -63,9 +64,9 @@ export default function JoinSquadPage() {
       <NarrowPageLayout title="Your squad" subtitle="You’ve been invited">
         <p className="text-error">That invite link is not valid.</p>
         <p className="text-center text-sm">
-          <Link className="link-accent" to="/">
+          <AppLink className="link-accent" to="/">
             Back home
-          </Link>
+          </AppLink>
         </p>
       </NarrowPageLayout>
     );
@@ -88,9 +89,9 @@ export default function JoinSquadPage() {
       <NarrowPageLayout title="Your squad" subtitle="You’ve been invited">
         <p className="text-error">{error ?? 'That invite is not available.'}</p>
         <p className="text-center text-sm">
-          <Link className="link-accent" to="/">
+          <AppLink className="link-accent" to="/">
             Back home
-          </Link>
+          </AppLink>
         </p>
       </NarrowPageLayout>
     );
@@ -134,9 +135,9 @@ export default function JoinSquadPage() {
       {authOpen ? <AuthModal onClose={() => setAuthOpen(false)} /> : null}
 
       <p className="text-center text-sm">
-        <Link className="link-accent" to="/">
+        <AppLink className="link-accent" to="/">
           Back home
-        </Link>
+        </AppLink>
       </p>
     </NarrowPageLayout>
   );

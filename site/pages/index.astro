@@ -1,0 +1,260 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ScheduledMissions from '../islands/ScheduledMissions';
+import TodaysMission from '../islands/TodaysMission';
+import WorkoutStyles from '../islands/WorkoutStyles';
+import { HeroLogoDissolve } from '@/components/home/HeroLogoDissolve';
+import { HeroPath } from '@/components/home/HeroPath';
+import { LiveLeaderboardPreview } from '@/components/home/LiveLeaderboardPreview';
+import { faqPage, webApplication } from '@/lib/seo/structuredData';
+
+const features = [
+  {
+    title: 'Synced live countdown',
+    description:
+      'Solo or with a crew, everyone watches the same clock — reconciled in real time so no phone runs ahead or behind.',
+  },
+  {
+    title: 'Live leaderboard',
+    description:
+      'Log rounds with a single tap. Chase your own score solo, or watch the board update as the whole crew competes on the same AMRAP.',
+  },
+  {
+    title: 'A real AMRAP workout library',
+    description:
+      'Pick programmed AMRAPs across 5, 10, 15, and 20-minute formats — with coaching cues and form instructions whether you train alone or invite friends.',
+  },
+];
+
+const faqs = [
+  {
+    question: 'What does AMRAP mean?',
+    answer:
+      'AMRAP stands for As Many Rounds (or Reps) As Possible. You cycle through a short list of exercises for a fixed time, completing as many full rounds as you can before the clock runs out. Your score is the number of rounds, plus any reps of the round you were partway through.',
+  },
+  {
+    question: 'Can you do an AMRAP workout with friends?',
+    answer:
+      'Yes. AMRAP With Friends puts everyone on one synced countdown — the host shares a rally link, every phone that opens it runs the same clock, and the leaderboard updates live as people log rounds. It works whether you are in the same gym or in different time zones.',
+  },
+  {
+    question: 'How long should an AMRAP workout be?',
+    answer:
+      'Most run 5 to 20 minutes. Short caps reward an all-out effort; longer caps become pacing tests, where going out too fast in the first round costs more than it gains. Pick the time domain first, then choose movements you can keep doing under fatigue.',
+  },
+];
+
+const jsonLd = [webApplication(), faqPage(faqs)];
+---
+
+<BaseLayout jsonLd={jsonLd} hideHeader>
+  <div class="night-panel relative isolate overflow-hidden bg-night text-night-ink">
+    <div
+      class="mx-auto flex w-full max-w-[1240px] flex-wrap items-center justify-between gap-4 px-6 py-5 lg:px-10"
+    >
+      <span class="text-display text-xl tracking-wide text-night-ink">AMRAP With Friends</span>
+      <nav aria-label="Main">
+        <ul class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+          <li>
+            <a class="text-night-secondary hover:text-gold" href="/amrap-timer">AMRAP timer</a>
+          </li>
+          <li><a class="text-night-secondary hover:text-gold" href="/about">About</a></li>
+          <li><a class="text-night-secondary hover:text-gold" href="/join">Join a mission</a></li>
+          <li>
+            <a
+              class="rounded-card bg-accent px-4 py-2 font-semibold text-on-accent hover:bg-accent-hover"
+              href="/create">Create mission</a
+            >
+          </li>
+        </ul>
+      </nav>
+    </div>
+
+    <section
+      class="mx-auto grid w-full max-w-[1240px] items-center gap-8 px-6 pb-10 pt-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:px-10 lg:pb-16 lg:pt-16"
+    >
+      <div>
+        <h1 class="landing-headline text-[clamp(3.5rem,10vw,8rem)] text-night-ink">
+          AMRAP With Friends
+        </h1>
+        <p
+          class="landing-headline mt-4 text-[clamp(1.35rem,3.2vw,2.05rem)] tracking-[0.02em] text-gold"
+        >
+          Stronger Together. Move as one.
+        </p>
+        <p class="mt-6 max-w-[26rem] text-[15px] leading-[1.6] text-night-secondary">
+          Training is hard. Showing up alone is harder. Bring your squad, lock in a shared mission,
+          and earn the kind of progress that only happens together.
+        </p>
+
+        <div class="mt-8 flex flex-wrap items-center gap-x-7 gap-y-4">
+          <a
+            class="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
+            href="/create">Create mission</a
+          >
+          <a
+            class="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
+            href="/squad">Invite your squad →</a
+          >
+          <a
+            class="border-b border-gold pb-1.5 text-xs font-bold uppercase tracking-[0.1em] text-night-ink hover:text-gold"
+            href="/join">Join a mission</a
+          >
+          <a
+            class="border-b border-gold pb-1.5 text-xs font-bold uppercase tracking-[0.1em] text-night-ink hover:text-gold"
+            href="/hud">Open your HUD</a
+          >
+        </div>
+      </div>
+
+      <div class="-mx-2 lg:mx-0">
+        <HeroLogoDissolve client:visible />
+      </div>
+    </section>
+
+    <div class="mx-auto w-full max-w-[1240px] px-6 pb-14 lg:px-10 lg:pb-20">
+      <div class="rounded-card border border-night-border bg-surface p-5 text-ink shadow-card">
+        <ScheduledMissions client:only="react" />
+      </div>
+    </div>
+  </div>
+
+  <div class="mx-auto w-full max-w-[1080px] space-y-16 px-6 py-14 lg:px-10 lg:py-20">
+    <TodaysMission client:only="react" />
+
+    <div class="flex flex-col gap-16 text-left">
+      <section class="grid gap-8 md:grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)] md:gap-14">
+        <div class="space-y-3">
+          <p class="eyebrow text-accent">What is an AMRAP?</p>
+          <h2 class="text-display text-[clamp(2.25rem,5vw,3.25rem)] leading-[0.9] text-ink">
+            As many rounds. As possible.
+          </h2>
+        </div>
+        <div class="space-y-4">
+          <p class="text-base leading-[1.7] text-secondary">
+            AMRAP stands for <strong class="font-semibold text-ink"
+              >As Many Rounds (or Reps) As Possible</strong
+            > — a timed workout format where you cycle through a short list of exercises for a fixed duration,
+            completing as many full rounds as you can before the clock runs out.
+          </p>
+          <p class="text-base leading-[1.7] text-secondary">
+            It's one of the most popular workout styles in functional fitness because it's simple to
+            set up, scales to any fitness level, and turns a workout into a measurable score you can
+            compare against friends.
+          </p>
+          <p class="text-base leading-[1.7] text-secondary">
+            <strong class="font-semibold text-ink">AMRAP With Friends</strong> takes that format and makes
+            it social: host a live AMRAP mission, share a code, and everyone's countdown, round count,
+            and leaderboard position update in real time — whether you're all in the same gym or scattered
+            across different time zones.
+          </p>
+        </div>
+      </section>
+
+      <!-- Presentational only, so Astro renders it to HTML and it ships no JavaScript. -->
+      <HeroPath />
+
+      <LiveLeaderboardPreview client:visible />
+
+      <section class="space-y-6">
+        <div class="space-y-3">
+          <p class="eyebrow text-accent">The kit</p>
+          <h2 class="text-display text-[clamp(2.25rem,5vw,3.25rem)] leading-[0.9] text-ink">
+            Built for training together or solo
+          </h2>
+        </div>
+        <div class="grid gap-4 md:grid-cols-3">
+          {
+            features.map((feature) => (
+              <article class="card space-y-3 p-6">
+                <h3 class="text-base font-semibold text-ink">{feature.title}</h3>
+                <p class="text-sm text-secondary">{feature.description}</p>
+              </article>
+            ))
+          }
+        </div>
+      </section>
+
+      <section class="space-y-5">
+        <div class="space-y-3">
+          <p class="eyebrow text-accent">The library</p>
+          <h2 class="text-display text-[clamp(2.25rem,5vw,3.25rem)] leading-[0.9] text-ink">
+            AMRAP workout styles
+          </h2>
+        </div>
+        <p class="max-w-[38rem] text-[15px] leading-[1.6] text-secondary">
+          Every AMRAP in the library is built around a specific training stimulus — from quick
+          anaerobic sprints to longer aerobic grinds. Pick one to see what it asks of you:
+        </p>
+        <WorkoutStyles client:visible />
+      </section>
+
+      <section class="space-y-8">
+        <h2 class="text-display text-[clamp(2.25rem,5vw,3.25rem)] leading-[0.9] text-ink">
+          AMRAP questions, answered
+        </h2>
+        {
+          faqs.map((faq) => (
+            <div class="space-y-3">
+              <h3 class="text-base font-semibold text-ink">{faq.question}</h3>
+              <p class="text-base leading-[1.7] text-secondary">{faq.answer}</p>
+            </div>
+          ))
+        }
+      </section>
+    </div>
+  </div>
+
+  <section id="rally" class="night-panel relative isolate overflow-hidden bg-night text-night-ink">
+    <div
+      class="mx-auto grid w-full max-w-[1240px] items-end gap-10 px-6 py-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)] lg:items-center lg:gap-8 lg:px-10 lg:py-24"
+    >
+      <div>
+        <p class="eyebrow text-gold">Rally command</p>
+        <h2
+          class="landing-headline mt-5 max-w-[45rem] text-[clamp(2.5rem,6vw,4.5rem)] text-night-ink"
+        >
+          Your next mission begins with one invitation.
+        </h2>
+        <p class="mt-6 max-w-[32rem] text-base leading-[1.6] text-night-secondary">
+          Set up the mission in under a minute and share the rally link. When the timer starts,
+          every member of the squad is synced to the same timer and workout.
+        </p>
+
+        <div class="mt-9 flex flex-wrap items-center gap-x-7 gap-y-4">
+          <a
+            class="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
+            href="/create">Create mission</a
+          >
+          <a
+            class="border-b border-gold pb-1.5 text-xs font-bold uppercase tracking-[0.1em] text-night-ink hover:text-gold"
+            href="/join">I have a mission code</a
+          >
+        </div>
+
+        <dl class="mt-12 flex flex-wrap gap-x-12 gap-y-6">
+          <div>
+            <dt class="text-display text-2xl text-night-ink">01 minute</dt>
+            <dd class="mt-1 text-xs text-night-secondary">to launch a rally</dd>
+          </div>
+          <div>
+            <dt class="text-display text-2xl text-night-ink">01 shared clock</dt>
+            <dd class="mt-1 text-xs text-night-secondary">for every athlete</dd>
+          </div>
+          <div>
+            <dt class="text-display text-2xl text-night-ink">∞ reasons</dt>
+            <dd class="mt-1 text-xs text-night-secondary">to show up again</dd>
+          </div>
+        </dl>
+      </div>
+
+      <div class="flex justify-center lg:justify-end lg:self-end lg:pb-2">
+        <HeroLogoDissolve
+          client:visible
+          decorative
+          className="w-full max-w-[18rem] sm:max-w-[22rem] lg:max-w-[min(100%,28rem)]"
+        />
+      </div>
+    </div>
+  </section>
+</BaseLayout>

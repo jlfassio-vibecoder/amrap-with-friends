@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { AppLink } from '@/components/AppLink';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { HostScheduledMissionsPanel } from '@/components/mission/HostScheduledMissionsPanel';
@@ -260,9 +261,9 @@ export default function JoinMissionPage() {
         <HostScheduledMissionsPanel />
 
         <p className="text-center text-sm">
-          <Link className="link-accent" to="/">
+          <AppLink className="link-accent" to="/">
             Back home
-          </Link>
+          </AppLink>
         </p>
       </NarrowPageLayout>
     );

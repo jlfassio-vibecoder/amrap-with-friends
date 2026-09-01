@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { AppLink } from '@/components/AppLink';
 
 /** Illustrative roster — labelled preview of the mission view, not live data. */
 const ROSTER = [
@@ -51,10 +51,10 @@ export function LiveLeaderboardPreview() {
           Rep counts update together, turning a personal effort into a mission the whole crew can
           feel — whether they&apos;re across the gym or across time zones.
         </p>
-        <Link className="btn-primary inline-block" to="/create">
+        <AppLink className="btn-primary inline-block" to="/create">
           {/* Copilot suggestion ignored: keep user-specified “Start a Mission” CTA on this marketing surface. */}
           Start a Mission
-        </Link>
+        </AppLink>
       </div>
 
       <figure className="m-0 space-y-3">

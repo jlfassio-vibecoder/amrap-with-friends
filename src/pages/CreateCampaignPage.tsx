@@ -1,5 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { AppLink } from '@/components/AppLink';
+import { useNavigate } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { CampaignSchedulePreview } from '@/components/campaign/CampaignSchedulePreview';
 import { CampaignSlotPicker } from '@/components/campaign/CampaignSlotPicker';
@@ -227,9 +228,9 @@ export default function CreateCampaignPage() {
           <button type="submit" className="btn-primary" disabled={!canSubmit}>
             {saving ? 'Creating…' : 'Create campaign'}
           </button>
-          <Link className="link-accent text-sm" to="/">
+          <AppLink className="link-accent text-sm" to="/">
             Cancel
-          </Link>
+          </AppLink>
         </div>
       </form>
     </NarrowPageLayout>

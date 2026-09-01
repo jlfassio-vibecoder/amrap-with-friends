@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { AppLink } from '@/components/AppLink';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { useCopyFlash } from '@/hooks/useCopyFlash';
 import {
@@ -171,9 +171,9 @@ export default function SquadPage() {
       <NarrowPageLayout title="Your squad" contentMaxWidthClassName="max-w-3xl">
         <p className="text-error">{error ?? 'Something went wrong. Please try again.'}</p>
         <p className="text-center text-sm">
-          <Link className="link-accent" to="/">
+          <AppLink className="link-accent" to="/">
             Back home
-          </Link>
+          </AppLink>
         </p>
       </NarrowPageLayout>
     );
@@ -400,9 +400,9 @@ export default function SquadPage() {
       {error ? <p className="alert-error">{error}</p> : null}
 
       <p className="text-center text-sm">
-        <Link className="link-accent" to="/">
+        <AppLink className="link-accent" to="/">
           Back home
-        </Link>
+        </AppLink>
       </p>
     </NarrowPageLayout>
   );

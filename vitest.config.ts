@@ -6,7 +6,9 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
-    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    // middleware.ts lives at the repo root because Vercel requires it there;
+    // its test sits beside it and still needs to run.
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'site/**/*.test.tsx', 'middleware.test.ts'],
     env: {
       VITE_SUPABASE_URL: 'http://localhost:54321',
       VITE_SUPABASE_ANON_KEY: 'test-anon-key',

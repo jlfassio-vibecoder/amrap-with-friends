@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { AppLink } from '@/components/AppLink';
 import { fetchMyCampaigns, type CampaignSummary } from '@/lib/api/campaigns';
 import { campaignProgress, formatCampaignShape } from '@/lib/campaign';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
@@ -80,9 +80,9 @@ export function MyCampaignsPanel({ showCreateCta = true }: MyCampaignsPanelProps
           </p>
         </div>
         {showCreateCta ? (
-          <Link className="btn-primary" to="/campaign/new">
+          <AppLink className="btn-primary" to="/campaign/new">
             New campaign
-          </Link>
+          </AppLink>
         ) : null}
       </div>
 
@@ -102,7 +102,7 @@ export function MyCampaignsPanel({ showCreateCta = true }: MyCampaignsPanelProps
             const progress = campaignProgress(campaign.completedMissions, campaign.totalMissions);
             return (
               <li key={campaign.campaignId} className="py-3 first:pt-0 last:pb-0">
-                <Link
+                <AppLink
                   className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
                   to={`/campaign/${campaign.campaignId}`}
                 >
@@ -118,7 +118,7 @@ export function MyCampaignsPanel({ showCreateCta = true }: MyCampaignsPanelProps
                     {formatCampaignShape(campaign.weekCount, campaign.missionsPerWeek)} ·{' '}
                     {progress.done}/{progress.total} done
                   </span>
-                </Link>
+                </AppLink>
               </li>
             );
           })}

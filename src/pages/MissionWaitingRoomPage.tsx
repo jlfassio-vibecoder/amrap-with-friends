@@ -1,4 +1,5 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { AppLink } from '@/components/AppLink';
 import { useEffect, useRef, useState } from 'react';
 import {
   getStoredParticipantId,
@@ -44,10 +45,14 @@ import { useStaleRallyPointHostClaim } from '@/hooks/useStaleRallyPointHostClaim
 import { useRallyPointChannel } from '@/lib/realtime/useRallyPointChannel';
 import {
   announceNextMission,
+  getRallyPoint,
+  isLiveRallyPointMissionState,
+  joinRallyPoint,
   passRallyPointCommand,
   touchRallyPointPresence,
 } from '@/lib/api/rallyPoint';
 import { canPassRallyPointCommand } from '@/lib/rallyPoint/canPassRallyPointCommand';
+import { shouldShowMissionReset } from '@/lib/mission/shouldShowMissionReset';
 import { shouldSubscribeRallyPointOnMission } from '@/lib/rallyPoint/shouldSubscribeRallyPointOnMission';
 import { shouldUseMissionRealtimeTables } from '@/lib/realtime/shouldUseMissionRealtimeTables';
 import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
@@ -342,9 +347,9 @@ export default function MissionWaitingRoomPage() {
     return (
       <main className="mx-auto max-w-lg space-y-4 p-6">
         <p className="text-error">Error: Missing mission ID.</p>
-        <Link className="link-accent" to="/">
+        <AppLink className="link-accent" to="/">
           Back home
-        </Link>
+        </AppLink>
       </main>
     );
   }
@@ -414,6 +419,9 @@ function LiveMissionView({
   const [passError, setPassError] = useState<string | null>(null);
   const [forceNavError, setForceNavError] = useState<string | null>(null);
   const [daisyExitError, setDaisyExitError] = useState<string | null>(null);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [hostRestartedDeadEnd, setHostRestartedDeadEnd] = useState(false);
   const [isSubmittingPartialReps, setIsSubmittingPartialReps] = useState(false);
   const [scorecardDismissed, setScorecardDismissed] = useState(false);
   const [missionLoadingDismissed, setMissionLoadingDismissed] = useState(false);
@@ -636,8 +644,12 @@ function LiveMissionView({
         ) : null}
       </div>
     ) : null;
-  const showPause = livePhase === 'work' && !live.isPaused && (isHost || live.isPractice);
-  const showResume = livePhase === 'work' && live.isPaused && (isHost || live.isPractice);
+  const showReset = shouldShowMissionReset({
+    isPractice: live.isPractice,
+    isHost,
+    isFeatured: channel.mission?.is_featured === true,
+    phase: livePhase,
+  });
   const showLogRound = livePhase === 'work' && !live.isPaused;
   const showEndPractice = live.isPractice && livePhase === 'finished';
   const showPartialRepsModal =
@@ -663,10 +675,109 @@ function LiveMissionView({
     activeMissionId: rallyPointChannel.rallyPoint?.activeMissionId,
     activeMissionState: rallyPointChannel.rallyPoint?.activeMissionState,
     currentMissionId: missionId,
-    // Hold straggler pull until AAR is dismissed — Daisy-chain / Close are the exits.
-    enabled: livePhase === 'finished' && !showPartialRepsModal && !showScorecard,
+    // Pull stragglers after AAR, and pull joiners when the host resets to a new rematch.
+    enabled:
+      Boolean(rallyPointId) &&
+      ((livePhase === 'finished' && !showPartialRepsModal && !showScorecard) ||
+        ((livePhase === 'waiting' || livePhase === 'setup' || livePhase === 'work') &&
+          Boolean(rallyPointChannel.rallyPoint?.activeMissionId) &&
+          rallyPointChannel.rallyPoint?.activeMissionId !== missionId)),
     onError: setForceNavError,
   });
+
+  useEffect(() => {
+    if (isHost || live.isPractice || channel.mission || !channel.error) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      const storedRallyPointId = getStoredRallyPointIdForMission(missionId);
+      if (!storedRallyPointId) {
+        if (!cancelled) {
+          setHostRestartedDeadEnd(true);
+        }
+        return;
+      }
+
+      const snapshot = await getRallyPoint(storedRallyPointId);
+      if (cancelled) {
+        return;
+      }
+      if (snapshot.error || !snapshot.data) {
+        setHostRestartedDeadEnd(true);
+        return;
+      }
+
+      const nextId = snapshot.data.activeMissionId;
+      const nextState = snapshot.data.activeMissionState;
+      if (!nextId || nextId === missionId || !isLiveRallyPointMissionState(nextState)) {
+        setHostRestartedDeadEnd(true);
+        return;
+      }
+
+      const joined = await joinRallyPoint({
+        rallyPointId: storedRallyPointId,
+        nickname:
+          getStoredRallyPointNickname(storedRallyPointId) ??
+          getStoredNickname(missionId) ??
+          nickname,
+      });
+      if (cancelled) {
+        return;
+      }
+      if (joined.error) {
+        setHostRestartedDeadEnd(true);
+        setForceNavError(joined.error.message);
+        return;
+      }
+
+      if (joined.data?.missionId) {
+        setStoredRallyPointIdForMission(joined.data.missionId, storedRallyPointId);
+        navigate(`/mission/${joined.data.missionId}`, { replace: true });
+        return;
+      }
+
+      setHostRestartedDeadEnd(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isHost, live.isPractice, channel.mission, channel.error, missionId, nickname, navigate]);
+
+  async function handleResetMission() {
+    if (resetBusy) {
+      return;
+    }
+    if (!live.isPractice) {
+      const confirmed = window.confirm('You are ending this mission and restarting the mission');
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    setResetBusy(true);
+    setResetError(null);
+    try {
+      const result = await live.resetMission();
+      if (result.error) {
+        setResetError(result.error);
+        return;
+      }
+      if (result.missionId) {
+        const rp =
+          getStoredRallyPointIdForMission(missionId) ?? channel.mission?.rally_point_id ?? null;
+        if (rp) {
+          setStoredRallyPointIdForMission(result.missionId, rp);
+        }
+        navigate(`/mission/${result.missionId}`, { replace: true });
+      }
+    } finally {
+      setResetBusy(false);
+    }
+  }
 
   async function handlePassCommand(toUserId: string) {
     if (!rallyPointId) {
@@ -809,6 +920,26 @@ function LiveMissionView({
       ? 'You are the host.'
       : 'Waiting on host for mission control.';
 
+  if (hostRestartedDeadEnd) {
+    return (
+      <main className="mx-auto max-w-lg space-y-4 p-6">
+        <AppHeader title="Rally point" />
+        <p className="text-error">
+          The host restarted this mission. Ask them for a new invite link.
+        </p>
+        {forceNavError ? <p className="text-error text-sm">{forceNavError}</p> : null}
+        <div className="flex flex-wrap gap-4 text-sm">
+          <Link className="link-accent" to="/join">
+            Join mission
+          </Link>
+          <Link className="link-accent" to="/">
+            Back home
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main
       className="mx-auto max-w-lg space-y-6 bg-page px-6 pb-6 pt-0 lg:flex lg:h-dvh lg:max-w-none lg:flex-col lg:space-y-0 lg:overflow-hidden lg:p-0"
@@ -852,6 +983,7 @@ function LiveMissionView({
           ) : null}
 
           {live.syncError && <p className="alert-error">{live.syncError}</p>}
+          {resetError ? <p className="alert-error">{resetError}</p> : null}
 
           {rallyPointId && rallyPointChannel.error ? (
             <p className="alert-error">{rallyPointChannel.error}</p>
@@ -1012,28 +1144,17 @@ function LiveMissionView({
                 className="flex flex-wrap gap-2 lg:justify-center"
                 {...(waitingStartPracticeActions ? {} : { 'data-walkthrough-id': 'actions' })}
               >
-                {showPause && (
+                {showReset && (
                   <button
                     type="button"
                     className="btn-outline px-3 py-1.5 text-sm lg:px-6 lg:py-3 lg:text-base"
+                    disabled={resetBusy}
                     onClick={() => {
                       handleAudioUnlock();
-                      void live.pause();
+                      void handleResetMission();
                     }}
                   >
-                    Pause
-                  </button>
-                )}
-                {showResume && (
-                  <button
-                    type="button"
-                    className="btn-primary px-3 py-1.5 text-sm lg:px-6 lg:py-3 lg:text-base"
-                    onClick={() => {
-                      handleAudioUnlock();
-                      void live.resume();
-                    }}
-                  >
-                    Resume
+                    {resetBusy ? 'Resetting…' : 'Reset'}
                   </button>
                 )}
                 {showLogRound && (
@@ -1197,14 +1318,14 @@ function LiveMissionView({
             {rallyPointHref ? (
               <DaisyChainCta className="link-accent text-sm" onActivate={handleDaisyChainExit} />
             ) : (
-              <Link className="link-accent" to="/">
+              <AppLink className="link-accent" to="/">
                 Back home
-              </Link>
+              </AppLink>
             )}
             {rallyPointHref ? (
-              <Link className="link-accent" to="/">
+              <AppLink className="link-accent" to="/">
                 Back home
-              </Link>
+              </AppLink>
             ) : null}
           </div>
         </section>
@@ -1222,14 +1343,14 @@ function LiveMissionView({
             {rallyPointHref ? (
               <DaisyChainCta className="link-accent text-sm" onActivate={handleDaisyChainExit} />
             ) : (
-              <Link className="link-accent" to="/">
+              <AppLink className="link-accent" to="/">
                 Back home
-              </Link>
+              </AppLink>
             )}
             {rallyPointHref ? (
-              <Link className="link-accent" to="/">
+              <AppLink className="link-accent" to="/">
                 Back home
-              </Link>
+              </AppLink>
             ) : null}
           </span>
         </footer>
