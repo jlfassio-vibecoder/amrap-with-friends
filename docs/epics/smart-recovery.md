@@ -287,6 +287,8 @@ Add `intensity_tier` and `completed_at` to `MyMissionEntry` for My Missions UI �
 
 **Goal:** Testable ruleset with no React dependencies.
 
+**Status:** Complete — 2026-09-01. Lock engine in [`computeRecoveryLocks.ts`](../../src/lib/smartRecovery/computeRecoveryLocks.ts); constants in [`recoveryRules.ts`](../../src/lib/smartRecovery/recoveryRules.ts); remaining copy in [`formatRecoveryRemaining.ts`](../../src/lib/smartRecovery/formatRecoveryRemaining.ts).
+
 ### Module layout
 
 ```
@@ -350,8 +352,8 @@ export const SEVERE_INTENSITY_THRESHOLD = 4 as const;
 
 ### Exit criteria
 
-- [ ] ≥15 unit tests: each rule in isolation, precedence, expired locks, empty history, tier 3 does not trigger severe lock
-- [ ] No `Date.now()` in tests — inject `now`
+- [x] ≥15 unit tests: each rule in isolation, precedence, expired locks, empty history, tier 3 does not trigger severe lock
+- [x] No `Date.now()` in tests — inject `now`
 
 ---
 
