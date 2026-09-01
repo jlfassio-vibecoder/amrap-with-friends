@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { getMissionLiveState } from '@/lib/api/getMissionLiveState';
 import { getSupabaseClient } from '@/lib/supabase';
 import { track } from '@/lib/analytics/track';
+import { getStoredClaimToken, getStoredHostToken } from '@/lib/missionIdentity';
 import {
   mergePresenceState,
   parseMessageRow,
@@ -25,6 +27,9 @@ import type {
   MissionRow,
 } from '@/lib/missionSync/types';
 
+/** Guests cannot SELECT mission tables after Phase 2 RLS; poll get_mission_live_state. */
+export const GUEST_MISSION_POLL_MS = 5_000;
+
 export interface MissionChannelPresence {
   participantId: string;
   nickname: string;
@@ -43,8 +48,10 @@ export interface UseMissionChannelResult {
 
 export function useMissionChannel(
   missionId: string | undefined,
-  presence: MissionChannelPresence | null
+  presence: MissionChannelPresence | null,
+  options?: { realtimeTables?: boolean }
 ): UseMissionChannelResult {
+  const realtimeTables = options?.realtimeTables === true;
   const [mission, setMission] = useState<MissionRow | null>(null);
   const [participants, setParticipants] = useState<ParticipantRow[]>([]);
   const [rounds, setRounds] = useState<RoundRow[]>([]);
@@ -57,230 +64,173 @@ export function useMissionChannel(
   const [error, setError] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const participantIdsRef = useRef<Set<string>>(new Set());
+  const cancelledRef = useRef(false);
+  const missionIdRef = useRef(missionId);
+  const fetchGenRef = useRef(0);
 
   const presenceParticipantId = presence?.participantId;
   const presenceNickname = presence?.nickname;
 
   useEffect(() => {
     if (!missionId || !presenceParticipantId || !presenceNickname) {
+      fetchGenRef.current += 1;
       return;
     }
 
+    missionIdRef.current = missionId;
     const supabase = getSupabaseClient();
-    let cancelled = false;
+    cancelledRef.current = false;
+    const participantIdForRpc = presenceParticipantId;
 
-    async function loadInitial() {
-      const [missionResult, participantsResult, roundsResult, messagesResult] = await Promise.all([
-        supabase
-          .from('missions')
-          .select(
-            'id, duration_minutes, workout, template_id, state, time_left_sec, is_paused, started_at, scheduled_at, rally_point_countdown_ends_at, segment_index, created_at, is_featured, rally_point_id'
-          )
-          .eq('id', missionId)
-          .maybeSingle(),
-        supabase
-          .from('participants')
-          .select('id, mission_id, nickname, role, joined_at')
-          .eq('mission_id', missionId),
-        supabase
-          .from('rounds')
-          .select(
-            'id, mission_id, participant_id, round_index, elapsed_sec_at_round, segment_index, missed_log_reps, created_at'
-          )
-          .eq('mission_id', missionId),
-        supabase
-          .from('messages')
-          .select('id, mission_id, participant_id, nickname, body, segment_index, created_at')
-          .eq('mission_id', missionId)
-          .order('created_at', { ascending: true }),
-      ]);
-
-      if (cancelled) {
+    async function refreshSnapshot() {
+      const requestedMissionId = missionIdRef.current;
+      if (!requestedMissionId) {
         return;
       }
 
-      if (missionResult.error) {
-        setError(missionResult.error.message);
+      const genAtStart = fetchGenRef.current;
+      const result = await getMissionLiveState({
+        missionId: requestedMissionId,
+        participantId: participantIdForRpc,
+        claimToken: getStoredClaimToken(requestedMissionId),
+        hostToken: getStoredHostToken(requestedMissionId),
+      });
+
+      if (cancelledRef.current || genAtStart !== fetchGenRef.current) {
         return;
       }
 
-      if (participantsResult.error) {
-        setError(participantsResult.error.message);
-        return;
-      }
-
-      if (roundsResult.error) {
-        setError(roundsResult.error.message);
-        return;
-      }
-
-      if (messagesResult.error) {
-        setError(messagesResult.error.message);
+      if (!result.ok) {
+        setError(result.error ?? result.reason);
         return;
       }
 
       setError(null);
-
-      if (missionResult.data) {
-        const parsed = parseMissionRow(missionResult.data as Record<string, unknown>);
-        if (parsed) {
-          setMission(parsed);
-        }
+      if (result.data.mission) {
+        setMission(result.data.mission);
       }
-
-      const parsedParticipants = (participantsResult.data ?? [])
-        .map((row) => parseParticipantRow(row as Record<string, unknown>))
-        .filter((row): row is ParticipantRow => row !== null);
-      setParticipants(parsedParticipants);
-      participantIdsRef.current = new Set(parsedParticipants.map((participant) => participant.id));
-
-      const participantIds = parsedParticipants.map((participant) => participant.id);
-      if (participantIds.length > 0) {
-        const segmentResultsResult = await supabase
-          .from('participant_segment_results')
-          .select(
-            'participant_id, segment_index, partial_reps, final_score, score_breakdown, updated_at'
-          )
-          .in('participant_id', participantIds);
-
-        if (cancelled) {
-          return;
-        }
-
-        if (segmentResultsResult.error) {
-          setError(segmentResultsResult.error.message);
-          return;
-        }
-
-        const parsedSegmentResults = (segmentResultsResult.data ?? [])
-          .map((row) => parseSegmentResultRow(row as Record<string, unknown>))
-          .filter((row): row is ParticipantSegmentResultRow => row !== null);
-        setSegmentResults((prev) => {
-          let merged = prev;
-          for (const row of parsedSegmentResults) {
-            merged = upsertSegmentResult(merged, row);
-          }
-          return merged;
-        });
-      } else {
-        setSegmentResults([]);
-      }
-
-      const parsedRounds = (roundsResult.data ?? [])
-        .map((row) => parseRoundRow(row as Record<string, unknown>))
-        .filter((row): row is RoundRow => row !== null);
-      setRounds(parsedRounds);
-
-      const parsedMessages = sortMessagesByCreatedAt(
-        (messagesResult.data ?? [])
-          .map((row) => parseMessageRow(row as Record<string, unknown>))
-          .filter((row): row is MessageRow => row !== null)
-      );
-      setMessages(parsedMessages);
+      setParticipants(result.data.participants);
+      participantIdsRef.current = new Set(result.data.participants.map((row) => row.id));
+      setRounds(result.data.rounds);
+      setMessages(sortMessagesByCreatedAt(result.data.messages));
+      setSegmentResults(result.data.segmentResults);
     }
 
-    loadInitial();
+    // Snapshot load; setState only after await inside refreshSnapshot.
+    void refreshSnapshot();
+
+    let pollTimer: number | null = null;
+    if (!realtimeTables) {
+      pollTimer = window.setInterval(() => {
+        void refreshSnapshot();
+      }, GUEST_MISSION_POLL_MS);
+    }
 
     const channel = supabase.channel(`mission:${missionId}`, {
       config: { presence: { key: presenceParticipantId } },
     });
     const subscribeStartedAtMs = Date.now();
 
-    channel
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'missions',
-          filter: `id=eq.${missionId}`,
-        },
-        (payload) => {
-          const parsed = parseMissionRow(payload.new as Record<string, unknown>);
-          if (parsed) {
-            setMission(parsed);
+    if (realtimeTables) {
+      channel
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'missions',
+            filter: `id=eq.${missionId}`,
+          },
+          (payload) => {
+            const parsed = parseMissionRow(payload.new as Record<string, unknown>);
+            if (parsed) {
+              setMission(parsed);
+            }
           }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'participants',
-          filter: `mission_id=eq.${missionId}`,
-        },
-        (payload) => {
-          const parsed = parseParticipantRow(payload.new as Record<string, unknown>);
-          if (parsed) {
-            participantIdsRef.current.add(parsed.id);
-            setParticipants((prev) => upsertParticipant(prev, parsed));
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'participants',
+            filter: `mission_id=eq.${missionId}`,
+          },
+          (payload) => {
+            const parsed = parseParticipantRow(payload.new as Record<string, unknown>);
+            if (parsed) {
+              participantIdsRef.current.add(parsed.id);
+              setParticipants((prev) => upsertParticipant(prev, parsed));
+            }
           }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'participant_segment_results',
-        },
-        (payload) => {
-          if (payload.eventType === 'DELETE') {
-            const oldRecord = payload.old as Record<string, unknown>;
-            const participantId =
-              typeof oldRecord.participant_id === 'string' ? oldRecord.participant_id : null;
-            const segmentIndex =
-              typeof oldRecord.segment_index === 'number' ? oldRecord.segment_index : null;
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'participant_segment_results',
+            filter: `mission_id=eq.${missionId}`,
+          },
+          (payload) => {
+            if (payload.eventType === 'DELETE') {
+              const oldRecord = payload.old as Record<string, unknown>;
+              const participantId =
+                typeof oldRecord.participant_id === 'string' ? oldRecord.participant_id : null;
+              const segmentIndex =
+                typeof oldRecord.segment_index === 'number' ? oldRecord.segment_index : null;
 
-            if (
-              !participantId ||
-              segmentIndex === null ||
-              !participantIdsRef.current.has(participantId)
-            ) {
+              if (
+                !participantId ||
+                segmentIndex === null ||
+                !participantIdsRef.current.has(participantId)
+              ) {
+                return;
+              }
+
+              setSegmentResults((prev) => removeSegmentResult(prev, participantId, segmentIndex));
               return;
             }
 
-            setSegmentResults((prev) => removeSegmentResult(prev, participantId, segmentIndex));
-            return;
+            const parsed = parseSegmentResultRow(payload.new as Record<string, unknown>);
+            if (parsed && participantIdsRef.current.has(parsed.participant_id)) {
+              setSegmentResults((prev) => upsertSegmentResult(prev, parsed));
+            }
           }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'rounds',
+            filter: `mission_id=eq.${missionId}`,
+          },
+          (payload) => {
+            const parsed = parseRoundRow(payload.new as Record<string, unknown>);
+            if (parsed) {
+              setRounds((prev) => upsertRound(prev, parsed));
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `mission_id=eq.${missionId}`,
+          },
+          (payload) => {
+            const parsed = parseMessageRow(payload.new as Record<string, unknown>);
+            if (parsed) {
+              setMessages((prev) => sortMessagesByCreatedAt(upsertMessage(prev, parsed)));
+            }
+          }
+        );
+    }
 
-          const parsed = parseSegmentResultRow(payload.new as Record<string, unknown>);
-          if (parsed && participantIdsRef.current.has(parsed.participant_id)) {
-            setSegmentResults((prev) => upsertSegmentResult(prev, parsed));
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'rounds',
-          filter: `mission_id=eq.${missionId}`,
-        },
-        (payload) => {
-          const parsed = parseRoundRow(payload.new as Record<string, unknown>);
-          if (parsed) {
-            setRounds((prev) => upsertRound(prev, parsed));
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `mission_id=eq.${missionId}`,
-        },
-        (payload) => {
-          const parsed = parseMessageRow(payload.new as Record<string, unknown>);
-          if (parsed) {
-            setMessages((prev) => sortMessagesByCreatedAt(upsertMessage(prev, parsed)));
-          }
-        }
-      )
+    channel
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
         setPresenceByParticipantId(mergePresenceState(state));
@@ -320,14 +270,18 @@ export function useMissionChannel(
     channelRef.current = channel;
 
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
+      fetchGenRef.current += 1;
+      if (pollTimer !== null) {
+        window.clearInterval(pollTimer);
+      }
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
       setIsConnected(false);
     };
-  }, [missionId, presenceParticipantId, presenceNickname]);
+  }, [missionId, presenceParticipantId, presenceNickname, realtimeTables]);
 
   return {
     mission,

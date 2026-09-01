@@ -53,6 +53,8 @@ import {
 } from '@/lib/api/rallyPoint';
 import { canPassRallyPointCommand } from '@/lib/rallyPoint/canPassRallyPointCommand';
 import { shouldShowMissionReset } from '@/lib/mission/shouldShowMissionReset';
+import { shouldSubscribeRallyPointOnMission } from '@/lib/rallyPoint/shouldSubscribeRallyPointOnMission';
+import { shouldUseMissionRealtimeTables } from '@/lib/realtime/shouldUseMissionRealtimeTables';
 import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
 import {
   getStoredRallyPointIdForMission,
@@ -438,7 +440,18 @@ function LiveMissionView({
     confirmSafetyNotice,
   } = useMissionSafetyNotices(missionId);
 
-  const channel = useMissionChannel(missionId, { participantId, nickname });
+  const useRealtimeTables = shouldUseMissionRealtimeTables({
+    isAuthenticated,
+    hasClaimToken: Boolean(claimToken),
+  });
+
+  const channel = useMissionChannel(
+    missionId,
+    { participantId, nickname },
+    {
+      realtimeTables: useRealtimeTables,
+    }
+  );
   const live = useLiveAmrapMission(missionId, channel);
   const { isHost, start: startMission, phase: livePhase } = live;
 
@@ -459,15 +472,9 @@ function LiveMissionView({
       ? { memberId: rallyPointMemberId, nickname: rallyPointNickname }
       : null;
   const rallyPointChannel = useRallyPointChannel(
-    rallyPointId &&
-      (livePhase === 'waiting' ||
-        livePhase === 'setup' ||
-        livePhase === 'work' ||
-        livePhase === 'finished')
-      ? rallyPointId
-      : undefined,
+    rallyPointId && shouldSubscribeRallyPointOnMission(livePhase) ? rallyPointId : undefined,
     rallyPointChannelPresence,
-    { realtimeTables: isAuthenticated }
+    { realtimeTables: useRealtimeTables }
   );
 
   useRallyPointHostHandoff({
@@ -925,9 +932,9 @@ function LiveMissionView({
           <Link className="link-accent" to="/join">
             Join mission
           </Link>
-          <Link className="link-accent" to="/">
+          <AppLink className="link-accent" to="/">
             Back home
-          </Link>
+          </AppLink>
         </div>
       </main>
     );
@@ -977,6 +984,10 @@ function LiveMissionView({
 
           {live.syncError && <p className="alert-error">{live.syncError}</p>}
           {resetError ? <p className="alert-error">{resetError}</p> : null}
+
+          {rallyPointId && rallyPointChannel.error ? (
+            <p className="alert-error">{rallyPointChannel.error}</p>
+          ) : null}
 
           {claim.claimError && <p className="alert-error">{claim.claimError}</p>}
 

@@ -373,10 +373,8 @@ describe('CampaignDetailPage', () => {
       error: null,
     });
     renderPage();
-    await waitFor(() =>
-      expect(screen.getByRole('link', { name: 'Rally point open' })).toBeTruthy()
-    );
-    expect(screen.getByRole('link', { name: 'Rally point open' }).getAttribute('href')).toBe(
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Mission open' })).toBeTruthy());
+    expect(screen.getByRole('link', { name: 'Mission open' }).getAttribute('href')).toBe(
       '/mission/s1'
     );
     expect(screen.queryByRole('link', { name: 'Planned' })).toBeNull();

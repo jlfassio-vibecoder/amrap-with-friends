@@ -40,7 +40,7 @@ export function ActivityAttributionCard({
             role="progressbar"
             aria-valuemin={0}
             aria-valuemax={attribution.totalMinutes}
-            aria-valuenow={attribution.totalMinutes}
+            aria-valuenow={attribution.inAppMinutes}
             aria-label={`Activity attribution: ${attribution.inAppMinutes} in-app minutes, ${attribution.outsideMinutes} outside minutes`}
           >
             {attribution.inAppPercent > 0 ? (
