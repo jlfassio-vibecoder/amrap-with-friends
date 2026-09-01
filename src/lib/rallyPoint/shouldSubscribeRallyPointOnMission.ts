@@ -2,9 +2,9 @@ import type { LiveMissionPhase } from '@/lib/missionSync/types';
 
 /**
  * Whether the waiting room should keep the Next Mission hub channel open.
- * Stay subscribed through finished so force-nav and daisy can see
- * activeMissionId / nextMissionPendingAt. Drop during work to avoid dual-channel fan-out.
+ * Keep it through waiting/setup/work/finished so force-nav can pull joiners on
+ * host Reset rematch (work) and daisy after AAR (finished).
  */
 export function shouldSubscribeRallyPointOnMission(phase: LiveMissionPhase | string): boolean {
-  return phase === 'waiting' || phase === 'setup' || phase === 'finished';
+  return phase === 'waiting' || phase === 'setup' || phase === 'work' || phase === 'finished';
 }

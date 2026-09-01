@@ -11,8 +11,8 @@ describe('shouldSubscribeRallyPointOnMission', () => {
     expect(shouldSubscribeRallyPointOnMission('finished')).toBe(true);
   });
 
-  it('drops the hub channel during work', () => {
-    expect(shouldSubscribeRallyPointOnMission('work')).toBe(false);
+  it('subscribes during work so Reset rematch can force-nav', () => {
+    expect(shouldSubscribeRallyPointOnMission('work')).toBe(true);
   });
 
   it('rejects unknown phases', () => {

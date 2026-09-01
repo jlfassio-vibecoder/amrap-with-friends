@@ -932,9 +932,9 @@ function LiveMissionView({
           <Link className="link-accent" to="/join">
             Join mission
           </Link>
-          <Link className="link-accent" to="/">
+          <AppLink className="link-accent" to="/">
             Back home
-          </Link>
+          </AppLink>
         </div>
       </main>
     );
