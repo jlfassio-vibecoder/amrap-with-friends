@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { isMagicLinkAuthEnabled } from '@/lib/auth/authFeatures';
 import { AUTH_MIN_PASSWORD_LENGTH } from '@/lib/auth/passwordPolicy';
@@ -16,8 +16,10 @@ export interface AuthFormProps {
    * form stops telling people signing in that it was optional.
    */
   guestAllowed?: boolean;
-  /** Called when auth succeeds (modal uses this to close). */
+  /** Called when auth succeeds (modal uses this to close). Password sign-up waits for Continue. */
   onAuthenticated?: () => void;
+  /** Called when Create account issued a session, before Continue — homepage holds the form. */
+  onSignupSessionSuccess?: () => void;
   /** Render the Sign in / Create account heading (homepage inline). */
   showHeading?: boolean;
   /** Magic link / password tabs, or the password-only label. Off for compact inline slots. */
@@ -81,6 +83,7 @@ export function AuthForm({
   initialPasswordMode = 'sign-in',
   guestAllowed = true,
   onAuthenticated,
+  onSignupSessionSuccess,
   showHeading = false,
   showAuthMethodSelector = true,
   titleId,
@@ -89,31 +92,21 @@ export function AuthForm({
 }: AuthFormProps) {
   const isCompact = variant === 'compact';
   const magicLinkEnabled = isMagicLinkAuthEnabled();
-  const { signInWithMagicLink, signUpWithPassword, signInWithPassword, isAuthenticated } =
-    useAmrapAuth();
+  const { signInWithMagicLink, signUpWithPassword, signInWithPassword } = useAmrapAuth();
 
-  const [authMethod, setAuthMethod] = useState<AuthMethod>(() => {
-    if (initialPasswordMode === 'sign-up' || !magicLinkEnabled || !showAuthMethodSelector) {
-      return 'password';
-    }
-    return 'magic-link';
-  });
+  const [authMethod, setAuthMethod] = useState<AuthMethod>('password');
   const [passwordMode, setPasswordMode] = useState<PasswordMode>(initialPasswordMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [status, setStatus] = useState<FormStatus>('idle');
   const [message, setMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      onAuthenticated?.();
-    }
-  }, [isAuthenticated, onAuthenticated]);
+  const [awaitingSignupContinue, setAwaitingSignupContinue] = useState(false);
 
   function resetFeedback() {
     setStatus('idle');
     setMessage(null);
+    setAwaitingSignupContinue(false);
   }
 
   function switchAuthMethod(method: AuthMethod) {
@@ -164,7 +157,9 @@ export function AuthForm({
       }
 
       setStatus('success');
-      setMessage('Account created.');
+      setMessage("You're signed in.");
+      setAwaitingSignupContinue(true);
+      onSignupSessionSuccess?.();
       return;
     }
 
@@ -177,10 +172,12 @@ export function AuthForm({
 
     setStatus('success');
     setMessage(null);
+    onAuthenticated?.();
   }
 
   const isBusy = status === 'submitting';
   const isSuccessLocked = status === 'success' && authMethod === 'magic-link';
+  const passwordFieldsLocked = isBusy || (status === 'success' && !awaitingSignupContinue);
   const showingPasswordForm = !(magicLinkEnabled && authMethod === 'magic-link');
   const title = showingPasswordForm && passwordMode === 'sign-up' ? 'Create account' : 'Sign in';
   const showTitleRow = showHeading || titleId !== undefined;
@@ -270,18 +267,17 @@ export function AuthForm({
             </p>
           ) : null}
 
-          <button
-            type="submit"
-            className={submitClass}
-            disabled={isBusy || isSuccessLocked}
-          >
+          <button type="submit" className={submitClass} disabled={isBusy || isSuccessLocked}>
             {isBusy ? 'Sending…' : 'Send magic link'}
           </button>
         </form>
       ) : (
         <form className={passwordFormSpacing} onSubmit={handlePasswordSubmit}>
           {isCompact ? (
-            <AuthPasswordModeToggle value={passwordMode} onChange={switchPasswordMode} />
+            <AuthPasswordModeToggle
+              value={passwordMode}
+              onChange={awaitingSignupContinue ? () => undefined : switchPasswordMode}
+            />
           ) : (
             <div className="flex gap-3 text-sm">
               <button
@@ -289,6 +285,7 @@ export function AuthForm({
                 className={
                   passwordMode === 'sign-in' ? 'font-semibold text-ink underline' : 'link-accent'
                 }
+                disabled={awaitingSignupContinue}
                 onClick={() => switchPasswordMode('sign-in')}
               >
                 Sign in
@@ -298,6 +295,7 @@ export function AuthForm({
                 className={
                   passwordMode === 'sign-up' ? 'font-semibold text-ink underline' : 'link-accent'
                 }
+                disabled={awaitingSignupContinue}
                 onClick={() => switchPasswordMode('sign-up')}
               >
                 Create account
@@ -315,7 +313,7 @@ export function AuthForm({
               placeholder={isCompact ? 'Email' : undefined}
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              disabled={isBusy || status === 'success'}
+              disabled={passwordFieldsLocked}
             />
           </label>
 
@@ -333,13 +331,13 @@ export function AuthForm({
                 }
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                disabled={isBusy || status === 'success'}
+                disabled={passwordFieldsLocked}
               />
               <button
                 type="button"
                 className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted hover:text-ink disabled:opacity-50"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
-                disabled={isBusy || status === 'success'}
+                disabled={isBusy}
                 onClick={() => setShowPassword((visible) => !visible)}
               >
                 {showPassword ? (
@@ -381,14 +379,23 @@ export function AuthForm({
           </label>
 
           {message ? (
-            <p className={status === 'error' ? 'text-error' : 'text-sm text-secondary'}>
-              {status === 'error' ? `Error: ${message}` : message}
-            </p>
+            <div className={status === 'error' ? 'text-error' : 'space-y-1 text-sm text-secondary'}>
+              <p>{status === 'error' ? `Error: ${message}` : message}</p>
+              {awaitingSignupContinue ? (
+                <p>Reveal the password if you need it on another device.</p>
+              ) : null}
+            </div>
           ) : null}
 
-          <button type="submit" className={submitClass} disabled={isBusy || status === 'success'}>
-            {isBusy ? 'Submitting…' : passwordMode === 'sign-up' ? 'Create account' : 'Sign in'}
-          </button>
+          {awaitingSignupContinue ? (
+            <button type="button" className={submitClass} onClick={() => onAuthenticated?.()}>
+              Continue
+            </button>
+          ) : (
+            <button type="submit" className={submitClass} disabled={isBusy || status === 'success'}>
+              {isBusy ? 'Submitting…' : passwordMode === 'sign-up' ? 'Create account' : 'Sign in'}
+            </button>
+          )}
         </form>
       )}
     </div>

@@ -1,17 +1,20 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { AuthForm } from './AuthForm';
 
-const authState = vi.hoisted(() => ({
+const authApi = vi.hoisted(() => ({
+  signInWithMagicLink: vi.fn(),
+  signUpWithPassword: vi.fn(),
+  signInWithPassword: vi.fn(),
   isAuthenticated: false,
 }));
 
 vi.mock('@/hooks/useAmrapAuth', () => ({
   useAmrapAuth: () => ({
-    signInWithMagicLink: vi.fn(),
-    signUpWithPassword: vi.fn(),
-    signInWithPassword: vi.fn(),
-    isAuthenticated: authState.isAuthenticated,
+    signInWithMagicLink: authApi.signInWithMagicLink,
+    signUpWithPassword: authApi.signUpWithPassword,
+    signInWithPassword: authApi.signInWithPassword,
+    isAuthenticated: authApi.isAuthenticated,
   }),
 }));
 
@@ -23,19 +26,39 @@ vi.mock('@/lib/auth/authFeatures', () => ({
 
 afterEach(() => {
   cleanup();
-  authState.isAuthenticated = false;
+  authApi.isAuthenticated = false;
+  authApi.signInWithMagicLink.mockReset();
+  authApi.signUpWithPassword.mockReset();
+  authApi.signInWithPassword.mockReset();
   isMagicLinkAuthEnabledMock.mockReset();
   isMagicLinkAuthEnabledMock.mockReturnValue(true);
 });
 
 describe('AuthForm', () => {
-  it('shows magic link and password tabs when magic link is enabled', () => {
+  it('opens on password sign-in when magic link is enabled', () => {
     isMagicLinkAuthEnabledMock.mockReturnValue(true);
 
     render(<AuthForm showHeading />);
 
     expect(screen.getByRole('tab', { name: 'Magic link' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Password' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Password' }).getAttribute('aria-selected')).toBe(
+      'true'
+    );
+    expect(screen.queryByRole('button', { name: 'Send magic link' })).toBeNull();
+    expect(
+      screen
+        .getAllByRole('button', { name: 'Sign in' })
+        .some((button) => button.getAttribute('type') === 'submit')
+    ).toBe(true);
+  });
+
+  it('shows magic-link submit after switching tabs when enabled', () => {
+    isMagicLinkAuthEnabledMock.mockReturnValue(true);
+
+    render(<AuthForm showHeading />);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Magic link' }));
     expect(screen.getByRole('button', { name: 'Send magic link' })).toBeTruthy();
   });
 
@@ -83,5 +106,60 @@ describe('AuthForm', () => {
     expect(screen.getByPlaceholderText('Email')).toBeTruthy();
     expect(screen.getByPlaceholderText('Password (6+ characters)')).toBeTruthy();
     expect(screen.queryByText('At least 6 characters.')).toBeNull();
+  });
+
+  it('keeps the password revealable after create account and waits for Continue', async () => {
+    isMagicLinkAuthEnabledMock.mockReturnValue(false);
+    authApi.signUpWithPassword.mockResolvedValue({
+      error: null,
+      needsEmailConfirmation: false,
+    });
+    const onAuthenticated = vi.fn();
+
+    render(
+      <AuthForm showHeading initialPasswordMode="sign-up" onAuthenticated={onAuthenticated} />
+    );
+
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'athlete@example.com' } });
+    const passwordInput = document.querySelector('input[type="password"]');
+    expect(passwordInput).not.toBeNull();
+    fireEvent.change(passwordInput!, { target: { value: 'secret1' } });
+    fireEvent.click(
+      screen
+        .getAllByRole('button', { name: 'Create account' })
+        .find((button) => button.getAttribute('type') === 'submit')!
+    );
+
+    expect(await screen.findByText("You're signed in.")).toBeTruthy();
+    expect(passwordInput?.hasAttribute('disabled')).toBe(false);
+    expect(screen.getByRole('button', { name: 'Show password' }).hasAttribute('disabled')).toBe(
+      false
+    );
+    expect(onAuthenticated).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(onAuthenticated).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes immediately after password sign-in', async () => {
+    isMagicLinkAuthEnabledMock.mockReturnValue(false);
+    authApi.signInWithPassword.mockResolvedValue({ error: null });
+    const onAuthenticated = vi.fn();
+
+    render(<AuthForm showHeading onAuthenticated={onAuthenticated} />);
+
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'athlete@example.com' } });
+    const passwordInput = document.querySelector('input[type="password"]');
+    fireEvent.change(passwordInput!, { target: { value: 'secret1' } });
+    fireEvent.click(
+      screen
+        .getAllByRole('button', { name: 'Sign in' })
+        .find((button) => button.getAttribute('type') === 'submit')!
+    );
+
+    await waitFor(() => {
+      expect(onAuthenticated).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.queryByRole('button', { name: 'Continue' })).toBeNull();
   });
 });

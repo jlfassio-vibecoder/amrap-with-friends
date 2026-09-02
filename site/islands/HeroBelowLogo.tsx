@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { AuthForm } from '@/components/AuthForm';
 import { HostScheduledMissionsPanel } from '@/components/mission/HostScheduledMissionsPanel';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
@@ -19,17 +20,26 @@ export default function HeroBelowLogo() {
 
 function HeroBelowLogoGate() {
   const { isAuthenticated, isAuthLoading } = useAmrapAuth();
+  const [holdSignupContinue, setHoldSignupContinue] = useState(false);
 
   if (isAuthLoading) {
     return null;
   }
 
+  const showAuthForm = !isAuthenticated || holdSignupContinue;
+
   return (
     <div className={CARD_CLASS}>
-      {isAuthenticated ? (
-        <HostScheduledMissionsPanel />
+      {showAuthForm ? (
+        <AuthForm
+          variant="compact"
+          guestAllowed={false}
+          showAuthMethodSelector={false}
+          onSignupSessionSuccess={() => setHoldSignupContinue(true)}
+          onAuthenticated={() => setHoldSignupContinue(false)}
+        />
       ) : (
-        <AuthForm variant="compact" guestAllowed={false} showAuthMethodSelector={false} />
+        <HostScheduledMissionsPanel />
       )}
     </div>
   );

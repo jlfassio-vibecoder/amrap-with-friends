@@ -14,7 +14,7 @@ function parseAuthEnvBoolean(value: string | undefined, defaultValue: boolean): 
   return defaultValue;
 }
 
-/** When false, AuthModal hides magic link and only offers email + password. */
+/** When false, AuthModal hides magic link and only offers email + password. Off by default until custom SMTP exists. */
 export function isMagicLinkAuthEnabled(): boolean {
-  return parseAuthEnvBoolean(import.meta.env.VITE_AUTH_MAGIC_LINK_ENABLED, true);
+  return parseAuthEnvBoolean(import.meta.env.VITE_AUTH_MAGIC_LINK_ENABLED, false);
 }

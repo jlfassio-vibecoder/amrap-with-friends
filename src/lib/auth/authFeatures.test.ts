@@ -6,10 +6,10 @@ describe('isMagicLinkAuthEnabled', () => {
     vi.resetModules();
   });
 
-  it('defaults to true when unset', async () => {
+  it('defaults to false when unset', async () => {
     vi.stubEnv('VITE_AUTH_MAGIC_LINK_ENABLED', '');
     const { isMagicLinkAuthEnabled } = await import('./authFeatures');
-    expect(isMagicLinkAuthEnabled()).toBe(true);
+    expect(isMagicLinkAuthEnabled()).toBe(false);
   });
 
   it('returns false when explicitly disabled', async () => {
