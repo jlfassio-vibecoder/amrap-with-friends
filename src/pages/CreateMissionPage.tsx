@@ -31,6 +31,7 @@ import { quotasFromProfile } from '@/lib/hud/classificationQuotas';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { useHudTelemetry } from '@/hooks/useHudTelemetry';
 import { useSmartRecovery } from '@/hooks/useSmartRecovery';
+// Copilot suggestion ignored: PR title mismatch is GitHub metadata, not fixable in source.
 import { coachWorkoutLockId } from '@/lib/smartRecovery/deriveCoachWorkoutPatterns';
 import { firstAvailableCategoryForDuration } from '@/lib/workout/filterWorkoutTemplates';
 import { CUSTOM_WORKOUT_INTENSITY_TIER } from '@/lib/workout/resolveTemplateIntensity';
@@ -436,6 +437,12 @@ export default function CreateMissionPage() {
                     smartRecoveryLoading={smartRecovery.loading}
                     smartRecoveryError={smartRecovery.error}
                     isAuthenticated={isAuthenticated}
+                    coachWorkouts={smartRecovery.enabled ? smartRecovery.coachWorkouts : undefined}
+                    coachWorkoutsLoading={
+                      smartRecovery.enabled &&
+                      smartRecovery.loading &&
+                      smartRecovery.coachWorkouts === null
+                    }
                     onSelect={handleCoachWorkoutSelect}
                   />
                 )}

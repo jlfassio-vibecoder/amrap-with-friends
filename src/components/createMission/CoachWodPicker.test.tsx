@@ -44,6 +44,7 @@ function renderPicker(overrides: Partial<Parameters<typeof CoachWodPicker>[0]> =
       recoveryLocks={new Map()}
       smartRecoveryActive={false}
       isAuthenticated
+      coachWorkouts={[workout]}
       onSelect={() => undefined}
       {...overrides}
     />
@@ -52,10 +53,6 @@ function renderPicker(overrides: Partial<Parameters<typeof CoachWodPicker>[0]> =
 
 describe('CoachWodPicker', () => {
   it('does not call onSelect when a coach workout is locked', async () => {
-    fetchPublishedCoachWorkouts.mockResolvedValue({
-      data: [workout],
-      error: null,
-    });
     const onSelect = vi.fn();
 
     renderPicker({
@@ -70,10 +67,6 @@ describe('CoachWodPicker', () => {
   });
 
   it('calls onSelect when a coach workout is unlocked', async () => {
-    fetchPublishedCoachWorkouts.mockResolvedValue({
-      data: [workout],
-      error: null,
-    });
     const onSelect = vi.fn();
 
     renderPicker({ onSelect });
@@ -82,5 +75,12 @@ describe('CoachWodPicker', () => {
     fireEvent.click(screen.getByText('Coach Crucible'));
     expect(onSelect).toHaveBeenCalledTimes(1);
     expect(onSelect).toHaveBeenCalledWith(workout);
+  });
+
+  it('skips internal fetch when coach workouts are provided', async () => {
+    renderPicker();
+
+    expect(await screen.findByText('Coach Crucible')).toBeTruthy();
+    expect(fetchPublishedCoachWorkouts).not.toHaveBeenCalled();
   });
 });

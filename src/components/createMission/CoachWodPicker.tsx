@@ -99,6 +99,10 @@ interface CoachWodPickerProps {
   smartRecoveryLoading?: boolean;
   smartRecoveryError?: string | null;
   isAuthenticated: boolean;
+  /** When provided, skips the internal fetch and uses these workouts instead. */
+  coachWorkouts?: PublishedCoachWorkout[] | null;
+  coachWorkoutsLoading?: boolean;
+  coachWorkoutsError?: string | null;
   onSelect: (workout: PublishedCoachWorkout) => void;
 }
 
@@ -111,14 +115,22 @@ export function CoachWodPicker({
   smartRecoveryLoading = false,
   smartRecoveryError = null,
   isAuthenticated,
+  coachWorkouts: coachWorkoutsFromParent,
+  coachWorkoutsLoading = false,
+  coachWorkoutsError = null,
   onSelect,
 }: CoachWodPickerProps) {
+  const usesParentWorkouts = coachWorkoutsFromParent !== undefined;
   const [workouts, setWorkouts] = useState<PublishedCoachWorkout[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!usesParentWorkouts);
   const [error, setError] = useState<string | null>(null);
   const [activeTag, setActiveTag] = useState<string | null>(null);
 
   useEffect(() => {
+    if (usesParentWorkouts) {
+      return;
+    }
+
     let cancelled = false;
     fetchPublishedCoachWorkouts({}).then((result) => {
       if (cancelled) {
@@ -135,27 +147,36 @@ export function CoachWodPicker({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [usesParentWorkouts]);
+
+  const resolvedWorkouts = useMemo(
+    () => (usesParentWorkouts ? (coachWorkoutsFromParent ?? []) : workouts),
+    [usesParentWorkouts, coachWorkoutsFromParent, workouts]
+  );
+  const resolvedLoading = usesParentWorkouts ? coachWorkoutsLoading : loading;
+  const resolvedError = usesParentWorkouts ? coachWorkoutsError : error;
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
-    for (const workout of workouts) {
+    for (const workout of resolvedWorkouts) {
       for (const tag of workout.tags) {
         tags.add(tag);
       }
     }
     return Array.from(tags).sort();
-  }, [workouts]);
+  }, [resolvedWorkouts]);
 
-  const visibleWorkouts = activeTag ? workouts.filter((w) => w.tags.includes(activeTag)) : workouts;
+  const visibleWorkouts = activeTag
+    ? resolvedWorkouts.filter((w) => w.tags.includes(activeTag))
+    : resolvedWorkouts;
 
-  if (loading) {
+  if (resolvedLoading) {
     return <p className="text-sm text-secondary">Loading coach workouts…</p>;
   }
-  if (error) {
-    return <p className="text-error text-sm">{error}</p>;
+  if (resolvedError) {
+    return <p className="text-error text-sm">{resolvedError}</p>;
   }
-  if (workouts.length === 0) {
+  if (resolvedWorkouts.length === 0) {
     return (
       <p className="rounded-card border border-border bg-page p-4 text-sm text-secondary">
         No coach workouts published yet.

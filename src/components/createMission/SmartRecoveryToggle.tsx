@@ -7,7 +7,7 @@ interface SmartRecoveryToggleProps {
 }
 
 const RULES_TOOLTIP =
-  'Locks recently completed workouts (6 days), high-intensity sessions (72 hours), and overlapping movement patterns (48 hours).';
+  'Locks recently completed workouts (6 days), high-intensity missions (72 hours), and overlapping movement patterns (48 hours).';
 
 export function SmartRecoveryToggle({
   enabled,

@@ -29,7 +29,7 @@ Smart Recovery complements — does not replace — the existing **overtraining 
 | Guests | Scores persist but `participants.user_id IS NULL` until claim | Smart Recovery **requires auth** — no history until claimed |
 | Astro library | Static `/amrap-workouts/*` — SEO only, no interactive picker | Toggle lives on **SPA create flow** in v1 |
 
-There are **zero** references to “Smart Recovery” in the codebase today.
+Before Phase 0, there were **zero** references to “Smart Recovery” in the codebase.
 
 ---
 
