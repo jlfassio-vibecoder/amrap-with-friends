@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  coachOnboardingStuckStatusLabel,
   fetchCoachDashboard,
+  fetchCoachOnboardingStuckList,
   fetchCoachRecentEvents,
   fetchCoachUserDetail,
   fetchCoachUsersList,
@@ -224,6 +226,97 @@ describe('fetchCoachUsersList', () => {
     expect(result.error).toBeNull();
     expect(result.data).toHaveLength(1);
     expect(result.data?.[0].username).toBe('ghost_ops');
+  });
+});
+
+describe('coachOnboardingStuckStatusLabel', () => {
+  it('returns plain-English labels for stuck statuses', () => {
+    expect(coachOnboardingStuckStatusLabel('needs_profile')).toBe(
+      'Signed up — profile not started'
+    );
+    expect(coachOnboardingStuckStatusLabel('intake_incomplete')).toBe(
+      'Profile started — finish your details'
+    );
+  });
+});
+
+describe('fetchCoachOnboardingStuckList', () => {
+  it('wires RPC params and parses stuck onboarding rows', async () => {
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        users: [
+          {
+            user_id: '22222222-2222-4222-8222-222222222222',
+            email: 'stuck@example.com',
+            status: 'needs_profile',
+            account_created_at: '2026-09-01T10:00:00.000Z',
+            last_sign_in_at: '2026-09-01T10:05:00.000Z',
+            providers: ['email', 'google'],
+          },
+          {
+            user_id: '33333333-3333-4333-8333-333333333333',
+            email: 'partial@example.com',
+            status: 'intake_incomplete',
+            account_created_at: '2026-09-01T11:00:00.000Z',
+            last_sign_in_at: null,
+            providers: [],
+          },
+          {
+            user_id: 'bad-row',
+            email: null,
+            status: 'needs_profile',
+          },
+          {
+            user_id: '44444444-4444-4444-8444-444444444444',
+            email: 'weird@example.com',
+            status: 'unknown_status',
+            account_created_at: '2026-09-01T12:00:00.000Z',
+          },
+        ],
+      },
+      error: null,
+    });
+
+    const result = await fetchCoachOnboardingStuckList({ limit: 50 });
+
+    expect(callRpcMock).toHaveBeenCalledWith('coach_onboarding_stuck_list', {
+      p_limit: 50,
+    });
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual([
+      {
+        userId: '22222222-2222-4222-8222-222222222222',
+        email: 'stuck@example.com',
+        status: 'needs_profile',
+        accountCreatedAt: '2026-09-01T10:00:00.000Z',
+        lastSignInAt: '2026-09-01T10:05:00.000Z',
+        providers: ['email', 'google'],
+      },
+      {
+        userId: '33333333-3333-4333-8333-333333333333',
+        email: 'partial@example.com',
+        status: 'intake_incomplete',
+        accountCreatedAt: '2026-09-01T11:00:00.000Z',
+        lastSignInAt: null,
+        providers: [],
+      },
+    ]);
+  });
+
+  it('maps auth errors for the stuck list', async () => {
+    callRpcMock.mockResolvedValue({
+      data: null,
+      error: { message: 'Not authorized' },
+    });
+
+    const result = await fetchCoachOnboardingStuckList();
+
+    expect(callRpcMock).toHaveBeenCalledWith('coach_onboarding_stuck_list', {
+      p_limit: 100,
+    });
+    expect(result.data).toBeNull();
+    expect(result.error?.message).toBe('Not authorized.');
   });
 });
 

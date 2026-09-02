@@ -112,6 +112,26 @@ export interface CoachUserListRow {
   totalMissions: number;
 }
 
+export type CoachOnboardingStuckStatus = 'needs_profile' | 'intake_incomplete';
+
+export interface CoachOnboardingStuckRow {
+  userId: string;
+  email: string;
+  status: CoachOnboardingStuckStatus;
+  accountCreatedAt: string;
+  lastSignInAt: string | null;
+  providers: string[];
+}
+
+export function coachOnboardingStuckStatusLabel(status: CoachOnboardingStuckStatus): string {
+  switch (status) {
+    case 'needs_profile':
+      return 'Signed up — profile not started';
+    case 'intake_incomplete':
+      return 'Profile started — finish your details';
+  }
+}
+
 export interface CoachUserProfile {
   userId: string;
   username: string;
@@ -339,6 +359,38 @@ function parseUserListRow(row: Record<string, unknown>): CoachUserListRow | null
   };
 }
 
+function parseOnboardingStuckStatus(value: unknown): CoachOnboardingStuckStatus | null {
+  if (value === 'needs_profile' || value === 'intake_incomplete') {
+    return value;
+  }
+  return null;
+}
+
+function parseProviders(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((item): item is string => typeof item === 'string' && item.length > 0);
+}
+
+function parseOnboardingStuckRow(row: Record<string, unknown>): CoachOnboardingStuckRow | null {
+  const userId = strOrNull(row, 'user_id');
+  const email = strOrNull(row, 'email');
+  const status = parseOnboardingStuckStatus(row.status);
+  const accountCreatedAt = strOrNull(row, 'account_created_at');
+  if (!userId || !email || !status || !accountCreatedAt) {
+    return null;
+  }
+  return {
+    userId,
+    email,
+    status,
+    accountCreatedAt,
+    lastSignInAt: strOrNull(row, 'last_sign_in_at'),
+    providers: parseProviders(row.providers),
+  };
+}
+
 function parseUserProfile(row: Record<string, unknown>): CoachUserProfile | null {
   const userId = strOrNull(row, 'userId');
   const username = strOrNull(row, 'username');
@@ -439,6 +491,29 @@ export async function fetchCoachUsersList(input: {
   const users = asArray(raw.users)
     .map(parseUserListRow)
     .filter((row): row is CoachUserListRow => row !== null);
+
+  return { data: users, error: null };
+}
+
+export async function fetchCoachOnboardingStuckList(input?: {
+  limit?: number;
+}): Promise<{ data: CoachOnboardingStuckRow[] | null; error: CoachApiError | null }> {
+  const { data, error } = await callRpc('coach_onboarding_stuck_list', {
+    p_limit: input?.limit ?? 100,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const users = asArray(raw.users)
+    .map(parseOnboardingStuckRow)
+    .filter((row): row is CoachOnboardingStuckRow => row !== null);
 
   return { data: users, error: null };
 }
