@@ -26,7 +26,7 @@ export interface AmrapAuthContextValue {
   session: Session | null;
   isAuthLoading: boolean;
   isAuthenticated: boolean;
-  /** True after a PASSWORD_RECOVERY auth event until password is updated or signed out. */
+  /** True during password recovery (PASSWORD_RECOVERY event or restored sessionStorage flag). */
   isPasswordRecovery: boolean;
   signInWithMagicLink: (email: string) => Promise<{ error: string | null }>;
   signUpWithPassword: (email: string, password: string) => Promise<AuthSignUpResult>;

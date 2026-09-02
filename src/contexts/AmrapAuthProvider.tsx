@@ -10,6 +10,29 @@ function trimEmail(email: string): string {
   return email.trim();
 }
 
+/** Survives reload so /reset-password still works after PASSWORD_RECOVERY was already consumed. */
+const PASSWORD_RECOVERY_STORAGE_KEY = 'amrap_password_recovery';
+
+function readPasswordRecoveryFlag(): boolean {
+  try {
+    return sessionStorage.getItem(PASSWORD_RECOVERY_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writePasswordRecoveryFlag(active: boolean): void {
+  try {
+    if (active) {
+      sessionStorage.setItem(PASSWORD_RECOVERY_STORAGE_KEY, '1');
+    } else {
+      sessionStorage.removeItem(PASSWORD_RECOVERY_STORAGE_KEY);
+    }
+  } catch {
+    /* sessionStorage unavailable */
+  }
+}
+
 export function AmrapAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AmrapAuthContextValue['user']>(null);
   const [session, setSession] = useState<AmrapAuthContextValue['session']>(null);
@@ -35,11 +58,19 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
         .then(({ data: { session: initialSession } }) => {
           setSession(initialSession);
           setUser(initialSession?.user ?? null);
+          if (initialSession && readPasswordRecoveryFlag()) {
+            setIsPasswordRecovery(true);
+          } else if (!initialSession) {
+            writePasswordRecoveryFlag(false);
+            setIsPasswordRecovery(false);
+          }
           resolveLoading();
         })
         .catch(() => {
           setSession(null);
           setUser(null);
+          writePasswordRecoveryFlag(false);
+          setIsPasswordRecovery(false);
           resolveLoading();
         });
 
@@ -50,8 +81,10 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
         setUser(nextSession?.user ?? null);
 
         if (event === 'PASSWORD_RECOVERY') {
+          writePasswordRecoveryFlag(true);
           setIsPasswordRecovery(true);
         } else if (event === 'SIGNED_OUT') {
+          writePasswordRecoveryFlag(false);
           setIsPasswordRecovery(false);
         }
 
@@ -70,6 +103,7 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const clearPasswordRecovery = useCallback(() => {
+    writePasswordRecoveryFlag(false);
     setIsPasswordRecovery(false);
   }, []);
 
@@ -218,6 +252,7 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
       return { error: error.message };
     }
 
+    writePasswordRecoveryFlag(false);
     setIsPasswordRecovery(false);
     return { error: null };
   }, []);
@@ -225,6 +260,7 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     const supabase = getSupabaseClient();
     await supabase.auth.signOut();
+    writePasswordRecoveryFlag(false);
     setIsPasswordRecovery(false);
   }, []);
 

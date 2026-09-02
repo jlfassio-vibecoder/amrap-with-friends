@@ -1,8 +1,8 @@
-/** Redirect after magic-link or confirmation email — stay on the current page. */
+/** Redirect after magic-link or confirmation email — stay on the current page (incl. query). */
 export function currentPathRedirectTo(
-  location: Pick<Location, 'origin' | 'pathname'> = window.location
+  location: Pick<Location, 'origin' | 'pathname' | 'search'> = window.location
 ): string {
-  return `${location.origin}${location.pathname}`;
+  return `${location.origin}${location.pathname}${location.search}`;
 }
 
 /** Redirect after password-reset email — always the set-new-password page. */
