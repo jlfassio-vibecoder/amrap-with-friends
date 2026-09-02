@@ -6,13 +6,30 @@ import {
   isPasswordResetEnabled,
 } from '@/lib/auth/authFeatures';
 import { isDuplicateAccountError } from '@/lib/auth/mapAuthError';
-import { readOAuthReturnError, stripOAuthReturnErrorParams } from '@/lib/auth/oauthReturnError';
+import {
+  hasOAuthReturnErrorParams,
+  readOAuthReturnError,
+  stripOAuthReturnErrorParams,
+} from '@/lib/auth/oauthReturnError';
 import { AUTH_MIN_PASSWORD_LENGTH } from '@/lib/auth/passwordPolicy';
 
 type AuthMethod = 'magic-link' | 'password';
 export type PasswordMode = 'sign-in' | 'sign-up';
 type FormStatus = 'idle' | 'submitting' | 'success' | 'error';
 type AuthFormVariant = 'default' | 'compact';
+
+function initialOAuthReturnFeedback(): { status: FormStatus; message: string | null } {
+  if (typeof window === 'undefined' || !isGoogleAuthEnabled()) {
+    return { status: 'idle', message: null };
+  }
+
+  const oauthError = readOAuthReturnError(new URLSearchParams(window.location.search));
+  if (!oauthError) {
+    return { status: 'idle', message: null };
+  }
+
+  return { status: 'error', message: oauthError };
+}
 
 export interface AuthFormProps {
   /** Open on password Sign in or Create account. Defaults to sign-in. */
@@ -113,24 +130,21 @@ export function AuthForm({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [status, setStatus] = useState<FormStatus>('idle');
-  const [message, setMessage] = useState<string | null>(null);
+  const [status, setStatus] = useState<FormStatus>(() => initialOAuthReturnFeedback().status);
+  const [message, setMessage] = useState<string | null>(() => initialOAuthReturnFeedback().message);
   const [awaitingSignupContinue, setAwaitingSignupContinue] = useState(false);
   const [resetBusy, setResetBusy] = useState(false);
 
+  // Strip OAuth error query params after paint — state already seeded from the URL above.
   useEffect(() => {
     if (!googleAuthEnabled || typeof window === 'undefined') {
       return;
     }
 
     const params = new URLSearchParams(window.location.search);
-    const oauthError = readOAuthReturnError(params);
-    if (!oauthError) {
+    if (!hasOAuthReturnErrorParams(params)) {
       return;
     }
-
-    setStatus('error');
-    setMessage(oauthError);
 
     const nextSearch = stripOAuthReturnErrorParams(params);
     window.history.replaceState(
