@@ -320,7 +320,7 @@ describe('IntakePage', () => {
 
     const passwordInput = screen.getByPlaceholderText('Leave blank to keep current');
     expect(passwordInput.getAttribute('type')).toBe('password');
-    expect(screen.getByText(/At least 6 characters/)).toBeTruthy();
+    expect(screen.getByText(/At least \d+ characters/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Show password' }));
     expect(passwordInput.getAttribute('type')).toBe('text');

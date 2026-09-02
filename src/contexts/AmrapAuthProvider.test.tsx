@@ -136,6 +136,23 @@ describe('AmrapAuthProvider password auth', () => {
     ).toBe(true);
   });
 
+  it('classifies email-not-confirmed failures from the raw GoTrue message', async () => {
+    signInWithPasswordMock.mockResolvedValue({
+      data: { session: null, user: null },
+      error: { message: 'Email not confirmed' },
+    });
+
+    await renderProvider();
+
+    const result = await authApi!.signInWithPassword('user@example.com', 'password1');
+
+    expect(result.error).toBe('Confirm your email, then sign in.');
+    expect(trackMock).toHaveBeenCalledWith(
+      'auth_sign_in_failed',
+      expect.objectContaining({ method: 'password', reason: 'email_not_confirmed' })
+    );
+  });
+
   it('signUpWithPassword sets needsEmailConfirmation when session is null and identities exist', async () => {
     signUpMock.mockResolvedValue({
       data: {

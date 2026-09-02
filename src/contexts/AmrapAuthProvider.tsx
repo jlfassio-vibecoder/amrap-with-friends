@@ -189,7 +189,10 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
 
     if (error) {
       const mapped = mapAuthError(error.message);
-      track('auth_google_failed', { method: 'google', reason: authFailureReason(mapped) });
+      track('auth_google_failed', {
+        method: 'google',
+        reason: authFailureReason(error.message),
+      });
       return { error: mapped };
     }
 
@@ -218,7 +221,10 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
 
     if (error) {
       const mapped = mapAuthError(error.message);
-      track('auth_sign_up_failed', { method: 'password', reason: authFailureReason(mapped) });
+      track('auth_sign_up_failed', {
+        method: 'password',
+        reason: authFailureReason(error.message),
+      });
       return { error: mapped, needsEmailConfirmation: false };
     }
 
@@ -266,7 +272,10 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
 
     if (error) {
       const mapped = mapAuthError(error.message);
-      track('auth_sign_in_failed', { method: 'password', reason: authFailureReason(mapped) });
+      track('auth_sign_in_failed', {
+        method: 'password',
+        reason: authFailureReason(error.message),
+      });
       return { error: mapped };
     }
 

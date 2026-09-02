@@ -288,7 +288,7 @@ describe('AuthForm', () => {
       render(<AuthForm showHeading />);
 
       expect(screen.getByText('Google sign-in was cancelled.')).toBeTruthy();
-      expect(replaceState).toHaveBeenCalledWith(null, '', '/create?c=keep');
+      expect(replaceState).toHaveBeenCalledWith(window.history.state, '', '/create?c=keep');
     } finally {
       Object.defineProperty(window, 'location', {
         configurable: true,
