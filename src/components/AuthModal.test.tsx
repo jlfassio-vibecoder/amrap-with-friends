@@ -19,6 +19,7 @@ const isMagicLinkAuthEnabledMock = vi.hoisted(() => vi.fn(() => true));
 
 vi.mock('@/lib/auth/authFeatures', () => ({
   isMagicLinkAuthEnabled: () => isMagicLinkAuthEnabledMock(),
+  isPasswordResetEnabled: () => false,
 }));
 
 afterEach(() => {

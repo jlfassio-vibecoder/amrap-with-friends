@@ -21,6 +21,7 @@ export default function HeroBelowLogo() {
 function HeroBelowLogoGate() {
   const { isAuthenticated, isAuthLoading } = useAmrapAuth();
   const [holdSignupContinue, setHoldSignupContinue] = useState(false);
+  const [pendingIntakeRedirect, setPendingIntakeRedirect] = useState(false);
 
   if (isAuthLoading) {
     return null;
@@ -35,8 +36,17 @@ function HeroBelowLogoGate() {
           variant="compact"
           guestAllowed={false}
           showAuthMethodSelector={false}
-          onSignupSessionSuccess={() => setHoldSignupContinue(true)}
-          onAuthenticated={() => setHoldSignupContinue(false)}
+          onSignupSessionSuccess={() => {
+            setHoldSignupContinue(true);
+            setPendingIntakeRedirect(true);
+          }}
+          onAuthenticated={() => {
+            setHoldSignupContinue(false);
+            if (pendingIntakeRedirect) {
+              window.location.assign('/intake?next=/create');
+              return;
+            }
+          }}
         />
       ) : (
         <HostScheduledMissionsPanel />

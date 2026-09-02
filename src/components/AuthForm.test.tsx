@@ -6,6 +6,7 @@ const authApi = vi.hoisted(() => ({
   signInWithMagicLink: vi.fn(),
   signUpWithPassword: vi.fn(),
   signInWithPassword: vi.fn(),
+  requestPasswordReset: vi.fn(),
   isAuthenticated: false,
 }));
 
@@ -14,14 +15,17 @@ vi.mock('@/hooks/useAmrapAuth', () => ({
     signInWithMagicLink: authApi.signInWithMagicLink,
     signUpWithPassword: authApi.signUpWithPassword,
     signInWithPassword: authApi.signInWithPassword,
+    requestPasswordReset: authApi.requestPasswordReset,
     isAuthenticated: authApi.isAuthenticated,
   }),
 }));
 
 const isMagicLinkAuthEnabledMock = vi.hoisted(() => vi.fn(() => true));
+const isPasswordResetEnabledMock = vi.hoisted(() => vi.fn(() => false));
 
 vi.mock('@/lib/auth/authFeatures', () => ({
   isMagicLinkAuthEnabled: () => isMagicLinkAuthEnabledMock(),
+  isPasswordResetEnabled: () => isPasswordResetEnabledMock(),
 }));
 
 afterEach(() => {
@@ -30,8 +34,11 @@ afterEach(() => {
   authApi.signInWithMagicLink.mockReset();
   authApi.signUpWithPassword.mockReset();
   authApi.signInWithPassword.mockReset();
+  authApi.requestPasswordReset.mockReset();
   isMagicLinkAuthEnabledMock.mockReset();
   isMagicLinkAuthEnabledMock.mockReturnValue(true);
+  isPasswordResetEnabledMock.mockReset();
+  isPasswordResetEnabledMock.mockReturnValue(false);
 });
 
 describe('AuthForm', () => {
@@ -161,5 +168,59 @@ describe('AuthForm', () => {
       expect(onAuthenticated).toHaveBeenCalledTimes(1);
     });
     expect(screen.queryByRole('button', { name: 'Continue' })).toBeNull();
+  });
+
+  it('switches to sign-in after a duplicate create-account error', async () => {
+    isMagicLinkAuthEnabledMock.mockReturnValue(false);
+    authApi.signUpWithPassword.mockResolvedValue({
+      error: 'An account with this email already exists. Sign in.',
+      needsEmailConfirmation: false,
+    });
+
+    render(<AuthForm showHeading initialPasswordMode="sign-up" />);
+
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'athlete@example.com' } });
+    const passwordInput = document.querySelector('input[type="password"]');
+    fireEvent.change(passwordInput!, { target: { value: 'secret1' } });
+    fireEvent.click(
+      screen
+        .getAllByRole('button', { name: 'Create account' })
+        .find((button) => button.getAttribute('type') === 'submit')!
+    );
+
+    expect(
+      await screen.findByText('An account with this email already exists. Sign in.')
+    ).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeTruthy();
+    expect(
+      screen
+        .getAllByRole('button', { name: 'Sign in' })
+        .some((button) => button.getAttribute('type') === 'submit')
+    ).toBe(true);
+  });
+
+  it('hides Forgot password when reset is disabled', () => {
+    isMagicLinkAuthEnabledMock.mockReturnValue(false);
+    isPasswordResetEnabledMock.mockReturnValue(false);
+
+    render(<AuthForm showHeading />);
+
+    expect(screen.queryByRole('button', { name: 'Forgot password?' })).toBeNull();
+  });
+
+  it('shows Forgot password and sends a reset when enabled', async () => {
+    isMagicLinkAuthEnabledMock.mockReturnValue(false);
+    isPasswordResetEnabledMock.mockReturnValue(true);
+    authApi.requestPasswordReset.mockResolvedValue({ error: null });
+
+    render(<AuthForm showHeading />);
+
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'athlete@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Forgot password?' }));
+
+    await waitFor(() => {
+      expect(authApi.requestPasswordReset).toHaveBeenCalledWith('athlete@example.com');
+    });
+    expect(await screen.findByText('Check your email for a reset link.')).toBeTruthy();
   });
 });

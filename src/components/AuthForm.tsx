@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
-import { isMagicLinkAuthEnabled } from '@/lib/auth/authFeatures';
+import { isMagicLinkAuthEnabled, isPasswordResetEnabled } from '@/lib/auth/authFeatures';
+import { isDuplicateAccountError } from '@/lib/auth/mapAuthError';
 import { AUTH_MIN_PASSWORD_LENGTH } from '@/lib/auth/passwordPolicy';
 
 type AuthMethod = 'magic-link' | 'password';
@@ -92,7 +93,9 @@ export function AuthForm({
 }: AuthFormProps) {
   const isCompact = variant === 'compact';
   const magicLinkEnabled = isMagicLinkAuthEnabled();
-  const { signInWithMagicLink, signUpWithPassword, signInWithPassword } = useAmrapAuth();
+  const passwordResetEnabled = isPasswordResetEnabled();
+  const { signInWithMagicLink, signUpWithPassword, signInWithPassword, requestPasswordReset } =
+    useAmrapAuth();
 
   const [authMethod, setAuthMethod] = useState<AuthMethod>('password');
   const [passwordMode, setPasswordMode] = useState<PasswordMode>(initialPasswordMode);
@@ -102,6 +105,7 @@ export function AuthForm({
   const [status, setStatus] = useState<FormStatus>('idle');
   const [message, setMessage] = useState<string | null>(null);
   const [awaitingSignupContinue, setAwaitingSignupContinue] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
 
   function resetFeedback() {
     setStatus('idle');
@@ -147,6 +151,9 @@ export function AuthForm({
       if (result.error) {
         setStatus('error');
         setMessage(result.error);
+        if (isDuplicateAccountError(result.error)) {
+          setPasswordMode('sign-in');
+        }
         return;
       }
 
@@ -176,6 +183,29 @@ export function AuthForm({
   }
 
   const isBusy = status === 'submitting';
+
+  async function handleForgotPassword() {
+    if (!passwordResetEnabled || resetBusy || isBusy) {
+      return;
+    }
+
+    setResetBusy(true);
+    setStatus('submitting');
+    setMessage(null);
+
+    const result = await requestPasswordReset(email);
+    setResetBusy(false);
+
+    if (result.error) {
+      setStatus('error');
+      setMessage(result.error);
+      return;
+    }
+
+    setStatus('success');
+    setMessage('Check your email for a reset link.');
+  }
+
   const isSuccessLocked = status === 'success' && authMethod === 'magic-link';
   const passwordFieldsLocked = isBusy || (status === 'success' && !awaitingSignupContinue);
   const showingPasswordForm = !(magicLinkEnabled && authMethod === 'magic-link');
@@ -263,7 +293,7 @@ export function AuthForm({
 
           {message ? (
             <p className={status === 'error' ? 'text-error' : 'text-sm text-secondary'}>
-              {status === 'error' ? `Error: ${message}` : message}
+              {message}
             </p>
           ) : null}
 
@@ -378,9 +408,22 @@ export function AuthForm({
             )}
           </label>
 
+          {passwordResetEnabled && passwordMode === 'sign-in' && !awaitingSignupContinue ? (
+            <div className="text-sm">
+              <button
+                type="button"
+                className="link-accent"
+                disabled={isBusy || resetBusy || email.trim().length === 0}
+                onClick={() => void handleForgotPassword()}
+              >
+                Forgot password?
+              </button>
+            </div>
+          ) : null}
+
           {message ? (
             <div className={status === 'error' ? 'text-error' : 'space-y-1 text-sm text-secondary'}>
-              <p>{status === 'error' ? `Error: ${message}` : message}</p>
+              <p>{message}</p>
               {awaitingSignupContinue ? (
                 <p>Reveal the password if you need it on another device.</p>
               ) : null}

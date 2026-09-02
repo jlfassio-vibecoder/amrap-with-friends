@@ -14,11 +14,11 @@ There is no `/signup` route. Account creation is a mode of [`AuthForm`](../../sr
 
 A usable account is three stacked layers. The form only implements the first.
 
-| Layer | Where | Required to… |
-| --- | --- | --- |
-| Auth user + session | Supabase Auth (`signUp` / `signInWithPassword` / `signInWithOtp`) | Exist as a user and stay signed in |
-| Email confirmed | Hosted Auth “Confirm email” (was **OFF** in Aug 2026; local `enable_confirmations = false`) | Sign in, if confirmations are on |
-| Athlete profile | `/intake` → `athlete_profiles` | Create missions, campaigns, squad — not required to exist as a user |
+| Layer               | Where                                                                                       | Required to…                                                        |
+| ------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Auth user + session | Supabase Auth (`signUp` / `signInWithPassword` / `signInWithOtp`)                           | Exist as a user and stay signed in                                  |
+| Email confirmed     | Hosted Auth “Confirm email” (was **OFF** in Aug 2026; local `enable_confirmations = false`) | Sign in, if confirmations are on                                    |
+| Athlete profile     | `/intake` → `athlete_profiles`                                                              | Create missions, campaigns, squad — not required to exist as a user |
 
 A user can succeed at “Create account,” see **Account created.**, have the modal close, and still feel locked out because:
 
@@ -54,14 +54,14 @@ flowchart TD
 
 ### 2.1 Surfaces
 
-| Surface | File | What the athlete sees |
-| --- | --- | --- |
-| Header | [`AuthHeaderActions.tsx`](../../src/components/AuthHeaderActions.tsx) | **Sign in** and **Create account** — Create account opens the modal on password sign-up |
-| Homepage hero | [`HeroBelowLogo.tsx`](../../site/islands/HeroBelowLogo.tsx) | Compact `AuthForm`: password only, Sign in / Create account pills, **no magic link**, **no heading** |
-| Gated routes | [`RequireIntake.tsx`](../../src/components/RequireIntake.tsx) | Auto-opens `AuthModal` on **Sign in** (magic link default if enabled) |
-| Join campaign / squad | Those pages | Modal; guest copy off where an account is required |
-| Post-mission save | [`MissionWaitingRoomPage.tsx`](../../src/pages/MissionWaitingRoomPage.tsx) | **Save to my account** → modal, then `claim_participant` |
-| Profile | [`IntakePage.tsx`](../../src/pages/IntakePage.tsx) | Change email / password **only if already signed in**. Signed-out `/intake` is a dead end: “Sign in to set up your profile” + link home — no form |
+| Surface               | File                                                                       | What the athlete sees                                                                                                                             |
+| --------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Header                | [`AuthHeaderActions.tsx`](../../src/components/AuthHeaderActions.tsx)      | **Sign in** and **Create account** — Create account opens the modal on password sign-up                                                           |
+| Homepage hero         | [`HeroBelowLogo.tsx`](../../site/islands/HeroBelowLogo.tsx)                | Compact `AuthForm`: password only, Sign in / Create account pills, **no magic link**, **no heading**                                              |
+| Gated routes          | [`RequireIntake.tsx`](../../src/components/RequireIntake.tsx)              | Auto-opens `AuthModal` on **Sign in** (magic link default if enabled)                                                                             |
+| Join campaign / squad | Those pages                                                                | Modal; guest copy off where an account is required                                                                                                |
+| Post-mission save     | [`MissionWaitingRoomPage.tsx`](../../src/pages/MissionWaitingRoomPage.tsx) | **Save to my account** → modal, then `claim_participant`                                                                                          |
+| Profile               | [`IntakePage.tsx`](../../src/pages/IntakePage.tsx)                         | Change email / password **only if already signed in**. Signed-out `/intake` is a dead end: “Sign in to set up your profile” + link home — no form |
 
 ### 2.2 Client stack
 
@@ -85,11 +85,11 @@ await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo } });
 
 Outcomes of `signUpWithPassword`:
 
-| Supabase result | UI |
-| --- | --- |
-| `data.session` | “Account created.” then `onAuthenticated` closes the modal |
-| `data.user` and no session | “Check your email to confirm your account, then sign in.” — fields **disabled** |
-| Error | Raw `Error: {message}` (e.g. `User already registered`, `Invalid login credentials`) |
+| Supabase result            | UI                                                                                   |
+| -------------------------- | ------------------------------------------------------------------------------------ |
+| `data.session`             | “Account created.” then `onAuthenticated` closes the modal                           |
+| `data.user` and no session | “Check your email to confirm your account, then sign in.” — fields **disabled**      |
+| Error                      | Raw `Error: {message}` (e.g. `User already registered`, `Invalid login credentials`) |
 
 There is **no** `resetPasswordForEmail`, no `/forgot-password` route, and no “Forgot password?” link. README still lists forgot-password as **out of scope**.
 
@@ -127,14 +127,14 @@ then GoTrue returns **`Invalid login credentials`**, shown verbatim as `Error: I
 
 There is **no recovery**:
 
-| Recovery option | Status |
-| --- | --- |
-| Forgot password / email reset | Not implemented |
-| Confirm-password at signup (catch typo) | Not implemented |
-| Stay signed in across devices | No cookies / no SSO |
-| Magic link as fallback | Hidden on homepage; default in modal **if** SMTP delivers |
-| Admin reset | Dashboard only |
-| Intake “change password” | Requires being signed in already |
+| Recovery option                         | Status                                                    |
+| --------------------------------------- | --------------------------------------------------------- |
+| Forgot password / email reset           | Not implemented                                           |
+| Confirm-password at signup (catch typo) | Not implemented                                           |
+| Stay signed in across devices           | No cookies / no SSO                                       |
+| Magic link as fallback                  | Hidden on homepage; default in modal **if** SMTP delivers |
+| Admin reset                             | Dashboard only                                            |
+| Intake “change password”                | Requires being signed in already                          |
 
 **This is a product dead end, not a support script.** The account exists. The athlete is locked out. A second **Create account** attempt returns `User already registered` (confirmations off) or a fake “check your email” (confirmations on — empty `identities`). Both look like “I can’t create an account.”
 
@@ -142,13 +142,13 @@ There is **no recovery**:
 
 Reports collapse three distinct failures into one sentence:
 
-| What happened | What they report |
-| --- | --- |
-| Signup succeeded; later sign-in fails (this incident) | “I created an account and can’t get in” |
-| Duplicate email / already registered | “It won’t let me create an account” |
+| What happened                                                 | What they report                                |
+| ------------------------------------------------------------- | ----------------------------------------------- |
+| Signup succeeded; later sign-in fails (this incident)         | “I created an account and can’t get in”         |
+| Duplicate email / already registered                          | “It won’t let me create an account”             |
 | Magic-link mail never arrived (default mailer, 2 emails/hour) | “I never got the email” / “signup doesn’t work” |
-| Session ok, `/create` demands intake | “I signed up and nothing happened” |
-| Preview / unique Vercel URL behind SSO | “The site asked me to log into Vercel” |
+| Session ok, `/create` demands intake                          | “I signed up and nothing happened”              |
+| Preview / unique Vercel URL behind SSO                        | “The site asked me to log into Vercel”          |
 
 ---
 
@@ -156,7 +156,7 @@ Reports collapse three distinct failures into one sentence:
 
 Severity: **P0** blocks create or re-entry; **P1** high confusion; **P2** polish.
 
-### P0 — No password reset (this incident)
+### P0 — No password reset (this incident) — done 2026-09-02
 
 A forgotten, unseen, or mistyped password cannot be recovered in the product. README already named this follow-up; it is now the primary user-facing failure.
 
@@ -182,31 +182,31 @@ Prior audit: custom SMTP was **not** configured; rate limit **2 emails/hour**. M
 
 **Fix:** Default modal to **Password**. Set `shouldCreateUser: false` on OTP, or copy: “Email me a sign-in link (works if you already have an account).” Disable magic link in Vercel (`VITE_AUTH_MAGIC_LINK_ENABLED=false`) until SMTP is live.
 
-### P1 — Duplicate signup / empty identities
+### P1 — Duplicate signup / empty identities — done 2026-09-02
 
 `signUpWithPassword` treats any `data.user` without `data.session` as confirmation sent. When Confirm email is ON, a second attempt returns a user with **empty identities** and no mail. UI says “Check your email…”. When Confirm email is OFF, they get raw `User already registered`.
 
 **Fix:** If `user.identities?.length === 0`, show “An account with this email already exists. Sign in or reset your password.” Map `User already registered` to the same string. Add a provider test (today only mocks the explicit error).
 
-### P1 — `signUp` has no `emailRedirectTo`
+### P1 — `signUp` has no `emailRedirectTo` — done 2026-09-02
 
 Magic link passes `origin + pathname`. Password sign-up does not. Confirmation links use Dashboard Site URL. Latent until Confirm email is turned on.
 
 **Fix:** Pass the same `emailRedirectTo` (or `/auth/callback?next=`) on `signUp`.
 
-### P1 — Account ≠ ready to train
+### P1 — Account ≠ ready to train — done 2026-09-02
 
 `RequireIntake` redirects a brand-new session to `/intake?next=…`. Header Create account does not. Users who thought signup was the whole job bounce on `/create`.
 
 **Fix:** After first session, if profile is missing, navigate to `/intake?next=/create`.
 
-### P1 — Signed-out `/intake` and signed-out gates
+### P1 — Signed-out `/intake` and signed-out gates — done 2026-09-02
 
 `/intake` when signed out has no `AuthForm`. Gates reopen with a **Sign in** button only (not Create account). Compact homepage is the friendliest create path; join/create gates are not.
 
 **Fix:** Mount `AuthForm` on signed-out intake; gate reopen button should offer Create account when the route requires an account.
 
-### P1 — Raw GoTrue errors
+### P1 — Raw GoTrue errors — done 2026-09-02
 
 `Invalid login credentials` is the re-entry message. It does not invite reset. `Email not confirmed` is unmapped.
 
@@ -230,15 +230,15 @@ Hosted Confirm email, SMTP, Site URL, and min password are Dashboard-only. A tog
 
 ## 5. Intended journeys vs what the code does
 
-| Intent | Click | System | Risk |
-| --- | --- | --- | --- |
-| Make an account | Header **Create account** | Modal, password sign-up | Autofill password; modal closes; no confirm |
-| Make an account | Homepage compact | Password pills, no magic link | Same autofill/typo hole; easiest path today |
-| Make an account | Gate **Sign in** | Magic link default (if enabled) | Mail never arrives; or passwordless user |
-| Come back tomorrow | Header **Sign in** | Password or magic link | Wrong password → dead end |
-| I forgot my password | (nothing) | — | Support / Dashboard only |
-| Create a mission | `/create` | Auth + intake | Feels like signup failed |
-| Save a guest mission | Scorecard **Save to my account** | Modal then claim | Finished “sign up is optional” banner only shows when **already** authenticated |
+| Intent               | Click                            | System                          | Risk                                                                            |
+| -------------------- | -------------------------------- | ------------------------------- | ------------------------------------------------------------------------------- |
+| Make an account      | Header **Create account**        | Modal, password sign-up         | Autofill password; modal closes; no confirm                                     |
+| Make an account      | Homepage compact                 | Password pills, no magic link   | Same autofill/typo hole; easiest path today                                     |
+| Make an account      | Gate **Sign in**                 | Magic link default (if enabled) | Mail never arrives; or passwordless user                                        |
+| Come back tomorrow   | Header **Sign in**               | Password or magic link          | Wrong password → dead end                                                       |
+| I forgot my password | (nothing)                        | —                               | Support / Dashboard only                                                        |
+| Create a mission     | `/create`                        | Auth + intake                   | Feels like signup failed                                                        |
+| Save a guest mission | Scorecard **Save to my account** | Modal then claim                | Finished “sign up is optional” banner only shows when **already** authenticated |
 
 ---
 

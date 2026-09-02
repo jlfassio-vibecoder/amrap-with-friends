@@ -26,3 +26,23 @@ describe('isMagicLinkAuthEnabled', () => {
     expect(isMagicLinkAuthEnabled()).toBe(true);
   });
 });
+
+describe('isPasswordResetEnabled', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it('defaults to false when unset', async () => {
+    vi.stubEnv('VITE_AUTH_PASSWORD_RESET_ENABLED', '');
+    const { isPasswordResetEnabled } = await import('./authFeatures');
+    expect(isPasswordResetEnabled()).toBe(false);
+  });
+
+  it('returns true when explicitly enabled', async () => {
+    vi.stubEnv('VITE_AUTH_PASSWORD_RESET_ENABLED', 'true');
+    vi.resetModules();
+    const { isPasswordResetEnabled } = await import('./authFeatures');
+    expect(isPasswordResetEnabled()).toBe(true);
+  });
+});

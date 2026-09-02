@@ -112,6 +112,7 @@ export const APP_ROUTES: RouteSeo[] = [
   { path: '/squad', title: 'Your squad', description: '', index: false },
   { path: '/my-missions', title: 'My missions', description: '', index: false },
   { path: '/intake', title: 'Your profile', description: '', index: false },
+  { path: '/reset-password', title: 'Reset password', description: '', index: false },
   { path: '/hud', title: 'HUD', description: '', index: false },
   { path: '/coach', title: 'Coach', description: '', index: false },
   { path: '/coach/wods', title: 'WOD Builder', description: '', index: false },

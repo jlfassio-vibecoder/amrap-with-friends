@@ -21,7 +21,7 @@ export default function JoinCampaignPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
-  const [authOpen, setAuthOpen] = useState(false);
+  const [authOpenMode, setAuthOpenMode] = useState<'sign-in' | 'sign-up' | null>(null);
 
   useEffect(() => {
     if (!inviteCode) {
@@ -138,16 +138,35 @@ export default function JoinCampaignPage() {
               Sign in to join. A campaign runs for weeks, so it tracks your missions against your
               account.
             </p>
-            <button type="button" className="btn-primary" onClick={() => setAuthOpen(true)}>
-              Sign in to join
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => setAuthOpenMode('sign-in')}
+              >
+                Sign in to join
+              </button>
+              <button
+                type="button"
+                className="btn-neutral"
+                onClick={() => setAuthOpenMode('sign-up')}
+              >
+                Create account
+              </button>
+            </div>
           </div>
         )}
 
         {error ? <p className="alert-error">{error}</p> : null}
       </section>
 
-      {authOpen ? <AuthModal onClose={() => setAuthOpen(false)} /> : null}
+      {authOpenMode ? (
+        <AuthModal
+          onClose={() => setAuthOpenMode(null)}
+          initialPasswordMode={authOpenMode}
+          guestAllowed={false}
+        />
+      ) : null}
 
       <p className="text-center text-sm">
         <AppLink className="link-accent" to="/">

@@ -18,3 +18,8 @@ function parseAuthEnvBoolean(value: string | undefined, defaultValue: boolean): 
 export function isMagicLinkAuthEnabled(): boolean {
   return parseAuthEnvBoolean(import.meta.env.VITE_AUTH_MAGIC_LINK_ENABLED, false);
 }
+
+/** When false, AuthForm hides Forgot password. Off by default until custom SMTP exists. */
+export function isPasswordResetEnabled(): boolean {
+  return parseAuthEnvBoolean(import.meta.env.VITE_AUTH_PASSWORD_RESET_ENABLED, false);
+}

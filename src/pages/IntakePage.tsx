@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type RefObject } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppLink } from '@/components/AppLink';
+import { AuthForm } from '@/components/AuthForm';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { track, trackBeacon } from '@/lib/analytics/track';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
@@ -774,6 +775,7 @@ export default function IntakePage() {
     return (
       <NarrowPageLayout title="Your profile" subtitle="Athlete details">
         <p className="text-sm text-secondary">Sign in to set up your profile.</p>
+        <AuthForm variant="compact" guestAllowed={false} showAuthMethodSelector={false} />
         <p className="text-center text-sm">
           <AppLink className="link-accent" to="/">
             Back home

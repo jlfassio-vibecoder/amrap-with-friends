@@ -16,6 +16,10 @@
       "destination": "/_app-shell"
     },
     {
+      "source": "/reset-password",
+      "destination": "/_app-shell"
+    },
+    {
       "source": "/hud",
       "destination": "/_app-shell"
     },

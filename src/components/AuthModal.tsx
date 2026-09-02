@@ -9,12 +9,15 @@ interface AuthModalProps {
    * modal stops telling people signing in that it was optional.
    */
   guestAllowed?: boolean;
+  /** Defaults to onClose. Header Create account uses this to send missing profiles to intake. */
+  onAuthenticated?: () => void;
 }
 
 export function AuthModal({
   onClose,
   initialPasswordMode = 'sign-in',
   guestAllowed = true,
+  onAuthenticated = onClose,
 }: AuthModalProps) {
   return (
     <div
@@ -28,7 +31,7 @@ export function AuthModal({
         <AuthForm
           titleId="auth-modal-title"
           onClose={onClose}
-          onAuthenticated={onClose}
+          onAuthenticated={onAuthenticated}
           initialPasswordMode={initialPasswordMode}
           guestAllowed={guestAllowed}
         />
