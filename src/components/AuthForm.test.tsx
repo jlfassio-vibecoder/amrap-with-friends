@@ -265,4 +265,36 @@ describe('AuthForm', () => {
 
     expect(await screen.findByText('Google sign-in failed.')).toBeTruthy();
   });
+
+  it('shows and clears OAuth return errors from the URL when Google is enabled', () => {
+    isMagicLinkAuthEnabledMock.mockReturnValue(false);
+    isGoogleAuthEnabledMock.mockReturnValue(true);
+
+    const replaceState = vi.fn();
+    const originalLocation = window.location;
+    const originalReplaceState = window.history.replaceState;
+
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        pathname: '/create',
+        search: '?error=access_denied&error_description=User+cancelled+login&c=keep',
+        hash: '',
+      },
+    });
+    window.history.replaceState = replaceState;
+
+    try {
+      render(<AuthForm showHeading />);
+
+      expect(screen.getByText('Google sign-in was cancelled.')).toBeTruthy();
+      expect(replaceState).toHaveBeenCalledWith(null, '', '/create?c=keep');
+    } finally {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: originalLocation,
+      });
+      window.history.replaceState = originalReplaceState;
+    }
+  });
 });

@@ -232,7 +232,7 @@ describe('IntakePage', () => {
     fireEvent.change(screen.getByLabelText(/^Email$/), {
       target: { value: 'new@example.com' },
     });
-    fireEvent.change(screen.getByLabelText(/^Password$/), {
+    fireEvent.change(screen.getByPlaceholderText('Leave blank to keep current'), {
       target: { value: 'newpass1' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
@@ -300,7 +300,7 @@ describe('IntakePage', () => {
     renderIntake();
 
     fillRequiredFields();
-    fireEvent.change(screen.getByLabelText(/^Password$/), {
+    fireEvent.change(screen.getByPlaceholderText('Leave blank to keep current'), {
       target: { value: 'weak' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
@@ -313,6 +313,19 @@ describe('IntakePage', () => {
       });
     });
     expect(screen.queryByText(/^Error:/)).toBeNull();
+  });
+
+  it('toggles password visibility and shows the length hint', () => {
+    renderIntake();
+
+    const passwordInput = screen.getByPlaceholderText('Leave blank to keep current');
+    expect(passwordInput.getAttribute('type')).toBe('password');
+    expect(screen.getByText(/At least 6 characters/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show password' }));
+    expect(passwordInput.getAttribute('type')).toBe('text');
+    fireEvent.click(screen.getByRole('button', { name: 'Hide password' }));
+    expect(passwordInput.getAttribute('type')).toBe('password');
   });
 
   it('stays on the form when profile save fails', async () => {

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import {
   isGoogleAuthEnabled,
@@ -6,6 +6,7 @@ import {
   isPasswordResetEnabled,
 } from '@/lib/auth/authFeatures';
 import { isDuplicateAccountError } from '@/lib/auth/mapAuthError';
+import { readOAuthReturnError, stripOAuthReturnErrorParams } from '@/lib/auth/oauthReturnError';
 import { AUTH_MIN_PASSWORD_LENGTH } from '@/lib/auth/passwordPolicy';
 
 type AuthMethod = 'magic-link' | 'password';
@@ -116,6 +117,28 @@ export function AuthForm({
   const [message, setMessage] = useState<string | null>(null);
   const [awaitingSignupContinue, setAwaitingSignupContinue] = useState(false);
   const [resetBusy, setResetBusy] = useState(false);
+
+  useEffect(() => {
+    if (!googleAuthEnabled || typeof window === 'undefined') {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const oauthError = readOAuthReturnError(params);
+    if (!oauthError) {
+      return;
+    }
+
+    setStatus('error');
+    setMessage(oauthError);
+
+    const nextSearch = stripOAuthReturnErrorParams(params);
+    window.history.replaceState(
+      window.history.state,
+      '',
+      `${window.location.pathname}${nextSearch}${window.location.hash}`
+    );
+  }, [googleAuthEnabled]);
 
   function resetFeedback() {
     setStatus('idle');
