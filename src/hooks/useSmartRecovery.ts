@@ -106,5 +106,6 @@ export function useSmartRecovery(options: UseSmartRecoveryOptions = {}) {
     loading,
     error,
     isAuthenticated,
+    coachWorkouts,
   };
 }

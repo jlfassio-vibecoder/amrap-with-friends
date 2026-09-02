@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { FeaturedWodCard } from '@/components/home/FeaturedWodCard';
 import { GlobalPresenceBroadcaster } from '@/components/GlobalPresenceBroadcaster';
+import { PasswordRecoveryRedirect } from '@/components/PasswordRecoveryRedirect';
 import { RequireIntake } from '@/components/RequireIntake';
 import { RequireCoach } from '@/components/RequireCoach';
 import { useSeo } from '@/hooks/useSeo';
@@ -18,6 +19,7 @@ const SquadPage = lazy(() => import('./pages/SquadPage'));
 const JoinSquadPage = lazy(() => import('./pages/JoinSquadPage'));
 const HUDPage = lazy(() => import('./pages/HUDPage'));
 const IntakePage = lazy(() => import('./pages/IntakePage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const CoachPage = lazy(() => import('./pages/CoachPage'));
 const CoachWodsPage = lazy(() => import('./pages/CoachWodsPage'));
 const TimerDevPage = lazy(() => import('./pages/dev/TimerDevPage'));
@@ -37,6 +39,7 @@ function App() {
   return (
     <>
       <GlobalPresenceBroadcaster />
+      <PasswordRecoveryRedirect />
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route
@@ -95,6 +98,7 @@ function App() {
           <Route path="/mission/:missionId" element={<MissionWaitingRoomPage />} />
           <Route path="/my-missions" element={<MyMissionsPage />} />
           <Route path="/intake" element={<IntakePage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route
             path="/hud"
             element={

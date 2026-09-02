@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { AuthModal } from './AuthModal';
 
 const authState = vi.hoisted(() => ({
@@ -19,6 +19,7 @@ const isMagicLinkAuthEnabledMock = vi.hoisted(() => vi.fn(() => true));
 
 vi.mock('@/lib/auth/authFeatures', () => ({
   isMagicLinkAuthEnabled: () => isMagicLinkAuthEnabledMock(),
+  isPasswordResetEnabled: () => false,
 }));
 
 afterEach(() => {
@@ -36,6 +37,12 @@ describe('AuthModal', () => {
 
     expect(screen.getByRole('tab', { name: 'Magic link' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Password' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Password' }).getAttribute('aria-selected')).toBe(
+      'true'
+    );
+    expect(screen.queryByRole('button', { name: 'Send magic link' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Magic link' }));
     expect(screen.getByRole('button', { name: 'Send magic link' })).toBeTruthy();
   });
 

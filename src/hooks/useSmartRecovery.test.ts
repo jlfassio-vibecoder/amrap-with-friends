@@ -36,11 +36,14 @@ describe('useSmartRecovery', () => {
       session: null,
       isAuthenticated: true,
       isAuthLoading: false,
+      isPasswordRecovery: false,
       signInWithMagicLink: vi.fn(),
       signUpWithPassword: vi.fn(),
       signInWithPassword: vi.fn(),
+      requestPasswordReset: vi.fn(),
       updateEmail: vi.fn(),
       updatePassword: vi.fn(),
+      clearPasswordRecovery: vi.fn(),
       signOut: vi.fn(),
     });
   });

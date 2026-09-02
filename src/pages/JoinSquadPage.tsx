@@ -20,7 +20,7 @@ export default function JoinSquadPage() {
   const [loadedCode, setLoadedCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [accepting, setAccepting] = useState(false);
-  const [authOpen, setAuthOpen] = useState(false);
+  const [authOpenMode, setAuthOpenMode] = useState<'sign-in' | 'sign-up' | null>(null);
 
   useEffect(() => {
     if (!inviteCode) {
@@ -123,16 +123,35 @@ export default function JoinSquadPage() {
             <p className="text-sm text-secondary">
               Sign in to accept. If you do not have an account yet, create one first.
             </p>
-            <button type="button" className="btn-primary" onClick={() => setAuthOpen(true)}>
-              Sign in to join
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => setAuthOpenMode('sign-in')}
+              >
+                Sign in to join
+              </button>
+              <button
+                type="button"
+                className="btn-neutral"
+                onClick={() => setAuthOpenMode('sign-up')}
+              >
+                Create account
+              </button>
+            </div>
           </div>
         )}
 
         {error ? <p className="alert-error">{error}</p> : null}
       </section>
 
-      {authOpen ? <AuthModal onClose={() => setAuthOpen(false)} /> : null}
+      {authOpenMode ? (
+        <AuthModal
+          onClose={() => setAuthOpenMode(null)}
+          initialPasswordMode={authOpenMode}
+          guestAllowed={false}
+        />
+      ) : null}
 
       <p className="text-center text-sm">
         <AppLink className="link-accent" to="/">

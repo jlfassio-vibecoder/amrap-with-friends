@@ -26,11 +26,15 @@ export interface AmrapAuthContextValue {
   session: Session | null;
   isAuthLoading: boolean;
   isAuthenticated: boolean;
+  /** True during password recovery (PASSWORD_RECOVERY event or restored sessionStorage flag). */
+  isPasswordRecovery: boolean;
   signInWithMagicLink: (email: string) => Promise<{ error: string | null }>;
   signUpWithPassword: (email: string, password: string) => Promise<AuthSignUpResult>;
   signInWithPassword: (email: string, password: string) => Promise<AuthSignInResult>;
+  requestPasswordReset: (email: string) => Promise<{ error: string | null }>;
   updateEmail: (email: string) => Promise<AuthUpdateEmailResult>;
   updatePassword: (password: string) => Promise<AuthUpdatePasswordResult>;
+  clearPasswordRecovery: () => void;
   signOut: () => Promise<void>;
 }
 

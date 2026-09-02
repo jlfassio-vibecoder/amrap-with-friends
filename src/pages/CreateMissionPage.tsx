@@ -436,6 +436,12 @@ export default function CreateMissionPage() {
                     smartRecoveryLoading={smartRecovery.loading}
                     smartRecoveryError={smartRecovery.error}
                     isAuthenticated={isAuthenticated}
+                    coachWorkouts={smartRecovery.enabled ? smartRecovery.coachWorkouts : undefined}
+                    coachWorkoutsLoading={
+                      smartRecovery.enabled &&
+                      smartRecovery.loading &&
+                      smartRecovery.coachWorkouts === null
+                    }
                     onSelect={handleCoachWorkoutSelect}
                   />
                 )}

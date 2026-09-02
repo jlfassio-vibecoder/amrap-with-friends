@@ -17,14 +17,27 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+const authState = vi.hoisted(() => ({
+  isAuthenticated: true,
+}));
+
 vi.mock('@/hooks/useAmrapAuth', () => ({
   useAmrapAuth: () => ({
-    isAuthenticated: true,
+    isAuthenticated: authState.isAuthenticated,
     isAuthLoading: false,
     user: { id: 'user-1', email: 'athlete@example.com' },
     updateEmail: updateEmailMock,
     updatePassword: updatePasswordMock,
+    signInWithMagicLink: vi.fn(),
+    signUpWithPassword: vi.fn(),
+    signInWithPassword: vi.fn(),
+    requestPasswordReset: vi.fn(),
   }),
+}));
+
+vi.mock('@/lib/auth/authFeatures', () => ({
+  isMagicLinkAuthEnabled: () => false,
+  isPasswordResetEnabled: () => false,
 }));
 
 vi.mock('@/hooks/useAthleteProfile', () => ({
@@ -39,6 +52,7 @@ vi.mock('@/hooks/useAthleteProfile', () => ({
 
 afterEach(() => {
   cleanup();
+  authState.isAuthenticated = true;
   saveMock.mockReset();
   updateEmailMock.mockReset();
   updatePasswordMock.mockReset();
@@ -87,10 +101,7 @@ describe('IntakePage', () => {
     renderIntake();
     expect(screen.getByLabelText(/Height \(in\)/)).toBeTruthy();
     expect(screen.getByLabelText(/Weight \(lb\)/)).toBeTruthy();
-    expect(screen.getByLabelText(/^Email$/)).toHaveProperty(
-      'value',
-      'athlete@example.com'
-    );
+    expect(screen.getByLabelText(/^Email$/)).toHaveProperty('value', 'athlete@example.com');
     // New users get a username suggestion from the email local-part.
     expect(screen.getByLabelText(/^Username$/)).toHaveProperty('value', 'athlete');
 
@@ -146,9 +157,8 @@ describe('IntakePage', () => {
 
     expect(screen.getByLabelText(/^Username$/)).toHaveProperty('value', 'Justin Fassio');
     expect(
-      screen.getAllByText(
-        'No spaces — use letters, numbers, or underscore (e.g. Justin_Fassio).'
-      ).length
+      screen.getAllByText('No spaces — use letters, numbers, or underscore (e.g. Justin_Fassio).')
+        .length
     ).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
@@ -176,9 +186,7 @@ describe('IntakePage', () => {
       expect(document.activeElement).toBe(nicknameInput);
     });
     expect(scrollIntoView).toHaveBeenCalled();
-    expect(screen.getAllByText('Enter a nickname (1–50 characters).').length).toBeGreaterThan(
-      0
-    );
+    expect(screen.getAllByText('Enter a nickname (1–50 characters).').length).toBeGreaterThan(0);
     expect(saveMock).not.toHaveBeenCalled();
   });
 
@@ -277,9 +285,7 @@ describe('IntakePage', () => {
     await waitFor(() => {
       expect(navigateMock).toHaveBeenCalledWith('/create', {
         state: {
-          intakeNotices: [
-            'Your profile was saved. Email update failed: Email already registered',
-          ],
+          intakeNotices: ['Your profile was saved. Email update failed: Email already registered'],
         },
       });
     });
@@ -300,9 +306,7 @@ describe('IntakePage', () => {
     await waitFor(() => {
       expect(navigateMock).toHaveBeenCalledWith('/create', {
         state: {
-          intakeNotices: [
-            'Your profile was saved. Password update failed: Password is too weak',
-          ],
+          intakeNotices: ['Your profile was saved. Password update failed: Password is too weak'],
         },
       });
     });
@@ -341,5 +345,15 @@ describe('IntakePage', () => {
 
     expect(screen.getByLabelText(/Height \(in\)/)).toHaveProperty('value', '70');
     expect(screen.getByLabelText(/Weight \(lb\)/)).toHaveProperty('value', '176.4');
+  });
+
+  it('shows AuthForm when signed out', () => {
+    authState.isAuthenticated = false;
+    renderIntake();
+
+    expect(screen.getByText('Sign in to set up your profile.')).toBeTruthy();
+    expect(screen.getByRole('tablist', { name: 'Account action' })).toBeTruthy();
+    expect(screen.getByPlaceholderText('Email')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Save profile' })).toBeNull();
   });
 });

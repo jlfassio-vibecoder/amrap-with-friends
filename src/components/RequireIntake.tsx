@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { AuthModal } from '@/components/AuthModal';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
+import type { PasswordMode } from '@/components/AuthForm';
 
 interface RequireIntakeProps {
   children: ReactNode;
@@ -30,7 +31,7 @@ export function RequireIntake({
 }: RequireIntakeProps) {
   const location = useLocation();
   const { profile, missing, loading, isAuthenticated, isAuthLoading, error } = useAthleteProfile();
-  const [authOpen, setAuthOpen] = useState(true);
+  const [authOpenMode, setAuthOpenMode] = useState<PasswordMode | null>('sign-in');
 
   if (isAuthLoading || loading) {
     return (
@@ -49,13 +50,30 @@ export function RequireIntake({
       <NarrowPageLayout title={gateTitle} subtitle="Sign in required">
         {signedOutPreview}
         <p className="text-sm text-secondary">{gateMessage}</p>
-        {authOpen ? (
-          <AuthModal onClose={() => setAuthOpen(false)} guestAllowed={gateAllowsGuest} />
+        {authOpenMode ? (
+          <AuthModal
+            onClose={() => setAuthOpenMode(null)}
+            guestAllowed={gateAllowsGuest}
+            initialPasswordMode={authOpenMode}
+          />
         ) : null}
-        {!authOpen ? (
-          <button type="button" className="btn-primary" onClick={() => setAuthOpen(true)}>
-            Sign in
-          </button>
+        {!authOpenMode ? (
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => setAuthOpenMode('sign-in')}
+            >
+              Sign in
+            </button>
+            <button
+              type="button"
+              className="btn-neutral"
+              onClick={() => setAuthOpenMode('sign-up')}
+            >
+              Create account
+            </button>
+          </div>
         ) : null}
       </NarrowPageLayout>
     );

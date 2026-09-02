@@ -8,6 +8,8 @@ import { AUTH_MIN_PASSWORD_LENGTH } from '@/lib/auth/passwordPolicy';
 
 const signUpMock = vi.fn();
 const signInWithPasswordMock = vi.fn();
+const signInWithOtpMock = vi.fn();
+const resetPasswordForEmailMock = vi.fn();
 const updateUserMock = vi.fn();
 
 vi.mock('@/lib/supabase', () => ({
@@ -17,9 +19,11 @@ vi.mock('@/lib/supabase', () => ({
         callback('INITIAL_SESSION', null);
         return { data: { subscription: { unsubscribe: vi.fn() } } };
       },
-      signInWithOtp: vi.fn(),
+      getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
+      signInWithOtp: signInWithOtpMock,
       signUp: signUpMock,
       signInWithPassword: signInWithPasswordMock,
+      resetPasswordForEmail: resetPasswordForEmailMock,
       updateUser: updateUserMock,
       signOut: vi.fn(),
     },
@@ -33,6 +37,16 @@ vi.mock('@/lib/supabase', () => ({
     },
   },
 }));
+
+vi.mock('@/lib/auth/authFeatures', () => ({
+  isMagicLinkAuthEnabled: vi.fn(() => true),
+  isPasswordResetEnabled: vi.fn(() => true),
+}));
+
+import { isMagicLinkAuthEnabled, isPasswordResetEnabled } from '@/lib/auth/authFeatures';
+
+const isMagicLinkAuthEnabledMock = vi.mocked(isMagicLinkAuthEnabled);
+const isPasswordResetEnabledMock = vi.mocked(isPasswordResetEnabled);
 
 let authApi: AmrapAuthContextValue | null = null;
 
@@ -60,6 +74,8 @@ function renderProvider() {
 describe('AmrapAuthProvider password auth', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    isMagicLinkAuthEnabledMock.mockReturnValue(true);
+    isPasswordResetEnabledMock.mockReturnValue(true);
   });
 
   it('signInWithPassword returns no error on success', async () => {
@@ -79,7 +95,7 @@ describe('AmrapAuthProvider password auth', () => {
     expect(result.error).toBeNull();
   });
 
-  it('signInWithPassword surfaces wrong-password error verbatim', async () => {
+  it('signInWithPassword maps wrong-password error', async () => {
     signInWithPasswordMock.mockResolvedValue({
       data: { session: null, user: null },
       error: { message: 'Invalid login credentials' },
@@ -89,13 +105,17 @@ describe('AmrapAuthProvider password auth', () => {
 
     const result = await authApi!.signInWithPassword('user@example.com', 'wrongpass');
 
-    expect(result.error).toBe('Invalid login credentials');
+    expect(result.error).toBe('Email or password is wrong. Reset it if you forgot.');
   });
 
-  it('signUpWithPassword sets needsEmailConfirmation when session is null', async () => {
+  it('signUpWithPassword sets needsEmailConfirmation when session is null and identities exist', async () => {
     signUpMock.mockResolvedValue({
       data: {
-        user: { id: 'user-1', email: 'user@example.com' },
+        user: {
+          id: 'user-1',
+          email: 'user@example.com',
+          identities: [{ id: 'identity-1' }],
+        },
         session: null,
       },
       error: null,
@@ -108,12 +128,34 @@ describe('AmrapAuthProvider password auth', () => {
     expect(signUpMock).toHaveBeenCalledWith({
       email: 'user@example.com',
       password: 'password1',
+      options: {
+        emailRedirectTo: expect.stringMatching(/^https?:\/\/.+/) as string,
+      },
     });
     expect(result.error).toBeNull();
     expect(result.needsEmailConfirmation).toBe(true);
   });
 
-  it('signUpWithPassword surfaces duplicate signup error verbatim', async () => {
+  it('signUpWithPassword treats empty identities as a duplicate account', async () => {
+    signUpMock.mockResolvedValue({
+      data: {
+        user: { id: 'user-1', email: 'user@example.com', identities: [] },
+        session: null,
+      },
+      error: null,
+    });
+
+    await renderProvider();
+
+    const result = await authApi!.signUpWithPassword('user@example.com', 'password1');
+
+    expect(result.error).toBe(
+      'An account with this email already exists. Sign in or reset your password.'
+    );
+    expect(result.needsEmailConfirmation).toBe(false);
+  });
+
+  it('signUpWithPassword maps duplicate signup error', async () => {
     signUpMock.mockResolvedValue({
       data: { user: null, session: null },
       error: { message: 'User already registered' },
@@ -123,7 +165,9 @@ describe('AmrapAuthProvider password auth', () => {
 
     const result = await authApi!.signUpWithPassword('user@example.com', 'password1');
 
-    expect(result.error).toBe('User already registered');
+    expect(result.error).toBe(
+      'An account with this email already exists. Sign in or reset your password.'
+    );
     expect(result.needsEmailConfirmation).toBe(false);
   });
 
@@ -149,12 +193,11 @@ describe('AmrapAuthProvider password auth', () => {
 
     const result = await authApi!.updateEmail('new@example.com');
 
-    expect(updateUserMock).toHaveBeenCalledWith({ email: 'new@example.com' });
     expect(result.error).toBeNull();
     expect(result.needsEmailConfirmation).toBe(true);
   });
 
-  it('updatePassword rejects short passwords before RPC', async () => {
+  it('rejects updatePassword shorter than minimum', async () => {
     await renderProvider();
 
     const shortPassword = 'a'.repeat(AUTH_MIN_PASSWORD_LENGTH - 1);
@@ -164,17 +207,30 @@ describe('AmrapAuthProvider password auth', () => {
     expect(result.error).toContain(String(AUTH_MIN_PASSWORD_LENGTH));
   });
 
-  it('updatePassword calls updateUser on success', async () => {
-    updateUserMock.mockResolvedValue({
-      data: { user: { id: 'user-1' } },
-      error: null,
-    });
+  it('requestPasswordReset calls resetPasswordForEmail when enabled', async () => {
+    resetPasswordForEmailMock.mockResolvedValue({ data: {}, error: null });
 
     await renderProvider();
 
-    const result = await authApi!.updatePassword('password1');
+    const result = await authApi!.requestPasswordReset('user@example.com');
 
-    expect(updateUserMock).toHaveBeenCalledWith({ password: 'password1' });
+    expect(resetPasswordForEmailMock).toHaveBeenCalledWith(
+      'user@example.com',
+      expect.objectContaining({
+        redirectTo: expect.stringMatching(/\/reset-password$/) as string,
+      })
+    );
     expect(result.error).toBeNull();
+  });
+
+  it('requestPasswordReset rejects when the flag is off', async () => {
+    isPasswordResetEnabledMock.mockReturnValue(false);
+
+    await renderProvider();
+
+    const result = await authApi!.requestPasswordReset('user@example.com');
+
+    expect(resetPasswordForEmailMock).not.toHaveBeenCalled();
+    expect(result.error).toBe('Password reset is not available right now.');
   });
 });

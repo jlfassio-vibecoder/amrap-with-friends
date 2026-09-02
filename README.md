@@ -84,7 +84,7 @@ supabase functions deploy submit-participant-result
 
 ### Auth (manual verification)
 
-Enable Supabase Auth **email** provider and redirect URLs for your dev origin (e.g. `http://localhost:5173`). Sign-in options: **magic link** or **email + password**. Set `VITE_AUTH_MAGIC_LINK_ENABLED=false` in `.env` (and Vercel) to hide magic link until custom SMTP (e.g. Resend) is configured.
+Enable Supabase Auth **email** provider and redirect URLs for your dev origin (e.g. `http://localhost:5173`). Sign-in is **email + password** by default. Set `VITE_AUTH_MAGIC_LINK_ENABLED=true` in `.env` (and Vercel) only after custom SMTP (e.g. Resend) is configured. Password reset (`Forgot password?` + `/reset-password`) stays off until `VITE_AUTH_PASSWORD_RESET_ENABLED=true` after the same SMTP setup; add `/reset-password` to the Auth redirect allow-list before flipping that flag.
 
 **Hosted vs local auth settings:** Local `supabase/config.toml` sets `enable_confirmations = false` and `minimum_password_length = 6`. The hosted dashboard may differ (Confirm email is often ON by default; password minimum may change). Before shipping to prod, check Dashboard → **Authentication → Providers → Email** and align [`AUTH_MIN_PASSWORD_LENGTH`](src/lib/auth/passwordPolicy.ts) with the hosted minimum if needed.
 
@@ -95,7 +95,7 @@ After `supabase db push` for `20260822140000_auth_claim.sql`:
 3. Optional: sign in mid-mission, save, then **Log round** still works after claim.
 4. Password sign-up: if email confirmation is enabled on hosted, UI should prompt to check email; local dev may sign in immediately.
 
-**Follow-up (out of scope):** forgot-password / password reset flow.
+**Follow-up (out of scope):** Resend confirmation email; confirm-password on Create account.
 
 ## Architecture decisions
 
