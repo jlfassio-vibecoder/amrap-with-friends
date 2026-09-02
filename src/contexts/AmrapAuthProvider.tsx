@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import type { User } from '@supabase/supabase-js';
+import { track } from '@/lib/analytics/track';
 import { validatePasswordLength } from '@/lib/auth/passwordPolicy';
-import { isMagicLinkAuthEnabled, isPasswordResetEnabled } from '@/lib/auth/authFeatures';
+import {
+  isGoogleAuthEnabled,
+  isMagicLinkAuthEnabled,
+  isPasswordResetEnabled,
+} from '@/lib/auth/authFeatures';
 import { currentPathRedirectTo, passwordResetRedirectTo } from '@/lib/auth/authRedirect';
 import { mapAuthError } from '@/lib/auth/mapAuthError';
 import { getSupabaseClient } from '@/lib/supabase';
@@ -31,6 +37,35 @@ function writePasswordRecoveryFlag(active: boolean): void {
   } catch {
     /* sessionStorage unavailable */
   }
+}
+
+function providersFromUser(user: User | null | undefined): string[] {
+  const identities = user?.identities ?? [];
+  return [...new Set(identities.map((identity) => identity.provider).filter(Boolean))];
+}
+
+function authFailureReason(message: string): string {
+  const normalized = message.trim().toLowerCase();
+  if (normalized === 'user already registered' || normalized.includes('already exists')) {
+    return 'duplicate';
+  }
+  if (
+    normalized === 'invalid login credentials' ||
+    normalized.includes('email or password is wrong')
+  ) {
+    return 'invalid_credentials';
+  }
+  if (normalized === 'email not confirmed') {
+    return 'email_not_confirmed';
+  }
+  if (
+    normalized.includes('cancelled') ||
+    normalized.includes('canceled') ||
+    normalized === 'access_denied'
+  ) {
+    return 'cancelled';
+  }
+  return 'other';
 }
 
 export function AmrapAuthProvider({ children }: { children: ReactNode }) {
@@ -86,6 +121,12 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
         } else if (event === 'SIGNED_OUT') {
           writePasswordRecoveryFlag(false);
           setIsPasswordRecovery(false);
+        } else if (event === 'SIGNED_IN' && nextSession?.user) {
+          track(
+            'auth_signed_in',
+            { providers: providersFromUser(nextSession.user) },
+            { userId: nextSession.user.id }
+          );
         }
 
         // Resolve loading on the first auth event so UI is never stuck waiting for
@@ -130,6 +171,34 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
     return { error: null };
   }, []);
 
+  const signInWithGoogle = useCallback(async () => {
+    if (!isGoogleAuthEnabled()) {
+      return { error: 'Google sign-in is not available right now.' };
+    }
+
+    track('auth_google_started', { method: 'google' });
+
+    const supabase = getSupabaseClient();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: currentPathRedirectTo(),
+        queryParams: { prompt: 'select_account' },
+      },
+    });
+
+    if (error) {
+      const mapped = mapAuthError(error.message);
+      track('auth_google_failed', {
+        method: 'google',
+        reason: authFailureReason(error.message),
+      });
+      return { error: mapped };
+    }
+
+    return { error: null };
+  }, []);
+
   const signUpWithPassword = useCallback(async (email: string, password: string) => {
     const trimmed = trimEmail(email);
     if (!trimmed) {
@@ -141,6 +210,8 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
       return { error: passwordCheck.error, needsEmailConfirmation: false };
     }
 
+    track('auth_sign_up_attempted', { method: 'password' });
+
     const supabase = getSupabaseClient();
     const { data, error } = await supabase.auth.signUp({
       email: trimmed,
@@ -149,23 +220,33 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
-      return { error: mapAuthError(error.message), needsEmailConfirmation: false };
+      const mapped = mapAuthError(error.message);
+      track('auth_sign_up_failed', {
+        method: 'password',
+        reason: authFailureReason(error.message),
+      });
+      return { error: mapped, needsEmailConfirmation: false };
     }
 
     if (data.session) {
+      track('auth_sign_up_succeeded', { method: 'password' }, { userId: data.session.user.id });
       return { error: null, needsEmailConfirmation: false };
     }
 
     if (data.user) {
       if ((data.user.identities ?? []).length === 0) {
+        const mapped = mapAuthError('User already registered');
+        track('auth_sign_up_failed', { method: 'password', reason: 'duplicate' });
         return {
-          error: mapAuthError('User already registered'),
+          error: mapped,
           needsEmailConfirmation: false,
         };
       }
+      track('auth_sign_up_needs_confirmation', { method: 'password' }, { userId: data.user.id });
       return { error: null, needsEmailConfirmation: true };
     }
 
+    track('auth_sign_up_failed', { method: 'password', reason: 'other' });
     return {
       error: 'Something went wrong. Please try again.',
       needsEmailConfirmation: false,
@@ -184,15 +265,25 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
     }
 
     const supabase = getSupabaseClient();
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: trimmed,
       password,
     });
 
     if (error) {
-      return { error: mapAuthError(error.message) };
+      const mapped = mapAuthError(error.message);
+      track('auth_sign_in_failed', {
+        method: 'password',
+        reason: authFailureReason(error.message),
+      });
+      return { error: mapped };
     }
 
+    track(
+      'auth_sign_in_succeeded',
+      { method: 'password' },
+      { userId: data.user?.id ?? data.session?.user?.id ?? null }
+    );
     return { error: null };
   }, []);
 
@@ -272,6 +363,7 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: user !== null,
       isPasswordRecovery,
       signInWithMagicLink,
+      signInWithGoogle,
       signUpWithPassword,
       signInWithPassword,
       requestPasswordReset,
@@ -286,6 +378,7 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
       isAuthLoading,
       isPasswordRecovery,
       signInWithMagicLink,
+      signInWithGoogle,
       signUpWithPassword,
       signInWithPassword,
       requestPasswordReset,

@@ -9,8 +9,14 @@ import { AUTH_MIN_PASSWORD_LENGTH } from '@/lib/auth/passwordPolicy';
 const signUpMock = vi.fn();
 const signInWithPasswordMock = vi.fn();
 const signInWithOtpMock = vi.fn();
+const signInWithOAuthMock = vi.fn();
 const resetPasswordForEmailMock = vi.fn();
 const updateUserMock = vi.fn();
+const trackMock = vi.fn();
+
+vi.mock('@/lib/analytics/track', () => ({
+  track: (...args: unknown[]) => trackMock(...args),
+}));
 
 vi.mock('@/lib/supabase', () => ({
   getSupabaseClient: vi.fn(() => ({
@@ -21,6 +27,7 @@ vi.mock('@/lib/supabase', () => ({
       },
       getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
       signInWithOtp: signInWithOtpMock,
+      signInWithOAuth: signInWithOAuthMock,
       signUp: signUpMock,
       signInWithPassword: signInWithPasswordMock,
       resetPasswordForEmail: resetPasswordForEmailMock,
@@ -41,12 +48,18 @@ vi.mock('@/lib/supabase', () => ({
 vi.mock('@/lib/auth/authFeatures', () => ({
   isMagicLinkAuthEnabled: vi.fn(() => true),
   isPasswordResetEnabled: vi.fn(() => true),
+  isGoogleAuthEnabled: vi.fn(() => true),
 }));
 
-import { isMagicLinkAuthEnabled, isPasswordResetEnabled } from '@/lib/auth/authFeatures';
+import {
+  isGoogleAuthEnabled,
+  isMagicLinkAuthEnabled,
+  isPasswordResetEnabled,
+} from '@/lib/auth/authFeatures';
 
 const isMagicLinkAuthEnabledMock = vi.mocked(isMagicLinkAuthEnabled);
 const isPasswordResetEnabledMock = vi.mocked(isPasswordResetEnabled);
+const isGoogleAuthEnabledMock = vi.mocked(isGoogleAuthEnabled);
 
 let authApi: AmrapAuthContextValue | null = null;
 
@@ -76,6 +89,7 @@ describe('AmrapAuthProvider password auth', () => {
     vi.clearAllMocks();
     isMagicLinkAuthEnabledMock.mockReturnValue(true);
     isPasswordResetEnabledMock.mockReturnValue(true);
+    isGoogleAuthEnabledMock.mockReturnValue(true);
   });
 
   it('signInWithPassword returns no error on success', async () => {
@@ -93,6 +107,11 @@ describe('AmrapAuthProvider password auth', () => {
       password: 'password1',
     });
     expect(result.error).toBeNull();
+    expect(trackMock).toHaveBeenCalledWith(
+      'auth_sign_in_succeeded',
+      expect.objectContaining({ method: 'password' }),
+      expect.objectContaining({ userId: 'user-1' })
+    );
   });
 
   it('signInWithPassword maps wrong-password error', async () => {
@@ -105,7 +124,33 @@ describe('AmrapAuthProvider password auth', () => {
 
     const result = await authApi!.signInWithPassword('user@example.com', 'wrongpass');
 
-    expect(result.error).toBe('Email or password is wrong. Reset it if you forgot.');
+    expect(result.error).toBe(
+      'Email or password is wrong. Reset it if you forgot, or Continue with Google.'
+    );
+    expect(trackMock).toHaveBeenCalledWith(
+      'auth_sign_in_failed',
+      expect.objectContaining({ method: 'password', reason: 'invalid_credentials' })
+    );
+    expect(
+      trackMock.mock.calls.every((call) => !JSON.stringify(call).includes('user@example.com'))
+    ).toBe(true);
+  });
+
+  it('classifies email-not-confirmed failures from the raw GoTrue message', async () => {
+    signInWithPasswordMock.mockResolvedValue({
+      data: { session: null, user: null },
+      error: { message: 'Email not confirmed' },
+    });
+
+    await renderProvider();
+
+    const result = await authApi!.signInWithPassword('user@example.com', 'password1');
+
+    expect(result.error).toBe('Confirm your email, then sign in.');
+    expect(trackMock).toHaveBeenCalledWith(
+      'auth_sign_in_failed',
+      expect.objectContaining({ method: 'password', reason: 'email_not_confirmed' })
+    );
   });
 
   it('signUpWithPassword sets needsEmailConfirmation when session is null and identities exist', async () => {
@@ -134,6 +179,15 @@ describe('AmrapAuthProvider password auth', () => {
     });
     expect(result.error).toBeNull();
     expect(result.needsEmailConfirmation).toBe(true);
+    expect(trackMock).toHaveBeenCalledWith(
+      'auth_sign_up_attempted',
+      expect.objectContaining({ method: 'password' })
+    );
+    expect(trackMock).toHaveBeenCalledWith(
+      'auth_sign_up_needs_confirmation',
+      expect.objectContaining({ method: 'password' }),
+      expect.objectContaining({ userId: 'user-1' })
+    );
   });
 
   it('signUpWithPassword treats empty identities as a duplicate account', async () => {
@@ -150,9 +204,13 @@ describe('AmrapAuthProvider password auth', () => {
     const result = await authApi!.signUpWithPassword('user@example.com', 'password1');
 
     expect(result.error).toBe(
-      'An account with this email already exists. Sign in or reset your password.'
+      'An account with this email already exists. Sign in, reset your password, or Continue with Google.'
     );
     expect(result.needsEmailConfirmation).toBe(false);
+    expect(trackMock).toHaveBeenCalledWith(
+      'auth_sign_up_failed',
+      expect.objectContaining({ method: 'password', reason: 'duplicate' })
+    );
   });
 
   it('signUpWithPassword maps duplicate signup error', async () => {
@@ -166,7 +224,7 @@ describe('AmrapAuthProvider password auth', () => {
     const result = await authApi!.signUpWithPassword('user@example.com', 'password1');
 
     expect(result.error).toBe(
-      'An account with this email already exists. Sign in or reset your password.'
+      'An account with this email already exists. Sign in, reset your password, or Continue with Google.'
     );
     expect(result.needsEmailConfirmation).toBe(false);
   });
@@ -232,5 +290,57 @@ describe('AmrapAuthProvider password auth', () => {
 
     expect(resetPasswordForEmailMock).not.toHaveBeenCalled();
     expect(result.error).toBe('Password reset is not available right now.');
+  });
+
+  it('signInWithGoogle calls signInWithOAuth with google and path+search redirect', async () => {
+    signInWithOAuthMock.mockResolvedValue({
+      data: { provider: 'google', url: 'https://accounts.google.com' },
+      error: null,
+    });
+
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        origin: 'https://www.amrapwithfriends.com',
+        pathname: '/join',
+        search: '?c=invite-1',
+      },
+    });
+
+    try {
+      await renderProvider();
+
+      const result = await authApi!.signInWithGoogle();
+
+      expect(signInWithOAuthMock).toHaveBeenCalledWith({
+        provider: 'google',
+        options: {
+          redirectTo: 'https://www.amrapwithfriends.com/join?c=invite-1',
+          queryParams: { prompt: 'select_account' },
+        },
+      });
+      expect(result.error).toBeNull();
+      expect(trackMock).toHaveBeenCalledWith(
+        'auth_google_started',
+        expect.objectContaining({ method: 'google' })
+      );
+    } finally {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: originalLocation,
+      });
+    }
+  });
+
+  it('signInWithGoogle rejects when the flag is off', async () => {
+    isGoogleAuthEnabledMock.mockReturnValue(false);
+
+    await renderProvider();
+
+    const result = await authApi!.signInWithGoogle();
+
+    expect(signInWithOAuthMock).not.toHaveBeenCalled();
+    expect(result.error).toBe('Google sign-in is not available right now.');
   });
 });

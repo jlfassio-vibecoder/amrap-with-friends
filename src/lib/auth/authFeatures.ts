@@ -23,3 +23,8 @@ export function isMagicLinkAuthEnabled(): boolean {
 export function isPasswordResetEnabled(): boolean {
   return parseAuthEnvBoolean(import.meta.env.VITE_AUTH_PASSWORD_RESET_ENABLED, false);
 }
+
+/** When false, AuthForm hides Continue with Google. Off until Google Cloud + Supabase Google provider are configured. */
+export function isGoogleAuthEnabled(): boolean {
+  return parseAuthEnvBoolean(import.meta.env.VITE_AUTH_GOOGLE_ENABLED, false);
+}

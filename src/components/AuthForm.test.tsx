@@ -4,6 +4,7 @@ import { AuthForm } from './AuthForm';
 
 const authApi = vi.hoisted(() => ({
   signInWithMagicLink: vi.fn(),
+  signInWithGoogle: vi.fn(),
   signUpWithPassword: vi.fn(),
   signInWithPassword: vi.fn(),
   requestPasswordReset: vi.fn(),
@@ -13,6 +14,7 @@ const authApi = vi.hoisted(() => ({
 vi.mock('@/hooks/useAmrapAuth', () => ({
   useAmrapAuth: () => ({
     signInWithMagicLink: authApi.signInWithMagicLink,
+    signInWithGoogle: authApi.signInWithGoogle,
     signUpWithPassword: authApi.signUpWithPassword,
     signInWithPassword: authApi.signInWithPassword,
     requestPasswordReset: authApi.requestPasswordReset,
@@ -22,16 +24,19 @@ vi.mock('@/hooks/useAmrapAuth', () => ({
 
 const isMagicLinkAuthEnabledMock = vi.hoisted(() => vi.fn(() => true));
 const isPasswordResetEnabledMock = vi.hoisted(() => vi.fn(() => false));
+const isGoogleAuthEnabledMock = vi.hoisted(() => vi.fn(() => false));
 
 vi.mock('@/lib/auth/authFeatures', () => ({
   isMagicLinkAuthEnabled: () => isMagicLinkAuthEnabledMock(),
   isPasswordResetEnabled: () => isPasswordResetEnabledMock(),
+  isGoogleAuthEnabled: () => isGoogleAuthEnabledMock(),
 }));
 
 afterEach(() => {
   cleanup();
   authApi.isAuthenticated = false;
   authApi.signInWithMagicLink.mockReset();
+  authApi.signInWithGoogle.mockReset();
   authApi.signUpWithPassword.mockReset();
   authApi.signInWithPassword.mockReset();
   authApi.requestPasswordReset.mockReset();
@@ -39,6 +44,8 @@ afterEach(() => {
   isMagicLinkAuthEnabledMock.mockReturnValue(true);
   isPasswordResetEnabledMock.mockReset();
   isPasswordResetEnabledMock.mockReturnValue(false);
+  isGoogleAuthEnabledMock.mockReset();
+  isGoogleAuthEnabledMock.mockReturnValue(false);
 });
 
 describe('AuthForm', () => {
@@ -222,5 +229,72 @@ describe('AuthForm', () => {
       expect(authApi.requestPasswordReset).toHaveBeenCalledWith('athlete@example.com');
     });
     expect(await screen.findByText('Check your email for a reset link.')).toBeTruthy();
+  });
+
+  it('hides Continue with Google when Google auth is disabled', () => {
+    isMagicLinkAuthEnabledMock.mockReturnValue(false);
+    isGoogleAuthEnabledMock.mockReturnValue(false);
+
+    render(<AuthForm showHeading />);
+
+    expect(screen.queryByRole('button', { name: 'Continue with Google' })).toBeNull();
+  });
+
+  it('shows Continue with Google and invokes the provider when enabled', async () => {
+    isMagicLinkAuthEnabledMock.mockReturnValue(false);
+    isGoogleAuthEnabledMock.mockReturnValue(true);
+    authApi.signInWithGoogle.mockResolvedValue({ error: null });
+
+    render(<AuthForm showHeading />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with Google' }));
+
+    await waitFor(() => {
+      expect(authApi.signInWithGoogle).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('surfaces Google sign-in errors', async () => {
+    isMagicLinkAuthEnabledMock.mockReturnValue(false);
+    isGoogleAuthEnabledMock.mockReturnValue(true);
+    authApi.signInWithGoogle.mockResolvedValue({ error: 'Google sign-in failed.' });
+
+    render(<AuthForm showHeading />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with Google' }));
+
+    expect(await screen.findByText('Google sign-in failed.')).toBeTruthy();
+  });
+
+  it('shows and clears OAuth return errors from the URL when Google is enabled', () => {
+    isMagicLinkAuthEnabledMock.mockReturnValue(false);
+    isGoogleAuthEnabledMock.mockReturnValue(true);
+
+    const replaceState = vi.fn();
+    const originalLocation = window.location;
+    const originalReplaceState = window.history.replaceState;
+
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        pathname: '/create',
+        search: '?error=access_denied&error_description=User+cancelled+login&c=keep',
+        hash: '',
+      },
+    });
+    window.history.replaceState = replaceState;
+
+    try {
+      render(<AuthForm showHeading />);
+
+      expect(screen.getByText('Google sign-in was cancelled.')).toBeTruthy();
+      expect(replaceState).toHaveBeenCalledWith(window.history.state, '', '/create?c=keep');
+    } finally {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: originalLocation,
+      });
+      window.history.replaceState = originalReplaceState;
+    }
   });
 });

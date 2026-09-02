@@ -29,6 +29,7 @@ export interface AmrapAuthContextValue {
   /** True during password recovery (PASSWORD_RECOVERY event or restored sessionStorage flag). */
   isPasswordRecovery: boolean;
   signInWithMagicLink: (email: string) => Promise<{ error: string | null }>;
+  signInWithGoogle: () => Promise<{ error: string | null }>;
   signUpWithPassword: (email: string, password: string) => Promise<AuthSignUpResult>;
   signInWithPassword: (email: string, password: string) => Promise<AuthSignInResult>;
   requestPasswordReset: (email: string) => Promise<{ error: string | null }>;

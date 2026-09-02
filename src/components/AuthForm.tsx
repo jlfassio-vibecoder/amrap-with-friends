@@ -1,13 +1,35 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
-import { isMagicLinkAuthEnabled, isPasswordResetEnabled } from '@/lib/auth/authFeatures';
+import {
+  isGoogleAuthEnabled,
+  isMagicLinkAuthEnabled,
+  isPasswordResetEnabled,
+} from '@/lib/auth/authFeatures';
 import { isDuplicateAccountError } from '@/lib/auth/mapAuthError';
+import {
+  hasOAuthReturnErrorParams,
+  readOAuthReturnError,
+  stripOAuthReturnErrorParams,
+} from '@/lib/auth/oauthReturnError';
 import { AUTH_MIN_PASSWORD_LENGTH } from '@/lib/auth/passwordPolicy';
 
 type AuthMethod = 'magic-link' | 'password';
 export type PasswordMode = 'sign-in' | 'sign-up';
 type FormStatus = 'idle' | 'submitting' | 'success' | 'error';
 type AuthFormVariant = 'default' | 'compact';
+
+function initialOAuthReturnFeedback(): { status: FormStatus; message: string | null } {
+  if (typeof window === 'undefined' || !isGoogleAuthEnabled()) {
+    return { status: 'idle', message: null };
+  }
+
+  const oauthError = readOAuthReturnError(new URLSearchParams(window.location.search));
+  if (!oauthError) {
+    return { status: 'idle', message: null };
+  }
+
+  return { status: 'error', message: oauthError };
+}
 
 export interface AuthFormProps {
   /** Open on password Sign in or Create account. Defaults to sign-in. */
@@ -94,18 +116,43 @@ export function AuthForm({
   const isCompact = variant === 'compact';
   const magicLinkEnabled = isMagicLinkAuthEnabled();
   const passwordResetEnabled = isPasswordResetEnabled();
-  const { signInWithMagicLink, signUpWithPassword, signInWithPassword, requestPasswordReset } =
-    useAmrapAuth();
+  const googleAuthEnabled = isGoogleAuthEnabled();
+  const {
+    signInWithMagicLink,
+    signInWithGoogle,
+    signUpWithPassword,
+    signInWithPassword,
+    requestPasswordReset,
+  } = useAmrapAuth();
 
   const [authMethod, setAuthMethod] = useState<AuthMethod>('password');
   const [passwordMode, setPasswordMode] = useState<PasswordMode>(initialPasswordMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [status, setStatus] = useState<FormStatus>('idle');
-  const [message, setMessage] = useState<string | null>(null);
+  const [status, setStatus] = useState<FormStatus>(() => initialOAuthReturnFeedback().status);
+  const [message, setMessage] = useState<string | null>(() => initialOAuthReturnFeedback().message);
   const [awaitingSignupContinue, setAwaitingSignupContinue] = useState(false);
   const [resetBusy, setResetBusy] = useState(false);
+
+  // Strip OAuth error query params after paint — state already seeded from the URL above.
+  useEffect(() => {
+    if (!googleAuthEnabled || typeof window === 'undefined') {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    if (!hasOAuthReturnErrorParams(params)) {
+      return;
+    }
+
+    const nextSearch = stripOAuthReturnErrorParams(params);
+    window.history.replaceState(
+      window.history.state,
+      '',
+      `${window.location.pathname}${nextSearch}${window.location.hash}`
+    );
+  }, [googleAuthEnabled]);
 
   function resetFeedback() {
     setStatus('idle');
@@ -206,6 +253,22 @@ export function AuthForm({
     setMessage('Check your email for a reset link.');
   }
 
+  async function handleGoogleSignIn() {
+    if (!googleAuthEnabled || isBusy || awaitingSignupContinue) {
+      return;
+    }
+
+    setStatus('submitting');
+    setMessage(null);
+
+    const result = await signInWithGoogle();
+    if (result.error) {
+      setStatus('error');
+      setMessage(result.error);
+    }
+    // On success the browser navigates to Google — leave submitting state.
+  }
+
   const isSuccessLocked = status === 'success' && authMethod === 'magic-link';
   const passwordFieldsLocked = isBusy || (status === 'success' && !awaitingSignupContinue);
   const showingPasswordForm = !(magicLinkEnabled && authMethod === 'magic-link');
@@ -221,6 +284,9 @@ export function AuthForm({
   const submitClass = isCompact
     ? 'btn-neutral w-full py-1.5 text-sm'
     : 'btn-neutral w-full text-sm';
+  const googleButtonClass = isCompact
+    ? 'btn-outline w-full py-1.5 text-sm font-semibold'
+    : 'btn-outline w-full text-sm font-semibold';
 
   return (
     <div className={formSpacing}>
@@ -273,6 +339,26 @@ export function AuthForm({
           >
             Password
           </button>
+        </div>
+      ) : null}
+
+      {googleAuthEnabled && !awaitingSignupContinue ? (
+        <div className={passwordFormSpacing}>
+          <button
+            type="button"
+            className={googleButtonClass}
+            disabled={isBusy}
+            onClick={() => void handleGoogleSignIn()}
+          >
+            {isBusy ? 'Continuing…' : 'Continue with Google'}
+          </button>
+          <p
+            className={
+              isCompact ? 'text-center text-xs text-muted' : 'text-center text-sm text-muted'
+            }
+          >
+            or
+          </p>
         </div>
       ) : null}
 
