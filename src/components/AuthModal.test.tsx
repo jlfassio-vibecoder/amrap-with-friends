@@ -9,6 +9,7 @@ const authState = vi.hoisted(() => ({
 vi.mock('@/hooks/useAmrapAuth', () => ({
   useAmrapAuth: () => ({
     signInWithMagicLink: vi.fn(),
+    signInWithGoogle: vi.fn(),
     signUpWithPassword: vi.fn(),
     signInWithPassword: vi.fn(),
     isAuthenticated: authState.isAuthenticated,
@@ -20,6 +21,7 @@ const isMagicLinkAuthEnabledMock = vi.hoisted(() => vi.fn(() => true));
 vi.mock('@/lib/auth/authFeatures', () => ({
   isMagicLinkAuthEnabled: () => isMagicLinkAuthEnabledMock(),
   isPasswordResetEnabled: () => false,
+  isGoogleAuthEnabled: () => false,
 }));
 
 afterEach(() => {

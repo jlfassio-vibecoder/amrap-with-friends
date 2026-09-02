@@ -9,6 +9,7 @@ import { AUTH_MIN_PASSWORD_LENGTH } from '@/lib/auth/passwordPolicy';
 const signUpMock = vi.fn();
 const signInWithPasswordMock = vi.fn();
 const signInWithOtpMock = vi.fn();
+const signInWithOAuthMock = vi.fn();
 const resetPasswordForEmailMock = vi.fn();
 const updateUserMock = vi.fn();
 
@@ -21,6 +22,7 @@ vi.mock('@/lib/supabase', () => ({
       },
       getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
       signInWithOtp: signInWithOtpMock,
+      signInWithOAuth: signInWithOAuthMock,
       signUp: signUpMock,
       signInWithPassword: signInWithPasswordMock,
       resetPasswordForEmail: resetPasswordForEmailMock,
@@ -41,12 +43,18 @@ vi.mock('@/lib/supabase', () => ({
 vi.mock('@/lib/auth/authFeatures', () => ({
   isMagicLinkAuthEnabled: vi.fn(() => true),
   isPasswordResetEnabled: vi.fn(() => true),
+  isGoogleAuthEnabled: vi.fn(() => true),
 }));
 
-import { isMagicLinkAuthEnabled, isPasswordResetEnabled } from '@/lib/auth/authFeatures';
+import {
+  isGoogleAuthEnabled,
+  isMagicLinkAuthEnabled,
+  isPasswordResetEnabled,
+} from '@/lib/auth/authFeatures';
 
 const isMagicLinkAuthEnabledMock = vi.mocked(isMagicLinkAuthEnabled);
 const isPasswordResetEnabledMock = vi.mocked(isPasswordResetEnabled);
+const isGoogleAuthEnabledMock = vi.mocked(isGoogleAuthEnabled);
 
 let authApi: AmrapAuthContextValue | null = null;
 
@@ -76,6 +84,7 @@ describe('AmrapAuthProvider password auth', () => {
     vi.clearAllMocks();
     isMagicLinkAuthEnabledMock.mockReturnValue(true);
     isPasswordResetEnabledMock.mockReturnValue(true);
+    isGoogleAuthEnabledMock.mockReturnValue(true);
   });
 
   it('signInWithPassword returns no error on success', async () => {
@@ -232,5 +241,53 @@ describe('AmrapAuthProvider password auth', () => {
 
     expect(resetPasswordForEmailMock).not.toHaveBeenCalled();
     expect(result.error).toBe('Password reset is not available right now.');
+  });
+
+  it('signInWithGoogle calls signInWithOAuth with google and path+search redirect', async () => {
+    signInWithOAuthMock.mockResolvedValue({
+      data: { provider: 'google', url: 'https://accounts.google.com' },
+      error: null,
+    });
+
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        origin: 'https://www.amrapwithfriends.com',
+        pathname: '/join',
+        search: '?c=invite-1',
+      },
+    });
+
+    try {
+      await renderProvider();
+
+      const result = await authApi!.signInWithGoogle();
+
+      expect(signInWithOAuthMock).toHaveBeenCalledWith({
+        provider: 'google',
+        options: {
+          redirectTo: 'https://www.amrapwithfriends.com/join?c=invite-1',
+          queryParams: { prompt: 'select_account' },
+        },
+      });
+      expect(result.error).toBeNull();
+    } finally {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: originalLocation,
+      });
+    }
+  });
+
+  it('signInWithGoogle rejects when the flag is off', async () => {
+    isGoogleAuthEnabledMock.mockReturnValue(false);
+
+    await renderProvider();
+
+    const result = await authApi!.signInWithGoogle();
+
+    expect(signInWithOAuthMock).not.toHaveBeenCalled();
+    expect(result.error).toBe('Google sign-in is not available right now.');
   });
 });

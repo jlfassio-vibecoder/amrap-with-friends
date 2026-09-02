@@ -46,3 +46,23 @@ describe('isPasswordResetEnabled', () => {
     expect(isPasswordResetEnabled()).toBe(true);
   });
 });
+
+describe('isGoogleAuthEnabled', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it('defaults to false when unset', async () => {
+    vi.stubEnv('VITE_AUTH_GOOGLE_ENABLED', '');
+    const { isGoogleAuthEnabled } = await import('./authFeatures');
+    expect(isGoogleAuthEnabled()).toBe(false);
+  });
+
+  it('returns true when explicitly enabled', async () => {
+    vi.stubEnv('VITE_AUTH_GOOGLE_ENABLED', 'true');
+    vi.resetModules();
+    const { isGoogleAuthEnabled } = await import('./authFeatures');
+    expect(isGoogleAuthEnabled()).toBe(true);
+  });
+});

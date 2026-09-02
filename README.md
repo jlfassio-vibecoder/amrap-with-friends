@@ -86,6 +86,8 @@ supabase functions deploy submit-participant-result
 
 Enable Supabase Auth **email** provider and redirect URLs for your dev origin (e.g. `http://localhost:5173`). Sign-in is **email + password** by default. Set `VITE_AUTH_MAGIC_LINK_ENABLED=true` in `.env` (and Vercel) only after custom SMTP (e.g. Resend) is configured. Password reset (`Forgot password?` + `/reset-password`) stays off until `VITE_AUTH_PASSWORD_RESET_ENABLED=true` after the same SMTP setup; add `/reset-password` to the Auth redirect allow-list before flipping that flag.
 
+**Google OAuth** (`Continue with Google`) stays off until `VITE_AUTH_GOOGLE_ENABLED=true`. Before enabling: create a Google Cloud OAuth 2.0 Web client with authorized redirect URI `https://<project-ref>.supabase.co/auth/v1/callback`, enable Google under Dashboard → Authentication → Providers, and keep Site URL / redirect allow-list covering production (`https://www.amrapwithfriends.com/**`), apex if used, and `http://localhost:5173/**`. `VITE_*` flags are bake-in at build time — set the Vercel env var, then **redeploy**.
+
 **Hosted vs local auth settings:** Local `supabase/config.toml` sets `enable_confirmations = false` and `minimum_password_length = 6`. The hosted dashboard may differ (Confirm email is often ON by default; password minimum may change). Before shipping to prod, check Dashboard → **Authentication → Providers → Email** and align [`AUTH_MIN_PASSWORD_LENGTH`](src/lib/auth/passwordPolicy.ts) with the hosted minimum if needed.
 
 After `supabase db push` for `20260822140000_auth_claim.sql`:

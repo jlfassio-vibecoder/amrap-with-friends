@@ -18,6 +18,7 @@ vi.mock('@/hooks/useAthleteProfile', () => ({
 vi.mock('@/hooks/useAmrapAuth', () => ({
   useAmrapAuth: () => ({
     signInWithMagicLink: vi.fn(),
+    signInWithGoogle: vi.fn(),
     signUpWithPassword: vi.fn(),
     signInWithPassword: vi.fn(),
     requestPasswordReset: vi.fn(),
@@ -28,6 +29,7 @@ vi.mock('@/hooks/useAmrapAuth', () => ({
 vi.mock('@/lib/auth/authFeatures', () => ({
   isMagicLinkAuthEnabled: () => false,
   isPasswordResetEnabled: () => false,
+  isGoogleAuthEnabled: () => false,
 }));
 
 afterEach(() => {

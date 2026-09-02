@@ -38,6 +38,7 @@ describe('useSmartRecovery', () => {
       isAuthLoading: false,
       isPasswordRecovery: false,
       signInWithMagicLink: vi.fn(),
+      signInWithGoogle: vi.fn(),
       signUpWithPassword: vi.fn(),
       signInWithPassword: vi.fn(),
       requestPasswordReset: vi.fn(),

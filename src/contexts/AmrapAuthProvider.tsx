@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { validatePasswordLength } from '@/lib/auth/passwordPolicy';
-import { isMagicLinkAuthEnabled, isPasswordResetEnabled } from '@/lib/auth/authFeatures';
+import {
+  isGoogleAuthEnabled,
+  isMagicLinkAuthEnabled,
+  isPasswordResetEnabled,
+} from '@/lib/auth/authFeatures';
 import { currentPathRedirectTo, passwordResetRedirectTo } from '@/lib/auth/authRedirect';
 import { mapAuthError } from '@/lib/auth/mapAuthError';
 import { getSupabaseClient } from '@/lib/supabase';
@@ -121,6 +125,27 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signInWithOtp({
       email: trimmed,
       options: { emailRedirectTo: currentPathRedirectTo() },
+    });
+
+    if (error) {
+      return { error: mapAuthError(error.message) };
+    }
+
+    return { error: null };
+  }, []);
+
+  const signInWithGoogle = useCallback(async () => {
+    if (!isGoogleAuthEnabled()) {
+      return { error: 'Google sign-in is not available right now.' };
+    }
+
+    const supabase = getSupabaseClient();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: currentPathRedirectTo(),
+        queryParams: { prompt: 'select_account' },
+      },
     });
 
     if (error) {
@@ -272,6 +297,7 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: user !== null,
       isPasswordRecovery,
       signInWithMagicLink,
+      signInWithGoogle,
       signUpWithPassword,
       signInWithPassword,
       requestPasswordReset,
@@ -286,6 +312,7 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
       isAuthLoading,
       isPasswordRecovery,
       signInWithMagicLink,
+      signInWithGoogle,
       signUpWithPassword,
       signInWithPassword,
       requestPasswordReset,
