@@ -5,6 +5,7 @@ import { CoachActivityCohorts } from '@/components/coach/CoachActivityCohorts';
 import { CoachDataTable } from '@/components/coach/CoachDataTable';
 import { CoachEventsExplorer } from '@/components/coach/CoachEventsExplorer';
 import { CoachFunnelCard } from '@/components/coach/CoachFunnelCard';
+import { CoachOnboardingStuckTable } from '@/components/coach/CoachOnboardingStuckTable';
 import { CoachSectionHeader } from '@/components/coach/CoachSectionHeader';
 import { CoachStatGrid } from '@/components/coach/CoachStatGrid';
 import { CoachUserDetailPanel } from '@/components/coach/CoachUserDetailPanel';
@@ -63,6 +64,7 @@ export default function CoachPage() {
         </section>
 
         <CoachActivityCohorts selectedUser={selectedUser} onSelect={setSelectedUser} />
+        <CoachOnboardingStuckTable />
         <CoachUserPicker selectedUser={selectedUser} onSelect={setSelectedUser} />
 
         {selectedUser ? (
