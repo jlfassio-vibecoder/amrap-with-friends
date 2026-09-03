@@ -3,6 +3,11 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import { AppHeader } from '@/components/AppHeader';
 import { AuthModal } from '@/components/AuthModal';
 import { IdentityOverlay } from '@/components/onboarding/IdentityOverlay';
+import { GuidedIgnitionOverlay } from '@/components/onboarding/GuidedIgnitionOverlay';
+import {
+  hasCompletedGuidedIgnition,
+  markGuidedIgnitionComplete,
+} from '@/lib/onboarding/guidedIgnitionPrefs';
 import { FeaturedWodCard } from '@/components/home/FeaturedWodCard';
 import {
   CreateMissionSummaryPanel,
@@ -99,6 +104,7 @@ export default function CreateMissionPage() {
   const [activeCount, setActiveCount] = useState<number | null>(null);
   const [authOpenMode, setAuthOpenMode] = useState<PasswordMode | null>(null);
   const submitAfterAuthRef = useRef(false);
+  const [showGuidedIgnition, setShowGuidedIgnition] = useState(() => !hasCompletedGuidedIgnition());
 
   useEffect(() => {
     const state = location.state as IntakeNavigationState | null;
@@ -449,7 +455,9 @@ export default function CreateMissionPage() {
             <p className="text-sm text-secondary">Loading athlete profile…</p>
           ) : (
             <div className="space-y-6 lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start lg:gap-6 lg:space-y-0">
-              <div className="card space-y-6 p-6">
+              <div
+                className={`card space-y-6 p-6${showGuidedIgnition ? 'pointer-events-none select-none blur-sm' : ''}`}
+              >
                 <WorkoutSourceToggle value={workoutSource} onChange={handleWorkoutSourceChange} />
 
                 {workoutSource === 'custom' ? (
@@ -560,6 +568,20 @@ export default function CreateMissionPage() {
           guestAllowed={false}
           heading="Save & Launch"
           subtitle="Create an account to hit the rally point and join the leaderboard."
+        />
+      ) : null}
+      {showGuidedIgnition ? (
+        <GuidedIgnitionOverlay
+          onSelect={(id) => {
+            const tpl = WORKOUT_TEMPLATES.find((t) => t.id === id);
+            if (tpl) handleTemplateSelect(tpl);
+            markGuidedIgnitionComplete();
+            setShowGuidedIgnition(false);
+          }}
+          onSkip={() => {
+            markGuidedIgnitionComplete();
+            setShowGuidedIgnition(false);
+          }}
         />
       ) : null}
       {identityOpen ? <IdentityOverlay {...overlayProps} /> : null}

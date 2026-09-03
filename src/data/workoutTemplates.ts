@@ -2226,4 +2226,32 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     tacticalNote:
       'The bottom hold taxes the quads before slow dead bugs reset the spine. Stay rigid through the push-ups so the jacks do not collapse your posture.',
   },
+  {
+    id: 'first-contact',
+    name: 'First Contact',
+    durationMinutes: 10,
+    category: 'engine-room',
+    intensityTier: 1,
+    movements: [
+      { name: 'Air Squats', reps: 15 },
+      { name: 'Sit-Ups', reps: 15 },
+      { name: 'Push-Ups', reps: 10 },
+    ],
+    tacticalNote:
+      'Establish your baseline pace in the first round and hold it. No heroics.',
+  },
+  {
+    id: 'the-undertow',
+    name: 'The Undertow',
+    durationMinutes: 15,
+    category: 'blood-shunt',
+    intensityTier: 3,
+    movements: [
+      { name: 'Burpees', reps: 10 },
+      { name: 'Broad Jumps', reps: 10 },
+      { name: 'Hand-Release Push-Ups', reps: 12 },
+    ],
+    tacticalNote:
+      'Pace is survival. The deck-to-jump cycle will find your ceiling by round three.',
+  },
 ];
