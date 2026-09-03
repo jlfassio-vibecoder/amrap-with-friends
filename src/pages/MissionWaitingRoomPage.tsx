@@ -426,6 +426,7 @@ function LiveMissionView({
   const [scorecardDismissed, setScorecardDismissed] = useState(false);
   const [missionLoadingDismissed, setMissionLoadingDismissed] = useState(false);
   const [authOpenForSave, setAuthOpenForSave] = useState(false);
+  const [chatExpanded, setChatExpanded] = useState(false);
   const pendingSaveAfterAuth = useRef(false);
   const [ghostSelection, setGhostSelection] = useState<StoredGhostSelection | null>(() =>
     getStoredGhostSelection(missionId)
@@ -1233,15 +1234,6 @@ function LiveMissionView({
                 </ul>
               </section>
             )}
-
-            <MissionChat
-              missionId={missionId}
-              participantId={participantId}
-              claimToken={claimToken}
-              isAuthenticated={isAuthenticated}
-              messages={channel.messages}
-              className="min-h-[12rem] flex-1 overflow-hidden"
-            />
           </div>
 
           <div className="flex min-h-0 flex-col gap-6 lg:overflow-hidden">
@@ -1250,15 +1242,26 @@ function LiveMissionView({
               presence={live.presence}
               selfParticipantId={live.participantId}
               phase={live.phase}
+              className="lg:min-h-0 lg:flex-1 lg:overflow-hidden"
+            />
+
+            <MissionChat
+              missionId={missionId}
+              participantId={participantId}
+              claimToken={claimToken}
+              isAuthenticated={isAuthenticated}
+              messages={channel.messages}
+              expanded={chatExpanded}
+              onExpandedChange={setChatExpanded}
               className={
-                showRallyPointPass && rallyPointChannel.rallyPoint
-                  ? 'lg:min-h-0 lg:flex-[2] lg:overflow-hidden'
-                  : 'lg:min-h-0 lg:flex-1 lg:overflow-hidden'
+                chatExpanded
+                  ? 'lg:min-h-0 lg:flex-1 lg:overflow-hidden'
+                  : 'shrink-0 overflow-hidden'
               }
             />
 
             {showRallyPointPass && rallyPointChannel.rallyPoint ? (
-              <section className="card flex min-h-0 flex-col space-y-3 overflow-hidden p-4 lg:flex-1 lg:overflow-y-auto">
+              <section className="card flex max-h-48 min-h-0 shrink-0 flex-col space-y-3 overflow-hidden p-4 lg:max-h-56 lg:overflow-y-auto">
                 <h2 className="shrink-0 text-sm font-semibold uppercase tracking-widest text-secondary">
                   Pass Command
                 </h2>
