@@ -3,6 +3,8 @@ import { WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
 import { CUSTOM_WORKOUT_INTENSITY_TIER } from './resolveTemplateIntensity';
 
 const TIER_5_IDS = new Set(['the-trench', 'iron-will', 'the-shield']);
+// Intentional tier-1 templates (beginner / baseline) that differ from the category default.
+const TIER_1_IDS = new Set(['first-contact']);
 
 const CATEGORY_TIER: Record<string, number> = {
   'aerobic-matrix': 2,
@@ -16,7 +18,7 @@ const CATEGORY_TIER: Record<string, number> = {
 
 describe('library template intensity', () => {
   it('hardcodes intensity 1–5 on every template', () => {
-    expect(WORKOUT_TEMPLATES).toHaveLength(150);
+    expect(WORKOUT_TEMPLATES).toHaveLength(152);
     for (const template of WORKOUT_TEMPLATES) {
       expect(template.intensityTier).toBeGreaterThanOrEqual(1);
       expect(template.intensityTier).toBeLessThanOrEqual(5);
@@ -27,6 +29,10 @@ describe('library template intensity', () => {
     for (const template of WORKOUT_TEMPLATES) {
       if (TIER_5_IDS.has(template.id)) {
         expect(template.intensityTier).toBe(5);
+        continue;
+      }
+      if (TIER_1_IDS.has(template.id)) {
+        expect(template.intensityTier).toBe(1);
         continue;
       }
       expect(template.category).not.toBeNull();
