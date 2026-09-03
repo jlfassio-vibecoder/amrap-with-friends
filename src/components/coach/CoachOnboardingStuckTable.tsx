@@ -28,6 +28,7 @@ export function CoachOnboardingStuckTable() {
 
   useEffect(() => {
     let cancelled = false;
+    // Copilot suggestion ignored: callRpc settles RPC failures as { error } rather than reject, matching CoachActivityCohorts and other coach fetches.
     fetchCoachOnboardingStuckList().then((result) => {
       if (cancelled) {
         return;
