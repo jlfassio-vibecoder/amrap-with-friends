@@ -29,7 +29,7 @@ import {
   type WorkoutCategory,
   type WorkoutTemplate,
 } from '@/data/workoutTemplates';
-import { fetchHostActiveMissionCount } from '@/lib/api/missions';
+import { createMission, fetchHostActiveMissionCount } from '@/lib/api/missions';
 import { createRallyPointMission } from '@/lib/api/rallyPoint';
 import { SendWorkoutToSquad } from '@/components/mission/SendWorkoutToSquad';
 import { getSupabaseConfigError } from '@/lib/supabase';
@@ -106,6 +106,7 @@ export default function CreateMissionPage() {
   const submitAfterAuthRef = useRef(false);
   const guidedLaunchTemplateRef = useRef<WorkoutTemplate | null>(null);
   const [showGuidedIgnition, setShowGuidedIgnition] = useState(() => !hasCompletedGuidedIgnition());
+  const [guestNameOpen, setGuestNameOpen] = useState(false);
 
   useEffect(() => {
     const state = location.state as IntakeNavigationState | null;
@@ -325,8 +326,25 @@ export default function CreateMissionPage() {
     }
 
     if (!isAuthenticated) {
-      submitAfterAuthRef.current = true;
-      setAuthOpenMode('sign-up');
+      if (scheduleMode === 'rally') {
+        submitAfterAuthRef.current = true;
+        setAuthOpenMode('sign-up');
+        return;
+      }
+
+      const hostNick = nickname.trim();
+      if (!hostNick) {
+        if (launchTemplate) {
+          guidedLaunchTemplateRef.current = launchTemplate;
+        }
+        setGuestNameOpen(true);
+        return;
+      }
+
+      void igniteMission(true, {
+        template: launchTemplate,
+        nickname: hostNick,
+      });
       return;
     }
 
@@ -370,6 +388,18 @@ export default function CreateMissionPage() {
     const missionDuration = applied?.durationMinutes ?? durationMinutes;
     const missionWorkoutText = applied?.workoutText ?? workoutText;
 
+    if (!hostNickname) {
+      if (!isAuthenticated && scheduleMode === 'now') {
+        if (launchTemplate) {
+          guidedLaunchTemplateRef.current = launchTemplate;
+        }
+        setGuestNameOpen(true);
+        return;
+      }
+      setError('Enter your name or a nickname.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -388,17 +418,25 @@ export default function CreateMissionPage() {
           : workoutSource === 'coach' && selectedCoachWorkout
             ? `coach:${selectedCoachWorkout.id}`
             : undefined;
-      const result = await createRallyPointMission({
+
+      const createInput = {
         nickname: hostNickname,
         durationMinutes: missionDuration,
         workout,
         templateId,
         intensityTier,
         scheduledAt,
-      });
+      };
+
+      const result = !isAuthenticated
+        ? await createMission({
+            ...createInput,
+            scheduledAt: undefined,
+          })
+        : await createRallyPointMission(createInput);
 
       if (result.error) {
-        if (isIntakeRequiredMessage(result.error.message) && retryAllowed) {
+        if (isAuthenticated && isIntakeRequiredMessage(result.error.message) && retryAllowed) {
           ensureThen((accepted) => {
             void igniteMission(false, {
               template: launchTemplate,
@@ -553,7 +591,11 @@ export default function CreateMissionPage() {
                 rallyTime={rallyTime}
                 capReached={capReached}
                 error={error}
-                unsignedHint={isAuthenticated ? null : 'Launch will ask you to sign in.'}
+                unsignedHint={
+                  isAuthenticated
+                    ? null
+                    : 'You can train now — save to your account after the mission.'
+                }
                 loading={loading}
                 onNicknameChange={setNickname}
                 onDurationChange={handleSummaryDurationChange}
@@ -617,6 +659,22 @@ export default function CreateMissionPage() {
           onSkip={() => {
             markGuidedIgnitionComplete();
             setShowGuidedIgnition(false);
+          }}
+        />
+      ) : null}
+      {guestNameOpen ? (
+        <IdentityOverlay
+          acceptLabel="Accept & Launch"
+          dismissible
+          onClose={() => setGuestNameOpen(false)}
+          onAccept={async (input) => {
+            setNickname(input.nickname);
+            setGuestNameOpen(false);
+            void igniteMission(true, {
+              template: guidedLaunchTemplateRef.current ?? undefined,
+              nickname: input.nickname,
+            });
+            return { error: null };
           }}
         />
       ) : null}
