@@ -76,6 +76,7 @@ describe('useMissionChannel', () => {
         rounds: [],
         messages: [],
         segmentResults: [],
+        incremental: false,
       },
     });
   });
@@ -102,6 +103,7 @@ describe('useMissionChannel', () => {
       participantId: 'participant-1',
       claimToken: 'claim-token',
       hostToken: null,
+      since: null,
     });
     expect(fromMock).not.toHaveBeenCalled();
   });

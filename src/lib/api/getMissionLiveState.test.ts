@@ -41,6 +41,7 @@ describe('parseMissionLiveStatePayload', () => {
     }
     expect(result.data.mission?.id).toBe('m1');
     expect(result.data.participants).toHaveLength(1);
+    expect(result.data.incremental).toBe(false);
   });
 
   it('surfaces invalid_claim_token failures', () => {

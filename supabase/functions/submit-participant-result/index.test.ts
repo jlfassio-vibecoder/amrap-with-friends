@@ -1,7 +1,4 @@
-import {
-  assertEquals,
-  assertExists,
-} from 'https://deno.land/std@0.224.0/assert/mod.ts';
+import { assertEquals, assertExists } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 import {
   computeLockedScore,
   deriveRoundDurationsSec,
@@ -10,8 +7,7 @@ import {
   type RoundRow,
 } from './handler.ts';
 
-const CLAIM_TOKEN_HASH =
-  'abfc1de71d4684842800719f5d6407b1e0ef7965ad4473a1cd8632462eec1b8c';
+const CLAIM_TOKEN_HASH = 'abfc1de71d4684842800719f5d6407b1e0ef7965ad4473a1cd8632462eec1b8c';
 
 const WORKOUT = [
   { name: 'Burpees', target: 20, unit: 'reps' },
@@ -203,4 +199,35 @@ Deno.test('handleSubmitParticipantResult ignores client-side score tampering inp
   assertEquals(result.ok, true);
   assertEquals(result.finalScore, 302);
   assertEquals(result.scoreBreakdown?.baseScore, 175);
+});
+
+Deno.test('handleSubmitParticipantResult fails closed when rounds cannot be loaded', async () => {
+  const result = await handleSubmitParticipantResult(
+    {
+      missionId: MISSION_ID,
+      participantId: PARTICIPANT_ID,
+      claimToken: 'claim-token',
+      partialReps: 0,
+      segmentIndex: 0,
+    },
+    {
+      authUserId: null,
+      fetchParticipant: async () => ({
+        claim_token_hash: CLAIM_TOKEN_HASH,
+        mission_id: MISSION_ID,
+        user_id: null,
+      }),
+      fetchMission: async () => ({
+        state: 'finished',
+        segment_index: 0,
+        workout: WORKOUT,
+        duration_minutes: 15,
+      }),
+      fetchExistingResult: async () => ({ score_breakdown: null }),
+      fetchRounds: async () => null,
+      persistResult: async () => ({ ok: true }),
+    }
+  );
+
+  assertEquals(result, { ok: false, reason: 'rounds_unavailable' });
 });

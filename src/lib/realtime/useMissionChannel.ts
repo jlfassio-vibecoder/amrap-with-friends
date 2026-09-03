@@ -4,6 +4,7 @@ import { getMissionLiveState } from '@/lib/api/getMissionLiveState';
 import { getSupabaseClient } from '@/lib/supabase';
 import { track } from '@/lib/analytics/track';
 import { getStoredClaimToken, getStoredHostToken } from '@/lib/missionIdentity';
+import { nextLiveStateSince } from '@/lib/realtime/liveStateWatermark';
 import {
   mergePresenceState,
   parseMessageRow,
@@ -67,6 +68,7 @@ export function useMissionChannel(
   const cancelledRef = useRef(false);
   const missionIdRef = useRef(missionId);
   const fetchGenRef = useRef(0);
+  const sinceRef = useRef<string | null>(null);
 
   const presenceParticipantId = presence?.participantId;
   const presenceNickname = presence?.nickname;
@@ -78,6 +80,7 @@ export function useMissionChannel(
     }
 
     missionIdRef.current = missionId;
+    sinceRef.current = null;
     const supabase = getSupabaseClient();
     cancelledRef.current = false;
     const participantIdForRpc = presenceParticipantId;
@@ -94,6 +97,7 @@ export function useMissionChannel(
         participantId: participantIdForRpc,
         claimToken: getStoredClaimToken(requestedMissionId),
         hostToken: getStoredHostToken(requestedMissionId),
+        since: sinceRef.current,
       });
 
       if (cancelledRef.current || genAtStart !== fetchGenRef.current) {
@@ -111,9 +115,27 @@ export function useMissionChannel(
       }
       setParticipants(result.data.participants);
       participantIdsRef.current = new Set(result.data.participants.map((row) => row.id));
-      setRounds(result.data.rounds);
-      setMessages(sortMessagesByCreatedAt(result.data.messages));
-      setSegmentResults(result.data.segmentResults);
+      if (result.data.incremental) {
+        setRounds((prev) => result.data.rounds.reduce((next, row) => upsertRound(next, row), prev));
+        setMessages((prev) =>
+          sortMessagesByCreatedAt(
+            result.data.messages.reduce((next, row) => upsertMessage(next, row), prev)
+          )
+        );
+        setSegmentResults((prev) =>
+          result.data.segmentResults.reduce((next, row) => upsertSegmentResult(next, row), prev)
+        );
+      } else {
+        setRounds(result.data.rounds);
+        setMessages(sortMessagesByCreatedAt(result.data.messages));
+        setSegmentResults(result.data.segmentResults);
+      }
+      sinceRef.current = nextLiveStateSince({
+        previous: sinceRef.current,
+        rounds: result.data.rounds,
+        messages: result.data.messages,
+        segmentResults: result.data.segmentResults,
+      });
     }
 
     // Snapshot load; setState only after await inside refreshSnapshot.

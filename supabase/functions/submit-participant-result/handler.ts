@@ -172,7 +172,7 @@ export async function handleSubmitParticipantResult(
       participantId: string,
       segmentIndex: number
     ) => Promise<ExistingSegmentResult | null>;
-    fetchRounds: (participantId: string, segmentIndex: number) => Promise<RoundRow[]>;
+    fetchRounds: (participantId: string, segmentIndex: number) => Promise<RoundRow[] | null>;
     persistResult: (input: {
       participantId: string;
       segmentIndex: number;
@@ -199,11 +199,11 @@ export async function handleSubmitParticipantResult(
 
   const mission = await deps.fetchMission(body.missionId);
   if (!mission) {
-    return { ok: false, reason: 'session_not_found' };
+    return { ok: false, reason: 'mission_not_found' };
   }
 
   if (mission.state !== 'finished') {
-    return { ok: false, reason: 'session_not_submittable' };
+    return { ok: false, reason: 'mission_not_submittable' };
   }
 
   if (body.segmentIndex !== mission.segment_index) {
@@ -217,6 +217,10 @@ export async function handleSubmitParticipantResult(
   }
 
   const rounds = await deps.fetchRounds(body.participantId, body.segmentIndex);
+  if (rounds === null) {
+    return { ok: false, reason: 'rounds_unavailable' };
+  }
+
   const computed = computeLockedScore(
     rounds,
     mission.workout,
