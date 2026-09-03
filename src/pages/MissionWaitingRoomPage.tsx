@@ -52,6 +52,7 @@ import {
   touchRallyPointPresence,
 } from '@/lib/api/rallyPoint';
 import { canPassRallyPointCommand } from '@/lib/rallyPoint/canPassRallyPointCommand';
+import { shouldHandleLogRoundHotkey } from '@/lib/mission/logRoundHotkey';
 import { shouldShowMissionReset } from '@/lib/mission/shouldShowMissionReset';
 import { shouldSubscribeRallyPointOnMission } from '@/lib/rallyPoint/shouldSubscribeRallyPointOnMission';
 import { shouldUseMissionRealtimeTables } from '@/lib/realtime/shouldUseMissionRealtimeTables';
@@ -652,6 +653,30 @@ function LiveMissionView({
     phase: livePhase,
   });
   const showLogRound = livePhase === 'work' && !live.isPaused;
+
+  function handleLogRound() {
+    playRoundLogged();
+    void live.logRound();
+  }
+
+  const handleLogRoundRef = useRef(handleLogRound);
+  handleLogRoundRef.current = handleLogRound;
+
+  useEffect(() => {
+    if (!showLogRound) {
+      return;
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (!shouldHandleLogRoundHotkey(event)) {
+        return;
+      }
+      event.preventDefault();
+      handleLogRoundRef.current();
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showLogRound]);
+
   const showEndPractice = live.isPractice && livePhase === 'finished';
   const showPartialRepsModal =
     !live.isPractice &&
@@ -1162,10 +1187,7 @@ function LiveMissionView({
                   <button
                     type="button"
                     className="btn-success px-3 py-1.5 text-sm lg:px-6 lg:py-3 lg:text-base"
-                    onClick={() => {
-                      playRoundLogged();
-                      void live.logRound();
-                    }}
+                    onClick={handleLogRound}
                   >
                     Log round
                   </button>
