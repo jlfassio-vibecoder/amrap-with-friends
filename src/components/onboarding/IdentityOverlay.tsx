@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from 'react';
 import { track } from '@/lib/analytics/track';
 import type { AthleteIdentityInput } from '@/lib/api/athleteProfile';
 import {
+  isValidAthleteUsername,
   sanitizeCallsignUsername,
   suggestAthleteIdentity,
   type AthleteIdentitySuggestion,
@@ -142,7 +143,7 @@ export function IdentityOverlay({
     if (value.length < 1 || value.length > 50) {
       return 'Enter a name (1–50 characters).';
     }
-    if (!sanitizeCallsignUsername(value)) {
+    if (!isValidAthleteUsername(sanitizeCallsignUsername(value))) {
       return 'Enter a name we can turn into a handle.';
     }
     return null;

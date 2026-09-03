@@ -17,14 +17,16 @@ export function useEnsureAthleteIdentity(options?: {
 
   const ensureThen = useCallback(
     (action: PendingAction) => {
-      if (needsIdentity) {
+      // Only open the overlay when authenticated and fully loaded; callers are
+      // responsible for the auth gate when the user is signed out.
+      if (isAuthenticated && !loading && needsIdentity) {
         pendingRef.current = action;
         setOpen(true);
         return;
       }
       action();
     },
-    [needsIdentity]
+    [isAuthenticated, loading, needsIdentity]
   );
 
   const handleAccept = useCallback(

@@ -90,7 +90,6 @@ export default function CreateMissionPage() {
   );
   const [workoutText, setWorkoutText] = useState('10 Burpees\n15 Push-ups');
   const [error, setError] = useState<string | null>(null);
-  const [errorAction, setErrorAction] = useState<{ to: string; label: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [scheduleMode, setScheduleMode] = useState<CreateScheduleMode>('now');
   const [rallyDay, setRallyDay] = useState<RallyDay>('today');
@@ -295,7 +294,6 @@ export default function CreateMissionPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    setErrorAction(null);
 
     if (workoutSource === 'library' && !selectedTemplate) {
       setError('Select a workout from the library before creating a mission.');
@@ -334,7 +332,7 @@ export default function CreateMissionPage() {
     });
   }
 
-  async function igniteMission() {
+  async function igniteMission(retryAllowed = true) {
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     let scheduledAt: string | undefined;
     if (scheduleMode === 'rally') {
@@ -372,9 +370,9 @@ export default function CreateMissionPage() {
       });
 
       if (result.error) {
-        if (isIntakeRequiredMessage(result.error.message)) {
+        if (isIntakeRequiredMessage(result.error.message) && retryAllowed) {
           ensureThen(() => {
-            void igniteMission();
+            void igniteMission(false);
           });
           return;
         }
@@ -516,7 +514,6 @@ export default function CreateMissionPage() {
                 rallyTime={rallyTime}
                 capReached={capReached}
                 error={error}
-                errorAction={errorAction}
                 unsignedHint={isAuthenticated ? null : 'Launch will ask you to sign in.'}
                 loading={loading}
                 onNicknameChange={setNickname}
