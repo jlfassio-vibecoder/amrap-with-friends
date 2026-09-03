@@ -1,6 +1,5 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { FeaturedWodCard } from '@/components/home/FeaturedWodCard';
 import { GlobalPresenceBroadcaster } from '@/components/GlobalPresenceBroadcaster';
 import { PasswordRecoveryRedirect } from '@/components/PasswordRecoveryRedirect';
 import { RequireIntake } from '@/components/RequireIntake';
@@ -42,14 +41,7 @@ function App() {
       <PasswordRecoveryRedirect />
       <Suspense fallback={<RouteFallback />}>
         <Routes>
-          <Route
-            path="/create"
-            element={
-              <RequireIntake guestMode="sign-in" signedOutPreview={<FeaturedWodCard />}>
-                <CreateMissionPage />
-              </RequireIntake>
-            }
-          />
+          <Route path="/create" element={<CreateMissionPage />} />
           <Route path="/join" element={<JoinMissionPage />} />
           <Route path="/rally-point/:rallyPointId" element={<RallyPointPage />} />
           {/* Public: the invite preview is what convinces someone to sign up,

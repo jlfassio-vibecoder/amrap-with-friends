@@ -8,6 +8,7 @@ import {
   isPasswordResetEnabled,
 } from '@/lib/auth/authFeatures';
 import { currentPathRedirectTo, passwordResetRedirectTo } from '@/lib/auth/authRedirect';
+import { peekPostAuthPathIntent } from '@/lib/auth/postAuthDestination';
 import { mapAuthError } from '@/lib/auth/mapAuthError';
 import { getSupabaseClient } from '@/lib/supabase';
 import { AmrapAuthContext, type AmrapAuthContextValue } from '@/contexts/AmrapAuthContext';
@@ -179,10 +180,12 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
     track('auth_google_started', { method: 'google' });
 
     const supabase = getSupabaseClient();
+    const intent = peekPostAuthPathIntent();
+    const redirectTo = intent ? `${window.location.origin}${intent}` : currentPathRedirectTo();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: currentPathRedirectTo(),
+        redirectTo,
         queryParams: { prompt: 'select_account' },
       },
     });

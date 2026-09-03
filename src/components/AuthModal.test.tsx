@@ -32,19 +32,16 @@ afterEach(() => {
 });
 
 describe('AuthModal', () => {
-  it('shows magic link and password tabs when magic link is enabled', () => {
+  it('shows a secondary email-link control when magic link is enabled', () => {
     isMagicLinkAuthEnabledMock.mockReturnValue(true);
 
     render(<AuthModal onClose={() => {}} />);
 
-    expect(screen.getByRole('tab', { name: 'Magic link' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Password' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Password' }).getAttribute('aria-selected')).toBe(
-      'true'
-    );
+    expect(screen.queryByRole('tab', { name: 'Magic link' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Email me a sign-in link' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Send magic link' })).toBeNull();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Magic link' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Email me a sign-in link' }));
     expect(screen.getByRole('button', { name: 'Send magic link' })).toBeTruthy();
   });
 

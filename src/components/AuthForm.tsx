@@ -5,7 +5,9 @@ import {
   isMagicLinkAuthEnabled,
   isPasswordResetEnabled,
 } from '@/lib/auth/authFeatures';
+import { isGuestOpenPath } from '@/lib/auth/guestOpenPaths';
 import { isDuplicateAccountError } from '@/lib/auth/mapAuthError';
+import { clearPostAuthPathIntent, setPostAuthPathIntent } from '@/lib/auth/postAuthDestination';
 import {
   hasOAuthReturnErrorParams,
   readOAuthReturnError,
@@ -45,7 +47,7 @@ export interface AuthFormProps {
   onSignupSessionSuccess?: () => void;
   /** Render the Sign in / Create account heading (homepage inline). */
   showHeading?: boolean;
-  /** Magic link / password tabs, or the password-only label. Off for compact inline slots. */
+  /** When true (default), allow the secondary email-link control if magic link is enabled. Off for compact inline slots. */
   showAuthMethodSelector?: boolean;
   /** Heading id for modal aria-labelledby. Implies a heading row when set. */
   titleId?: string;
@@ -94,12 +96,6 @@ function AuthPasswordModeToggle({
       </button>
     </div>
   );
-}
-
-function authMethodButtonClass(isActive: boolean): string {
-  return isActive
-    ? 'rounded-full bg-accent px-4 py-2 text-sm font-semibold text-on-accent'
-    : 'rounded-full px-4 py-2 text-sm font-semibold text-secondary hover:text-ink';
 }
 
 export function AuthForm({
@@ -258,6 +254,12 @@ export function AuthForm({
       return;
     }
 
+    if (passwordMode === 'sign-up' && !isGuestOpenPath(window.location.pathname)) {
+      setPostAuthPathIntent('/create');
+    } else {
+      clearPostAuthPathIntent();
+    }
+
     setStatus('submitting');
     setMessage(null);
 
@@ -315,34 +317,7 @@ export function AuthForm({
         </p>
       ) : null}
 
-      {showAuthMethodSelector && magicLinkEnabled ? (
-        <div
-          className="inline-flex rounded-full border border-border bg-page p-1"
-          role="tablist"
-          aria-label="Sign-in method"
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={authMethod === 'magic-link'}
-            className={authMethodButtonClass(authMethod === 'magic-link')}
-            onClick={() => switchAuthMethod('magic-link')}
-          >
-            Magic link
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={authMethod === 'password'}
-            className={authMethodButtonClass(authMethod === 'password')}
-            onClick={() => switchAuthMethod('password')}
-          >
-            Password
-          </button>
-        </div>
-      ) : null}
-
-      {googleAuthEnabled && !awaitingSignupContinue ? (
+      {googleAuthEnabled && !awaitingSignupContinue && showingPasswordForm ? (
         <div className={passwordFormSpacing}>
           <button
             type="button"
@@ -386,6 +361,17 @@ export function AuthForm({
           <button type="submit" className={submitClass} disabled={isBusy || isSuccessLocked}>
             {isBusy ? 'Sending…' : 'Send magic link'}
           </button>
+
+          {showAuthMethodSelector ? (
+            <button
+              type="button"
+              className="link-accent text-sm"
+              disabled={isBusy || isSuccessLocked}
+              onClick={() => switchAuthMethod('password')}
+            >
+              Use password instead
+            </button>
+          ) : null}
         </form>
       ) : (
         <form className={passwordFormSpacing} onSubmit={handlePasswordSubmit}>
@@ -525,6 +511,17 @@ export function AuthForm({
               {isBusy ? 'Submitting…' : passwordMode === 'sign-up' ? 'Create account' : 'Sign in'}
             </button>
           )}
+
+          {showAuthMethodSelector && magicLinkEnabled && !awaitingSignupContinue ? (
+            <button
+              type="button"
+              className="link-accent text-sm"
+              disabled={isBusy || status === 'success'}
+              onClick={() => switchAuthMethod('magic-link')}
+            >
+              Email me a sign-in link
+            </button>
+          ) : null}
         </form>
       )}
     </div>

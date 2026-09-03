@@ -2,6 +2,11 @@ import { useState } from 'react';
 import { AuthForm } from '@/components/AuthForm';
 import { HostScheduledMissionsPanel } from '@/components/mission/HostScheduledMissionsPanel';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
+import {
+  clearPostAuthPathIntent,
+  consumePostAuthPathIntent,
+  setPostAuthPathIntent,
+} from '@/lib/auth/postAuthDestination';
 import { HomeIsland } from './HomeIsland';
 
 const CARD_CLASS = 'rounded-card border border-night-border bg-surface p-3 text-ink shadow-card';
@@ -21,7 +26,7 @@ export default function HeroBelowLogo() {
 function HeroBelowLogoGate() {
   const { isAuthenticated, isAuthLoading } = useAmrapAuth();
   const [holdSignupContinue, setHoldSignupContinue] = useState(false);
-  const [pendingIntakeRedirect, setPendingIntakeRedirect] = useState(false);
+  const [pendingCreateRedirect, setPendingCreateRedirect] = useState(false);
 
   if (isAuthLoading) {
     return null;
@@ -38,14 +43,17 @@ function HeroBelowLogoGate() {
           showAuthMethodSelector={false}
           onSignupSessionSuccess={() => {
             setHoldSignupContinue(true);
-            setPendingIntakeRedirect(true);
+            setPendingCreateRedirect(true);
+            setPostAuthPathIntent('/create');
           }}
           onAuthenticated={() => {
             setHoldSignupContinue(false);
-            if (pendingIntakeRedirect) {
-              window.location.assign('/intake?next=/create');
+            if (pendingCreateRedirect) {
+              consumePostAuthPathIntent();
+              window.location.assign('/create');
               return;
             }
+            clearPostAuthPathIntent();
           }}
         />
       ) : (

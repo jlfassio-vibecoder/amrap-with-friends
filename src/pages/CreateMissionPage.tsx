@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
+import { AuthModal } from '@/components/AuthModal';
 import { FeaturedWodCard } from '@/components/home/FeaturedWodCard';
 import {
   CreateMissionSummaryPanel,
@@ -36,6 +37,8 @@ import { firstAvailableCategoryForDuration } from '@/lib/workout/filterWorkoutTe
 import { CUSTOM_WORKOUT_INTENSITY_TIER } from '@/lib/workout/resolveTemplateIntensity';
 import { applyTemplate } from '@/lib/workout/templateToExercises';
 import { parseWorkoutText } from '@/lib/workout/parseWorkoutLines';
+import { profileNeedsIntake } from '@/lib/auth/profileNeedsIntake';
+import type { PasswordMode } from '@/components/AuthForm';
 import {
   HOST_ACTIVE_MISSION_LIMIT,
   defaultRallyTime,
@@ -43,6 +46,10 @@ import {
   rallyLocalDateTimeToIso,
   type RallyDay,
 } from '@/lib/mission/rallySchedule';
+
+const INTAKE_CREATE_HREF = '/intake?next=%2Fcreate';
+const PROFILE_INCOMPLETE_MESSAGE =
+  'Finish your profile (username and nickname) before opening a rally point.';
 
 // Copilot suggestion ignored: keep a local type to avoid coupling CreateMissionPage to IntakePage routing internals.
 type IntakeNavigationState = {
@@ -62,7 +69,7 @@ export default function CreateMissionPage() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { telemetry, isAuthenticated } = useHudTelemetry();
-  const { profile, loading: profileLoading } = useAthleteProfile();
+  const { profile, missing, loading: profileLoading } = useAthleteProfile();
   const quotas = quotasFromProfile(profile);
   const [intakeNotices, setIntakeNotices] = useState<string[]>([]);
   const [workoutSource, setWorkoutSource] = useState<WorkoutSource>('library');
@@ -78,6 +85,7 @@ export default function CreateMissionPage() {
   );
   const [workoutText, setWorkoutText] = useState('10 Burpees\n15 Push-ups');
   const [error, setError] = useState<string | null>(null);
+  const [errorAction, setErrorAction] = useState<{ to: string; label: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [scheduleMode, setScheduleMode] = useState<CreateScheduleMode>('now');
   const [rallyDay, setRallyDay] = useState<RallyDay>('today');
@@ -85,6 +93,8 @@ export default function CreateMissionPage() {
     defaultRallyTime(new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone)
   );
   const [activeCount, setActiveCount] = useState<number | null>(null);
+  const [authOpenMode, setAuthOpenMode] = useState<PasswordMode | null>(null);
+  const submitAfterAuthRef = useRef(false);
 
   useEffect(() => {
     const state = location.state as IntakeNavigationState | null;
@@ -280,6 +290,7 @@ export default function CreateMissionPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setErrorAction(null);
 
     if (workoutSource === 'library' && !selectedTemplate) {
       setError('Select a workout from the library before creating a mission.');
@@ -299,6 +310,23 @@ export default function CreateMissionPage() {
     const configError = getSupabaseConfigError();
     if (configError) {
       setError(configError);
+      return;
+    }
+
+    if (!isAuthenticated) {
+      submitAfterAuthRef.current = true;
+      setAuthOpenMode('sign-up');
+      return;
+    }
+
+    if (profileLoading) {
+      submitAfterAuthRef.current = true;
+      return;
+    }
+
+    if (profileNeedsIntake(profile, missing)) {
+      setError(PROFILE_INCOMPLETE_MESSAGE);
+      setErrorAction({ to: INTAKE_CREATE_HREF, label: 'Finish your profile' });
       return;
     }
 
@@ -351,6 +379,31 @@ export default function CreateMissionPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  useEffect(() => {
+    if (!submitAfterAuthRef.current || !isAuthenticated || profileLoading) {
+      return;
+    }
+
+    submitAfterAuthRef.current = false;
+    setAuthOpenMode(null);
+
+    if (profileNeedsIntake(profile, missing)) {
+      setError(PROFILE_INCOMPLETE_MESSAGE);
+      setErrorAction({ to: INTAKE_CREATE_HREF, label: 'Finish your profile' });
+      return;
+    }
+
+    const form = document.getElementById('create-mission-form');
+    if (form instanceof HTMLFormElement) {
+      form.requestSubmit();
+    }
+  }, [isAuthenticated, profileLoading, profile, missing]);
+
+  function handleAuthSuccess() {
+    setAuthOpenMode(null);
+    // submitAfterAuthRef stays true until profile finishes loading (effect above).
   }
 
   return (
@@ -458,6 +511,8 @@ export default function CreateMissionPage() {
                 rallyTime={rallyTime}
                 capReached={capReached}
                 error={error}
+                errorAction={errorAction}
+                unsignedHint={isAuthenticated ? null : 'Open rally point will ask you to sign in.'}
                 loading={loading}
                 onNicknameChange={setNickname}
                 onDurationChange={handleSummaryDurationChange}
@@ -491,6 +546,17 @@ export default function CreateMissionPage() {
       <footer className="hidden pb-6 text-center text-xs text-muted lg:block">
         AMRAP With Friends
       </footer>
+
+      {authOpenMode ? (
+        <AuthModal
+          onClose={() => {
+            submitAfterAuthRef.current = false;
+            setAuthOpenMode(null);
+          }}
+          initialPasswordMode={authOpenMode}
+          onAuthenticated={handleAuthSuccess}
+        />
+      ) : null}
     </main>
   );
 }

@@ -9,7 +9,7 @@ interface AuthModalProps {
    * modal stops telling people signing in that it was optional.
    */
   guestAllowed?: boolean;
-  /** Defaults to onClose. Header Create account uses this to send missing profiles to intake. */
+  /** Defaults to onClose. Header Create account uses this to send new accounts to /create. */
   onAuthenticated?: () => void;
 }
 

@@ -54,11 +54,9 @@ describe('AuthForm', () => {
 
     render(<AuthForm showHeading />);
 
-    expect(screen.getByRole('tab', { name: 'Magic link' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Password' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Password' }).getAttribute('aria-selected')).toBe(
-      'true'
-    );
+    expect(screen.queryByRole('tab', { name: 'Magic link' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Password' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Email me a sign-in link' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Send magic link' })).toBeNull();
     expect(
       screen
@@ -67,13 +65,14 @@ describe('AuthForm', () => {
     ).toBe(true);
   });
 
-  it('shows magic-link submit after switching tabs when enabled', () => {
+  it('shows magic-link submit after choosing the secondary email-link control', () => {
     isMagicLinkAuthEnabledMock.mockReturnValue(true);
 
     render(<AuthForm showHeading />);
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Magic link' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Email me a sign-in link' }));
     expect(screen.getByRole('button', { name: 'Send magic link' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Use password instead' })).toBeTruthy();
   });
 
   it('shows password-only sign-in when magic link is disabled', () => {
