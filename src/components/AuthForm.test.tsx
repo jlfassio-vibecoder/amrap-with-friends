@@ -56,7 +56,7 @@ describe('AuthForm', () => {
 
     expect(screen.queryByRole('tab', { name: 'Magic link' })).toBeNull();
     expect(screen.queryByRole('tab', { name: 'Password' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Email me a sign-in link' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Use an email link instead' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Send magic link' })).toBeNull();
     expect(
       screen
@@ -70,7 +70,7 @@ describe('AuthForm', () => {
 
     render(<AuthForm showHeading />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Email me a sign-in link' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Use an email link instead' }));
     expect(screen.getByRole('button', { name: 'Send magic link' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Use password instead' })).toBeTruthy();
   });
@@ -263,6 +263,25 @@ describe('AuthForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Continue with Google' }));
 
     expect(await screen.findByText('Google sign-in failed.')).toBeTruthy();
+  });
+
+  it('uses a custom heading and subtitle when provided', () => {
+    isMagicLinkAuthEnabledMock.mockReturnValue(false);
+
+    render(
+      <AuthForm
+        showHeading
+        guestAllowed={false}
+        heading="Save & Launch"
+        subtitle="Create an account to hit the rally point and join the leaderboard."
+      />
+    );
+
+    expect(screen.getByRole('heading', { name: 'Save & Launch' })).toBeTruthy();
+    expect(
+      screen.getByText('Create an account to hit the rally point and join the leaderboard.')
+    ).toBeTruthy();
+    expect(screen.queryByText(/Optional — play as a guest/)).toBeNull();
   });
 
   it('shows and clears OAuth return errors from the URL when Google is enabled', () => {

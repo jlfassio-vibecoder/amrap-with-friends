@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   fetchAthleteProfile,
+  upsertAthleteIdentity,
   upsertAthleteProfile,
+  type AthleteIdentityInput,
   type AthleteProfile,
   type AthleteProfileMetricsInput,
 } from '@/lib/api/athleteProfile';
@@ -64,6 +66,17 @@ export function useAthleteProfile() {
     return { error: null };
   }, []);
 
+  const saveIdentity = useCallback(async (input: AthleteIdentityInput) => {
+    const result = await upsertAthleteIdentity(input);
+    if (result.error) {
+      return { error: result.error.message };
+    }
+    setProfile(result.data);
+    setMissing(false);
+    setError(null);
+    return { error: null };
+  }, []);
+
   const loading = isAuthLoading || (isAuthenticated && user !== null && !hasLoaded);
 
   return {
@@ -74,5 +87,6 @@ export function useAthleteProfile() {
     isAuthenticated,
     isAuthLoading,
     save,
+    saveIdentity,
   };
 }

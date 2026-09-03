@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/contexts/ThemeProvider';
 import IntakePage from './IntakePage';
 
 const saveMock = vi.fn();
+const saveIdentityMock = vi.fn();
 const updateEmailMock = vi.fn();
 const updatePasswordMock = vi.fn();
 const navigateMock = vi.fn();
@@ -49,6 +50,7 @@ vi.mock('@/hooks/useAthleteProfile', () => ({
     loading: false,
     error: null,
     save: saveMock,
+    saveIdentity: saveIdentityMock,
   }),
 }));
 
@@ -56,6 +58,7 @@ afterEach(() => {
   cleanup();
   authState.isAuthenticated = true;
   saveMock.mockReset();
+  saveIdentityMock.mockReset();
   updateEmailMock.mockReset();
   updatePasswordMock.mockReset();
   navigateMock.mockReset();
@@ -190,6 +193,49 @@ describe('IntakePage', () => {
     expect(scrollIntoView).toHaveBeenCalled();
     expect(screen.getAllByText('Enter a nickname (1–50 characters).').length).toBeGreaterThan(0);
     expect(saveMock).not.toHaveBeenCalled();
+  });
+
+  it('saves identity only when body metrics are left blank', async () => {
+    saveIdentityMock.mockResolvedValue({ error: null });
+    renderIntake();
+
+    fireEvent.change(screen.getByLabelText(/^Username$/), {
+      target: { value: 'ghost_ops' },
+    });
+    fireEvent.change(screen.getByLabelText(/^Nickname$/), {
+      target: { value: 'Ghost' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
+
+    await waitFor(() => {
+      expect(saveIdentityMock).toHaveBeenCalledWith({
+        username: 'ghost_ops',
+        nickname: 'Ghost',
+      });
+    });
+    expect(saveMock).not.toHaveBeenCalled();
+    expect(navigateMock).toHaveBeenCalledWith('/create', { state: { intakeNotices: [] } });
+  });
+
+  it('requires the full metric set when any body field is filled', async () => {
+    renderIntake();
+
+    fireEvent.change(screen.getByLabelText(/^Username$/), {
+      target: { value: 'ghost_ops' },
+    });
+    fireEvent.change(screen.getByLabelText(/^Nickname$/), {
+      target: { value: 'Ghost' },
+    });
+    fireEvent.change(screen.getByLabelText(/Height \(in\)/), {
+      target: { value: '71' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Enter a valid weight in pounds.').length).toBeGreaterThan(0);
+    });
+    expect(saveMock).not.toHaveBeenCalled();
+    expect(saveIdentityMock).not.toHaveBeenCalled();
   });
 
   it('converts imperial input to metric on save and includes identity fields', async () => {

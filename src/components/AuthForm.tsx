@@ -51,6 +51,10 @@ export interface AuthFormProps {
   showAuthMethodSelector?: boolean;
   /** Heading id for modal aria-labelledby. Implies a heading row when set. */
   titleId?: string;
+  /** Override the Sign in / Create account heading (Launch overlay). */
+  heading?: string;
+  /** Optional why-copy under the heading. */
+  subtitle?: string;
   /** When set with titleId, show a Close control in the heading row. */
   onClose?: () => void;
   /** Tighter layout for inline homepage hero slot. Modal keeps default. */
@@ -106,6 +110,8 @@ export function AuthForm({
   showHeading = false,
   showAuthMethodSelector = true,
   titleId,
+  heading,
+  subtitle,
   onClose,
   variant = 'default',
 }: AuthFormProps) {
@@ -274,8 +280,9 @@ export function AuthForm({
   const isSuccessLocked = status === 'success' && authMethod === 'magic-link';
   const passwordFieldsLocked = isBusy || (status === 'success' && !awaitingSignupContinue);
   const showingPasswordForm = !(magicLinkEnabled && authMethod === 'magic-link');
-  const title = showingPasswordForm && passwordMode === 'sign-up' ? 'Create account' : 'Sign in';
-  const showTitleRow = showHeading || titleId !== undefined;
+  const title =
+    heading ?? (showingPasswordForm && passwordMode === 'sign-up' ? 'Create account' : 'Sign in');
+  const showTitleRow = showHeading || titleId !== undefined || heading !== undefined;
   const formSpacing = isCompact
     ? 'space-y-2'
     : showTitleRow || guestAllowed || (showAuthMethodSelector && magicLinkEnabled)
@@ -309,6 +316,8 @@ export function AuthForm({
           ) : null}
         </div>
       ) : null}
+
+      {subtitle ? <p className="text-sm text-secondary">{subtitle}</p> : null}
 
       {guestAllowed ? (
         <p className="text-sm text-secondary">
@@ -519,7 +528,7 @@ export function AuthForm({
               disabled={isBusy || status === 'success'}
               onClick={() => switchAuthMethod('magic-link')}
             >
-              Email me a sign-in link
+              Use an email link instead
             </button>
           ) : null}
         </form>

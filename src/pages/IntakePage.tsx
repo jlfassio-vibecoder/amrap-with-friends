@@ -6,7 +6,11 @@ import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { track, trackBeacon } from '@/lib/analytics/track';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
-import { type AthleteProfile, type AthleteProfileMetricsInput } from '@/lib/api/athleteProfile';
+import {
+  type AthleteIdentityInput,
+  type AthleteProfile,
+  type AthleteProfileMetricsInput,
+} from '@/lib/api/athleteProfile';
 import type { BiologicalSex } from '@/lib/hud/classificationQuotas';
 import {
   canSetPerceivedClassification,
@@ -73,6 +77,22 @@ function nicknameValidationMessage(value: string): string | null {
     return 'Enter a nickname (1–50 characters).';
   }
   return null;
+}
+
+function intakeMetricsAreBlank(input: {
+  height: string;
+  weight: string;
+  age: string;
+  biologicalSex: BiologicalSex | null;
+  rank: PerceivedClassification | null;
+}): boolean {
+  return (
+    input.height.trim() === '' &&
+    input.weight.trim() === '' &&
+    input.age.trim() === '' &&
+    input.biologicalSex === null &&
+    input.rank === null
+  );
 }
 
 type IntakeFieldKey =
@@ -144,6 +164,7 @@ interface IntakeFormProps {
   nowYear: number;
   userId: string | null;
   onSaveProfile: (input: AthleteProfileMetricsInput) => Promise<{ error: string | null }>;
+  onSaveIdentity: (input: AthleteIdentityInput) => Promise<{ error: string | null }>;
   onUpdateEmail: (
     email: string
   ) => Promise<{ error: string | null; needsEmailConfirmation: boolean }>;
@@ -159,6 +180,7 @@ function IntakeForm({
   nowYear,
   userId,
   onSaveProfile,
+  onSaveIdentity,
   onUpdateEmail,
   onUpdatePassword,
   onSaved,
@@ -287,35 +309,44 @@ function IntakeForm({
     if (nicknameMsg) {
       errors.push({ key: 'nickname', message: nicknameMsg });
     }
-    const h = Number(height);
-    const w = Number(weight);
-    const a = Number(age);
-    if (!isValidHeight(h, unitSystem)) {
-      errors.push({
-        key: 'height',
-        message:
-          unitSystem === 'imperial'
-            ? 'Enter a valid height in inches.'
-            : 'Enter a valid height in centimeters.',
-      });
-    }
-    if (!isValidWeight(w, unitSystem)) {
-      errors.push({
-        key: 'weight',
-        message:
-          unitSystem === 'imperial'
-            ? 'Enter a valid weight in pounds.'
-            : 'Enter a valid weight in kilograms.',
-      });
-    }
-    if (!Number.isInteger(a) || a < 13 || a > 120) {
-      errors.push({ key: 'age', message: 'Enter an age between 13 and 120.' });
-    }
-    if (biologicalSex === null) {
-      errors.push({ key: 'biologicalSex', message: 'Select biological sex.' });
-    }
-    if (rank === null) {
-      errors.push({ key: 'declaration', message: 'Select a declaration.' });
+    const metricsBlank = intakeMetricsAreBlank({
+      height,
+      weight,
+      age,
+      biologicalSex,
+      rank,
+    });
+    if (!metricsBlank) {
+      const h = Number(height);
+      const w = Number(weight);
+      const a = Number(age);
+      if (!isValidHeight(h, unitSystem)) {
+        errors.push({
+          key: 'height',
+          message:
+            unitSystem === 'imperial'
+              ? 'Enter a valid height in inches.'
+              : 'Enter a valid height in centimeters.',
+        });
+      }
+      if (!isValidWeight(w, unitSystem)) {
+        errors.push({
+          key: 'weight',
+          message:
+            unitSystem === 'imperial'
+              ? 'Enter a valid weight in pounds.'
+              : 'Enter a valid weight in kilograms.',
+        });
+      }
+      if (!Number.isInteger(a) || a < 13 || a > 120) {
+        errors.push({ key: 'age', message: 'Enter an age between 13 and 120.' });
+      }
+      if (biologicalSex === null) {
+        errors.push({ key: 'biologicalSex', message: 'Select biological sex.' });
+      }
+      if (rank === null) {
+        errors.push({ key: 'declaration', message: 'Select a declaration.' });
+      }
     }
     return FIELD_ORDER.flatMap((key) => errors.filter((e) => e.key === key));
   }, [email, username, nickname, height, weight, age, rank, biologicalSex, unitSystem]);
@@ -369,7 +400,14 @@ function IntakeForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!canSubmit || !rank || !biologicalSex) {
+    const metricsBlank = intakeMetricsAreBlank({
+      height,
+      weight,
+      age,
+      biologicalSex,
+      rank,
+    });
+    if (!canSubmit || (!metricsBlank && (!rank || !biologicalSex))) {
       setAttemptedSubmit(true);
       const first = fieldErrors[0];
       if (first) {
@@ -380,19 +418,20 @@ function IntakeForm({
     setSubmitting(true);
     setError(null);
     try {
-      const heightValue = Number(height);
-      const weightValue = Number(weight);
-      const heightCm = unitSystem === 'imperial' ? inToCm(heightValue) : heightValue;
-      const weightKg = unitSystem === 'imperial' ? lbToKg(weightValue) : weightValue;
-      const profileResult = await onSaveProfile({
-        heightCm,
-        weightKg,
-        birthYear: nowYear - Number(age),
-        biologicalSex,
-        perceivedClassification: rank,
+      const identity = {
         username: username.trim(),
         nickname: nickname.trim(),
-      });
+      };
+      const profileResult = metricsBlank
+        ? await onSaveIdentity(identity)
+        : await onSaveProfile({
+            heightCm: unitSystem === 'imperial' ? inToCm(Number(height)) : Number(height),
+            weightKg: unitSystem === 'imperial' ? lbToKg(Number(weight)) : Number(weight),
+            birthYear: nowYear - Number(age),
+            biologicalSex: biologicalSex!,
+            perceivedClassification: rank!,
+            ...identity,
+          });
       if (profileResult.error) {
         track(
           'intake_save_failed',
@@ -596,7 +635,7 @@ function IntakeForm({
             {nicknameError}
           </p>
         ) : (
-          <p className="text-xs text-muted">Default workout callsign (max 50 characters)</p>
+          <p className="text-xs text-muted">Your name (max 50 characters)</p>
         )}
       </div>
 
@@ -813,7 +852,7 @@ export default function IntakePage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { isAuthenticated, isAuthLoading, user, updateEmail, updatePassword } = useAmrapAuth();
-  const { profile, loading, save } = useAthleteProfile();
+  const { profile, loading, save, saveIdentity } = useAthleteProfile();
   const nowYear = new Date().getFullYear();
 
   if (isAuthLoading || loading) {
@@ -853,6 +892,7 @@ export default function IntakePage() {
         nowYear={nowYear}
         userId={user?.id ?? null}
         onSaveProfile={save}
+        onSaveIdentity={saveIdentity}
         onUpdateEmail={updateEmail}
         onUpdatePassword={updatePassword}
         onSaved={(notices) =>

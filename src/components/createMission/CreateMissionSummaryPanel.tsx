@@ -81,7 +81,7 @@ export function CreateMissionSummaryPanel({
     ? 'Creating…'
     : scheduleMode === 'rally'
       ? 'Schedule rally point'
-      : 'Open rally point';
+      : 'Launch';
 
   return (
     <form id="create-mission-form" className="card space-y-4 p-6" onSubmit={onSubmit}>

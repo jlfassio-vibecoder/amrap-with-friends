@@ -512,7 +512,7 @@ export default function CreateMissionPage() {
                 capReached={capReached}
                 error={error}
                 errorAction={errorAction}
-                unsignedHint={isAuthenticated ? null : 'Open rally point will ask you to sign in.'}
+                unsignedHint={isAuthenticated ? null : 'Launch will ask you to sign in.'}
                 loading={loading}
                 onNicknameChange={setNickname}
                 onDurationChange={handleSummaryDurationChange}
@@ -555,6 +555,9 @@ export default function CreateMissionPage() {
           }}
           initialPasswordMode={authOpenMode}
           onAuthenticated={handleAuthSuccess}
+          guestAllowed={false}
+          heading="Save & Launch"
+          subtitle="Create an account to hit the rally point and join the leaderboard."
         />
       ) : null}
     </main>

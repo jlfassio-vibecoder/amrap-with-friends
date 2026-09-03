@@ -38,10 +38,10 @@ describe('AuthModal', () => {
     render(<AuthModal onClose={() => {}} />);
 
     expect(screen.queryByRole('tab', { name: 'Magic link' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Email me a sign-in link' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Use an email link instead' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Send magic link' })).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Email me a sign-in link' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Use an email link instead' }));
     expect(screen.getByRole('button', { name: 'Send magic link' })).toBeTruthy();
   });
 
@@ -68,5 +68,24 @@ describe('AuthModal', () => {
     expect(screen.getByRole('heading', { name: 'Create account' })).toBeTruthy();
     const createButtons = screen.getAllByRole('button', { name: 'Create account' });
     expect(createButtons.some((button) => button.getAttribute('type') === 'submit')).toBe(true);
+  });
+
+  it('shows Launch heading and hides guest copy when required', () => {
+    isMagicLinkAuthEnabledMock.mockReturnValue(false);
+
+    render(
+      <AuthModal
+        onClose={() => {}}
+        guestAllowed={false}
+        heading="Save & Launch"
+        subtitle="Create an account to hit the rally point and join the leaderboard."
+      />
+    );
+
+    expect(screen.getByRole('heading', { name: 'Save & Launch' })).toBeTruthy();
+    expect(
+      screen.getByText('Create an account to hit the rally point and join the leaderboard.')
+    ).toBeTruthy();
+    expect(screen.queryByText(/Optional — play as a guest/)).toBeNull();
   });
 });

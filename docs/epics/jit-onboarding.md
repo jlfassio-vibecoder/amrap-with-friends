@@ -4,7 +4,7 @@
 **Status:** Draft — awaiting review  
 **Last updated:** 2026-09-03
 
-**Related:** [create-account-workflow.md](../audits/create-account-workflow.md) (2026-08-27), [create-account-reentry-2026-09.md](../audits/create-account-reentry-2026-09.md), coach stuck list (`needs_profile`), onboarding architecture assessment (2026-09-03).
+**Related:** [jit-onboarding-workflow.html](../html-examples/jit-onboarding-workflow.html) (canonical Launch sequence — not a visual spec), [create-account-workflow.md](../audits/create-account-workflow.md) (2026-08-27), [create-account-reentry-2026-09.md](../audits/create-account-reentry-2026-09.md), coach stuck list (`needs_profile`), onboarding architecture assessment (2026-09-03).
 
 ---
 
@@ -14,16 +14,18 @@ Maximize conversion from “I want to train” to “timer is running.”
 
 Today, signup often lands on a long intake dossier (height, weight, age, sex, rank, username, nickname) **before** the athlete configures a mission. Magic-link-era accounts from late August show the failure mode: auth succeeded, dossier never saved, never returned.
 
-**Target journey (signed-out visitor):**
+**Target journey (signed-out visitor)** — sequencing from [`jit-onboarding-workflow.html`](../html-examples/jit-onboarding-workflow.html). That file is a **flow mock**, not a visual spec: do not copy its colors, type, layout chrome, or extra protocol options.
 
-1. Land on `/create` (no auth wall).
-2. Pick a workout and set duration / nickname / options.
-3. Tap **Launch**.
-4. If needed: fast auth (password or Google — not magic link).
-5. If needed: one-screen **Micro-Dossier** with a one-click tactical callsign.
-6. Mission creates and they enter the rally point — **no second Launch click**.
+1. Land on `/create` (no auth wall). Configure the mission (workout, duration, mission name). Copy: no account required to **configure**.
+2. Tap **Launch**. `/create` **stays mounted** under every overlay (loss aversion — the form is still visible / intact).
+3. If unsigned → **auth overlay** on top of create (not a navigation to `/intake`). Primary Google, then email/password; magic link buried. Dismiss overlay → back to the same form, no mission created.
+4. On auth success, **resume the same Launch chain** (no second Launch tap). If identity is still missing → **identity overlay** on the same create screen.
+5. Identity overlay suggests a tactical name (scramble, then enable accept). Athlete can regenerate or type their own. Username is derived silently. Primary: **Accept & Launch** → upsert identity → `create_mission` with the pending form → rally point.
+6. Rally point shows the configured mission and the accepted name. Athlete taps **Start** for the clock. They are not dumped into Live.
 
-Under ten seconds of friction after “Launch” for a Google user who accepts the suggested callsign.
+If already signed in with username + nickname, Launch skips both overlays and creates immediately.
+
+Under ten seconds of friction after Launch for a Google user who accepts the suggestion.
 
 ---
 
@@ -37,7 +39,7 @@ The phased shape is right. These amendments are required for this codebase and f
 | Post-auth always → `/create`                   | **Amend** | Do **not** yank every success to `/create`. Exceptions: guest-open mission/rally/join paths (stay put), `/campaign/join` + `/squad/join` (finish join), password-recovery return, explicit `?next=` when present. Default for **Create account / homepage / unsigned `/create` gate** success → `/create`. |
 | Guest can use `/create` without dossier        | **Keep**  | Remove `RequireIntake` from the `/create` **route**. Defer identity to Launch (Phase 3). Guests may configure; they cannot call `create_mission` until auth + micro-dossier.                                                                                                                               |
 | Micro-dossier = username + nickname only       | **Keep**  | Requires a **schema migration**: `height_cm`, `weight_kg`, `birth_year`, `biological_sex`, `perceived_classification` are `NOT NULL` today. Phase 2 must nullable-or-default those columns and teach HUD / overtraining / upsert to tolerate missing metrics.                                              |
-| JIT modal on Launch + auto-ignite              | **Keep**  | Preserve create-form state; after upsert, immediately `create_mission` and navigate.                                                                                                                                                                                                                       |
+| JIT overlay on Launch + auto-ignite            | **Keep**  | Preserve create-form state; after upsert, immediately `create_mission` and land on rally point (Start — not Live). Sequence locked to the HTML workflow mock.                                                                                                                                               |
 | Server username/nickname completeness          | **Keep**  | Matches coach stuck semantics and closes client/server gap (EXISTS-only today).                                                                                                                                                                                                                            |
 | Randomized tactical callsign, one-click accept | **Keep**  | Pure generator in `src/lib/` with tests; maps to **nickname** (display) and a legal **username** (sanitized, uniqueness retry).                                                                                                                                                                            |
 
@@ -47,30 +49,38 @@ The phased shape is right. These amendments are required for this codebase and f
 
 ## Current state (baseline)
 
-| Area                  | Today                                                                                                                                                   | Gap                                                   |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `/create` gate        | [`RequireIntake`](../../src/components/RequireIntake.tsx) `guestMode="sign-in"` — soft auth wall, then hard redirect to `/intake` if profile incomplete | Blocks browsing; forces full dossier before create UI |
-| Post-signup routing   | Header Create account → `/intake?next=…` (Sep 2); hero → `/intake?next=/create`                                                                         | Sends new users into long form before value           |
-| Auth defaults         | Magic link flag off; Google flagged; password primary when flags off                                                                                    | Must stay definitive in UI hierarchy                  |
-| Intake form           | Full dossier on [`IntakePage`](../../src/pages/IntakePage.tsx)                                                                                          | Too much before first mission                         |
-| `athlete_profiles`    | Metrics + sex + rank **NOT NULL**; username/nickname required on upsert                                                                                 | Cannot insert micro row without migration             |
-| `create_mission` gate | `athlete_profiles` **EXISTS** only                                                                                                                      | Blank names could pass server; client is stricter     |
-| Launch                | Single button after form fill; nickname field on create page                                                                                            | No JIT identity modal; no auto-retry after intake     |
-| Stuck cohort          | Coach `needs_profile` — auth users, no profile, often magic-link era                                                                                    | This epic is the product fix                          |
+Phases 1–2 leftovers from the workflow-mock update are implemented on `fix/homepage-scheduled-missions-empty-bar`. Apply [`20260903120000_athlete_profile_identity_optional_metrics.sql`](../../supabase/migrations/20260903120000_athlete_profile_identity_optional_metrics.sql) with `supabase db push` before calling `upsert_athlete_identity` in a remote environment.
+
+| Area                  | Today                                                                                                                                                          | Remaining gap                                      |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `/create` gate        | Ungated. Signed-out visitors configure; Launch opens AuthModal (**Save & Launch**). Incomplete identity soft-blocks with `/intake?next=/create`                | Phase 3 identity overlay                           |
+| Post-signup routing   | Header / hero / generic signup → `/create` via [`postAuthDestination.ts`](../../src/lib/auth/postAuthDestination.ts). Guest-open and join paths stay put        | —                                                  |
+| Auth defaults         | Password + Google primary; magic link buried as **Use an email link instead** when the flag is on                                                              | —                                                  |
+| Intake form           | **Your profile** / **HUD metrics**. Username + nickname required; body metrics all-or-nothing (blank → identity upsert)                                        | Phase 3 collects identity at Launch, not here      |
+| `athlete_profiles`    | Metrics + rank nullable; `upsert_athlete_identity` exists                                                                                                      | Remote migration until `supabase db push`          |
+| `create_mission` gate | `athlete_profiles` **EXISTS** only                                                                                                                             | Phase 4 username/nickname guard                    |
+| Launch                | Overlay + resume handler; now-path submit is **Launch**. Identity still a soft-block link                                                                      | Phase 3 Accept & Launch auto-ignite                |
+| Stuck cohort          | Coach `needs_profile` — auth users, no profile, often magic-link era                                                                                           | This epic is the product fix                       |
 
 ```mermaid
-flowchart LR
+flowchart TD
   subgraph today [Today]
     A1[Auth] --> I1[Full /intake]
     I1 --> C1[/create]
     C1 --> L1[Launch]
   end
 
-  subgraph target [Target]
-    A2[/create browse] --> L2[Launch]
-    L2 --> Auth2[Auth if needed]
-    Auth2 --> M2[Micro-Dossier if needed]
-    M2 --> RP[Rally point]
+  subgraph target [Target — overlays on /create]
+    C2["/create configure — stays mounted"] --> L2[Launch]
+    L2 --> AuthQ{Signed in?}
+    AuthQ -->|no| Auth2[Auth overlay]
+    Auth2 -->|dismiss| C2
+    Auth2 -->|success resume Launch| IdQ
+    AuthQ -->|yes| IdQ{Username and nickname?}
+    IdQ -->|missing| M2[Identity overlay]
+    M2 -->|Accept and Launch| Create
+    IdQ -->|complete| Create[create_mission]
+    Create --> RP[Rally point — Start clock]
   end
 ```
 
@@ -92,24 +102,30 @@ Instrument: reuse `track()` — add props `onboarding_path: 'micro_dossier' | 'f
 
 ## Master architecture
 
+Canonical Launch handler (same function after auth success — **no second Launch click**):
+
 ```
-/create (no RequireIntake)
-    ↓ configure mission (local state)
+/create stays mounted (local mission config)
 Launch
+    ↓ validate create-form fields
+unsigned?
+    ↓ yes → Auth overlay on /create (form visible underneath)
+         dismiss → stay on /create, form intact, stop
+         success → hide overlay, re-enter this handler
+    ↓ no
+profileNeedsIntake (missing row or blank username/nickname)?
+    ↓ yes → Identity overlay on /create
+         scramble suggestion → enable Accept
+         regenerate or type-your-own (callsign / Your name)
+         username derived silently (sanitize + collision retry)
+         Accept & Launch → upsert_athlete_identity → hide overlay
+    ↓ no (identity already complete)
+create_mission(...) with the pending form
     ↓
-unsigned? → AuthModal (password / Google primary)
-    ↓ session
-profile missing or blank username/nickname?
-    ↓ yes
-MicroDossierModal (suggested callsign → username + nickname)
-    ↓ upsert_athlete_profile (micro)  OR  upsert_athlete_identity (new thin RPC)
-    ↓
-create_mission(...)   -- same click chain
-    ↓
-navigate /mission/:id
+navigate /mission/:id  (rally point: Start clock — not Live)
 ```
 
-**Server guardrail (Phase 4):** `create_mission` / campaign / squad RPCs require non-blank username **and** nickname, not mere EXISTS. Standardized error → client opens Micro-Dossier.
+**Server guardrail (Phase 4):** `create_mission` / campaign / squad RPCs require non-blank username **and** nickname, not mere EXISTS. Standardized error → client opens the identity overlay.
 
 ---
 
@@ -145,7 +161,10 @@ navigate /mission/:id
    - Soft copy optional: “Launch will ask you to sign in.”
 
 4. **Launch without session**
-   - Opens AuthModal (`sign-up` or `sign-in` as appropriate); on success, continue Phase 3 chain (or temporary: if Phase 3 not shipped, open Micro-Dossier stub / full intake only as fallback — prefer shipping 1+2+3 as one release train).
+   - Overlay on `/create` (create form remains underneath). Auth copy is **Save & Launch** / why they need an account (rally point + leaderboard) — not a trip to `/intake`.
+   - Primary: **Continue with Google**; then email + password **Sign in / Sign up**; magic link as **Use an email link instead**.
+   - Dismiss (backdrop) cancels auth only; form state kept.
+   - On success, **resume the same Launch handler** (Phase 3). If Phase 3 is not shipped yet: incomplete identity soft-blocks on `/create` with a link to `/intake?next=/create` — never auto-dump into the long form. Prefer shipping 1+2+3 as one release train.
 
 ### Explicit non-goals (Phase 1)
 
@@ -155,12 +174,12 @@ navigate /mission/:id
 
 ### Exit criteria
 
-- [ ] Magic link not default anywhere in SPA/hero when flag false.
-- [ ] New password/Google signup from header/hero lands on `/create`, not `/intake`.
-- [ ] Signed-out user can open `/create` and select a template without a modal.
-- [ ] Joining a live mission as guest still does not force `/create`.
-- [ ] Unit tests for `postAuthDestination` + AuthForm default method.
-- [ ] **P1 interim:** Open rally point while unsigned opens AuthModal; incomplete identity soft-blocks on `/create` with a link to `/intake?next=/create` (form preserved — no auto intake dump). Full JIT Micro-Dossier is Phase 3.
+- [x] Magic link not default anywhere in SPA/hero when flag false.
+- [x] New password/Google signup from header/hero lands on `/create`, not `/intake`.
+- [x] Signed-out user can open `/create` and select a template without a modal.
+- [x] Joining a live mission as guest still does not force `/create`.
+- [x] Unit tests for `postAuthDestination` + AuthForm default method.
+- [x] **P1 interim:** Launch while unsigned opens AuthModal (**Save & Launch**, `guestAllowed={false}`); incomplete identity soft-blocks on `/create` with a link to `/intake?next=/create` (form preserved — no auto intake dump). Full JIT identity overlay is Phase 3.
 
 ---
 
@@ -203,53 +222,84 @@ Pure module e.g. [`src/lib/onboarding/tacticalCallsign.ts`](../../src/lib/onboar
 
 ### Exit criteria
 
-- [x] Migration applied; micro upsert succeeds without metrics. (`20260903120000_athlete_profile_identity_optional_metrics.sql` + `upsert_athlete_identity`)
+- [x] Migration applied; micro upsert succeeds without metrics. (`20260903120000_athlete_profile_identity_optional_metrics.sql` + `upsert_athlete_identity`). Remote: `supabase db push`.
 - [x] Existing full profiles still load and editable. (`parseAthleteProfile` null-tolerant; full `upsert_athlete_profile` unchanged)
 - [x] HUD does not error on null metrics. (soft CTA + `quotasFromProfile` fallback)
 - [x] Callsign helper tested; no network in pure lib. (`src/lib/onboarding/tacticalCallsign.ts`)
+- [x] `/intake` saves identity-only when metrics are blank; any filled metric requires the full set.
 
 ---
 
-## Phase 3 — State-preserving JIT Micro-Dossier modal
+## Phase 3 — State-preserving JIT identity overlay
 
-**Goal:** Identity is collected at **Launch**, not at route entry. One click through auth + callsign → mission live.
+**Goal:** Identity is collected at **Launch**, not at route entry. Auth overlay → identity overlay → rally point on the **same Launch chain**. Sequence must match [`jit-onboarding-workflow.html`](../html-examples/jit-onboarding-workflow.html). Do not import that mock’s palette, type, or decorative chrome.
 
 **Depends on:** Phase 2 schema + identity upsert; Phase 1 ungated `/create`.
 
 ### Launch intercept ([`CreateMissionPage`](../../src/pages/CreateMissionPage.tsx))
 
-On Launch / create submit:
+One handler. After auth success, call it again — do not require a second Launch tap.
 
-1. Validate create-form fields (duration, workout, etc.) as today.
-2. If `!isAuthenticated` → open AuthModal; on success, **resume same Launch handler** (do not require second click).
-3. If authenticated but `profileNeedsIntake` (missing row or blank username/nickname) → open **MicroDossierModal**.
-4. On micro save success → call `create_mission` with pending form state → navigate to rally point.
-5. Preserve all create-form state across auth + modal (React state / ref; do not remount page).
+1. Validate create-form fields (duration, workout, mission name, etc.) as today.
+2. If `!isAuthenticated` → open **auth overlay** on `/create`. Create stays in the tree (loss aversion). Backdrop dismiss → hide overlay, stop, form intact.
+3. If authenticated but `profileNeedsIntake` → open **identity overlay** on `/create`.
+4. If authenticated and identity complete → **ignite**: `create_mission` with pending form state → navigate to `/mission/:id` (rally point).
+5. After identity upsert success → hide overlay → **ignite** immediately (same as step 4).
+6. Preserve all create-form state across both overlays (React state / ref; do not remount `/create`).
 
-### MicroDossierModal UX
+### Auth overlay (unsigned Launch)
 
-- Overlay on `/create` (focus trap, Esc cancels without wiping form).
-- Shows suggested **callsign** (nickname) prominently; username shown as secondary “handle” or derived silently.
-- Primary CTA: **Use callsign** (accept suggestion) — one click.
-- Secondary: edit nickname / username before save.
-- Copy in plain English: why we need a name (leaderboard / squad), not military chrome on the button.
-- On success: close modal and **immediately** ignite create (Phase 3 goal).
-- On cancel: stay on `/create` with form intact; no mission created.
+Matches the mock’s **order of controls**, not its look:
 
-### Interaction with create-page nickname field
+| Beat | Behavior |
+| ---- | -------- |
+| Title / why | Save & Launch. Account is so they can hit the rally point and the leaderboard. |
+| Primary | Continue with Google |
+| Then | Email + password, **Sign in / Sign up** |
+| Buried | Use an email link instead |
+| Dismiss | Backdrop (and Esc) — no mission created |
+| Success | Hide overlay → resume Launch handler (identity overlay or ignite) |
 
-Today the page has a mission `nickname` field prefilled from profile. After micro-dossier:
+### Identity overlay (signed-in, incomplete profile)
 
-- Prefill mission nickname from profile nickname / accepted callsign.
-- Avoid asking for three names — micro-dossier nickname **is** the workout callsign default.
+Matches the mock’s **beats**, not its look:
+
+| Beat | Behavior |
+| ---- | -------- |
+| Why | We need a name for the leaderboard and your squad. Accept or edit. |
+| Suggestion | Generated nickname (`Ghost-Actual` / `Viper-2`) via [`suggestAthleteIdentity`](../../src/lib/onboarding/tacticalCallsign.ts). Brief scramble, then reveal. **Accept stays disabled until the suggestion settles.** |
+| Regenerate | New suggestion + scramble again. |
+| Type your own | Reveal a single **Your name** field (plain English). Hide the generated display while editing. Not a second username field. |
+| Username | Derived silently from the accepted name (`Ghost_Actual`). Collision: retry / regenerate. Athlete never fills two identity fields. |
+| Primary | **Accept & Launch** — one click. Saving copy while upserting. Then ignite. |
+| Button chrome | Plain English on the clickable control. Do not put “callsign” or “dossier” on the button. |
+
+Esc may close the identity overlay without creating a mission (form intact). The mock has no extra cancel button; do not add a long-form `/intake` escape hatch as the primary path.
+
+### After ignite (rally point)
+
+- Mission name, workout, and duration from the create form — not a blank mission.
+- Athlete display name is the accepted identity nickname.
+- Land on **rally point** (`/mission/:id`): countdown / **Start**, not already in Live.
+
+### Mission name vs athlete name
+
+The mock treats these as two different things. Keep them that way:
+
+| Field | Whose | Where |
+| ----- | ----- | ----- |
+| Mission name | This workout | Create form (today’s mission nickname / title field) |
+| Athlete name | The person | Identity overlay only |
+
+Do not ask for a third name. After identity exists, the create form may still prefill the **mission** nickname from the athlete name if that field is empty — that is a convenience, not a second identity step.
 
 ### Other routes (same release or fast follow)
 
-| Route                           | Behavior                                                                                                                        |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `/campaign/new`, host actions   | Same JIT pattern or shared `ensureAthleteIdentity()` helper                                                                     |
-| `/campaign/join`, `/squad/join` | On Intake-required / incomplete identity → Micro-Dossier (or thin ensure helper) then retry join — **not** a dead-end RPC error |
-| `/hud`, `/squad` browse         | Prefer soft CTA over hard `/intake` redirect when metrics optional; identity still required where RPCs need names               |
+| Route                           | Behavior                                                                                                              |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `/campaign/new`, host actions   | Same JIT pattern or shared `ensureAthleteIdentity()` helper                                                           |
+| `/campaign/join`, `/squad/join` | Incomplete identity → identity overlay then retry join — **not** a dead-end RPC error                                 |
+| `/hud`, `/squad` browse         | Prefer soft CTA over hard `/intake` redirect when metrics optional; identity still required where RPCs need names     |
 
 `RequireIntake` either becomes a thin wrapper around `ensureAthleteIdentity` for remaining hard routes or is retired from create/campaign entry in favor of Launch-time checks.
 
@@ -260,10 +310,12 @@ Today the page has a mission `nickname` field prefilled from profile. After micr
 
 ### Exit criteria
 
-- [ ] Signed-out → configure → Launch → auth → accept callsign → mission route without second Launch.
-- [ ] Signed-in incomplete profile → Launch → modal → mission (no `/intake` navigation).
-- [ ] Cancel modal leaves form state.
-- [ ] Component + handler tests (mock upsert + create_mission).
+- [ ] Signed-out → configure → Launch → auth overlay → Google/password → identity overlay → Accept & Launch → rally point, **without a second Launch**.
+- [ ] Auth overlay dismiss leaves `/create` form intact and does not create a mission.
+- [ ] Signed-in incomplete profile → Launch → identity overlay → rally point (no `/intake` navigation).
+- [ ] Signed-in complete profile → Launch → rally point with no overlays.
+- [ ] Rally point shows the configured mission and accepted name; clock starts only on Start.
+- [ ] Component + handler tests (mock upsert + `create_mission`).
 
 ---
 
@@ -286,7 +338,7 @@ Today the page has a mission `nickname` field prefilled from profile. After micr
 
 2. **Stable error** — e.g. raise `Intake required` remains OK if client already maps it, **or** prefer a dedicated message / `ERRCODE` / JSON `{ ok:false, code:'athlete_identity_required' }` consistent with existing RPC styles. Document the one string/code the SPA keys on.
 
-3. Client map: that code opens Micro-Dossier (or `ensureAthleteIdentity`) and retries the original action once.
+3. Client map: that code opens the identity overlay (or `ensureAthleteIdentity`) and retries the original action once.
 
 4. Coach stuck list stays valid: `needs_profile` / `intake_incomplete` still describe the same population.
 
@@ -304,7 +356,7 @@ Today the page has a mission `nickname` field prefilled from profile. After micr
 | Train                | Phases                                            | Notes                                                                                                                   |
 | -------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | **T0**               | 1 (auth routing + ungated `/create` browse) alone | Only if Launch still blocks safely; avoid shipping ungated create with Launch → full `/intake` (regression). Prefer T1. |
-| **T1 (recommended)** | 1 + 2 + 3                                         | One conversion story: browse → Launch → auth → callsign → mission                                                       |
+| **T1 (recommended)** | 1 + 2 + 3                                         | One conversion story: browse → Launch → auth overlay → identity overlay → rally point                                   |
 | **T2**               | 4                                                 | Guardrail; can overlap end of T1                                                                                        |
 
 Do **not** ship Phase 1 guest `/create` without Phase 3 Launch identity, or conversion will look like “Launch dumps me into a long form.”
@@ -321,10 +373,10 @@ Do **not** ship Phase 1 guest `/create` without Phase 3 Launch identity, or conv
 
 ---
 
-## Open questions (resolve before Phase 2 build)
+## Open questions
 
-1. **Default perceived_classification / sex when metrics omitted** — leave NULL and teach HUD, or server default `civilian` / unknown? Prefer **NULL + HUD CTA** for honesty.
-2. **Username visible in Micro-Dossier?** — show editable handle vs derive silently from callsign (collision retry invisible).
+1. **Default perceived_classification / sex when metrics omitted** — **Resolved (Phase 2):** NULL + HUD CTA.
+2. **Username visible in identity overlay?** — **Resolved (workflow mock):** derive silently from the accepted name. One editable field if they type their own (**Your name**). Collision retry is invisible.
 3. **Campaign/squad in T1 or fast follow?** — create-mission path is P0; join paths are P0 for the dead-end error gap.
 4. **Retire `RequireIntake` on `/hud`?** — signed-in without identity could see HUD empty state + CTA instead of forced intake; decide in Phase 3.
 
@@ -335,7 +387,7 @@ Do **not** ship Phase 1 guest `/create` without Phase 3 Launch identity, or conv
 | Area             | Files                                                                                                                                     |
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | Auth destination | `src/lib/auth/postAuthDestination.ts`, `AuthHeaderActions`, `HeroBelowLogo`, `AuthForm` / `AuthModal`, `RequireIntake` usage in `App.tsx` |
-| Create Launch    | `CreateMissionPage.tsx`, new `MicroDossierModal.tsx`, callsign lib + tests                                                                |
+| Create Launch    | `CreateMissionPage.tsx`, auth overlay on Launch, identity overlay (suggestion + Accept & Launch), callsign lib + tests                    |
 | Profile API      | `athleteProfile.ts`, optional `upsert_athlete_identity`                                                                                   |
 | Schema / RPCs    | New migration(s); `upsert_*`, `create_mission`, campaign/squad gates                                                                      |
 | HUD resilience   | `hud/*` consumers, Intake page split (identity vs metrics)                                                                                |
@@ -345,7 +397,7 @@ Do **not** ship Phase 1 guest `/create` without Phase 3 Launch identity, or conv
 
 ## Phase checklist (roll-up)
 
-- [ ] **P1** Auth primary = password/Google; post-auth policy; `/create` ungated for browse
-- [ ] **P2** Nullable metrics + identity upsert; HUD tolerates nulls; callsign generator
-- [ ] **P3** Launch intercept → Micro-Dossier → auto `create_mission`
+- [x] **P1** Auth primary = password/Google; post-auth policy; `/create` ungated for browse; Launch **Save & Launch** overlay
+- [x] **P2** Nullable metrics + identity upsert; HUD tolerates nulls; callsign generator; optional `/intake` metrics
+- [ ] **P3** Launch → auth overlay if needed → identity overlay if needed → auto `create_mission` → rally point
 - [ ] **P4** RPC username/nickname guard + client retry via modal

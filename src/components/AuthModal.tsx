@@ -9,6 +9,10 @@ interface AuthModalProps {
    * modal stops telling people signing in that it was optional.
    */
   guestAllowed?: boolean;
+  /** Override the Sign in / Create account heading (Launch overlay). */
+  heading?: string;
+  /** Optional why-copy under the heading. */
+  subtitle?: string;
   /** Defaults to onClose. Header Create account uses this to send new accounts to /create. */
   onAuthenticated?: () => void;
 }
@@ -17,6 +21,8 @@ export function AuthModal({
   onClose,
   initialPasswordMode = 'sign-in',
   guestAllowed = true,
+  heading,
+  subtitle,
   onAuthenticated = onClose,
 }: AuthModalProps) {
   return (
@@ -34,6 +40,8 @@ export function AuthModal({
           onAuthenticated={onAuthenticated}
           initialPasswordMode={initialPasswordMode}
           guestAllowed={guestAllowed}
+          heading={heading}
+          subtitle={subtitle}
         />
       </div>
     </div>
