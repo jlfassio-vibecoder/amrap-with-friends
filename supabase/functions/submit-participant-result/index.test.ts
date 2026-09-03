@@ -66,6 +66,12 @@ Deno.test('computeLockedScore derives 302 from 4 rounds and 15 partial reps', ()
   }
 
   assertEquals(result.repsPerRound, 40);
+
+  assertEquals('breakdown' in result, true);
+  if (!('breakdown' in result)) {
+    return;
+  }
+
   assertEquals(result.breakdown, {
     baseScore: 175,
     pvi: 0,
