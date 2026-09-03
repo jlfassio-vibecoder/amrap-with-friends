@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { profileNeedsIntake } from './profileNeedsIntake';
+import { isIntakeRequiredMessage, profileNeedsIntake } from './profileNeedsIntake';
 
 describe('profileNeedsIntake', () => {
   it('is true when missing or profile is null', () => {
@@ -14,5 +14,13 @@ describe('profileNeedsIntake', () => {
 
   it('is false when both names are present', () => {
     expect(profileNeedsIntake({ username: 'ghost', nickname: 'Ghost' })).toBe(false);
+  });
+});
+
+describe('isIntakeRequiredMessage', () => {
+  it('matches server and mapped client copy', () => {
+    expect(isIntakeRequiredMessage('Intake required')).toBe(true);
+    expect(isIntakeRequiredMessage('Complete your profile before starting a campaign.')).toBe(true);
+    expect(isIntakeRequiredMessage('This campaign is full.')).toBe(false);
   });
 });

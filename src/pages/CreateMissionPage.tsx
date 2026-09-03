@@ -30,6 +30,7 @@ import { getSupabaseConfigError } from '@/lib/supabase';
 import { track } from '@/lib/analytics/track';
 import { quotasFromProfile } from '@/lib/hud/classificationQuotas';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
+import { useEnsureAthleteIdentity } from '@/hooks/useEnsureAthleteIdentity';
 import { useHudTelemetry } from '@/hooks/useHudTelemetry';
 import { useSmartRecovery } from '@/hooks/useSmartRecovery';
 import { coachWorkoutLockId } from '@/lib/smartRecovery/deriveCoachWorkoutPatterns';
@@ -37,7 +38,7 @@ import { firstAvailableCategoryForDuration } from '@/lib/workout/filterWorkoutTe
 import { CUSTOM_WORKOUT_INTENSITY_TIER } from '@/lib/workout/resolveTemplateIntensity';
 import { applyTemplate } from '@/lib/workout/templateToExercises';
 import { parseWorkoutText } from '@/lib/workout/parseWorkoutLines';
-import { profileNeedsIntake } from '@/lib/auth/profileNeedsIntake';
+import { isIntakeRequiredMessage } from '@/lib/auth/profileNeedsIntake';
 import type { PasswordMode } from '@/components/AuthForm';
 import {
   HOST_ACTIVE_MISSION_LIMIT,
@@ -46,10 +47,6 @@ import {
   rallyLocalDateTimeToIso,
   type RallyDay,
 } from '@/lib/mission/rallySchedule';
-
-const INTAKE_CREATE_HREF = '/intake?next=%2Fcreate';
-const PROFILE_INCOMPLETE_MESSAGE =
-  'Finish your profile (username and nickname) before opening a rally point.';
 
 // Copilot suggestion ignored: keep a local type to avoid coupling CreateMissionPage to IntakePage routing internals.
 type IntakeNavigationState = {
@@ -69,7 +66,10 @@ export default function CreateMissionPage() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { telemetry, isAuthenticated } = useHudTelemetry();
-  const { profile, missing, loading: profileLoading } = useAthleteProfile();
+  const { profile, loading: profileLoading } = useAthleteProfile();
+  const { ensureThen, overlay: identityOverlay } = useEnsureAthleteIdentity({
+    acceptLabel: 'Accept & Launch',
+  });
   const quotas = quotasFromProfile(profile);
   const [intakeNotices, setIntakeNotices] = useState<string[]>([]);
   const [workoutSource, setWorkoutSource] = useState<WorkoutSource>('library');
@@ -324,12 +324,12 @@ export default function CreateMissionPage() {
       return;
     }
 
-    if (profileNeedsIntake(profile, missing)) {
-      setError(PROFILE_INCOMPLETE_MESSAGE);
-      setErrorAction({ to: INTAKE_CREATE_HREF, label: 'Finish your profile' });
-      return;
-    }
+    ensureThen(() => {
+      void igniteMission();
+    });
+  }
 
+  async function igniteMission() {
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     let scheduledAt: string | undefined;
     if (scheduleMode === 'rally') {
@@ -367,6 +367,12 @@ export default function CreateMissionPage() {
       });
 
       if (result.error) {
+        if (isIntakeRequiredMessage(result.error.message)) {
+          ensureThen(() => {
+            void igniteMission();
+          });
+          return;
+        }
         setError(result.error.message);
         return;
       }
@@ -389,17 +395,11 @@ export default function CreateMissionPage() {
     submitAfterAuthRef.current = false;
     setAuthOpenMode(null);
 
-    if (profileNeedsIntake(profile, missing)) {
-      setError(PROFILE_INCOMPLETE_MESSAGE);
-      setErrorAction({ to: INTAKE_CREATE_HREF, label: 'Finish your profile' });
-      return;
-    }
-
     const form = document.getElementById('create-mission-form');
     if (form instanceof HTMLFormElement) {
       form.requestSubmit();
     }
-  }, [isAuthenticated, profileLoading, profile, missing]);
+  }, [isAuthenticated, profileLoading]);
 
   function handleAuthSuccess() {
     setAuthOpenMode(null);
@@ -560,6 +560,7 @@ export default function CreateMissionPage() {
           subtitle="Create an account to hit the rally point and join the leaderboard."
         />
       ) : null}
+      {identityOverlay}
     </main>
   );
 }
