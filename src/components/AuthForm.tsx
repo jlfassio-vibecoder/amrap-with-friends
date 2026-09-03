@@ -25,7 +25,10 @@ function initialOAuthReturnFeedback(): { status: FormStatus; message: string | n
     return { status: 'idle', message: null };
   }
 
-  const oauthError = readOAuthReturnError(new URLSearchParams(window.location.search));
+  const oauthError = readOAuthReturnError(new URLSearchParams(window.location.search), {
+    passwordResetEnabled: isPasswordResetEnabled(),
+    googleAuthEnabled: isGoogleAuthEnabled(),
+  });
   if (!oauthError) {
     return { status: 'idle', message: null };
   }

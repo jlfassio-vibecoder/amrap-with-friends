@@ -3,6 +3,10 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@/contexts/ThemeProvider';
 import { WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
+import {
+  markGuidedIgnitionComplete,
+  resetGuidedIgnitionPrefs,
+} from '@/lib/onboarding/guidedIgnitionPrefs';
 import CreateMissionPage from './CreateMissionPage';
 
 const createMock = vi.fn();
@@ -126,6 +130,7 @@ function renderPage() {
 
 afterEach(() => {
   cleanup();
+  resetGuidedIgnitionPrefs();
 });
 
 beforeEach(() => {
@@ -149,6 +154,10 @@ beforeEach(() => {
 });
 
 describe('CreateMissionPage Launch identity', () => {
+  beforeEach(() => {
+    markGuidedIgnitionComplete();
+  });
+
   it('ignites immediately when identity is complete', async () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Pick workout' }));
@@ -220,6 +229,80 @@ describe('CreateMissionPage Launch identity', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Launch' }));
 
     expect(screen.getByText('Save & Launch')).toBeTruthy();
+    expect(createMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('CreateMissionPage Guided Ignition', () => {
+  beforeEach(() => {
+    resetGuidedIgnitionPrefs();
+  });
+
+  it('launches first-contact and navigates to the rally point', async () => {
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set my baseline' }));
+
+    await waitFor(() => {
+      expect(createMock).toHaveBeenCalled();
+    });
+    expect(createMock.mock.calls[0]?.[0]).toMatchObject({
+      templateId: 'first-contact',
+      nickname: 'Ghost',
+    });
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith('/mission/m1');
+    });
+  });
+
+  it('opens identity overlay when profile is incomplete, then navigates after accept', async () => {
+    authState.profile = null;
+    authState.missing = true;
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set my baseline' }));
+
+    expect(await screen.findByRole('heading', { name: 'Your name' })).toBeTruthy();
+    expect(createMock).not.toHaveBeenCalled();
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Accept & Launch' })).toHaveProperty(
+        'disabled',
+        false
+      )
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Accept & Launch' }));
+
+    await waitFor(() => {
+      expect(saveIdentityMock).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(createMock).toHaveBeenCalled();
+    });
+    expect(createMock.mock.calls[0]?.[0]).toMatchObject({
+      templateId: 'first-contact',
+    });
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith('/mission/m1');
+    });
+  });
+
+  it('opens Save & Launch auth when unsigned and does not create yet', () => {
+    authState.isAuthenticated = false;
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set my baseline' }));
+
+    expect(screen.getByText('Save & Launch')).toBeTruthy();
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
+  it('skip closes the overlay without creating a mission', () => {
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: /Skip and browse/ }));
+
+    expect(screen.queryByRole('dialog', { name: /Determine Your Baseline/i })).toBeNull();
     expect(createMock).not.toHaveBeenCalled();
   });
 });

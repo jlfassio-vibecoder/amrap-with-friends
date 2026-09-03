@@ -1,22 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { isDuplicateAccountError, mapAuthError } from './mapAuthError';
-
-vi.mock('@/lib/auth/authFeatures', () => ({
-  isPasswordResetEnabled: vi.fn(() => false),
-  isGoogleAuthEnabled: vi.fn(() => false),
-}));
-
-import { isGoogleAuthEnabled, isPasswordResetEnabled } from '@/lib/auth/authFeatures';
-
-const isPasswordResetEnabledMock = vi.mocked(isPasswordResetEnabled);
-const isGoogleAuthEnabledMock = vi.mocked(isGoogleAuthEnabled);
-
-afterEach(() => {
-  isPasswordResetEnabledMock.mockReset();
-  isPasswordResetEnabledMock.mockReturnValue(false);
-  isGoogleAuthEnabledMock.mockReset();
-  isGoogleAuthEnabledMock.mockReturnValue(false);
-});
 
 describe('mapAuthError', () => {
   it('maps duplicate signup when reset and Google are off', () => {
@@ -95,12 +78,8 @@ describe('mapAuthError', () => {
     expect(mapAuthError('Rate limit exceeded')).toBe('Rate limit exceeded');
   });
 
-  it('reads flags when options omit them', () => {
-    isPasswordResetEnabledMock.mockReturnValue(true);
-    isGoogleAuthEnabledMock.mockReturnValue(true);
-    expect(mapAuthError('Invalid login credentials')).toBe(
-      'Email or password is wrong. Reset it if you forgot, or Continue with Google.'
-    );
+  it('defaults omitted flags to off', () => {
+    expect(mapAuthError('Invalid login credentials')).toBe('Email or password is wrong.');
   });
 });
 

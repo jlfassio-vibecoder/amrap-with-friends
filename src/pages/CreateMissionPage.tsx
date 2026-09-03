@@ -104,6 +104,7 @@ export default function CreateMissionPage() {
   const [activeCount, setActiveCount] = useState<number | null>(null);
   const [authOpenMode, setAuthOpenMode] = useState<PasswordMode | null>(null);
   const submitAfterAuthRef = useRef(false);
+  const guidedLaunchTemplateRef = useRef<WorkoutTemplate | null>(null);
   const [showGuidedIgnition, setShowGuidedIgnition] = useState(() => !hasCompletedGuidedIgnition());
 
   useEffect(() => {
@@ -297,11 +298,12 @@ export default function CreateMissionPage() {
     });
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function beginLaunch(template?: WorkoutTemplate) {
     setError(null);
 
-    if (workoutSource === 'library' && !selectedTemplate) {
+    const launchTemplate = template ?? guidedLaunchTemplateRef.current ?? undefined;
+
+    if (workoutSource === 'library' && !selectedTemplate && !launchTemplate) {
       setError('Select a workout from the library before creating a mission.');
       return;
     }
@@ -333,12 +335,23 @@ export default function CreateMissionPage() {
       return;
     }
 
-    ensureThen(() => {
-      void igniteMission();
+    ensureThen((accepted) => {
+      void igniteMission(true, {
+        template: launchTemplate ?? guidedLaunchTemplateRef.current ?? undefined,
+        nickname: accepted?.nickname,
+      });
     });
   }
 
-  async function igniteMission(retryAllowed = true) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    beginLaunch();
+  }
+
+  async function igniteMission(
+    retryAllowed = true,
+    overrides?: { template?: WorkoutTemplate; nickname?: string }
+  ) {
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     let scheduledAt: string | undefined;
     if (scheduleMode === 'rally') {
@@ -350,25 +363,34 @@ export default function CreateMissionPage() {
       scheduledAt = iso;
     }
 
+    const launchTemplate = overrides?.template ?? guidedLaunchTemplateRef.current ?? undefined;
+    const applied = launchTemplate ? applyTemplate(launchTemplate) : null;
+    const hostNickname =
+      (overrides?.nickname ?? nickname).trim() || profile?.nickname?.trim() || '';
+    const missionDuration = applied?.durationMinutes ?? durationMinutes;
+    const missionWorkoutText = applied?.workoutText ?? workoutText;
+
     setLoading(true);
 
     try {
-      const workout = parseWorkoutText(workoutText);
-      const intensityTier =
-        workoutSource === 'library' && selectedTemplate
+      const workout = parseWorkoutText(missionWorkoutText);
+      const intensityTier = launchTemplate
+        ? launchTemplate.intensityTier
+        : workoutSource === 'library' && selectedTemplate
           ? selectedTemplate.intensityTier
           : workoutSource === 'coach' && selectedCoachWorkout
             ? selectedCoachWorkout.intensityTier
             : CUSTOM_WORKOUT_INTENSITY_TIER;
-      const templateId =
-        workoutSource === 'library' && selectedTemplateId
+      const templateId = launchTemplate
+        ? launchTemplate.id
+        : workoutSource === 'library' && selectedTemplateId
           ? selectedTemplateId
           : workoutSource === 'coach' && selectedCoachWorkout
             ? `coach:${selectedCoachWorkout.id}`
             : undefined;
       const result = await createRallyPointMission({
-        nickname,
-        durationMinutes,
+        nickname: hostNickname,
+        durationMinutes: missionDuration,
         workout,
         templateId,
         intensityTier,
@@ -377,8 +399,11 @@ export default function CreateMissionPage() {
 
       if (result.error) {
         if (isIntakeRequiredMessage(result.error.message) && retryAllowed) {
-          ensureThen(() => {
-            void igniteMission(false);
+          ensureThen((accepted) => {
+            void igniteMission(false, {
+              template: launchTemplate,
+              nickname: accepted?.nickname ?? overrides?.nickname,
+            });
           });
           return;
         }
@@ -387,6 +412,7 @@ export default function CreateMissionPage() {
       }
 
       if (result.data) {
+        guidedLaunchTemplateRef.current = null;
         navigate(`/mission/${result.data.missionId}`);
       }
     } catch (e) {
@@ -456,7 +482,12 @@ export default function CreateMissionPage() {
           ) : (
             <div className="space-y-6 lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start lg:gap-6 lg:space-y-0">
               <div
-                className={`card space-y-6 p-6${showGuidedIgnition ? 'pointer-events-none select-none blur-sm' : ''}`}
+                className={[
+                  'card space-y-6 p-6',
+                  showGuidedIgnition ? 'pointer-events-none select-none blur-sm' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
               >
                 <WorkoutSourceToggle value={workoutSource} onChange={handleWorkoutSourceChange} />
 
@@ -574,9 +605,14 @@ export default function CreateMissionPage() {
         <GuidedIgnitionOverlay
           onSelect={(id) => {
             const tpl = WORKOUT_TEMPLATES.find((t) => t.id === id);
-            if (tpl) handleTemplateSelect(tpl);
+            if (!tpl) {
+              return;
+            }
+            handleTemplateSelect(tpl);
+            guidedLaunchTemplateRef.current = tpl;
             markGuidedIgnitionComplete();
             setShowGuidedIgnition(false);
+            beginLaunch(tpl);
           }}
           onSkip={() => {
             markGuidedIgnitionComplete();
