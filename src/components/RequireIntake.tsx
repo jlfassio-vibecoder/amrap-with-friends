@@ -99,9 +99,13 @@ export function RequireIntake({
       return <Navigate to={`/intake?next=${encodeURIComponent(next)}`} replace />;
     }
 
+    // Do not mount gated children until identity exists — otherwise pages like
+    // SquadPage call intake-gated RPCs and stick on a dead-end error.
     return (
       <>
-        {children}
+        <NarrowPageLayout title={gateTitle} subtitle="Your name">
+          <p className="text-sm text-secondary">{gateMessage}</p>
+        </NarrowPageLayout>
         <IdentityOverlay
           acceptLabel="Continue"
           dismissible={false}

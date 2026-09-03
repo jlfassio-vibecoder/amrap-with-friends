@@ -86,13 +86,40 @@ describe('RequireIntake', () => {
     expect(screen.getByRole('heading', { name: 'Create account' })).toBeTruthy();
   });
 
-  it('shows the identity overlay instead of redirecting when signed in but missing identity', () => {
+  it('shows the identity overlay and does not mount gated children when identity is missing', () => {
     profileState.isAuthenticated = true;
     profileState.profile = null;
     profileState.missing = true;
 
     render(
       <MemoryRouter initialEntries={['/campaign/new']}>
+        <ThemeProvider>
+          <RequireIntake
+            guestMode="sign-in"
+            gateTitle="Your squad"
+            gateMessage="Sign in and set up your profile to invite people to your squad."
+            gateAllowsGuest={false}
+          >
+            <div>gated</div>
+          </RequireIntake>
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByText('gated')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Your name' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Your squad' })).toBeTruthy();
+    expect(screen.queryByText('Sign in required')).toBeNull();
+  });
+
+  it('mounts gated children once identity is present', () => {
+    profileState.isAuthenticated = true;
+    profileState.profile = { username: 'ghost', nickname: 'Ghost' };
+    profileState.missing = false;
+
+    render(
+      <MemoryRouter initialEntries={['/squad']}>
         <ThemeProvider>
           <RequireIntake guestMode="sign-in" gateAllowsGuest={false}>
             <div>gated</div>
@@ -102,8 +129,6 @@ describe('RequireIntake', () => {
     );
 
     expect(screen.getByText('gated')).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Your name' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Continue' })).toBeTruthy();
-    expect(screen.queryByText('Sign in required')).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Your name' })).toBeNull();
   });
 });
