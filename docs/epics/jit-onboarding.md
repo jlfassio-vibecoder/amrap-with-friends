@@ -203,10 +203,10 @@ Pure module e.g. [`src/lib/onboarding/tacticalCallsign.ts`](../../src/lib/onboar
 
 ### Exit criteria
 
-- [ ] Migration applied; micro upsert succeeds without metrics.
-- [ ] Existing full profiles still load and editable.
-- [ ] HUD does not error on null metrics.
-- [ ] Callsign helper tested; no network in pure lib.
+- [x] Migration applied; micro upsert succeeds without metrics. (`20260903120000_athlete_profile_identity_optional_metrics.sql` + `upsert_athlete_identity`)
+- [x] Existing full profiles still load and editable. (`parseAthleteProfile` null-tolerant; full `upsert_athlete_profile` unchanged)
+- [x] HUD does not error on null metrics. (soft CTA + `quotasFromProfile` fallback)
+- [x] Callsign helper tested; no network in pure lib. (`src/lib/onboarding/tacticalCallsign.ts`)
 
 ---
 

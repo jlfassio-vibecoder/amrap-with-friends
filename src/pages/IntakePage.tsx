@@ -6,7 +6,7 @@ import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { track, trackBeacon } from '@/lib/analytics/track';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
-import type { AthleteProfile } from '@/lib/api/athleteProfile';
+import { type AthleteProfile, type AthleteProfileMetricsInput } from '@/lib/api/athleteProfile';
 import type { BiologicalSex } from '@/lib/hud/classificationQuotas';
 import {
   canSetPerceivedClassification,
@@ -143,7 +143,7 @@ interface IntakeFormProps {
   initialEmail: string;
   nowYear: number;
   userId: string | null;
-  onSaveProfile: (input: AthleteProfile) => Promise<{ error: string | null }>;
+  onSaveProfile: (input: AthleteProfileMetricsInput) => Promise<{ error: string | null }>;
   onUpdateEmail: (
     email: string
   ) => Promise<{ error: string | null; needsEmailConfirmation: boolean }>;
@@ -173,8 +173,13 @@ function IntakeForm({
     return suggestUsernameFromEmail(initialEmail);
   });
   const [nickname, setNickname] = useState(initial?.nickname ?? '');
+  const hasPersistedBodyMetrics =
+    initial != null &&
+    initial.heightCm != null &&
+    initial.weightKg != null &&
+    initial.birthYear != null;
   const [unitSystem, setUnitSystem] = useState<BodyMetricUnitSystem>(() => {
-    if (!initial) {
+    if (!hasPersistedBodyMetrics || !initial?.heightCm || !initial.weightKg) {
       return 'imperial';
     }
     const inches = cmToIn(initial.heightCm);
@@ -186,7 +191,7 @@ function IntakeForm({
     return 'metric';
   });
   const [height, setHeight] = useState(() => {
-    if (!initial) {
+    if (!hasPersistedBodyMetrics || !initial?.heightCm || !initial.weightKg) {
       return '';
     }
     const inches = cmToIn(initial.heightCm);
@@ -195,7 +200,7 @@ function IntakeForm({
     return String(preferImperial ? inches : initial.heightCm);
   });
   const [weight, setWeight] = useState(() => {
-    if (!initial) {
+    if (!hasPersistedBodyMetrics || !initial?.heightCm || !initial.weightKg) {
       return '';
     }
     const inches = cmToIn(initial.heightCm);
@@ -204,7 +209,9 @@ function IntakeForm({
     return String(preferImperial ? pounds : initial.weightKg);
   });
   const [age, setAge] = useState(
-    initial ? String(ageFromBirthYear(initial.birthYear, nowYear)) : ''
+    hasPersistedBodyMetrics && initial?.birthYear != null
+      ? String(ageFromBirthYear(initial.birthYear, nowYear))
+      : ''
   );
   const [rank, setRank] = useState<PerceivedClassification | null>(
     initial?.perceivedClassification ?? null
@@ -811,7 +818,7 @@ export default function IntakePage() {
 
   if (isAuthLoading || loading) {
     return (
-      <NarrowPageLayout title="Your profile" subtitle="Athlete details">
+      <NarrowPageLayout title="Your profile" subtitle="Edit profile / HUD metrics">
         <p className="text-sm text-secondary">Loading…</p>
       </NarrowPageLayout>
     );
@@ -819,7 +826,7 @@ export default function IntakePage() {
 
   if (!isAuthenticated) {
     return (
-      <NarrowPageLayout title="Your profile" subtitle="Athlete details">
+      <NarrowPageLayout title="Your profile" subtitle="Edit profile / HUD metrics">
         <p className="text-sm text-secondary">Sign in to set up your profile.</p>
         <AuthForm variant="compact" guestAllowed={false} showAuthMethodSelector={false} />
         <p className="text-center text-sm">
@@ -832,11 +839,11 @@ export default function IntakePage() {
   }
 
   return (
-    <NarrowPageLayout title="Your profile" subtitle="Athlete details">
+    <NarrowPageLayout title="Your profile" subtitle="Edit profile / HUD metrics">
       <p className="text-sm text-secondary lg:hidden">State the claim. Telemetry decides.</p>
       <div className="hidden space-y-2 lg:block">
         <h1 className="text-display text-5xl text-ink">Your profile</h1>
-        <p className="text-sm text-secondary">State the claim. Telemetry decides.</p>
+        <p className="text-sm text-secondary">Edit profile / HUD metrics</p>
       </div>
 
       <IntakeForm

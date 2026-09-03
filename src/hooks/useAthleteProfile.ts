@@ -3,6 +3,7 @@ import {
   fetchAthleteProfile,
   upsertAthleteProfile,
   type AthleteProfile,
+  type AthleteProfileMetricsInput,
 } from '@/lib/api/athleteProfile';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 
@@ -52,7 +53,7 @@ export function useAthleteProfile() {
     };
   }, [isAuthLoading, isAuthenticated, user]);
 
-  const save = useCallback(async (input: AthleteProfile) => {
+  const save = useCallback(async (input: AthleteProfileMetricsInput) => {
     const result = await upsertAthleteProfile(input);
     if (result.error) {
       return { error: result.error.message };

@@ -81,7 +81,7 @@ export function RequireIntake({
 
   if (error) {
     return (
-      <NarrowPageLayout title="Your profile" subtitle="Athlete details">
+      <NarrowPageLayout title="Your profile" subtitle="Edit profile / HUD metrics">
         <p className="text-error">Error: {error}</p>
       </NarrowPageLayout>
     );
