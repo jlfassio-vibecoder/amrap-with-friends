@@ -113,7 +113,7 @@ export default function CoachPage() {
                   rateLabel="Completion rate"
                 />
                 <CoachFunnelCard
-                  title="Intake dossier"
+                  title="Incomplete sign-ups"
                   steps={[
                     { label: 'Submitted', value: dashboard.intakeFunnel.submitted },
                     { label: 'Abandoned', value: dashboard.intakeFunnel.abandoned },

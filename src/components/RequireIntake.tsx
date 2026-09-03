@@ -1,8 +1,10 @@
 import { useState, type ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { AuthModal } from '@/components/AuthModal';
+import { IdentityOverlay } from '@/components/onboarding/IdentityOverlay';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
+import { profileNeedsIntake } from '@/lib/auth/profileNeedsIntake';
 import type { PasswordMode } from '@/components/AuthForm';
 
 interface RequireIntakeProps {
@@ -19,6 +21,8 @@ interface RequireIntakeProps {
   /** False where the route genuinely needs an account, so the auth modal does
    * not offer guest play the gate has already ruled out. */
   gateAllowsGuest?: boolean;
+  /** HUD keeps the /intake redirect; campaign/squad host gates use the overlay. */
+  identityGate?: 'overlay' | 'redirect';
 }
 
 export function RequireIntake({
@@ -28,9 +32,11 @@ export function RequireIntake({
   gateTitle = 'Create mission',
   gateMessage = 'Sign in and set up your profile before creating a mission. You can still join as a guest.',
   gateAllowsGuest = true,
+  identityGate = 'overlay',
 }: RequireIntakeProps) {
   const location = useLocation();
-  const { profile, missing, loading, isAuthenticated, isAuthLoading, error } = useAthleteProfile();
+  const { profile, missing, loading, isAuthenticated, isAuthLoading, error, saveIdentity } =
+    useAthleteProfile();
   const [authOpenMode, setAuthOpenMode] = useState<PasswordMode | null>('sign-in');
 
   if (isAuthLoading || loading) {
@@ -81,15 +87,29 @@ export function RequireIntake({
 
   if (error) {
     return (
-      <NarrowPageLayout title="Your profile" subtitle="Athlete details">
+      <NarrowPageLayout title="Your profile" subtitle="Edit profile / HUD metrics">
         <p className="text-error">Error: {error}</p>
       </NarrowPageLayout>
     );
   }
 
-  if (missing || !profile || !profile.username.trim() || !profile.nickname.trim()) {
-    const next = `${location.pathname}${location.search}`;
-    return <Navigate to={`/intake?next=${encodeURIComponent(next)}`} replace />;
+  if (profileNeedsIntake(profile, missing)) {
+    if (identityGate === 'redirect') {
+      const next = `${location.pathname}${location.search}`;
+      return <Navigate to={`/intake?next=${encodeURIComponent(next)}`} replace />;
+    }
+
+    return (
+      <>
+        {children}
+        <IdentityOverlay
+          acceptLabel="Continue"
+          dismissible={false}
+          onClose={() => undefined}
+          onAccept={saveIdentity}
+        />
+      </>
+    );
   }
 
   return children;

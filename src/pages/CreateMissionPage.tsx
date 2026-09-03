@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
+import { AuthModal } from '@/components/AuthModal';
+import { IdentityOverlay } from '@/components/onboarding/IdentityOverlay';
 import { FeaturedWodCard } from '@/components/home/FeaturedWodCard';
 import {
   CreateMissionSummaryPanel,
@@ -29,6 +31,7 @@ import { getSupabaseConfigError } from '@/lib/supabase';
 import { track } from '@/lib/analytics/track';
 import { quotasFromProfile } from '@/lib/hud/classificationQuotas';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
+import { useEnsureAthleteIdentity } from '@/hooks/useEnsureAthleteIdentity';
 import { useHudTelemetry } from '@/hooks/useHudTelemetry';
 import { useSmartRecovery } from '@/hooks/useSmartRecovery';
 import { coachWorkoutLockId } from '@/lib/smartRecovery/deriveCoachWorkoutPatterns';
@@ -36,6 +39,8 @@ import { firstAvailableCategoryForDuration } from '@/lib/workout/filterWorkoutTe
 import { CUSTOM_WORKOUT_INTENSITY_TIER } from '@/lib/workout/resolveTemplateIntensity';
 import { applyTemplate } from '@/lib/workout/templateToExercises';
 import { parseWorkoutText } from '@/lib/workout/parseWorkoutLines';
+import { isIntakeRequiredMessage } from '@/lib/auth/profileNeedsIntake';
+import type { PasswordMode } from '@/components/AuthForm';
 import {
   HOST_ACTIVE_MISSION_LIMIT,
   defaultRallyTime,
@@ -63,6 +68,13 @@ export default function CreateMissionPage() {
   const [searchParams] = useSearchParams();
   const { telemetry, isAuthenticated } = useHudTelemetry();
   const { profile, loading: profileLoading } = useAthleteProfile();
+  const {
+    ensureThen,
+    open: identityOpen,
+    overlayProps,
+  } = useEnsureAthleteIdentity({
+    acceptLabel: 'Accept & Launch',
+  });
   const quotas = quotasFromProfile(profile);
   const [intakeNotices, setIntakeNotices] = useState<string[]>([]);
   const [workoutSource, setWorkoutSource] = useState<WorkoutSource>('library');
@@ -85,6 +97,8 @@ export default function CreateMissionPage() {
     defaultRallyTime(new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone)
   );
   const [activeCount, setActiveCount] = useState<number | null>(null);
+  const [authOpenMode, setAuthOpenMode] = useState<PasswordMode | null>(null);
+  const submitAfterAuthRef = useRef(false);
 
   useEffect(() => {
     const state = location.state as IntakeNavigationState | null;
@@ -302,6 +316,23 @@ export default function CreateMissionPage() {
       return;
     }
 
+    if (!isAuthenticated) {
+      submitAfterAuthRef.current = true;
+      setAuthOpenMode('sign-up');
+      return;
+    }
+
+    if (profileLoading) {
+      submitAfterAuthRef.current = true;
+      return;
+    }
+
+    ensureThen(() => {
+      void igniteMission();
+    });
+  }
+
+  async function igniteMission(retryAllowed = true) {
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     let scheduledAt: string | undefined;
     if (scheduleMode === 'rally') {
@@ -339,6 +370,12 @@ export default function CreateMissionPage() {
       });
 
       if (result.error) {
+        if (isIntakeRequiredMessage(result.error.message) && retryAllowed) {
+          ensureThen(() => {
+            void igniteMission(false);
+          });
+          return;
+        }
         setError(result.error.message);
         return;
       }
@@ -351,6 +388,25 @@ export default function CreateMissionPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  useEffect(() => {
+    if (!submitAfterAuthRef.current || !isAuthenticated || profileLoading) {
+      return;
+    }
+
+    submitAfterAuthRef.current = false;
+    setAuthOpenMode(null);
+
+    const form = document.getElementById('create-mission-form');
+    if (form instanceof HTMLFormElement) {
+      form.requestSubmit();
+    }
+  }, [isAuthenticated, profileLoading]);
+
+  function handleAuthSuccess() {
+    setAuthOpenMode(null);
+    // submitAfterAuthRef stays true until profile finishes loading (effect above).
   }
 
   return (
@@ -458,6 +514,7 @@ export default function CreateMissionPage() {
                 rallyTime={rallyTime}
                 capReached={capReached}
                 error={error}
+                unsignedHint={isAuthenticated ? null : 'Launch will ask you to sign in.'}
                 loading={loading}
                 onNicknameChange={setNickname}
                 onDurationChange={handleSummaryDurationChange}
@@ -491,6 +548,21 @@ export default function CreateMissionPage() {
       <footer className="hidden pb-6 text-center text-xs text-muted lg:block">
         AMRAP With Friends
       </footer>
+
+      {authOpenMode ? (
+        <AuthModal
+          onClose={() => {
+            submitAfterAuthRef.current = false;
+            setAuthOpenMode(null);
+          }}
+          initialPasswordMode={authOpenMode}
+          onAuthenticated={handleAuthSuccess}
+          guestAllowed={false}
+          heading="Save & Launch"
+          subtitle="Create an account to hit the rally point and join the leaderboard."
+        />
+      ) : null}
+      {identityOpen ? <IdentityOverlay {...overlayProps} /> : null}
     </main>
   );
 }

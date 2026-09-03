@@ -14,6 +14,7 @@ import { PhysicalActivityLogForm } from '@/components/hud/PhysicalActivityLogFor
 import { WeeklyBaselineBar } from '@/components/hud/WeeklyBaselineBar';
 import { summarizePhysicalActivityWindow } from '@/lib/hud/activityWindowSummary';
 import { evaluateOvertrainingRisk } from '@/lib/hud/evaluateOvertrainingRisk';
+import { hasAthleteBodyMetrics } from '@/lib/api/athleteProfile';
 import { quotasFromProfile } from '@/lib/hud/classificationQuotas';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { useHudTelemetry } from '@/hooks/useHudTelemetry';
@@ -24,6 +25,8 @@ export default function HUDPage() {
   const { profile, loading: profileLoading } = useAthleteProfile();
   const quotas = quotasFromProfile(profile);
   const showTelemetry = !loading && !profileLoading && isAuthenticated && telemetry;
+  const metricsMissing =
+    isAuthenticated && !profileLoading && profile !== null && !hasAthleteBodyMetrics(profile);
 
   const activityLog = usePhysicalActivityLog();
   const outsideSummary = summarizePhysicalActivityWindow(activityLog.entries);
@@ -77,6 +80,14 @@ export default function HUDPage() {
         ) : null}
 
         {error ? <p className="text-error">Error: {error}</p> : null}
+
+        {metricsMissing ? (
+          <p className="border-line rounded-card border bg-surface px-4 py-3 text-sm text-secondary">
+            <Link className="link-accent font-semibold" to="/intake?next=%2Fhud">
+              Add body metrics for load telemetry
+            </Link>
+          </p>
+        ) : null}
 
         {showTelemetry ? (
           <div className="space-y-4">
@@ -144,7 +155,7 @@ export default function HUDPage() {
         <p className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm">
           {isAuthenticated ? (
             <Link className="link-accent" to="/intake?next=%2Fhud">
-              Edit dossier
+              Edit profile / HUD metrics
             </Link>
           ) : null}
           <AppLink className="link-accent" to="/">

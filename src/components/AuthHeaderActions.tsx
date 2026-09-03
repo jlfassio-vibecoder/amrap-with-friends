@@ -6,25 +6,19 @@ import { AuthModal } from '@/components/AuthModal';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { HEADER_TONE_CLASSES, type HeaderTone } from '@/components/headerTone';
 import { isGuestOpenPath } from '@/lib/auth/guestOpenPaths';
+import {
+  clearPostAuthPathIntent,
+  consumePostAuthPathIntent,
+  resolvePostAuthDestination,
+  setPostAuthPathIntent,
+} from '@/lib/auth/postAuthDestination';
 import type { PasswordMode } from '@/components/AuthForm';
 
 type AuthOpenMode = PasswordMode;
 
-function profileNeedsIntake(
-  profile: {
-    username: string;
-    nickname: string;
-  } | null
-): boolean {
-  if (!profile) {
-    return true;
-  }
-  return !profile.username.trim() || !profile.nickname.trim();
-}
-
 export function AuthHeaderActions({ tone = 'default' }: { tone?: HeaderTone }) {
   const { isAuthenticated, isAuthLoading, user, signOut } = useAmrapAuth();
-  const { profile, missing } = useAthleteProfile();
+  const { profile } = useAthleteProfile();
   const location = useLocation();
   const navigate = useNavigate();
   const [authOpenMode, setAuthOpenMode] = useState<AuthOpenMode | null>(null);
@@ -35,20 +29,28 @@ export function AuthHeaderActions({ tone = 'default' }: { tone?: HeaderTone }) {
 
   function openAuth(mode: AuthOpenMode) {
     setOpenedAsSignUp(mode === 'sign-up');
+    if (mode === 'sign-up' && !isGuestOpenPath(location.pathname)) {
+      setPostAuthPathIntent('/create');
+    } else {
+      clearPostAuthPathIntent();
+    }
     setAuthOpenMode(mode);
   }
 
   function handleAuthenticated() {
     setAuthOpenMode(null);
     if (!openedAsSignUp) {
+      clearPostAuthPathIntent();
       return;
     }
     if (isGuestOpenPath(location.pathname)) {
+      clearPostAuthPathIntent();
       return;
     }
-    if (missing || profileNeedsIntake(profile)) {
-      const next = `${location.pathname}${location.search}`;
-      navigate(`/intake?next=${encodeURIComponent(next)}`);
+    const intent = consumePostAuthPathIntent();
+    const destination = intent ?? resolvePostAuthDestination({ pathname: location.pathname });
+    if (destination) {
+      navigate(destination);
     }
   }
 
@@ -91,7 +93,10 @@ export function AuthHeaderActions({ tone = 'default' }: { tone?: HeaderTone }) {
       </div>
       {authOpenMode ? (
         <AuthModal
-          onClose={() => setAuthOpenMode(null)}
+          onClose={() => {
+            clearPostAuthPathIntent();
+            setAuthOpenMode(null);
+          }}
           initialPasswordMode={authOpenMode}
           onAuthenticated={handleAuthenticated}
         />

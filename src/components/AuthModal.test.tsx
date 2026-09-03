@@ -32,19 +32,16 @@ afterEach(() => {
 });
 
 describe('AuthModal', () => {
-  it('shows magic link and password tabs when magic link is enabled', () => {
+  it('shows a secondary email-link control when magic link is enabled', () => {
     isMagicLinkAuthEnabledMock.mockReturnValue(true);
 
     render(<AuthModal onClose={() => {}} />);
 
-    expect(screen.getByRole('tab', { name: 'Magic link' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Password' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Password' }).getAttribute('aria-selected')).toBe(
-      'true'
-    );
+    expect(screen.queryByRole('tab', { name: 'Magic link' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Use an email link instead' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Send magic link' })).toBeNull();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Magic link' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Use an email link instead' }));
     expect(screen.getByRole('button', { name: 'Send magic link' })).toBeTruthy();
   });
 
@@ -71,5 +68,24 @@ describe('AuthModal', () => {
     expect(screen.getByRole('heading', { name: 'Create account' })).toBeTruthy();
     const createButtons = screen.getAllByRole('button', { name: 'Create account' });
     expect(createButtons.some((button) => button.getAttribute('type') === 'submit')).toBe(true);
+  });
+
+  it('shows Launch heading and hides guest copy when required', () => {
+    isMagicLinkAuthEnabledMock.mockReturnValue(false);
+
+    render(
+      <AuthModal
+        onClose={() => {}}
+        guestAllowed={false}
+        heading="Save & Launch"
+        subtitle="Create an account to hit the rally point and join the leaderboard."
+      />
+    );
+
+    expect(screen.getByRole('heading', { name: 'Save & Launch' })).toBeTruthy();
+    expect(
+      screen.getByText('Create an account to hit the rally point and join the leaderboard.')
+    ).toBeTruthy();
+    expect(screen.queryByText(/Optional — play as a guest/)).toBeNull();
   });
 });
