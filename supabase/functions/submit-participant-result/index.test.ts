@@ -6,6 +6,7 @@ import {
   computeLockedScore,
   deriveRoundDurationsSec,
   handleSubmitParticipantResult,
+  normalizeSubmitRequest,
   type RoundRow,
 } from './handler.ts';
 
@@ -16,6 +17,32 @@ const WORKOUT = [
   { name: 'Burpees', target: 20, unit: 'reps' },
   { name: 'Air squats', target: 20, unit: 'reps' },
 ];
+
+const MISSION_ID = '11111111-1111-4111-8111-111111111111';
+const PARTICIPANT_ID = '22222222-2222-4222-8222-222222222222';
+
+Deno.test('normalizeSubmitRequest prefers missionId and accepts legacy sessionId', () => {
+  assertEquals(
+    normalizeSubmitRequest({
+      missionId: MISSION_ID,
+      participantId: PARTICIPANT_ID,
+      claimToken: 't',
+      partialReps: 1,
+      segmentIndex: 0,
+    }).missionId,
+    MISSION_ID
+  );
+  assertEquals(
+    normalizeSubmitRequest({
+      sessionId: MISSION_ID,
+      participantId: PARTICIPANT_ID,
+      claimToken: 't',
+      partialReps: 1,
+      segmentIndex: 0,
+    }).missionId,
+    MISSION_ID
+  );
+});
 
 Deno.test('deriveRoundDurationsSec computes elapsed deltas', () => {
   const rounds: RoundRow[] = [
@@ -59,8 +86,8 @@ Deno.test('handleSubmitParticipantResult rejects second submit when score is loc
 
   const first = await handleSubmitParticipantResult(
     {
-      sessionId: '11111111-1111-4111-8111-111111111111',
-      participantId: '22222222-2222-4222-8222-222222222222',
+      missionId: MISSION_ID,
+      participantId: PARTICIPANT_ID,
       claimToken: 'claim-token',
       partialReps: 15,
       segmentIndex: 0,
@@ -69,10 +96,10 @@ Deno.test('handleSubmitParticipantResult rejects second submit when score is loc
       authUserId: null,
       fetchParticipant: async () => ({
         claim_token_hash: CLAIM_TOKEN_HASH,
-        session_id: '11111111-1111-4111-8111-111111111111',
+        mission_id: MISSION_ID,
         user_id: null,
       }),
-      fetchSession: async () => ({
+      fetchMission: async () => ({
         state: 'finished',
         segment_index: 0,
         workout: WORKOUT,
@@ -100,8 +127,8 @@ Deno.test('handleSubmitParticipantResult rejects second submit when score is loc
 
   const second = await handleSubmitParticipantResult(
     {
-      sessionId: '11111111-1111-4111-8111-111111111111',
-      participantId: '22222222-2222-4222-8222-222222222222',
+      missionId: MISSION_ID,
+      participantId: PARTICIPANT_ID,
       claimToken: 'claim-token',
       partialReps: 10,
       segmentIndex: 0,
@@ -110,10 +137,10 @@ Deno.test('handleSubmitParticipantResult rejects second submit when score is loc
       authUserId: null,
       fetchParticipant: async () => ({
         claim_token_hash: CLAIM_TOKEN_HASH,
-        session_id: '11111111-1111-4111-8111-111111111111',
+        mission_id: MISSION_ID,
         user_id: null,
       }),
-      fetchSession: async () => ({
+      fetchMission: async () => ({
         state: 'finished',
         segment_index: 0,
         workout: WORKOUT,
@@ -143,8 +170,8 @@ Deno.test('handleSubmitParticipantResult rejects second submit when score is loc
 Deno.test('handleSubmitParticipantResult ignores client-side score tampering inputs', async () => {
   const result = await handleSubmitParticipantResult(
     {
-      sessionId: '11111111-1111-4111-8111-111111111111',
-      participantId: '22222222-2222-4222-8222-222222222222',
+      missionId: MISSION_ID,
+      participantId: PARTICIPANT_ID,
       claimToken: 'claim-token',
       partialReps: 15,
       segmentIndex: 0,
@@ -153,10 +180,10 @@ Deno.test('handleSubmitParticipantResult ignores client-side score tampering inp
       authUserId: null,
       fetchParticipant: async () => ({
         claim_token_hash: CLAIM_TOKEN_HASH,
-        session_id: '11111111-1111-4111-8111-111111111111',
+        mission_id: MISSION_ID,
         user_id: null,
       }),
-      fetchSession: async () => ({
+      fetchMission: async () => ({
         state: 'finished',
         segment_index: 0,
         workout: WORKOUT,
