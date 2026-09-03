@@ -4,6 +4,7 @@ import { getMissionLiveState } from '@/lib/api/getMissionLiveState';
 import { getSupabaseClient } from '@/lib/supabase';
 import { track } from '@/lib/analytics/track';
 import { getStoredClaimToken, getStoredHostToken } from '@/lib/missionIdentity';
+import { LIVE_STATE_MESSAGE_CAP } from '@/lib/realtime/liveStateLimits';
 import { nextLiveStateSince } from '@/lib/realtime/liveStateWatermark';
 import {
   mergePresenceState,
@@ -120,7 +121,7 @@ export function useMissionChannel(
         setMessages((prev) =>
           sortMessagesByCreatedAt(
             result.data.messages.reduce((next, row) => upsertMessage(next, row), prev)
-          )
+          ).slice(-LIVE_STATE_MESSAGE_CAP)
         );
         setSegmentResults((prev) =>
           result.data.segmentResults.reduce((next, row) => upsertSegmentResult(next, row), prev)
