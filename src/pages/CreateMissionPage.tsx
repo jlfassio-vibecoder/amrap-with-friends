@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
 import { AuthModal } from '@/components/AuthModal';
+import { IdentityOverlay } from '@/components/onboarding/IdentityOverlay';
 import { FeaturedWodCard } from '@/components/home/FeaturedWodCard';
 import {
   CreateMissionSummaryPanel,
@@ -67,7 +68,11 @@ export default function CreateMissionPage() {
   const [searchParams] = useSearchParams();
   const { telemetry, isAuthenticated } = useHudTelemetry();
   const { profile, loading: profileLoading } = useAthleteProfile();
-  const { ensureThen, overlay: identityOverlay } = useEnsureAthleteIdentity({
+  const {
+    ensureThen,
+    open: identityOpen,
+    overlayProps,
+  } = useEnsureAthleteIdentity({
     acceptLabel: 'Accept & Launch',
   });
   const quotas = quotasFromProfile(profile);
@@ -560,7 +565,7 @@ export default function CreateMissionPage() {
           subtitle="Create an account to hit the rally point and join the leaderboard."
         />
       ) : null}
-      {identityOverlay}
+      {identityOpen ? <IdentityOverlay {...overlayProps} /> : null}
     </main>
   );
 }

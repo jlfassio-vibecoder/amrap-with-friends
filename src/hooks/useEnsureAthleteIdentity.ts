@@ -1,5 +1,4 @@
-import { createElement, useCallback, useRef, useState, type ReactNode } from 'react';
-import { IdentityOverlay } from '@/components/onboarding/IdentityOverlay';
+import { useCallback, useRef, useState } from 'react';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { profileNeedsIntake } from '@/lib/auth/profileNeedsIntake';
 import type { AthleteIdentityInput } from '@/lib/api/athleteProfile';
@@ -18,14 +17,14 @@ export function useEnsureAthleteIdentity(options?: {
 
   const ensureThen = useCallback(
     (action: PendingAction) => {
-      if (profileNeedsIntake(profile, missing)) {
+      if (needsIdentity) {
         pendingRef.current = action;
         setOpen(true);
         return;
       }
       action();
     },
-    [profile, missing]
+    [needsIdentity]
   );
 
   const handleAccept = useCallback(
@@ -48,20 +47,16 @@ export function useEnsureAthleteIdentity(options?: {
     setOpen(false);
   }, []);
 
-  const overlay: ReactNode = open
-    ? createElement(IdentityOverlay, {
-        acceptLabel: options?.acceptLabel ?? 'Accept & Launch',
-        dismissible: options?.dismissible ?? true,
-        onClose: handleClose,
-        onAccept: handleAccept,
-      })
-    : null;
-
   return {
     ensureThen,
-    overlay,
     needsIdentity,
     profileLoading: loading,
     open,
+    overlayProps: {
+      acceptLabel: options?.acceptLabel ?? 'Accept & Launch',
+      dismissible: options?.dismissible ?? true,
+      onClose: handleClose,
+      onAccept: handleAccept,
+    },
   };
 }

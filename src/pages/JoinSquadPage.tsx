@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppLink } from '@/components/AppLink';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AuthModal } from '@/components/AuthModal';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
+import { IdentityOverlay } from '@/components/onboarding/IdentityOverlay';
 import {
   acceptSquadInviteCode,
   fetchSquadInvitePreview,
@@ -19,7 +20,11 @@ export default function JoinSquadPage() {
   const inviteCode = (searchParams.get('c') ?? '').trim();
   const { isAuthenticated, isAuthLoading } = useAmrapAuth();
   const { loading: profileLoading } = useAthleteProfile();
-  const { ensureThen, overlay: identityOverlay } = useEnsureAthleteIdentity({
+  const {
+    ensureThen,
+    open: identityOpen,
+    overlayProps,
+  } = useEnsureAthleteIdentity({
     acceptLabel: 'Accept & join',
   });
 
@@ -29,7 +34,6 @@ export default function JoinSquadPage() {
   const [accepting, setAccepting] = useState(false);
   const [authOpenMode, setAuthOpenMode] = useState<'sign-in' | 'sign-up' | null>(null);
   const joinAfterAuthRef = useRef(false);
-  const intakeRetryRef = useRef(false);
 
   useEffect(() => {
     if (!inviteCode) {
@@ -56,40 +60,40 @@ export default function JoinSquadPage() {
     };
   }, [inviteCode]);
 
-  async function performAccept() {
-    setAccepting(true);
-    setError(null);
-    const result = await acceptSquadInviteCode(inviteCode);
-    setAccepting(false);
-    if (result.error && isIntakeRequiredMessage(result.error.message) && !intakeRetryRef.current) {
-      intakeRetryRef.current = true;
-      ensureThen(() => {
-        void performAccept();
-      });
-      return;
-    }
-    if (result.error) {
-      setError(result.error.message);
-      return;
-    }
-    navigate('/squad');
-  }
+  const performAccept = useCallback(
+    async function runAccept(needsRetry = true) {
+      setAccepting(true);
+      setError(null);
+      const result = await acceptSquadInviteCode(inviteCode);
+      setAccepting(false);
+      if (result.error && isIntakeRequiredMessage(result.error.message) && needsRetry) {
+        ensureThen(() => {
+          void runAccept(false);
+        });
+        return;
+      }
+      if (result.error) {
+        setError(result.error.message);
+        return;
+      }
+      navigate('/squad');
+    },
+    [ensureThen, inviteCode, navigate]
+  );
 
-  function handleAccept() {
-    intakeRetryRef.current = false;
+  const handleAccept = useCallback(() => {
     ensureThen(() => {
       void performAccept();
     });
-  }
+  }, [ensureThen, performAccept]);
 
   useEffect(() => {
     if (!joinAfterAuthRef.current || !isAuthenticated || isAuthLoading || profileLoading) {
       return;
     }
     joinAfterAuthRef.current = false;
-    setAuthOpenMode(null);
     handleAccept();
-  }, [isAuthenticated, isAuthLoading, profileLoading]);
+  }, [handleAccept, isAuthenticated, isAuthLoading, profileLoading]);
 
   if (!inviteCode) {
     return (
@@ -197,7 +201,7 @@ export default function JoinSquadPage() {
           guestAllowed={false}
         />
       ) : null}
-      {identityOverlay}
+      {identityOpen ? <IdentityOverlay {...overlayProps} /> : null}
 
       <p className="text-center text-sm">
         <AppLink className="link-accent" to="/">

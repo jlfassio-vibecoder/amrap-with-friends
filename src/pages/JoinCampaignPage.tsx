@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppLink } from '@/components/AppLink';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AuthModal } from '@/components/AuthModal';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
+import { IdentityOverlay } from '@/components/onboarding/IdentityOverlay';
 import {
   fetchCampaignInvitePreview,
   joinCampaign,
@@ -20,7 +21,11 @@ export default function JoinCampaignPage() {
   const inviteCode = (searchParams.get('c') ?? '').trim();
   const { isAuthenticated, isAuthLoading } = useAmrapAuth();
   const { loading: profileLoading } = useAthleteProfile();
-  const { ensureThen, overlay: identityOverlay } = useEnsureAthleteIdentity({
+  const {
+    ensureThen,
+    open: identityOpen,
+    overlayProps,
+  } = useEnsureAthleteIdentity({
     acceptLabel: 'Accept & join',
   });
 
@@ -30,7 +35,6 @@ export default function JoinCampaignPage() {
   const [joining, setJoining] = useState(false);
   const [authOpenMode, setAuthOpenMode] = useState<'sign-in' | 'sign-up' | null>(null);
   const joinAfterAuthRef = useRef(false);
-  const intakeRetryRef = useRef(false);
 
   useEffect(() => {
     if (!inviteCode) {
@@ -55,42 +59,42 @@ export default function JoinCampaignPage() {
     };
   }, [inviteCode]);
 
-  async function performJoin() {
-    setJoining(true);
-    setError(null);
-    const result = await joinCampaign(inviteCode);
-    setJoining(false);
+  const performJoin = useCallback(
+    async function runJoin(needsRetry = true) {
+      setJoining(true);
+      setError(null);
+      const result = await joinCampaign(inviteCode);
+      setJoining(false);
 
-    if (result.error && isIntakeRequiredMessage(result.error.message) && !intakeRetryRef.current) {
-      intakeRetryRef.current = true;
-      ensureThen(() => {
-        void performJoin();
-      });
-      return;
-    }
+      if (result.error && isIntakeRequiredMessage(result.error.message) && needsRetry) {
+        ensureThen(() => {
+          void runJoin(false);
+        });
+        return;
+      }
 
-    if (result.error || !result.data) {
-      setError(result.error?.message ?? 'Something went wrong. Please try again.');
-      return;
-    }
-    navigate(`/campaign/${result.data.campaignId}`);
-  }
+      if (result.error || !result.data) {
+        setError(result.error?.message ?? 'Something went wrong. Please try again.');
+        return;
+      }
+      navigate(`/campaign/${result.data.campaignId}`);
+    },
+    [ensureThen, inviteCode, navigate]
+  );
 
-  function handleJoin() {
-    intakeRetryRef.current = false;
+  const handleJoin = useCallback(() => {
     ensureThen(() => {
       void performJoin();
     });
-  }
+  }, [ensureThen, performJoin]);
 
   useEffect(() => {
     if (!joinAfterAuthRef.current || !isAuthenticated || isAuthLoading || profileLoading) {
       return;
     }
     joinAfterAuthRef.current = false;
-    setAuthOpenMode(null);
     handleJoin();
-  }, [isAuthenticated, isAuthLoading, profileLoading]);
+  }, [handleJoin, isAuthenticated, isAuthLoading, profileLoading]);
 
   if (!inviteCode) {
     return (
@@ -213,7 +217,7 @@ export default function JoinCampaignPage() {
           guestAllowed={false}
         />
       ) : null}
-      {identityOverlay}
+      {identityOpen ? <IdentityOverlay {...overlayProps} /> : null}
 
       <p className="text-center text-sm">
         <AppLink className="link-accent" to="/">

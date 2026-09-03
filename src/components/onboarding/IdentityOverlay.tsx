@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { track } from '@/lib/analytics/track';
 import type { AthleteIdentityInput } from '@/lib/api/athleteProfile';
 import {
@@ -11,6 +11,13 @@ const SCRAMBLE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-';
 const DEFAULT_SCRAMBLE_STEPS = 12;
 const DEFAULT_SCRAMBLE_MS = 50;
 const GENERATED_RETRY_LIMIT = 4;
+
+function scrambleName(target: string): string {
+  return target
+    .split('')
+    .map(() => SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)])
+    .join('');
+}
 
 export interface IdentityOverlayProps {
   onClose: () => void;
@@ -34,13 +41,13 @@ export function IdentityOverlay({
 }: IdentityOverlayProps) {
   const titleId = useId();
   const [suggestion, setSuggestion] = useState<AthleteIdentitySuggestion>(() => suggestIdentity());
-  const [displayName, setDisplayName] = useState('········');
-  const [settled, setSettled] = useState(false);
+  const shouldScramble = scrambleIntervalMs > 0 && scrambleSteps > 1;
+  const [scrambledDisplayName, setScrambledDisplayName] = useState('········');
+  const [settled, setSettled] = useState(() => !shouldScramble);
   const [customMode, setCustomMode] = useState(false);
   const [customName, setCustomName] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const scrambleGenRef = useRef(0);
 
   useEffect(() => {
     track('micro_dossier_shown');
@@ -58,31 +65,22 @@ export function IdentityOverlay({
   }, [dismissible, onClose, saving]);
 
   useEffect(() => {
-    const generation = scrambleGenRef.current;
-    const target = suggestion.nickname;
-    if (scrambleIntervalMs <= 0 || scrambleSteps <= 1) {
-      setDisplayName(target);
-      setSettled(true);
+    if (!shouldScramble) {
       return;
     }
 
-    setSettled(false);
-    setDisplayName(
-      target
-        .split('')
-        .map(() => SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)])
-        .join('')
-    );
+    const target = suggestion.nickname;
+    let cancelled = false;
 
     let step = 0;
     const interval = window.setInterval(() => {
-      if (generation !== scrambleGenRef.current) {
+      if (cancelled) {
         window.clearInterval(interval);
         return;
       }
       step += 1;
       const revealed = Math.ceil((step / scrambleSteps) * target.length);
-      setDisplayName(
+      setScrambledDisplayName(
         target
           .split('')
           .map((letter, index) => {
@@ -95,23 +93,31 @@ export function IdentityOverlay({
       );
       if (step >= scrambleSteps) {
         window.clearInterval(interval);
-        setDisplayName(target);
+        setScrambledDisplayName(target);
         setSettled(true);
       }
     }, scrambleIntervalMs);
 
     return () => {
+      cancelled = true;
       window.clearInterval(interval);
     };
-  }, [suggestion, scrambleIntervalMs, scrambleSteps]);
+  }, [shouldScramble, suggestion, scrambleIntervalMs, scrambleSteps]);
+
+  function loadSuggestion(nextSuggestion: AthleteIdentitySuggestion) {
+    if (shouldScramble) {
+      setScrambledDisplayName(scrambleName(nextSuggestion.nickname));
+      setSettled(false);
+    }
+    setSuggestion(nextSuggestion);
+  }
 
   function regenerate() {
     if (saving) {
       return;
     }
-    scrambleGenRef.current += 1;
     setError(null);
-    setSuggestion(suggestIdentity());
+    loadSuggestion(suggestIdentity());
   }
 
   function toggleCustom() {
@@ -153,7 +159,7 @@ export function IdentityOverlay({
     setSaving(true);
     setError(null);
     let nextNickname = nickname;
-    let generated = !customMode;
+    const generated = !customMode;
 
     for (let attempt = 0; attempt < GENERATED_RETRY_LIMIT; attempt += 1) {
       const username = sanitizeCallsignUsername(nextNickname);
@@ -167,7 +173,7 @@ export function IdentityOverlay({
       if (taken && generated && attempt < GENERATED_RETRY_LIMIT - 1) {
         const retry = suggestIdentity();
         nextNickname = retry.nickname;
-        setSuggestion(retry);
+        loadSuggestion(retry);
         continue;
       }
       setError(result.error);
@@ -177,6 +183,7 @@ export function IdentityOverlay({
     setSaving(false);
   }
 
+  const displayName = shouldScramble ? scrambledDisplayName : suggestion.nickname;
   const acceptReady = customMode || settled;
   const acceptDisabled = saving || !acceptReady;
 

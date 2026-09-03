@@ -15,6 +15,9 @@ const profileState = vi.hoisted(() => ({
   error: null as string | null,
 }));
 const ensureThenMock = vi.hoisted(() => vi.fn((action: () => void) => action()));
+const identityOverlayState = vi.hoisted(() => ({
+  open: false,
+}));
 
 vi.mock('@/lib/api/squad', () => ({
   fetchSquadInvitePreview: (...args: unknown[]) => previewMock(...args),
@@ -43,8 +46,17 @@ vi.mock('@/hooks/useAthleteProfile', () => ({
 vi.mock('@/hooks/useEnsureAthleteIdentity', () => ({
   useEnsureAthleteIdentity: () => ({
     ensureThen: ensureThenMock,
-    overlay: 'Identity overlay',
+    open: identityOverlayState.open,
+    overlayProps: {
+      acceptLabel: 'Accept & join',
+      dismissible: true,
+      onClose: vi.fn(),
+      onAccept: vi.fn(),
+    },
   }),
+}));
+vi.mock('@/components/onboarding/IdentityOverlay', () => ({
+  IdentityOverlay: () => <div>Identity overlay</div>,
 }));
 vi.mock('@/components/AuthModal', () => ({
   AuthModal: () => <div>Auth modal</div>,
@@ -71,6 +83,7 @@ beforeEach(() => {
   profileState.loading = false;
   profileState.error = null;
   ensureThenMock.mockClear();
+  identityOverlayState.open = false;
   previewMock.mockResolvedValue({
     data: { username: 'maya', nickname: 'Maya' },
     error: null,
@@ -129,6 +142,8 @@ describe('JoinSquadPage', () => {
   it('opens the identity overlay path before accept when identity is missing', async () => {
     profileState.profile = null;
     profileState.missing = true;
+    identityOverlayState.open = true;
+    ensureThenMock.mockImplementationOnce(() => {});
     renderPage();
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Accept' })).toBeTruthy());
