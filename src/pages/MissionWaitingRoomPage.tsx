@@ -52,6 +52,7 @@ import {
   touchRallyPointPresence,
 } from '@/lib/api/rallyPoint';
 import { canPassRallyPointCommand } from '@/lib/rallyPoint/canPassRallyPointCommand';
+import { shouldHandleLogRoundHotkey } from '@/lib/mission/logRoundHotkey';
 import { shouldShowMissionReset } from '@/lib/mission/shouldShowMissionReset';
 import { shouldSubscribeRallyPointOnMission } from '@/lib/rallyPoint/shouldSubscribeRallyPointOnMission';
 import { shouldUseMissionRealtimeTables } from '@/lib/realtime/shouldUseMissionRealtimeTables';
@@ -426,6 +427,7 @@ function LiveMissionView({
   const [scorecardDismissed, setScorecardDismissed] = useState(false);
   const [missionLoadingDismissed, setMissionLoadingDismissed] = useState(false);
   const [authOpenForSave, setAuthOpenForSave] = useState(false);
+  const [chatExpanded, setChatExpanded] = useState(false);
   const pendingSaveAfterAuth = useRef(false);
   const [ghostSelection, setGhostSelection] = useState<StoredGhostSelection | null>(() =>
     getStoredGhostSelection(missionId)
@@ -651,6 +653,30 @@ function LiveMissionView({
     phase: livePhase,
   });
   const showLogRound = livePhase === 'work' && !live.isPaused;
+
+  function handleLogRound() {
+    playRoundLogged();
+    void live.logRound();
+  }
+
+  const handleLogRoundRef = useRef(handleLogRound);
+  handleLogRoundRef.current = handleLogRound;
+
+  useEffect(() => {
+    if (!showLogRound) {
+      return;
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (!shouldHandleLogRoundHotkey(event)) {
+        return;
+      }
+      event.preventDefault();
+      handleLogRoundRef.current();
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showLogRound]);
+
   const showEndPractice = live.isPractice && livePhase === 'finished';
   const showPartialRepsModal =
     !live.isPractice &&
@@ -1161,10 +1187,7 @@ function LiveMissionView({
                   <button
                     type="button"
                     className="btn-success px-3 py-1.5 text-sm lg:px-6 lg:py-3 lg:text-base"
-                    onClick={() => {
-                      playRoundLogged();
-                      void live.logRound();
-                    }}
+                    onClick={handleLogRound}
                   >
                     Log round
                   </button>
@@ -1233,15 +1256,6 @@ function LiveMissionView({
                 </ul>
               </section>
             )}
-
-            <MissionChat
-              missionId={missionId}
-              participantId={participantId}
-              claimToken={claimToken}
-              isAuthenticated={isAuthenticated}
-              messages={channel.messages}
-              className="min-h-[12rem] flex-1 overflow-hidden"
-            />
           </div>
 
           <div className="flex min-h-0 flex-col gap-6 lg:overflow-hidden">
@@ -1250,15 +1264,26 @@ function LiveMissionView({
               presence={live.presence}
               selfParticipantId={live.participantId}
               phase={live.phase}
+              className="lg:min-h-0 lg:flex-1 lg:overflow-hidden"
+            />
+
+            <MissionChat
+              missionId={missionId}
+              participantId={participantId}
+              claimToken={claimToken}
+              isAuthenticated={isAuthenticated}
+              messages={channel.messages}
+              expanded={chatExpanded}
+              onExpandedChange={setChatExpanded}
               className={
-                showRallyPointPass && rallyPointChannel.rallyPoint
-                  ? 'lg:min-h-0 lg:flex-[2] lg:overflow-hidden'
-                  : 'lg:min-h-0 lg:flex-1 lg:overflow-hidden'
+                chatExpanded
+                  ? 'lg:min-h-0 lg:flex-1 lg:overflow-hidden'
+                  : 'shrink-0 overflow-hidden'
               }
             />
 
             {showRallyPointPass && rallyPointChannel.rallyPoint ? (
-              <section className="card flex min-h-0 flex-col space-y-3 overflow-hidden p-4 lg:flex-1 lg:overflow-y-auto">
+              <section className="card flex max-h-48 min-h-0 shrink-0 flex-col space-y-3 overflow-hidden p-4 lg:max-h-56 lg:overflow-y-auto">
                 <h2 className="shrink-0 text-sm font-semibold uppercase tracking-widest text-secondary">
                   Pass Command
                 </h2>
