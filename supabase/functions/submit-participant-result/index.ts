@@ -1,13 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 import {
   handleSubmitParticipantResult,
+  normalizeSubmitRequest,
   type SubmitParticipantResultRequest,
 } from './handler.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -34,12 +34,14 @@ Deno.serve(async (req) => {
     return jsonResponse({ ok: false, reason: 'server_misconfigured' }, 500);
   }
 
-  let body: SubmitParticipantResultRequest;
+  let rawBody: Record<string, unknown>;
   try {
-    body = await req.json();
+    rawBody = await req.json();
   } catch {
     return jsonResponse({ ok: false, reason: 'invalid_json' }, 400);
   }
+
+  const body: SubmitParticipantResultRequest = normalizeSubmitRequest(rawBody);
 
   const authHeader = req.headers.get('Authorization');
   let authUserId: string | null = null;
@@ -62,7 +64,7 @@ Deno.serve(async (req) => {
     fetchParticipant: async (participantId) => {
       const { data, error } = await adminClient
         .from('participants')
-        .select('claim_token_hash, session_id, user_id')
+        .select('claim_token_hash, mission_id, user_id')
         .eq('id', participantId)
         .maybeSingle();
 
@@ -72,11 +74,11 @@ Deno.serve(async (req) => {
 
       return data;
     },
-    fetchSession: async (sessionId) => {
+    fetchMission: async (missionId) => {
       const { data, error } = await adminClient
-        .from('sessions')
+        .from('missions')
         .select('state, segment_index, workout, duration_minutes')
-        .eq('id', sessionId)
+        .eq('id', missionId)
         .maybeSingle();
 
       if (error || !data) {

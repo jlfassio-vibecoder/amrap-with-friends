@@ -2,10 +2,10 @@ import { computeBaseScore } from '@/lib/scoring/computeBaseScore';
 import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
 import { computeScoreBreakdown } from '@/lib/scoring/computeScoreBreakdown';
 import type { ScoreBreakdown } from '@/lib/scoring/types';
-import type { WorkoutExercise } from '@/lib/api/sessionTypes';
+import type { WorkoutExercise } from '@/lib/api/missionTypes';
 
 export interface SubmitParticipantResultRequest {
-  sessionId: string;
+  missionId: string;
   participantId: string;
   claimToken: string;
   partialReps: number;
@@ -30,11 +30,11 @@ export interface RoundRow {
 
 export interface ParticipantRecord {
   claim_token_hash: string | null;
-  session_id: string;
+  mission_id: string;
   user_id: string | null;
 }
 
-export interface SessionRecord {
+export interface MissionRecord {
   state: string;
   segment_index: number;
   workout: WorkoutExercise[];
@@ -45,22 +45,36 @@ export interface ExistingSegmentResult {
   score_breakdown: ScoreBreakdown | null;
 }
 
+/** Accept missionId (current) or legacy sessionId from older clients. */
+export function normalizeSubmitRequest(
+  body: Record<string, unknown>
+): SubmitParticipantResultRequest {
+  const missionId =
+    (typeof body.missionId === 'string' && body.missionId) ||
+    (typeof body.sessionId === 'string' && body.sessionId) ||
+    '';
+
+  return {
+    missionId,
+    participantId: typeof body.participantId === 'string' ? body.participantId : '',
+    claimToken: typeof body.claimToken === 'string' ? body.claimToken : '',
+    partialReps: typeof body.partialReps === 'number' ? body.partialReps : Number.NaN,
+    segmentIndex: typeof body.segmentIndex === 'number' ? body.segmentIndex : Number.NaN,
+  };
+}
+
 export function deriveRoundDurationsSec(rounds: RoundRow[]): number[] {
   const sorted = [...rounds].sort((a, b) => a.round_index - b.round_index);
 
   return sorted.map((round, index) => {
-    const previousElapsed =
-      index > 0 ? sorted[index - 1].elapsed_sec_at_round : 0;
+    const previousElapsed = index > 0 ? sorted[index - 1].elapsed_sec_at_round : 0;
 
     return Math.max(0, round.elapsed_sec_at_round - previousElapsed);
   });
 }
 
 export async function hashClaimToken(claimToken: string): Promise<string> {
-  const digest = await crypto.subtle.digest(
-    'SHA-256',
-    new TextEncoder().encode(claimToken)
-  );
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(claimToken));
 
   return Array.from(new Uint8Array(digest))
     .map((byte) => byte.toString(16).padStart(2, '0'))
@@ -69,11 +83,11 @@ export async function hashClaimToken(claimToken: string): Promise<string> {
 
 export function isAuthorizedParticipant(
   participant: ParticipantRecord,
-  sessionId: string,
+  missionId: string,
   claimTokenHash: string | null,
   authUserId: string | null
 ): boolean {
-  if (participant.session_id !== sessionId) {
+  if (participant.mission_id !== missionId) {
     return false;
   }
 
@@ -85,17 +99,13 @@ export function isAuthorizedParticipant(
     return true;
   }
 
-  return (
-    authUserId !== null &&
-    participant.user_id !== null &&
-    participant.user_id === authUserId
-  );
+  return authUserId !== null && participant.user_id !== null && participant.user_id === authUserId;
 }
 
 export function validateSubmitRequest(
   body: SubmitParticipantResultRequest
 ): SubmitParticipantResultResponse | null {
-  if (!body.sessionId || !body.participantId) {
+  if (!body.missionId || !body.participantId) {
     return { ok: false, reason: 'participant_not_found' };
   }
 
@@ -144,12 +154,7 @@ export function computeLockedScore(
   const baseScore = computeBaseScore(roundCount, partialReps, repsPerRound);
   const roundDurationsSec = deriveRoundDurationsSec(rounds);
   const breakdown = {
-    ...computeScoreBreakdown(
-      roundDurationsSec,
-      durationMinutes,
-      'finished',
-      baseScore
-    ),
+    ...computeScoreBreakdown(roundDurationsSec, durationMinutes, 'finished', baseScore),
     roundCount,
     roundSplits: roundDurationsSec,
   };
@@ -161,18 +166,13 @@ export async function handleSubmitParticipantResult(
   body: SubmitParticipantResultRequest,
   deps: {
     authUserId: string | null;
-    fetchParticipant: (
-      participantId: string
-    ) => Promise<ParticipantRecord | null>;
-    fetchSession: (sessionId: string) => Promise<SessionRecord | null>;
+    fetchParticipant: (participantId: string) => Promise<ParticipantRecord | null>;
+    fetchMission: (missionId: string) => Promise<MissionRecord | null>;
     fetchExistingResult: (
       participantId: string,
       segmentIndex: number
     ) => Promise<ExistingSegmentResult | null>;
-    fetchRounds: (
-      participantId: string,
-      segmentIndex: number
-    ) => Promise<RoundRow[]>;
+    fetchRounds: (participantId: string, segmentIndex: number) => Promise<RoundRow[]>;
     persistResult: (input: {
       participantId: string;
       segmentIndex: number;
@@ -187,39 +187,30 @@ export async function handleSubmitParticipantResult(
     return validationError;
   }
 
-  const claimTokenHash =
-    body.claimToken.length > 0 ? await hashClaimToken(body.claimToken) : null;
+  const claimTokenHash = body.claimToken.length > 0 ? await hashClaimToken(body.claimToken) : null;
 
   const participant = await deps.fetchParticipant(body.participantId);
   if (
     !participant ||
-    !isAuthorizedParticipant(
-      participant,
-      body.sessionId,
-      claimTokenHash,
-      deps.authUserId
-    )
+    !isAuthorizedParticipant(participant, body.missionId, claimTokenHash, deps.authUserId)
   ) {
     return { ok: false, reason: 'invalid_claim_token' };
   }
 
-  const session = await deps.fetchSession(body.sessionId);
-  if (!session) {
+  const mission = await deps.fetchMission(body.missionId);
+  if (!mission) {
     return { ok: false, reason: 'session_not_found' };
   }
 
-  if (session.state !== 'finished') {
+  if (mission.state !== 'finished') {
     return { ok: false, reason: 'session_not_submittable' };
   }
 
-  if (body.segmentIndex !== session.segment_index) {
+  if (body.segmentIndex !== mission.segment_index) {
     return { ok: false, reason: 'stale_segment_index' };
   }
 
-  const existing = await deps.fetchExistingResult(
-    body.participantId,
-    body.segmentIndex
-  );
+  const existing = await deps.fetchExistingResult(body.participantId, body.segmentIndex);
 
   if (existing?.score_breakdown !== null && existing?.score_breakdown !== undefined) {
     return { ok: false, reason: 'score_already_locked' };
@@ -228,8 +219,8 @@ export async function handleSubmitParticipantResult(
   const rounds = await deps.fetchRounds(body.participantId, body.segmentIndex);
   const computed = computeLockedScore(
     rounds,
-    session.workout,
-    session.duration_minutes,
+    mission.workout,
+    mission.duration_minutes,
     body.partialReps
   );
 
