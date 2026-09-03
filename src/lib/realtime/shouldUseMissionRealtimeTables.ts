@@ -1,12 +1,11 @@
 /**
- * Use postgres_changes only when the athlete is signed in and has no claim
- * token for this mission (membership RLS can apply). Anyone with a claim
- * keeps get_mission_live_state polling — including signed-in guests whose
- * seat is still claim-backed (user_id may still be null).
+ * Signed-in seats use membership postgres_changes even when a claim token is
+ * still in sessionStorage. Guests (no auth.uid) keep get_mission_live_state
+ * polling because anon cannot SELECT live tables.
  */
 export function shouldUseMissionRealtimeTables(input: {
   isAuthenticated: boolean;
   hasClaimToken: boolean;
 }): boolean {
-  return input.isAuthenticated && !input.hasClaimToken;
+  return input.isAuthenticated;
 }

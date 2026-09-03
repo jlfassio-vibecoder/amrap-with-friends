@@ -4,12 +4,14 @@ import { HonestyLockCheckbox } from '@/components/HonestyLockCheckbox';
 interface PartialRepsModalProps {
   repsPerRound: number;
   isSubmitting: boolean;
+  error?: string | null;
   onSubmit: (partialReps: number) => void;
 }
 
 export function PartialRepsModal({
   repsPerRound,
   isSubmitting,
+  error,
   onSubmit,
 }: PartialRepsModalProps) {
   const titleId = 'partial-reps-modal-title';
@@ -40,8 +42,7 @@ export function PartialRepsModal({
           TIME CALLED. BREATHE.
         </h2>
         <p className="text-sm text-secondary">
-          Where did you break? Log the exact reps completed in your final, unfinished
-          round.
+          Where did you break? Log the exact reps completed in your final, unfinished round.
         </p>
 
         <div className="flex items-center justify-center gap-4">
@@ -54,16 +55,12 @@ export function PartialRepsModal({
           >
             −
           </button>
-          <span className="text-display text-4xl tabular-nums text-accent">
-            {partialReps}
-          </span>
+          <span className="text-display text-4xl tabular-nums text-accent">{partialReps}</span>
           <button
             type="button"
             className="btn-outline h-12 w-12 text-xl"
             disabled={!canIncrement || isSubmitting}
-            onClick={() =>
-              setPartialReps((value) => Math.min(maxPartialReps, value + 1))
-            }
+            onClick={() => setPartialReps((value) => Math.min(maxPartialReps, value + 1))}
             aria-label="Increase partial reps"
           >
             +
@@ -80,12 +77,12 @@ export function PartialRepsModal({
           onChange={setIntegrityAcknowledged}
         />
 
+        {error ? <p className="text-error text-sm">{error}</p> : null}
+
         <button
           type="button"
           className={
-            canSubmit
-              ? 'btn-primary w-full'
-              : 'btn-outline w-full cursor-not-allowed opacity-50'
+            canSubmit ? 'btn-primary w-full' : 'btn-outline w-full cursor-not-allowed opacity-50'
           }
           disabled={!canSubmit}
           onClick={() => onSubmit(partialReps)}

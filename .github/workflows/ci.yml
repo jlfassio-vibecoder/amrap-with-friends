@@ -29,6 +29,14 @@ jobs:
       - name: Test
         run: npm run test
 
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Edge function tests
+        run: npm run test:functions
+
       # Type errors inside .astro frontmatter only surface at build time, so the
       # build is the check that covers the content layer.
       - name: Build

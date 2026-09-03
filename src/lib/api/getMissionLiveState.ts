@@ -20,6 +20,7 @@ export type MissionLiveStateSnapshot = {
   rounds: RoundRow[];
   messages: MessageRow[];
   segmentResults: ParticipantSegmentResultRow[];
+  incremental: boolean;
 };
 
 export type GetMissionLiveStateResult =
@@ -79,6 +80,7 @@ export function parseMissionLiveStatePayload(payload: unknown): GetMissionLiveSt
       rounds,
       messages,
       segmentResults,
+      incremental: record.incremental === true,
     },
   };
 }
@@ -88,12 +90,14 @@ export async function getMissionLiveState(input: {
   participantId: string;
   claimToken: string | null;
   hostToken: string | null;
+  since?: string | null;
 }): Promise<GetMissionLiveStateResult> {
   const { data, error } = await callRpc<unknown>('get_mission_live_state', {
     p_mission_id: input.missionId,
     p_participant_id: input.participantId,
     p_claim_token: input.claimToken,
     p_host_token: input.hostToken,
+    p_since: input.since ?? null,
   });
 
   if (error) {

@@ -68,12 +68,39 @@ function mapRpcError(message: string | undefined): string {
   return message;
 }
 
-function mapInvokeError(message: string | undefined, reason?: string): string {
-  if (reason === 'score_already_locked') {
-    return 'Your score is already locked for this segment.';
+function mapSubmitReason(reason: string): string {
+  switch (reason) {
+    case 'score_already_locked':
+      return 'Your score is already locked for this segment.';
+    case 'use_edge_function':
+      return 'Score submission is unavailable. Please update the app.';
+    case 'mission_not_found':
+    case 'session_not_found':
+      return 'Mission not found.';
+    case 'mission_not_submittable':
+    case 'session_not_submittable':
+      return 'This mission is not finished yet.';
+    case 'invalid_claim_token':
+      return 'Could not verify this mission seat. Rejoin from this device or sign in.';
+    case 'invalid_partial_reps':
+    case 'partial_reps_too_high':
+      return 'Invalid partial rep count.';
+    case 'stale_segment_index':
+      return 'This mission was reset. Rejoin to submit a score.';
+    case 'rounds_unavailable':
+      return 'Could not load your rounds. Please try again.';
+    case 'persist_failed':
+      return 'Could not save your score. Please try again.';
+    case 'invalid_workout':
+      return 'This workout cannot be scored.';
+    default:
+      return `Could not submit score: ${reason}`;
   }
-  if (reason === 'use_edge_function') {
-    return 'Score submission is unavailable. Please update the app.';
+}
+
+function mapInvokeError(message: string | undefined, reason?: string): string {
+  if (reason) {
+    return mapSubmitReason(reason);
   }
   if (!message) {
     return 'Something went wrong. Please try again.';
@@ -234,18 +261,32 @@ export async function submitParticipantResult(input: SubmitParticipantResultInpu
     },
   });
 
-  if (error) {
-    return { data: null, error: { message: mapInvokeError(error.message) } };
+  const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  const reason = readString(raw.reason);
+
+  if (raw.ok === false && reason === 'score_already_locked') {
+    return {
+      data: { ok: false, reason: 'score_already_locked' },
+      error: null,
+    };
   }
 
-  const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
-  const ok = raw.ok === true;
-
-  if (!ok) {
-    const reason = readString(raw.reason) ?? 'unknown';
+  if (raw.ok === false && reason) {
     return {
       data: { ok: false, reason },
-      error: null,
+      error: { message: mapSubmitReason(reason) },
+    };
+  }
+
+  if (error) {
+    return { data: null, error: { message: mapInvokeError(error.message, reason ?? undefined) } };
+  }
+
+  const ok = raw.ok === true;
+  if (!ok) {
+    return {
+      data: { ok: false, reason: reason ?? 'unknown' },
+      error: { message: mapSubmitReason(reason ?? 'unknown') },
     };
   }
 

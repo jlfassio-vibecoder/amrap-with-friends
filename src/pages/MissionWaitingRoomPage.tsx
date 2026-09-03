@@ -1385,6 +1385,7 @@ function LiveMissionView({
         <PartialRepsModal
           repsPerRound={live.repsPerRound}
           isSubmitting={isSubmittingPartialReps}
+          error={live.syncError}
           onSubmit={handleSubmitPartialReps}
         />
       ) : null}

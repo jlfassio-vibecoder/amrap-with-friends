@@ -8,9 +8,9 @@ describe('shouldUseMissionRealtimeTables', () => {
     );
   });
 
-  it('polls when a claim token is present, even if signed in', () => {
+  it('uses Realtime for signed-in athletes even with a claim token', () => {
     expect(shouldUseMissionRealtimeTables({ isAuthenticated: true, hasClaimToken: true })).toBe(
-      false
+      true
     );
   });
 

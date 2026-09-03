@@ -13,6 +13,7 @@
     "lint": "eslint .",
     "typecheck": "tsc -b",
     "test": "vitest run",
+    "test:functions": "deno test --allow-env --import-map=supabase/functions/import_map.json supabase/functions/submit-participant-result/index.test.ts",
     "test:watch": "vitest",
     "format": "prettier --write .",
     "generate:og-images": "tsx scripts/generate-og-images.ts",

@@ -412,7 +412,10 @@ export function useLiveAmrapMission(
       return true;
     }
     return channel.segmentResults.some(
-      (result) => result.participant_id === participantId && result.segment_index === segmentIndex
+      (result) =>
+        result.participant_id === participantId &&
+        result.segment_index === segmentIndex &&
+        result.score_breakdown !== null
     );
   }, [localPartialSubmitted, channel.segmentResults, participantId, segmentIndex]);
 
@@ -758,6 +761,8 @@ export function useLiveAmrapMission(
         return;
       }
 
+      setSyncError(null);
+
       const tokenForRpc = claimToken ?? '';
       if (!tokenForRpc && !isAuthenticated) {
         setSyncError(
@@ -774,6 +779,12 @@ export function useLiveAmrapMission(
         segmentIndex,
       });
 
+      if (result.data?.ok === false && result.data.reason === 'score_already_locked') {
+        setSyncError(null);
+        setLocalPartialSubmitted(true);
+        return;
+      }
+
       if (result.error) {
         setSyncError(result.error.message);
         return;
@@ -784,6 +795,7 @@ export function useLiveAmrapMission(
         return;
       }
 
+      setSyncError(null);
       setLocalPartialSubmitted(true);
     },
     [

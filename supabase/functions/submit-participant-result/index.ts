@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
         .order('round_index', { ascending: true });
 
       if (error || !data) {
-        return [];
+        return null;
       }
 
       return data;
@@ -174,5 +174,6 @@ Deno.serve(async (req) => {
     },
   });
 
-  return jsonResponse(result, result.ok ? 200 : 400);
+  // Always 200 so supabase-js surfaces `{ ok, reason }` instead of FunctionsHttpError.
+  return jsonResponse(result, 200);
 });
