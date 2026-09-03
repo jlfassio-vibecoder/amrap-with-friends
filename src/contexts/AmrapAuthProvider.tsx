@@ -17,6 +17,13 @@ function trimEmail(email: string): string {
   return email.trim();
 }
 
+function mapProviderAuthError(message: string): string {
+  return mapAuthError(message, {
+    passwordResetEnabled: isPasswordResetEnabled(),
+    googleAuthEnabled: isGoogleAuthEnabled(),
+  });
+}
+
 /** Survives reload so /reset-password still works after PASSWORD_RECOVERY was already consumed. */
 const PASSWORD_RECOVERY_STORAGE_KEY = 'amrap_password_recovery';
 
@@ -166,7 +173,7 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
-      return { error: mapAuthError(error.message) };
+      return { error: mapProviderAuthError(error.message) };
     }
 
     return { error: null };
@@ -191,7 +198,7 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
-      const mapped = mapAuthError(error.message);
+      const mapped = mapProviderAuthError(error.message);
       track('auth_google_failed', {
         method: 'google',
         reason: authFailureReason(error.message),
@@ -223,7 +230,7 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
-      const mapped = mapAuthError(error.message);
+      const mapped = mapProviderAuthError(error.message);
       track('auth_sign_up_failed', {
         method: 'password',
         reason: authFailureReason(error.message),
@@ -238,7 +245,7 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
 
     if (data.user) {
       if ((data.user.identities ?? []).length === 0) {
-        const mapped = mapAuthError('User already registered');
+        const mapped = mapProviderAuthError('User already registered');
         track('auth_sign_up_failed', { method: 'password', reason: 'duplicate' });
         return {
           error: mapped,
@@ -274,7 +281,7 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
-      const mapped = mapAuthError(error.message);
+      const mapped = mapProviderAuthError(error.message);
       track('auth_sign_in_failed', {
         method: 'password',
         reason: authFailureReason(error.message),
@@ -306,7 +313,7 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
-      return { error: mapAuthError(error.message) };
+      return { error: mapProviderAuthError(error.message) };
     }
 
     return { error: null };

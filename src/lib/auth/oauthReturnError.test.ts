@@ -1,14 +1,9 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   hasOAuthReturnErrorParams,
   readOAuthReturnError,
   stripOAuthReturnErrorParams,
 } from './oauthReturnError';
-
-vi.mock('@/lib/auth/authFeatures', () => ({
-  isPasswordResetEnabled: () => false,
-  isGoogleAuthEnabled: () => true,
-}));
 
 describe('oauthReturnError', () => {
   it('returns null when no error params are present', () => {

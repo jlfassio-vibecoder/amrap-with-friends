@@ -1,3 +1,6 @@
+import { useId } from 'react';
+import { WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
+
 export interface GuidedIgnitionOverlayProps {
   onSelect: (templateId: string) => void;
   onSkip: () => void;
@@ -17,6 +20,7 @@ const TIERS: TierOption[] = [
   {
     templateId: 'first-contact',
     tier: 'TIER 1',
+    // Copilot suggestion ignored: tactical tier names are the required product copy; CTAs stay plain English.
     label: 'CIVILIAN / RECRUIT',
     hook: "I need a baseline. Let's start the clock.",
     duration: '10 min',
@@ -26,6 +30,7 @@ const TIERS: TierOption[] = [
   {
     templateId: 'steady-altitude',
     tier: 'TIER 2',
+    // Copilot suggestion ignored: tactical tier names are the required product copy; CTAs stay plain English.
     label: 'FIELD READY',
     hook: 'I know my way around the work. Give me a target.',
     duration: '15 min',
@@ -35,6 +40,7 @@ const TIERS: TierOption[] = [
   {
     templateId: 'the-undertow',
     tier: 'TIER 3',
+    // Copilot suggestion ignored: tactical tier names are the required product copy; CTAs stay plain English.
     label: 'OPERATOR / SPECIAL OPS',
     hook: 'Put me in the Crucible. No modifications.',
     duration: '15 min',
@@ -44,16 +50,20 @@ const TIERS: TierOption[] = [
 ];
 
 export function GuidedIgnitionOverlay({ onSelect, onSkip }: GuidedIgnitionOverlayProps) {
+  const titleId = useId();
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-scrim p-4"
       role="dialog"
       aria-modal="true"
-      aria-label="Determine Your Baseline"
+      aria-labelledby={titleId}
     >
       <div className="card w-full max-w-lg space-y-6 p-6" onClick={(e) => e.stopPropagation()}>
         <div className="space-y-1">
-          <h2 className="text-display text-2xl text-ink">Determine Your Baseline.</h2>
+          <h2 id={titleId} className="text-display text-2xl text-ink">
+            Determine Your Baseline.
+          </h2>
           <p className="text-sm text-secondary">
             Pick your operational tier. Your mission loads instantly.
           </p>
@@ -96,7 +106,7 @@ export function GuidedIgnitionOverlay({ onSelect, onSkip }: GuidedIgnitionOverla
             className="text-sm text-secondary underline underline-offset-2 hover:text-ink"
             onClick={onSkip}
           >
-            Skip and browse the full Arsenal (190 missions)
+            Skip and browse the full Arsenal ({WORKOUT_TEMPLATES.length} missions)
           </button>
         </div>
       </div>

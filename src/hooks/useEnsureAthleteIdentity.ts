@@ -3,7 +3,7 @@ import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { profileNeedsIntake } from '@/lib/auth/profileNeedsIntake';
 import type { AthleteIdentityInput } from '@/lib/api/athleteProfile';
 
-type PendingAction = () => void;
+type PendingAction = (accepted?: AthleteIdentityInput) => void;
 
 export function useEnsureAthleteIdentity(options?: {
   acceptLabel?: string;
@@ -38,7 +38,7 @@ export function useEnsureAthleteIdentity(options?: {
       setOpen(false);
       const pending = pendingRef.current;
       pendingRef.current = null;
-      pending?.();
+      pending?.(input);
       return { error: null };
     },
     [saveIdentity]

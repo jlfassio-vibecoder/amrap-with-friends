@@ -1,5 +1,3 @@
-import { isGoogleAuthEnabled, isPasswordResetEnabled } from '@/lib/auth/authFeatures';
-
 const DUPLICATE_ACCOUNT_BASE = 'An account with this email already exists.';
 const INVALID_CREDENTIALS_BASE = 'Email or password is wrong.';
 const EMAIL_NOT_CONFIRMED = 'Confirm your email, then sign in.';
@@ -67,8 +65,8 @@ function isGoogleProviderFailure(normalized: string): boolean {
  * Unknown messages pass through unchanged.
  */
 export function mapAuthError(message: string, options: MapAuthErrorOptions = {}): string {
-  const resetEnabled = options.passwordResetEnabled ?? isPasswordResetEnabled();
-  const googleEnabled = options.googleAuthEnabled ?? isGoogleAuthEnabled();
+  const resetEnabled = options.passwordResetEnabled ?? false;
+  const googleEnabled = options.googleAuthEnabled ?? false;
   const normalized = normalizeMessage(message);
 
   if (normalized === 'user already registered') {
