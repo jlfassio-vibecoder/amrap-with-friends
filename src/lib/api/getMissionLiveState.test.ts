@@ -44,12 +44,14 @@ describe('parseMissionLiveStatePayload', () => {
     expect(result.data.incremental).toBe(false);
     expect(result.data.missionClock).toBeNull();
     expect(result.data.participantIds).toBeNull();
+    expect(result.data.snapshotAt).toBeNull();
   });
 
   it('parses incremental mission clock without workout and participant_ids', () => {
     const result = parseMissionLiveStatePayload({
       ok: true,
       incremental: true,
+      snapshot_at: '2026-01-01T00:05:00.000Z',
       mission: {
         id: 'm1',
         duration_minutes: 10,
@@ -81,6 +83,7 @@ describe('parseMissionLiveStatePayload', () => {
     expect(result.data.missionClock?.time_left_sec).toBe(500);
     expect(result.data.participantIds).toEqual(['p1', 'p2']);
     expect(result.data.incremental).toBe(true);
+    expect(result.data.snapshotAt).toBe('2026-01-01T00:05:00.000Z');
   });
 
   it('surfaces invalid_claim_token failures', () => {

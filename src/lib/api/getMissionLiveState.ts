@@ -25,6 +25,7 @@ export type MissionLiveStateSnapshot = {
   messages: MessageRow[];
   segmentResults: ParticipantSegmentResultRow[];
   incremental: boolean;
+  snapshotAt: string | null;
 };
 
 export type GetMissionLiveStateResult =
@@ -89,6 +90,14 @@ export function parseMissionLiveStatePayload(payload: unknown): GetMissionLiveSt
     .map((row) => parseSegmentResultRow(row))
     .filter((row): row is ParticipantSegmentResultRow => row !== null);
 
+  const snapshotAtRaw = record.snapshot_at;
+  const snapshotAt =
+    snapshotAtRaw === null || snapshotAtRaw === undefined
+      ? null
+      : typeof snapshotAtRaw === 'string' && snapshotAtRaw.length > 0
+        ? snapshotAtRaw
+        : null;
+
   return {
     ok: true,
     data: {
@@ -100,6 +109,7 @@ export function parseMissionLiveStatePayload(payload: unknown): GetMissionLiveSt
       messages,
       segmentResults,
       incremental: record.incremental === true,
+      snapshotAt,
     },
   };
 }

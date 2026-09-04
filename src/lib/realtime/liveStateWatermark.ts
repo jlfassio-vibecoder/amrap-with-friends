@@ -3,6 +3,7 @@ export function nextLiveStateSince(input: {
   rounds: { created_at: string }[];
   messages: { created_at: string }[];
   segmentResults: { updated_at: string }[];
+  snapshotAt?: string | null;
 }): string | null {
   let latestMs = input.previous ? Date.parse(input.previous) : Number.NaN;
   if (!Number.isFinite(latestMs)) {
@@ -13,6 +14,7 @@ export function nextLiveStateSince(input: {
     ...input.rounds.map((row) => row.created_at),
     ...input.messages.map((row) => row.created_at),
     ...input.segmentResults.map((row) => row.updated_at),
+    ...(input.snapshotAt ? [input.snapshotAt] : []),
   ]) {
     const ms = Date.parse(stamp);
     if (Number.isFinite(ms) && ms > latestMs) {

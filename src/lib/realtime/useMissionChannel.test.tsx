@@ -79,6 +79,7 @@ describe('useMissionChannel', () => {
         messages: [],
         segmentResults: [],
         incremental: false,
+        snapshotAt: '2026-09-03T00:00:00.000Z',
       },
     });
   });
@@ -185,6 +186,7 @@ describe('useMissionChannel', () => {
           messages: [],
           segmentResults: [],
           incremental: false,
+          snapshotAt: '2026-09-03T00:00:00.000Z',
         },
       })
       .mockResolvedValueOnce({
@@ -220,6 +222,7 @@ describe('useMissionChannel', () => {
           messages: [],
           segmentResults: [],
           incremental: true,
+          snapshotAt: '2026-09-03T00:01:10.000Z',
         },
       });
 

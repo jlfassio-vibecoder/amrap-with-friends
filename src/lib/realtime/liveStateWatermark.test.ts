@@ -27,4 +27,16 @@ describe('nextLiveStateSince', () => {
       })
     ).toBe('2026-09-03T18:00:00.000Z');
   });
+
+  it('advances from a quiet bootstrap using snapshotAt', () => {
+    expect(
+      nextLiveStateSince({
+        previous: null,
+        rounds: [],
+        messages: [],
+        segmentResults: [],
+        snapshotAt: '2026-09-03T18:05:00.000Z',
+      })
+    ).toBe('2026-09-03T18:05:00.000Z');
+  });
 });

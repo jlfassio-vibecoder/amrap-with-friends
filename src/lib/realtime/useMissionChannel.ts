@@ -152,6 +152,7 @@ export function useMissionChannel(
         rounds: result.data.rounds,
         messages: result.data.messages,
         segmentResults: result.data.segmentResults,
+        snapshotAt: result.data.snapshotAt,
       });
     }
 
