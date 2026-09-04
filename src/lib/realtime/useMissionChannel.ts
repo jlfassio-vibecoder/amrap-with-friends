@@ -147,6 +147,7 @@ export function useMissionChannel(
         setMessages(sortMessagesByCreatedAt(result.data.messages));
         setSegmentResults(result.data.segmentResults);
       }
+      // Copilot suggestion ignored: quiet-mission watermark is advanced via server snapshot_at (20260903160000) passed into nextLiveStateSince.
       sinceRef.current = nextLiveStateSince({
         previous: sinceRef.current,
         rounds: result.data.rounds,

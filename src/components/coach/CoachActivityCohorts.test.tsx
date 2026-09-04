@@ -59,8 +59,9 @@ describe('CoachActivityCohorts Anonymous Now dossier', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Anonymous Now' }));
 
-    const idButton = await screen.findByRole('button', { name: 'aaaaaaaa…eeee' });
+    const idButton = await screen.findByRole('button', { name: ANON_UUID });
     expect(idButton.getAttribute('title')).toBe(ANON_UUID);
+    expect(idButton.getAttribute('aria-pressed')).toBe('false');
     expect(screen.queryByText(ANON_UUID)).toBeNull();
 
     fireEvent.click(idButton);
@@ -106,7 +107,7 @@ describe('CoachActivityCohorts Anonymous Now dossier', () => {
 
     render(<CoachActivityCohorts selectedUser={null} onSelect={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Anonymous Now' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'aaaaaaaa…eeee' }));
+    fireEvent.click(await screen.findByRole('button', { name: ANON_UUID }));
 
     await waitFor(() => {
       expect(screen.getByText('Signed in as Ghost')).toBeTruthy();
@@ -131,7 +132,7 @@ describe('CoachActivityCohorts historical guests', () => {
     render(<CoachActivityCohorts selectedUser={null} onSelect={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Anonymous Now' }));
 
-    await screen.findByRole('button', { name: 'aaaaaaaa…eeee' });
+    await screen.findByRole('button', { name: ANON_UUID });
     expect(fetchGuestsMock).not.toHaveBeenCalled();
     expect(screen.queryByRole('heading', { name: 'Guests' })).toBeNull();
   });
@@ -149,7 +150,7 @@ describe('CoachActivityCohorts historical guests', () => {
     expect(screen.getByRole('heading', { name: 'Accounts' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Guests' })).toBeTruthy();
 
-    const idButton = await screen.findByRole('button', { name: 'aaaaaaaa…eeee' });
+    const idButton = await screen.findByRole('button', { name: ANON_UUID });
     expect(idButton.getAttribute('title')).toBe(ANON_UUID);
     fireEvent.click(idButton);
 

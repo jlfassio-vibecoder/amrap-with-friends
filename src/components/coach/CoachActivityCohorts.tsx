@@ -56,6 +56,8 @@ function AnonIdButton({
     <button
       type="button"
       title={anonId}
+      aria-label={anonId}
+      aria-pressed={selected}
       className={
         selected
           ? 'font-mono text-sm font-semibold text-accent hover:underline'

@@ -37,7 +37,7 @@ export function CoachAnonDossierCard({ anonId, onDismiss }: CoachAnonDossierCard
 
   useEffect(() => {
     let cancelled = false;
-
+    // Copilot suggestion ignored: callRpc settles RPC failures as { error } rather than reject, matching CoachOnboardingStuckTable and other coach fetches.
     Promise.all([
       fetchCoachAnonSummary(anonId),
       fetchCoachRecentEvents({ anonId, limit: RECENT_EVENTS_LIMIT }),

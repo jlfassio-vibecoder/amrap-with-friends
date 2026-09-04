@@ -78,6 +78,7 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'reason', 'invalid_claim_token');
   END IF;
 
+  -- Copilot suggestion ignored: concurrent rate-limit race was fixed in 20260903160000_live_state_scale_cut_review.sql with pg_advisory_xact_lock.
   IF EXISTS (
     SELECT 1
     FROM public.messages

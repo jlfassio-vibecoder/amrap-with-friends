@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, renderHook, waitFor } from '@testing-library/react';
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 
 const fetchCoachOnlineNowMock = vi.fn();
 const subscribeOnlineAnonIdsMock = vi.fn();
@@ -35,6 +35,7 @@ describe('useOnlineUserIds / useOnlineAnonIds', () => {
   afterEach(() => {
     cleanup();
     resetCoachOnlinePollForTests();
+    vi.useRealTimers();
   });
 
   it('updates both sets from one shared coach_online_now poll', async () => {
@@ -65,5 +66,26 @@ describe('useOnlineUserIds / useOnlineAnonIds', () => {
 
     expect(users.result.current.size).toBe(0);
     expect(subscribeOnlineAnonIdsMock).not.toHaveBeenCalled();
+  });
+
+  it('clears online ids when a later poll fails', async () => {
+    vi.useFakeTimers();
+    const users = renderHook(() => useOnlineUserIds());
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(users.result.current.has('user-1')).toBe(true);
+
+    fetchCoachOnlineNowMock.mockResolvedValue({
+      data: null,
+      error: { message: 'Not authorized' },
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000);
+    });
+
+    expect(users.result.current.size).toBe(0);
   });
 });

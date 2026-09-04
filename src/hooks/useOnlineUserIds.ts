@@ -37,8 +37,13 @@ async function refreshOnlineNow() {
         userIds: new Set(result.data.userIds),
         anonIds: new Set(result.data.anonIds),
       };
-      emitOnline();
+    } else {
+      snapshot = { userIds: new Set(), anonIds: new Set() };
     }
+    emitOnline();
+  } catch {
+    snapshot = { userIds: new Set(), anonIds: new Set() };
+    emitOnline();
   } finally {
     inFlight = false;
   }
