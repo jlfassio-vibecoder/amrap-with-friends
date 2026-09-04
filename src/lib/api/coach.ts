@@ -8,6 +8,7 @@ export interface CoachTopStrip {
   missionsCreated30d: number;
   missionsFinished7d: number;
   missionsFinished30d: number;
+  guestBrowsers7d: number;
   uniqueAnonIds: number;
   registeredUsers: number;
   practiceMissionsStarted: number;
@@ -233,6 +234,7 @@ function parseTopStrip(row: Record<string, unknown>): CoachTopStrip {
     missionsCreated30d: num(row, 'missionsCreated30d'),
     missionsFinished7d: num(row, 'missionsFinished7d'),
     missionsFinished30d: num(row, 'missionsFinished30d'),
+    guestBrowsers7d: num(row, 'guestBrowsers7d'),
     uniqueAnonIds: num(row, 'uniqueAnonIds'),
     registeredUsers: num(row, 'registeredUsers'),
     practiceMissionsStarted: num(row, 'practiceMissionsStarted'),

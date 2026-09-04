@@ -87,7 +87,7 @@ export default function CoachPage() {
                     label: 'Missions finished (30d)',
                     value: dashboard.topStrip.missionsFinished30d,
                   },
-                  { label: 'Unique visitors (anon)', value: dashboard.topStrip.uniqueAnonIds },
+                  { label: 'Guest browsers (7d)', value: dashboard.topStrip.guestBrowsers7d },
                   { label: 'Anonymous now', value: onlineAnonIds.size },
                   { label: 'Registered users', value: dashboard.topStrip.registeredUsers },
                   { label: 'Live missions created', value: dashboard.topStrip.liveMissionsCreated },

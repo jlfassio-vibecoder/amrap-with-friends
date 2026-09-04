@@ -28,6 +28,7 @@ describe('fetchCoachDashboard', () => {
           missionsCreated30d: 10,
           missionsFinished7d: 2,
           missionsFinished30d: 8,
+          guestBrowsers7d: 2,
           uniqueAnonIds: 5,
           registeredUsers: 4,
           practiceMissionsStarted: 1,
@@ -105,8 +106,44 @@ describe('fetchCoachDashboard', () => {
     expect(callRpcMock).toHaveBeenCalledWith('coach_dashboard');
     expect(result.error).toBeNull();
     expect(result.data?.topStrip.missionsCreated7d).toBe(3);
+    expect(result.data?.topStrip.guestBrowsers7d).toBe(2);
+    expect(result.data?.topStrip.uniqueAnonIds).toBe(5);
     expect(result.data?.claimFunnel.completionRatePct).toBe(40);
     expect(result.data?.templatePerformance[0]?.templateId).toBe('blood-shunt-5');
+  });
+
+  it('treats a missing guestBrowsers7d key as zero (old RPC)', async () => {
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        topStrip: {
+          missionsCreated7d: 3,
+          missionsCreated30d: 10,
+          missionsFinished7d: 2,
+          missionsFinished30d: 8,
+          uniqueAnonIds: 5,
+          registeredUsers: 4,
+          practiceMissionsStarted: 1,
+          liveMissionsCreated: 9,
+        },
+        claimFunnel: {},
+        intakeFunnel: {},
+        rallyConversion: {},
+        missionAbandonment: {},
+        templatePerformance: [],
+        hostVsJoinerRetention: [],
+        audioUnlockRate: [],
+        rpcReliability: [],
+        realtimeReliability: [],
+      },
+      error: null,
+    });
+
+    const result = await fetchCoachDashboard();
+
+    expect(result.error).toBeNull();
+    expect(result.data?.topStrip.guestBrowsers7d).toBe(0);
+    expect(result.data?.topStrip.uniqueAnonIds).toBe(5);
   });
 
   it('maps Not authorized errors', async () => {
