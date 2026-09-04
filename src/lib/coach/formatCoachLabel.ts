@@ -16,12 +16,23 @@ function titleCaseWord(word: string): string {
   return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
 }
 
+/** Show a copyable full UUID in title; keep the cell to 8…4. */
+export function truncateAnonId(anonId: string): string {
+  if (anonId.length <= 12) {
+    return anonId;
+  }
+  return `${anonId.slice(0, 8)}…${anonId.slice(-4)}`;
+}
+
 /** intake_submitted → "Intake submitted"; blood-shunt → "Blood shunt" */
 export function formatCoachLabel(value: string): string {
   if (!value.trim()) {
     return value;
   }
-  const words = value.split(/[_-]+/).filter(Boolean).map((word) => word.toLowerCase());
+  const words = value
+    .split(/[_-]+/)
+    .filter(Boolean)
+    .map((word) => word.toLowerCase());
   if (words.length === 0) {
     return value;
   }
@@ -52,10 +63,7 @@ function formatCoachPropsObject(props: Record<string, unknown>): Record<string, 
 }
 
 /** For rpc_call rows: "Rpc call · Upsert athlete profile" */
-export function formatCoachEventLabel(
-  eventName: string,
-  props: Record<string, unknown>
-): string {
+export function formatCoachEventLabel(eventName: string, props: Record<string, unknown>): string {
   const label = formatCoachLabel(eventName);
   if (eventName === 'rpc_call' && typeof props.rpc_name === 'string') {
     return `${label} · ${formatCoachLabel(props.rpc_name)}`;

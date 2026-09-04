@@ -1,4 +1,6 @@
 import { callRpc } from '@/lib/api/callRpc';
+import { isLinkableAnonId } from '@/lib/api/linkAnonIdentity';
+import { isGuestHistoryCohort, type ActivityCohortId } from '@/lib/coach/activityCohorts';
 import type { HudOvertraining } from '@/lib/hud/types';
 
 export type CoachApiError = { message: string };
@@ -8,6 +10,7 @@ export interface CoachTopStrip {
   missionsCreated30d: number;
   missionsFinished7d: number;
   missionsFinished30d: number;
+  guestBrowsers7d: number;
   uniqueAnonIds: number;
   registeredUsers: number;
   practiceMissionsStarted: number;
@@ -101,6 +104,15 @@ export interface CoachEventRow {
   props: Record<string, unknown>;
 }
 
+export interface CoachAnonSummary {
+  lastOccurredAt: string | null;
+  lastRoute: string | null;
+  eventCount: number;
+  eventNameCounts: Record<string, number>;
+  linkedUserId: string | null;
+  linkedNickname: string | null;
+}
+
 export interface CoachUserListRow {
   userId: string;
   username: string;
@@ -110,6 +122,16 @@ export interface CoachUserListRow {
   accountCreatedAt: string;
   lastActiveAt: string | null;
   totalMissions: number;
+}
+
+export interface CoachGuestListRow {
+  anonId: string;
+  lastOccurredAt: string;
+}
+
+export interface CoachOnlineNow {
+  userIds: string[];
+  anonIds: string[];
 }
 
 export type CoachOnboardingStuckStatus = 'needs_profile' | 'intake_incomplete';
@@ -189,6 +211,13 @@ function asArray(value: unknown): Record<string, unknown>[] {
   return Array.isArray(value) ? value.map(asRecord) : [];
 }
 
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((item): item is string => typeof item === 'string' && item.length > 0);
+}
+
 function num(row: Record<string, unknown>, key: string): number {
   const value = row[key];
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
@@ -233,6 +262,7 @@ function parseTopStrip(row: Record<string, unknown>): CoachTopStrip {
     missionsCreated30d: num(row, 'missionsCreated30d'),
     missionsFinished7d: num(row, 'missionsFinished7d'),
     missionsFinished30d: num(row, 'missionsFinished30d'),
+    guestBrowsers7d: num(row, 'guestBrowsers7d'),
     uniqueAnonIds: num(row, 'uniqueAnonIds'),
     registeredUsers: num(row, 'registeredUsers'),
     practiceMissionsStarted: num(row, 'practiceMissionsStarted'),
@@ -320,6 +350,34 @@ function parseRealtimeReliabilityRow(row: Record<string, unknown>): CoachRealtim
   };
 }
 
+function parseEventNameCounts(value: unknown): Record<string, number> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+  const counts: Record<string, number> = {};
+  for (const [name, count] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof count === 'number' && Number.isFinite(count)) {
+      counts[name] = count;
+    }
+  }
+  return counts;
+}
+
+export function parseCoachAnonSummary(value: unknown): CoachAnonSummary | null {
+  const raw = asRecord(value);
+  if (raw.ok !== true) {
+    return null;
+  }
+  return {
+    lastOccurredAt: strOrNull(raw, 'lastOccurredAt'),
+    lastRoute: strOrNull(raw, 'lastRoute'),
+    eventCount: nonNegativeNum(raw, 'eventCount'),
+    eventNameCounts: parseEventNameCounts(raw.eventNameCounts),
+    linkedUserId: strOrNull(raw, 'linkedUserId'),
+    linkedNickname: strOrNull(raw, 'linkedNickname'),
+  };
+}
+
 function parseEventRow(row: Record<string, unknown>): CoachEventRow | null {
   const id = strOrNull(row, 'id');
   const eventName = strOrNull(row, 'event_name');
@@ -357,6 +415,15 @@ function parseUserListRow(row: Record<string, unknown>): CoachUserListRow | null
     lastActiveAt: strOrNull(row, 'last_active_at'),
     totalMissions: num(row, 'total_missions'),
   };
+}
+
+function parseGuestListRow(row: Record<string, unknown>): CoachGuestListRow | null {
+  const anonId = strOrNull(row, 'anon_id');
+  const lastOccurredAt = strOrNull(row, 'last_occurred_at');
+  if (!anonId || !lastOccurredAt) {
+    return null;
+  }
+  return { anonId, lastOccurredAt };
 }
 
 function parseOnboardingStuckStatus(value: unknown): CoachOnboardingStuckStatus | null {
@@ -495,6 +562,35 @@ export async function fetchCoachUsersList(input: {
   return { data: users, error: null };
 }
 
+export async function fetchCoachGuestList(input: {
+  activityBucket: string;
+  limit?: number;
+}): Promise<{ data: CoachGuestListRow[] | null; error: CoachApiError | null }> {
+  if (!isGuestHistoryCohort(input.activityBucket as ActivityCohortId)) {
+    return { data: null, error: { message: 'Invalid activity bucket.' } };
+  }
+
+  const { data, error } = await callRpc('coach_guest_list', {
+    p_activity_bucket: input.activityBucket,
+    p_limit: input.limit ?? 200,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const guests = asArray(raw.guests)
+    .map(parseGuestListRow)
+    .filter((row): row is CoachGuestListRow => row !== null);
+
+  return { data: guests, error: null };
+}
+
 export async function fetchCoachOnboardingStuckList(input?: {
   limit?: number;
 }): Promise<{ data: CoachOnboardingStuckRow[] | null; error: CoachApiError | null }> {
@@ -590,15 +686,47 @@ export async function fetchCoachDashboard(): Promise<{
   };
 }
 
+export async function fetchCoachAnonSummary(anonId: string): Promise<{
+  data: CoachAnonSummary | null;
+  error: CoachApiError | null;
+}> {
+  if (!isLinkableAnonId(anonId)) {
+    return { data: null, error: { message: 'This browser id is not valid.' } };
+  }
+
+  const { data, error } = await callRpc('coach_anon_summary', { p_anon_id: anonId });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    if (raw.reason === 'invalid_anon_id') {
+      return { data: null, error: { message: 'This browser id is not valid.' } };
+    }
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const summary = parseCoachAnonSummary(raw);
+  if (!summary) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  return { data: summary, error: null };
+}
+
 export async function fetchCoachRecentEvents(input: {
   eventName?: string | null;
   limit?: number;
   userId?: string | null;
+  anonId?: string | null;
 }): Promise<{ data: CoachEventRow[] | null; error: CoachApiError | null }> {
   const { data, error } = await callRpc('coach_events_recent', {
     p_event_name: input.eventName ?? null,
     p_limit: input.limit ?? 100,
     p_user_id: input.userId ?? null,
+    p_anon_id: input.anonId ?? null,
   });
 
   if (error) {
@@ -615,4 +743,28 @@ export async function fetchCoachRecentEvents(input: {
     .filter((row): row is CoachEventRow => row !== null);
 
   return { data: events, error: null };
+}
+
+export async function fetchCoachOnlineNow(): Promise<{
+  data: CoachOnlineNow | null;
+  error: CoachApiError | null;
+}> {
+  const { data, error } = await callRpc('coach_online_now');
+
+  if (error) {
+    return { data: null, error: { message: mapCoachError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  return {
+    data: {
+      userIds: asStringArray(raw.userIds),
+      anonIds: asStringArray(raw.anonIds),
+    },
+    error: null,
+  };
 }

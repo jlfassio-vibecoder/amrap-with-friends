@@ -75,7 +75,7 @@ export const CONTENT_ROUTES: RouteSeo[] = [
     path: '/privacy',
     title: 'Privacy — AMRAP With Friends',
     description:
-      'How AMRAP With Friends handles accounts, workout data, and cookies — and how to request deletion of what we store.',
+      'How AMRAP With Friends handles accounts, workout data, and browser data — and how to request deletion of what we store.',
     index: true,
   },
   {

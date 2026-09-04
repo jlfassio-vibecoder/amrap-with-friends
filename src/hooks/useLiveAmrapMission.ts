@@ -36,7 +36,7 @@ import {
 } from '@/lib/missionIdentity';
 import { track, trackBeacon } from '@/lib/analytics/track';
 
-const PUSH_INTERVAL_MS = 3000;
+const PUSH_INTERVAL_MS = 15_000;
 
 export interface UseLiveAmrapMissionReturn {
   phase: LiveMissionPhase;
