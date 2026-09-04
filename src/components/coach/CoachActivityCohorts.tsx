@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { CoachAnonDossierCard } from '@/components/coach/CoachAnonDossierCard';
 import { CoachDataTable } from '@/components/coach/CoachDataTable';
 import { fetchCoachUsersList, type CoachUserListRow } from '@/lib/api/coach';
 import {
@@ -6,6 +7,7 @@ import {
   cohortToActivityBucketParam,
   type ActivityCohortId,
 } from '@/lib/coach/activityCohorts';
+import { truncateAnonId } from '@/lib/coach/formatCoachLabel';
 import { useOnlineAnonIds, useOnlineUserIds } from '@/hooks/useOnlineUserIds';
 
 const COHORT_FETCH_LIMIT = 200;
@@ -16,13 +18,6 @@ function formatLastActive(value: string | null): string {
     return 'Never';
   }
   return new Date(value).toLocaleString();
-}
-
-function truncateAnonId(anonId: string): string {
-  if (anonId.length <= 12) {
-    return anonId;
-  }
-  return `${anonId.slice(0, 8)}…${anonId.slice(-4)}`;
 }
 
 function OnlineDot({ online }: { online: boolean }) {
@@ -48,6 +43,7 @@ export function CoachActivityCohorts({ selectedUser, onSelect }: CoachActivityCo
   const [users, setUsers] = useState<CoachUserListRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedAnonId, setSelectedAnonId] = useState<string | null>(null);
   const onlineUserIds = useOnlineUserIds();
   const onlineAnonIds = useOnlineAnonIds();
 
@@ -63,8 +59,13 @@ export function CoachActivityCohorts({ selectedUser, onSelect }: CoachActivityCo
       setError(null);
       setUsers([]);
     } else {
+      setSelectedAnonId(null);
       setLoading(true);
     }
+  }
+
+  function handleSelectAnon(anonId: string) {
+    setSelectedAnonId((current) => (current === anonId ? null : anonId));
   }
 
   useEffect(() => {
@@ -130,27 +131,44 @@ export function CoachActivityCohorts({ selectedUser, onSelect }: CoachActivityCo
         {error ? <p className="text-error text-sm">{error}</p> : null}
 
         {!loading && !error && cohort === 'anon_now' ? (
-          <CoachDataTable
-            rows={anonRows}
-            rowKey={(row) => row.anonId}
-            emptyLabel="No anonymous visitors online."
-            scrollAfterRows={10}
-            columns={[
-              {
-                header: 'Anon id',
-                render: (row) => (
-                  <span className="font-mono text-sm text-ink" title={row.anonId}>
-                    {truncateAnonId(row.anonId)}
-                  </span>
-                ),
-              },
-              { header: 'Type', render: () => 'Guest' },
-              {
-                header: 'Online',
-                render: () => <OnlineDot online />,
-              },
-            ]}
-          />
+          <>
+            <CoachDataTable
+              rows={anonRows}
+              rowKey={(row) => row.anonId}
+              emptyLabel="No anonymous visitors online."
+              scrollAfterRows={10}
+              columns={[
+                {
+                  header: 'Anon id',
+                  render: (row) => (
+                    <button
+                      type="button"
+                      title={row.anonId}
+                      className={
+                        selectedAnonId === row.anonId
+                          ? 'font-mono text-sm font-semibold text-accent hover:underline'
+                          : 'font-mono text-sm text-ink hover:text-accent hover:underline'
+                      }
+                      onClick={() => handleSelectAnon(row.anonId)}
+                    >
+                      {truncateAnonId(row.anonId)}
+                    </button>
+                  ),
+                },
+                { header: 'Type', render: () => 'Guest' },
+                {
+                  header: 'Online',
+                  render: () => <OnlineDot online />,
+                },
+              ]}
+            />
+            {selectedAnonId ? (
+              <CoachAnonDossierCard
+                anonId={selectedAnonId}
+                onDismiss={() => setSelectedAnonId(null)}
+              />
+            ) : null}
+          </>
         ) : null}
 
         {!loading && !error && cohort !== 'anon_now' ? (

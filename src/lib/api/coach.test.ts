@@ -1,12 +1,20 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   coachOnboardingStuckStatusLabel,
+  fetchCoachAnonSummary,
   fetchCoachDashboard,
   fetchCoachOnboardingStuckList,
   fetchCoachRecentEvents,
   fetchCoachUserDetail,
   fetchCoachUsersList,
+  parseCoachAnonSummary,
 } from './coach';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '../../..');
+const ANON_UUID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 
 const callRpcMock = vi.fn();
 
@@ -201,12 +209,14 @@ describe('fetchCoachRecentEvents', () => {
     const result = await fetchCoachRecentEvents({
       eventName: 'mission_joined',
       limit: 50,
+      anonId: ANON_UUID,
     });
 
     expect(callRpcMock).toHaveBeenCalledWith('coach_events_recent', {
       p_event_name: 'mission_joined',
       p_limit: 50,
       p_user_id: null,
+      p_anon_id: ANON_UUID,
     });
     expect(result.error).toBeNull();
     expect(result.data).toHaveLength(1);
@@ -427,5 +437,96 @@ describe('fetchCoachUserDetail', () => {
       chronicWeeklyLoad28d: 60,
       consecutiveHighIntensityDays: 2,
     });
+  });
+});
+
+describe('parseCoachAnonSummary', () => {
+  it('parses an empty presence-only payload', () => {
+    expect(
+      parseCoachAnonSummary({
+        ok: true,
+        lastOccurredAt: null,
+        lastRoute: null,
+        eventCount: 0,
+        eventNameCounts: {},
+        linkedUserId: null,
+        linkedNickname: null,
+      })
+    ).toEqual({
+      lastOccurredAt: null,
+      lastRoute: null,
+      eventCount: 0,
+      eventNameCounts: {},
+      linkedUserId: null,
+      linkedNickname: null,
+    });
+  });
+
+  it('parses last activity and a linked account', () => {
+    expect(
+      parseCoachAnonSummary({
+        ok: true,
+        lastOccurredAt: '2026-09-03T12:00:00.000Z',
+        lastRoute: '/mission/abc',
+        eventCount: 4,
+        eventNameCounts: { mission_joined: 2, page_viewed: 2 },
+        linkedUserId: 'user-1',
+        linkedNickname: 'Ghost',
+      })
+    ).toEqual({
+      lastOccurredAt: '2026-09-03T12:00:00.000Z',
+      lastRoute: '/mission/abc',
+      eventCount: 4,
+      eventNameCounts: { mission_joined: 2, page_viewed: 2 },
+      linkedUserId: 'user-1',
+      linkedNickname: 'Ghost',
+    });
+  });
+});
+
+describe('fetchCoachAnonSummary', () => {
+  it('skips the RPC for an unlinkable anon id', async () => {
+    const result = await fetchCoachAnonSummary('unknown');
+    expect(callRpcMock).not.toHaveBeenCalled();
+    expect(result.data).toBeNull();
+    expect(result.error?.message).toBe('This browser id is not valid.');
+  });
+
+  it('wires p_anon_id and returns a parsed summary', async () => {
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        lastOccurredAt: '2026-09-03T12:00:00.000Z',
+        lastRoute: '/join',
+        eventCount: 1,
+        eventNameCounts: { mission_joined: 1 },
+        linkedUserId: null,
+        linkedNickname: null,
+      },
+      error: null,
+    });
+
+    const result = await fetchCoachAnonSummary(ANON_UUID);
+
+    expect(callRpcMock).toHaveBeenCalledWith('coach_anon_summary', { p_anon_id: ANON_UUID });
+    expect(result.error).toBeNull();
+    expect(result.data?.eventCount).toBe(1);
+    expect(result.data?.lastRoute).toBe('/join');
+  });
+});
+
+describe('coach_anon_summary migration contract', () => {
+  it('gates the dossier RPC and adds p_anon_id to coach_events_recent', () => {
+    const sql = readFileSync(
+      join(root, 'supabase/migrations/20260903190000_coach_anon_summary.sql'),
+      'utf8'
+    );
+
+    expect(sql).toContain('CREATE OR REPLACE FUNCTION public.coach_anon_summary');
+    expect(sql).toContain("interval '90 days'");
+    expect(sql).toContain('is_coach()');
+    expect(sql).toContain('p_anon_id text DEFAULT NULL');
+    expect(sql).toContain('AND (p_anon_id IS NULL OR ae.anon_id = p_anon_id)');
+    expect(sql).toContain('analytics_events_anon_id_occurred_idx');
   });
 });

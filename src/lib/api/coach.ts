@@ -1,4 +1,5 @@
 import { callRpc } from '@/lib/api/callRpc';
+import { isLinkableAnonId } from '@/lib/api/linkAnonIdentity';
 import type { HudOvertraining } from '@/lib/hud/types';
 
 export type CoachApiError = { message: string };
@@ -100,6 +101,15 @@ export interface CoachEventRow {
   anonId: string | null;
   route: string | null;
   props: Record<string, unknown>;
+}
+
+export interface CoachAnonSummary {
+  lastOccurredAt: string | null;
+  lastRoute: string | null;
+  eventCount: number;
+  eventNameCounts: Record<string, number>;
+  linkedUserId: string | null;
+  linkedNickname: string | null;
 }
 
 export interface CoachUserListRow {
@@ -319,6 +329,34 @@ function parseRealtimeReliabilityRow(row: Record<string, unknown>): CoachRealtim
     status: str(row, 'status'),
     eventCount: num(row, 'event_count'),
     p50SubscribeLatencyMs: numOrNull(row, 'p50_subscribe_latency_ms'),
+  };
+}
+
+function parseEventNameCounts(value: unknown): Record<string, number> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+  const counts: Record<string, number> = {};
+  for (const [name, count] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof count === 'number' && Number.isFinite(count)) {
+      counts[name] = count;
+    }
+  }
+  return counts;
+}
+
+export function parseCoachAnonSummary(value: unknown): CoachAnonSummary | null {
+  const raw = asRecord(value);
+  if (raw.ok !== true) {
+    return null;
+  }
+  return {
+    lastOccurredAt: strOrNull(raw, 'lastOccurredAt'),
+    lastRoute: strOrNull(raw, 'lastRoute'),
+    eventCount: nonNegativeNum(raw, 'eventCount'),
+    eventNameCounts: parseEventNameCounts(raw.eventNameCounts),
+    linkedUserId: strOrNull(raw, 'linkedUserId'),
+    linkedNickname: strOrNull(raw, 'linkedNickname'),
   };
 }
 
@@ -592,15 +630,47 @@ export async function fetchCoachDashboard(): Promise<{
   };
 }
 
+export async function fetchCoachAnonSummary(anonId: string): Promise<{
+  data: CoachAnonSummary | null;
+  error: CoachApiError | null;
+}> {
+  if (!isLinkableAnonId(anonId)) {
+    return { data: null, error: { message: 'This browser id is not valid.' } };
+  }
+
+  const { data, error } = await callRpc('coach_anon_summary', { p_anon_id: anonId });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    if (raw.reason === 'invalid_anon_id') {
+      return { data: null, error: { message: 'This browser id is not valid.' } };
+    }
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const summary = parseCoachAnonSummary(raw);
+  if (!summary) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  return { data: summary, error: null };
+}
+
 export async function fetchCoachRecentEvents(input: {
   eventName?: string | null;
   limit?: number;
   userId?: string | null;
+  anonId?: string | null;
 }): Promise<{ data: CoachEventRow[] | null; error: CoachApiError | null }> {
   const { data, error } = await callRpc('coach_events_recent', {
     p_event_name: input.eventName ?? null,
     p_limit: input.limit ?? 100,
     p_user_id: input.userId ?? null,
+    p_anon_id: input.anonId ?? null,
   });
 
   if (error) {
