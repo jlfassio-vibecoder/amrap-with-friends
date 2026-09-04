@@ -24,7 +24,12 @@ export interface PresenceByParticipantId {
   [participantId: string]: { nickname: string };
 }
 
-export function parseMissionRow(record: Record<string, unknown>): MissionRow | null {
+/** Clock/identity fields from live-state without requiring workout jsonb. */
+export type MissionClockFields = Omit<MissionRow, 'workout'>;
+
+export function parseMissionClockFields(
+  record: Record<string, unknown>
+): MissionClockFields | null {
   const id = typeof record.id === 'string' ? record.id : null;
   const durationMinutes =
     typeof record.duration_minutes === 'number' ? record.duration_minutes : null;
@@ -33,7 +38,6 @@ export function parseMissionRow(record: Record<string, unknown>): MissionRow | n
   const isPaused = typeof record.is_paused === 'boolean' ? record.is_paused : null;
   const segmentIndex = typeof record.segment_index === 'number' ? record.segment_index : null;
   const createdAt = typeof record.created_at === 'string' ? record.created_at : null;
-  const workout = record.workout;
 
   if (
     !id ||
@@ -42,8 +46,7 @@ export function parseMissionRow(record: Record<string, unknown>): MissionRow | n
     timeLeftSec === null ||
     isPaused === null ||
     segmentIndex === null ||
-    !createdAt ||
-    !Array.isArray(workout)
+    !createdAt
   ) {
     return null;
   }
@@ -87,7 +90,6 @@ export function parseMissionRow(record: Record<string, unknown>): MissionRow | n
   return {
     id,
     duration_minutes: durationMinutes,
-    workout: workout as MissionRow['workout'],
     template_id: templateId,
     state,
     time_left_sec: timeLeftSec,
@@ -99,6 +101,36 @@ export function parseMissionRow(record: Record<string, unknown>): MissionRow | n
     created_at: createdAt,
     is_featured: record.is_featured === true,
     rally_point_id: rallyPointId,
+  };
+}
+
+/** Merge incremental clock fields onto a bootstrapped mission (keeps workout). */
+export function mergeMissionClock(
+  previous: MissionRow | null,
+  clock: MissionClockFields
+): MissionRow | null {
+  if (!previous || previous.id !== clock.id) {
+    return previous;
+  }
+
+  return {
+    ...previous,
+    ...clock,
+    workout: previous.workout,
+  };
+}
+
+export function parseMissionRow(record: Record<string, unknown>): MissionRow | null {
+  const clock = parseMissionClockFields(record);
+  const workout = record.workout;
+
+  if (!clock || !Array.isArray(workout)) {
+    return null;
+  }
+
+  return {
+    ...clock,
+    workout: workout as MissionRow['workout'],
   };
 }
 

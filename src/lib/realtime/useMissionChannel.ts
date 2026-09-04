@@ -7,6 +7,7 @@ import { getStoredClaimToken, getStoredHostToken } from '@/lib/missionIdentity';
 import { LIVE_STATE_MESSAGE_CAP } from '@/lib/realtime/liveStateLimits';
 import { nextLiveStateSince } from '@/lib/realtime/liveStateWatermark';
 import {
+  mergeMissionClock,
   mergePresenceState,
   parseMessageRow,
   parseParticipantRow,
@@ -113,10 +114,23 @@ export function useMissionChannel(
       setError(null);
       if (result.data.mission) {
         setMission(result.data.mission);
+      } else if (result.data.missionClock) {
+        const clock = result.data.missionClock;
+        setMission((prev) => mergeMissionClock(prev, clock));
       }
-      setParticipants(result.data.participants);
-      participantIdsRef.current = new Set(result.data.participants.map((row) => row.id));
       if (result.data.incremental) {
+        setParticipants((prev) => {
+          let next = result.data.participants.reduce(
+            (roster, row) => upsertParticipant(roster, row),
+            prev
+          );
+          if (result.data.participantIds) {
+            const keep = new Set(result.data.participantIds);
+            next = next.filter((row) => keep.has(row.id));
+          }
+          participantIdsRef.current = new Set(next.map((row) => row.id));
+          return next;
+        });
         setRounds((prev) => result.data.rounds.reduce((next, row) => upsertRound(next, row), prev));
         setMessages((prev) =>
           sortMessagesByCreatedAt(
@@ -127,6 +141,8 @@ export function useMissionChannel(
           result.data.segmentResults.reduce((next, row) => upsertSegmentResult(next, row), prev)
         );
       } else {
+        setParticipants(result.data.participants);
+        participantIdsRef.current = new Set(result.data.participants.map((row) => row.id));
         setRounds(result.data.rounds);
         setMessages(sortMessagesByCreatedAt(result.data.messages));
         setSegmentResults(result.data.segmentResults);

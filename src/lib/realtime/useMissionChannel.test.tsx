@@ -72,7 +72,9 @@ describe('useMissionChannel', () => {
       ok: true,
       data: {
         mission: null,
+        missionClock: null,
         participants: [],
+        participantIds: null,
         rounds: [],
         messages: [],
         segmentResults: [],
@@ -135,6 +137,124 @@ describe('useMissionChannel', () => {
     });
 
     expect(getMissionLiveStateMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('merges incremental clock fields and prunes roster by participant_ids', async () => {
+    vi.useFakeTimers();
+    const bootstrapMission = {
+      id: MISSION_ID,
+      duration_minutes: 15,
+      workout: [{ name: 'Burpees', target: 10, unit: 'reps' }],
+      template_id: null,
+      state: 'waiting',
+      time_left_sec: 10,
+      is_paused: false,
+      started_at: null,
+      scheduled_at: null,
+      rally_point_countdown_ends_at: null,
+      segment_index: 0,
+      created_at: '2026-09-03T00:00:00.000Z',
+      is_featured: false,
+      rally_point_id: null,
+    };
+
+    getMissionLiveStateMock
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          mission: bootstrapMission,
+          missionClock: null,
+          participants: [
+            {
+              id: 'participant-1',
+              mission_id: MISSION_ID,
+              nickname: 'Host',
+              role: 'host',
+              joined_at: '2026-09-03T00:00:00.000Z',
+            },
+            {
+              id: 'participant-leave',
+              mission_id: MISSION_ID,
+              nickname: 'Gone',
+              role: 'joiner',
+              joined_at: '2026-09-03T00:00:01.000Z',
+            },
+          ],
+          participantIds: null,
+          rounds: [],
+          messages: [],
+          segmentResults: [],
+          incremental: false,
+        },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          mission: null,
+          missionClock: {
+            id: MISSION_ID,
+            duration_minutes: 15,
+            template_id: null,
+            state: 'work',
+            time_left_sec: 880,
+            is_paused: false,
+            started_at: '2026-09-03T00:01:00.000Z',
+            scheduled_at: null,
+            rally_point_countdown_ends_at: null,
+            segment_index: 0,
+            created_at: '2026-09-03T00:00:00.000Z',
+            is_featured: false,
+            rally_point_id: null,
+          },
+          participants: [
+            {
+              id: 'participant-2',
+              mission_id: MISSION_ID,
+              nickname: 'New',
+              role: 'joiner',
+              joined_at: '2026-09-03T00:01:05.000Z',
+            },
+          ],
+          participantIds: ['participant-1', 'participant-2'],
+          rounds: [],
+          messages: [],
+          segmentResults: [],
+          incremental: true,
+        },
+      });
+
+    const { result } = renderHook(() =>
+      useMissionChannel(
+        MISSION_ID,
+        { participantId: 'participant-1', nickname: 'Host' },
+        { realtimeTables: false }
+      )
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.mission?.workout).toEqual(bootstrapMission.workout);
+    expect(result.current.participants.map((p) => p.id).sort()).toEqual([
+      'participant-1',
+      'participant-leave',
+    ]);
+
+    await act(async () => {
+      vi.advanceTimersByTime(GUEST_MISSION_POLL_MS);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.mission?.state).toBe('work');
+    expect(result.current.mission?.time_left_sec).toBe(880);
+    expect(result.current.mission?.workout).toEqual(bootstrapMission.workout);
+    expect(result.current.participants.map((p) => p.id).sort()).toEqual([
+      'participant-1',
+      'participant-2',
+    ]);
   });
 
   it('registers mission_id-filtered segment-results listener when realtimeTables is true', async () => {

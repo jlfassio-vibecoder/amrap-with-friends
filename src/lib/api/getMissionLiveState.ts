@@ -1,10 +1,12 @@
 import { callRpc } from '@/lib/api/callRpc';
 import {
   parseMessageRow,
+  parseMissionClockFields,
   parseMissionRow,
   parseParticipantRow,
   parseRoundRow,
   parseSegmentResultRow,
+  type MissionClockFields,
 } from '@/lib/realtime/missionChannelUtils';
 import type {
   MessageRow,
@@ -16,7 +18,9 @@ import type {
 
 export type MissionLiveStateSnapshot = {
   mission: MissionRow | null;
+  missionClock: MissionClockFields | null;
   participants: ParticipantRow[];
+  participantIds: string[] | null;
   rounds: RoundRow[];
   messages: MessageRow[];
   segmentResults: ParticipantSegmentResultRow[];
@@ -33,6 +37,17 @@ function asRecordArray(value: unknown): Record<string, unknown>[] {
   return value.filter(
     (row): row is Record<string, unknown> => row !== null && typeof row === 'object'
   );
+}
+
+function parseParticipantIds(value: unknown): string[] | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (!Array.isArray(value)) {
+    return null;
+  }
+  const ids = value.filter((id): id is string => typeof id === 'string' && id.length > 0);
+  return ids;
 }
 
 export function parseMissionLiveStatePayload(payload: unknown): GetMissionLiveStateResult {
@@ -55,6 +70,8 @@ export function parseMissionLiveStatePayload(payload: unknown): GetMissionLiveSt
       ? (record.mission as Record<string, unknown>)
       : null;
   const mission = missionRecord ? parseMissionRow(missionRecord) : null;
+  const missionClock =
+    mission === null && missionRecord ? parseMissionClockFields(missionRecord) : null;
 
   const participants = asRecordArray(record.participants)
     .map((row) => parseParticipantRow(row))
@@ -76,7 +93,9 @@ export function parseMissionLiveStatePayload(payload: unknown): GetMissionLiveSt
     ok: true,
     data: {
       mission,
+      missionClock,
       participants,
+      participantIds: parseParticipantIds(record.participant_ids),
       rounds,
       messages,
       segmentResults,
