@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { track } from '@/lib/analytics/track';
+import { linkCurrentAnonIdentity } from '@/lib/api/linkAnonIdentity';
 import { validatePasswordLength } from '@/lib/auth/passwordPolicy';
 import {
   isGoogleAuthEnabled,
@@ -135,6 +136,7 @@ export function AmrapAuthProvider({ children }: { children: ReactNode }) {
             { providers: providersFromUser(nextSession.user) },
             { userId: nextSession.user.id }
           );
+          void linkCurrentAnonIdentity();
         }
 
         // Resolve loading on the first auth event so UI is never stuck waiting for

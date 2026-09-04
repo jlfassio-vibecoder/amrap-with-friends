@@ -13,16 +13,34 @@ const signInWithOAuthMock = vi.fn();
 const resetPasswordForEmailMock = vi.fn();
 const updateUserMock = vi.fn();
 const trackMock = vi.fn();
+const linkCurrentAnonIdentityMock = vi.fn();
+
+type AuthStateCallback = (
+  event: string,
+  session: {
+    user: { id: string; app_metadata?: { provider?: string; providers?: string[] } };
+  } | null
+) => void;
+
+let authStateCallback: AuthStateCallback | null = null;
+let fireInitialSession = true;
 
 vi.mock('@/lib/analytics/track', () => ({
   track: (...args: unknown[]) => trackMock(...args),
 }));
 
+vi.mock('@/lib/api/linkAnonIdentity', () => ({
+  linkCurrentAnonIdentity: (...args: unknown[]) => linkCurrentAnonIdentityMock(...args),
+}));
+
 vi.mock('@/lib/supabase', () => ({
   getSupabaseClient: vi.fn(() => ({
     auth: {
-      onAuthStateChange: (callback: (event: string, session: null) => void) => {
-        callback('INITIAL_SESSION', null);
+      onAuthStateChange: (callback: AuthStateCallback) => {
+        authStateCallback = callback;
+        if (fireInitialSession) {
+          callback('INITIAL_SESSION', null);
+        }
         return { data: { subscription: { unsubscribe: vi.fn() } } };
       },
       getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
@@ -87,9 +105,30 @@ function renderProvider() {
 describe('AmrapAuthProvider password auth', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    authStateCallback = null;
+    fireInitialSession = true;
+    linkCurrentAnonIdentityMock.mockResolvedValue(undefined);
     isMagicLinkAuthEnabledMock.mockReturnValue(true);
     isPasswordResetEnabledMock.mockReturnValue(true);
     isGoogleAuthEnabledMock.mockReturnValue(true);
+  });
+
+  it('stitches anon identity once on SIGNED_IN', async () => {
+    await renderProvider();
+    expect(linkCurrentAnonIdentityMock).not.toHaveBeenCalled();
+
+    authStateCallback?.('SIGNED_IN', {
+      user: { id: 'user-1', app_metadata: { provider: 'email', providers: ['email'] } },
+    });
+
+    await waitFor(() => {
+      expect(linkCurrentAnonIdentityMock).toHaveBeenCalledTimes(1);
+    });
+    expect(trackMock).toHaveBeenCalledWith(
+      'auth_signed_in',
+      expect.objectContaining({ providers: expect.any(Array) }),
+      expect.objectContaining({ userId: 'user-1' })
+    );
   });
 
   it('signInWithPassword returns no error on success', async () => {
