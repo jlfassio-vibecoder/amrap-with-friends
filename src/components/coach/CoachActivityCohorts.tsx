@@ -96,12 +96,18 @@ export function CoachActivityCohorts({ selectedUser, onSelect }: CoachActivityCo
       setSelectedAnonId(null);
     }
 
-    if (next === 'anon_now') {
-      setLoading(false);
-      setError(null);
-      setUsers([]);
+    setError(null);
+    setLoading(next !== 'anon_now');
+    setUsers([]);
+
+    if (isGuestHistoryCohort(next)) {
+      setGuests([]);
+      setGuestsError(null);
+      setGuestsLoading(true);
     } else {
-      setLoading(true);
+      setGuests([]);
+      setGuestsError(null);
+      setGuestsLoading(false);
     }
   }
 
@@ -137,14 +143,10 @@ export function CoachActivityCohorts({ selectedUser, onSelect }: CoachActivityCo
 
   useEffect(() => {
     if (!isGuestHistoryCohort(cohort)) {
-      setGuests([]);
-      setGuestsError(null);
-      setGuestsLoading(false);
       return;
     }
 
     let cancelled = false;
-    setGuestsLoading(true);
     fetchCoachGuestList({
       activityBucket: cohort,
       limit: COHORT_FETCH_LIMIT,
@@ -230,6 +232,7 @@ export function CoachActivityCohorts({ selectedUser, onSelect }: CoachActivityCo
             />
             {selectedAnonId ? (
               <CoachAnonDossierCard
+                key={selectedAnonId}
                 anonId={selectedAnonId}
                 onDismiss={() => setSelectedAnonId(null)}
               />
@@ -316,6 +319,7 @@ export function CoachActivityCohorts({ selectedUser, onSelect }: CoachActivityCo
                 />
                 {selectedAnonId ? (
                   <CoachAnonDossierCard
+                    key={selectedAnonId}
                     anonId={selectedAnonId}
                     onDismiss={() => setSelectedAnonId(null)}
                   />

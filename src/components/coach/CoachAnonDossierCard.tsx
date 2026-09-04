@@ -37,8 +37,6 @@ export function CoachAnonDossierCard({ anonId, onDismiss }: CoachAnonDossierCard
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
 
     Promise.all([
       fetchCoachAnonSummary(anonId),
@@ -47,16 +45,17 @@ export function CoachAnonDossierCard({ anonId, onDismiss }: CoachAnonDossierCard
       if (cancelled) {
         return;
       }
-      setLoading(false);
       if (summaryResult.error) {
         setError(summaryResult.error.message);
         setSummary(null);
         setEvents([]);
+        setLoading(false);
         return;
       }
       setError(eventsResult.error?.message ?? null);
       setSummary(summaryResult.data);
       setEvents(eventsResult.data ?? []);
+      setLoading(false);
     });
 
     return () => {
