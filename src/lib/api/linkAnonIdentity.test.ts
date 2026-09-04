@@ -49,6 +49,12 @@ describe('linkCurrentAnonIdentity', () => {
     expect(callRpcMock).not.toHaveBeenCalled();
   });
 
+  it('does not call the RPC when anon id is null', async () => {
+    getOrCreateAnonIdMock.mockReturnValue(null);
+    await linkCurrentAnonIdentity();
+    expect(callRpcMock).not.toHaveBeenCalled();
+  });
+
   it('calls link_anon_identity with a UUID anon id', async () => {
     getOrCreateAnonIdMock.mockReturnValue(UUID);
     await linkCurrentAnonIdentity();

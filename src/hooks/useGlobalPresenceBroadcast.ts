@@ -18,7 +18,16 @@ export function useGlobalPresenceBroadcast() {
       return;
     }
 
-    const presenceKey = isAuthenticated && userId ? userId : anonPresenceKey(getOrCreateAnonId());
+    let presenceKey: string;
+    if (isAuthenticated && userId) {
+      presenceKey = userId;
+    } else {
+      const anonId = getOrCreateAnonId();
+      if (!anonId) {
+        return;
+      }
+      presenceKey = anonPresenceKey(anonId);
+    }
 
     try {
       return startGlobalPresenceBroadcast(presenceKey);
