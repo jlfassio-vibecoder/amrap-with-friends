@@ -7,6 +7,7 @@ import {
   fetchCoachAnonSummary,
   fetchCoachDashboard,
   fetchCoachGuestList,
+  fetchCoachOnlineNow,
   fetchCoachOnboardingStuckList,
   fetchCoachRecentEvents,
   fetchCoachUserDetail,
@@ -581,5 +582,57 @@ describe('coach_guest_list migration contract', () => {
     expect(sql).toContain("'last_7d'");
     expect(sql).toContain("'lapsed'");
     expect(sql).toContain('LEAST(GREATEST(coalesce(p_limit, 200), 1), 200)');
+  });
+});
+
+describe('fetchCoachOnlineNow', () => {
+  it('parses user and anon id arrays and drops empty values', async () => {
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        userIds: ['user-1', '', 3],
+        anonIds: [ANON_UUID, null],
+      },
+      error: null,
+    });
+
+    const result = await fetchCoachOnlineNow();
+
+    expect(callRpcMock).toHaveBeenCalledWith('coach_online_now');
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual({
+      userIds: ['user-1'],
+      anonIds: [ANON_UUID],
+    });
+  });
+
+  it('returns a generic error when ok is not true', async () => {
+    callRpcMock.mockResolvedValue({
+      data: { ok: false },
+      error: null,
+    });
+
+    const result = await fetchCoachOnlineNow();
+
+    expect(result.data).toBeNull();
+    expect(result.error?.message).toBe('Something went wrong. Please try again.');
+  });
+});
+
+describe('coach_online_now migration contract', () => {
+  it('windows presence_heartbeat for coach only and splits signed-in from guests', () => {
+    const sql = readFileSync(
+      join(root, 'supabase/migrations/20260903210000_coach_online_now.sql'),
+      'utf8'
+    );
+
+    expect(sql).toContain('CREATE OR REPLACE FUNCTION public.coach_online_now');
+    expect(sql).toContain("event_name = 'presence_heartbeat'");
+    expect(sql).toContain("interval '90 seconds'");
+    expect(sql).toContain('is_coach()');
+    expect(sql).toContain('ae.user_id IS NULL');
+    expect(sql).toContain("ae.anon_id <> 'unknown'");
+    expect(sql).toContain('REVOKE EXECUTE ON FUNCTION public.coach_online_now() FROM PUBLIC, anon');
+    expect(sql).toContain('GRANT EXECUTE ON FUNCTION public.coach_online_now() TO authenticated');
   });
 });

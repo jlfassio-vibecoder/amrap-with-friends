@@ -1,17 +1,21 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, renderHook } from '@testing-library/react';
 import type { User } from '@supabase/supabase-js';
 import type { AmrapAuthContextValue } from '@/contexts/AmrapAuthContext';
 
 const getOrCreateAnonIdMock = vi.fn();
+const trackMock = vi.fn();
 const startGlobalPresenceBroadcastMock = vi.fn();
 
 vi.mock('@/lib/analytics/identity', () => ({
   getOrCreateAnonId: (...args: unknown[]) => getOrCreateAnonIdMock(...args),
 }));
 
+vi.mock('@/lib/analytics/track', () => ({
+  track: (...args: unknown[]) => trackMock(...args),
+}));
+
 vi.mock('@/lib/realtime/globalPresenceChannel', () => ({
-  anonPresenceKey: (anonId: string) => `anon:${anonId}`,
   startGlobalPresenceBroadcast: (...args: unknown[]) => startGlobalPresenceBroadcastMock(...args),
 }));
 
@@ -51,25 +55,32 @@ describe('useGlobalPresenceBroadcast', () => {
     startGlobalPresenceBroadcastMock.mockReturnValue(() => undefined);
   });
 
-  it('does not broadcast for a guest with no persistable anon id', () => {
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
+
+  it('does not heartbeat for a guest with no persistable anon id', () => {
     getOrCreateAnonIdMock.mockReturnValue(null);
     mockUseAmrapAuth.mockReturnValue(authValue());
 
     renderHook(() => useGlobalPresenceBroadcast());
 
+    expect(trackMock).not.toHaveBeenCalled();
     expect(startGlobalPresenceBroadcastMock).not.toHaveBeenCalled();
   });
 
-  it('broadcasts anon:{uuid} for a guest with a persistable id', () => {
+  it('writes presence_heartbeat with a null userId for a guest with a persistable id', () => {
     getOrCreateAnonIdMock.mockReturnValue(UUID);
     mockUseAmrapAuth.mockReturnValue(authValue());
 
     renderHook(() => useGlobalPresenceBroadcast());
 
-    expect(startGlobalPresenceBroadcastMock).toHaveBeenCalledWith(`anon:${UUID}`);
+    expect(trackMock).toHaveBeenCalledWith('presence_heartbeat', {}, { userId: null });
+    expect(startGlobalPresenceBroadcastMock).not.toHaveBeenCalled();
   });
 
-  it('broadcasts the auth user id even when anon id is null', () => {
+  it('writes presence_heartbeat with the auth user id and never joins Presence', () => {
     getOrCreateAnonIdMock.mockReturnValue(null);
     mockUseAmrapAuth.mockReturnValue(
       authValue({
@@ -80,7 +91,35 @@ describe('useGlobalPresenceBroadcast', () => {
 
     renderHook(() => useGlobalPresenceBroadcast());
 
-    expect(startGlobalPresenceBroadcastMock).toHaveBeenCalledWith('user-1');
+    expect(trackMock).toHaveBeenCalledWith('presence_heartbeat', {}, { userId: 'user-1' });
+    expect(startGlobalPresenceBroadcastMock).not.toHaveBeenCalled();
     expect(getOrCreateAnonIdMock).not.toHaveBeenCalled();
+  });
+
+  it('does not heartbeat while auth is still loading', () => {
+    getOrCreateAnonIdMock.mockReturnValue(UUID);
+    mockUseAmrapAuth.mockReturnValue(authValue({ isAuthLoading: true }));
+
+    renderHook(() => useGlobalPresenceBroadcast());
+
+    expect(trackMock).not.toHaveBeenCalled();
+    expect(startGlobalPresenceBroadcastMock).not.toHaveBeenCalled();
+  });
+
+  it('fires again on the 60s interval and when the tab becomes visible', () => {
+    vi.useFakeTimers();
+    getOrCreateAnonIdMock.mockReturnValue(UUID);
+    mockUseAmrapAuth.mockReturnValue(authValue());
+
+    renderHook(() => useGlobalPresenceBroadcast());
+
+    expect(trackMock).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(60_000);
+    expect(trackMock).toHaveBeenCalledTimes(2);
+
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(trackMock).toHaveBeenCalledTimes(3);
+    expect(startGlobalPresenceBroadcastMock).not.toHaveBeenCalled();
   });
 });

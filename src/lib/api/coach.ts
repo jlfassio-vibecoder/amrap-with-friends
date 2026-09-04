@@ -129,6 +129,11 @@ export interface CoachGuestListRow {
   lastOccurredAt: string;
 }
 
+export interface CoachOnlineNow {
+  userIds: string[];
+  anonIds: string[];
+}
+
 export type CoachOnboardingStuckStatus = 'needs_profile' | 'intake_incomplete';
 
 export interface CoachOnboardingStuckRow {
@@ -204,6 +209,13 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function asArray(value: unknown): Record<string, unknown>[] {
   return Array.isArray(value) ? value.map(asRecord) : [];
+}
+
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((item): item is string => typeof item === 'string' && item.length > 0);
 }
 
 function num(row: Record<string, unknown>, key: string): number {
@@ -731,4 +743,28 @@ export async function fetchCoachRecentEvents(input: {
     .filter((row): row is CoachEventRow => row !== null);
 
   return { data: events, error: null };
+}
+
+export async function fetchCoachOnlineNow(): Promise<{
+  data: CoachOnlineNow | null;
+  error: CoachApiError | null;
+}> {
+  const { data, error } = await callRpc('coach_online_now');
+
+  if (error) {
+    return { data: null, error: { message: mapCoachError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  return {
+    data: {
+      userIds: asStringArray(raw.userIds),
+      anonIds: asStringArray(raw.anonIds),
+    },
+    error: null,
+  };
 }
