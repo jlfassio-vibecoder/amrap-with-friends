@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { CoachActivityCohorts } from './CoachActivityCohorts';
 
 const fetchUsersMock = vi.fn();
+const fetchGuestsMock = vi.fn();
 const fetchSummaryMock = vi.fn();
 const fetchEventsMock = vi.fn();
 
@@ -11,6 +12,7 @@ vi.mock('@/lib/api/coach', async () => {
   return {
     ...actual,
     fetchCoachUsersList: (...args: unknown[]) => fetchUsersMock(...args),
+    fetchCoachGuestList: (...args: unknown[]) => fetchGuestsMock(...args),
     fetchCoachAnonSummary: (...args: unknown[]) => fetchSummaryMock(...args),
     fetchCoachRecentEvents: (...args: unknown[]) => fetchEventsMock(...args),
   };
@@ -29,9 +31,14 @@ afterEach(() => {
 
 beforeEach(() => {
   fetchUsersMock.mockReset();
+  fetchGuestsMock.mockReset();
   fetchSummaryMock.mockReset();
   fetchEventsMock.mockReset();
   fetchUsersMock.mockResolvedValue({ data: [], error: null });
+  fetchGuestsMock.mockResolvedValue({
+    data: [{ anonId: ANON_UUID, lastOccurredAt: '2026-09-03T12:00:00.000Z' }],
+    error: null,
+  });
   fetchSummaryMock.mockResolvedValue({
     data: {
       lastOccurredAt: null,
@@ -106,5 +113,49 @@ describe('CoachActivityCohorts Anonymous Now dossier', () => {
     });
     expect(screen.getAllByText('/join').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Mission joined').length).toBeGreaterThan(0);
+  });
+});
+
+describe('CoachActivityCohorts historical guests', () => {
+  it('does not fetch or show guests on All Users', async () => {
+    render(<CoachActivityCohorts selectedUser={null} onSelect={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(fetchUsersMock).toHaveBeenCalled();
+    });
+    expect(fetchGuestsMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole('heading', { name: 'Guests' })).toBeNull();
+  });
+
+  it('does not fetch guests on Anonymous Now', async () => {
+    render(<CoachActivityCohorts selectedUser={null} onSelect={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Anonymous Now' }));
+
+    await screen.findByRole('button', { name: 'aaaaaaaa…eeee' });
+    expect(fetchGuestsMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole('heading', { name: 'Guests' })).toBeNull();
+  });
+
+  it('shows a Guests table on Past 24 Hours and opens the dossier on click', async () => {
+    render(<CoachActivityCohorts selectedUser={null} onSelect={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Past 24 Hours' }));
+
+    await waitFor(() => {
+      expect(fetchGuestsMock).toHaveBeenCalledWith({
+        activityBucket: 'last_24h',
+        limit: 200,
+      });
+    });
+    expect(screen.getByRole('heading', { name: 'Accounts' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Guests' })).toBeTruthy();
+
+    const idButton = await screen.findByRole('button', { name: 'aaaaaaaa…eeee' });
+    expect(idButton.getAttribute('title')).toBe(ANON_UUID);
+    fireEvent.click(idButton);
+
+    await waitFor(() => {
+      expect(fetchSummaryMock).toHaveBeenCalledWith(ANON_UUID);
+    });
+    expect(screen.getByTestId('coach-anon-dossier')).toBeTruthy();
   });
 });

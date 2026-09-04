@@ -1,5 +1,6 @@
 import { callRpc } from '@/lib/api/callRpc';
 import { isLinkableAnonId } from '@/lib/api/linkAnonIdentity';
+import { isGuestHistoryCohort, type ActivityCohortId } from '@/lib/coach/activityCohorts';
 import type { HudOvertraining } from '@/lib/hud/types';
 
 export type CoachApiError = { message: string };
@@ -121,6 +122,11 @@ export interface CoachUserListRow {
   accountCreatedAt: string;
   lastActiveAt: string | null;
   totalMissions: number;
+}
+
+export interface CoachGuestListRow {
+  anonId: string;
+  lastOccurredAt: string;
 }
 
 export type CoachOnboardingStuckStatus = 'needs_profile' | 'intake_incomplete';
@@ -399,6 +405,15 @@ function parseUserListRow(row: Record<string, unknown>): CoachUserListRow | null
   };
 }
 
+function parseGuestListRow(row: Record<string, unknown>): CoachGuestListRow | null {
+  const anonId = strOrNull(row, 'anon_id');
+  const lastOccurredAt = strOrNull(row, 'last_occurred_at');
+  if (!anonId || !lastOccurredAt) {
+    return null;
+  }
+  return { anonId, lastOccurredAt };
+}
+
 function parseOnboardingStuckStatus(value: unknown): CoachOnboardingStuckStatus | null {
   if (value === 'needs_profile' || value === 'intake_incomplete') {
     return value;
@@ -533,6 +548,35 @@ export async function fetchCoachUsersList(input: {
     .filter((row): row is CoachUserListRow => row !== null);
 
   return { data: users, error: null };
+}
+
+export async function fetchCoachGuestList(input: {
+  activityBucket: string;
+  limit?: number;
+}): Promise<{ data: CoachGuestListRow[] | null; error: CoachApiError | null }> {
+  if (!isGuestHistoryCohort(input.activityBucket as ActivityCohortId)) {
+    return { data: null, error: { message: 'Invalid activity bucket.' } };
+  }
+
+  const { data, error } = await callRpc('coach_guest_list', {
+    p_activity_bucket: input.activityBucket,
+    p_limit: input.limit ?? 200,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const guests = asArray(raw.guests)
+    .map(parseGuestListRow)
+    .filter((row): row is CoachGuestListRow => row !== null);
+
+  return { data: guests, error: null };
 }
 
 export async function fetchCoachOnboardingStuckList(input?: {

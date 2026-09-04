@@ -6,6 +6,7 @@ import {
   coachOnboardingStuckStatusLabel,
   fetchCoachAnonSummary,
   fetchCoachDashboard,
+  fetchCoachGuestList,
   fetchCoachOnboardingStuckList,
   fetchCoachRecentEvents,
   fetchCoachUserDetail,
@@ -528,5 +529,57 @@ describe('coach_anon_summary migration contract', () => {
     expect(sql).toContain('p_anon_id text DEFAULT NULL');
     expect(sql).toContain('AND (p_anon_id IS NULL OR ae.anon_id = p_anon_id)');
     expect(sql).toContain('analytics_events_anon_id_occurred_idx');
+  });
+});
+
+describe('fetchCoachGuestList', () => {
+  it('skips the RPC for a non-history bucket', async () => {
+    const result = await fetchCoachGuestList({ activityBucket: 'all' });
+    expect(callRpcMock).not.toHaveBeenCalled();
+    expect(result.data).toBeNull();
+    expect(result.error?.message).toBe('Invalid activity bucket.');
+  });
+
+  it('wires RPC params and parses guest rows', async () => {
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        guests: [
+          { anon_id: ANON_UUID, last_occurred_at: '2026-09-03T12:00:00.000Z' },
+          { anon_id: null, last_occurred_at: '2026-09-03T11:00:00.000Z' },
+        ],
+      },
+      error: null,
+    });
+
+    const result = await fetchCoachGuestList({ activityBucket: 'last_24h', limit: 50 });
+
+    expect(callRpcMock).toHaveBeenCalledWith('coach_guest_list', {
+      p_activity_bucket: 'last_24h',
+      p_limit: 50,
+    });
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual([
+      { anonId: ANON_UUID, lastOccurredAt: '2026-09-03T12:00:00.000Z' },
+    ]);
+  });
+});
+
+describe('coach_guest_list migration contract', () => {
+  it('lists unlinked guests by last event in the four activity buckets', () => {
+    const sql = readFileSync(
+      join(root, 'supabase/migrations/20260903200000_coach_guest_list.sql'),
+      'utf8'
+    );
+
+    expect(sql).toContain('CREATE OR REPLACE FUNCTION public.coach_guest_list');
+    expect(sql).toContain('is_coach()');
+    expect(sql).toContain('NOT EXISTS');
+    expect(sql).toContain('analytics_identity_links');
+    expect(sql).toContain("'last_24h'");
+    expect(sql).toContain("'last_3d'");
+    expect(sql).toContain("'last_7d'");
+    expect(sql).toContain("'lapsed'");
+    expect(sql).toContain('LEAST(GREATEST(coalesce(p_limit, 200), 1), 200)');
   });
 });

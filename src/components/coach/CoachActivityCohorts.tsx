@@ -1,16 +1,26 @@
 import { useEffect, useState } from 'react';
 import { CoachAnonDossierCard } from '@/components/coach/CoachAnonDossierCard';
 import { CoachDataTable } from '@/components/coach/CoachDataTable';
-import { fetchCoachUsersList, type CoachUserListRow } from '@/lib/api/coach';
+import {
+  fetchCoachGuestList,
+  fetchCoachUsersList,
+  type CoachGuestListRow,
+  type CoachUserListRow,
+} from '@/lib/api/coach';
 import {
   ACTIVITY_COHORTS,
   cohortToActivityBucketParam,
+  isGuestHistoryCohort,
   type ActivityCohortId,
 } from '@/lib/coach/activityCohorts';
 import { truncateAnonId } from '@/lib/coach/formatCoachLabel';
 import { useOnlineAnonIds, useOnlineUserIds } from '@/hooks/useOnlineUserIds';
 
 const COHORT_FETCH_LIMIT = 200;
+
+function isGuestCapableCohort(cohort: ActivityCohortId): boolean {
+  return cohort === 'anon_now' || isGuestHistoryCohort(cohort);
+}
 
 // Copilot suggestion ignored: Active Now filtering the top-200 last-active list needs a presence-id RPC to be correct at scale; current coach_users_list cannot look up arbitrary online user ids.
 function formatLastActive(value: string | null): string {
@@ -33,6 +43,31 @@ function OnlineDot({ online }: { online: boolean }) {
   );
 }
 
+function AnonIdButton({
+  anonId,
+  selected,
+  onSelect,
+}: {
+  anonId: string;
+  selected: boolean;
+  onSelect: (anonId: string) => void;
+}) {
+  return (
+    <button
+      type="button"
+      title={anonId}
+      className={
+        selected
+          ? 'font-mono text-sm font-semibold text-accent hover:underline'
+          : 'font-mono text-sm text-ink hover:text-accent hover:underline'
+      }
+      onClick={() => onSelect(anonId)}
+    >
+      {truncateAnonId(anonId)}
+    </button>
+  );
+}
+
 interface CoachActivityCohortsProps {
   selectedUser: CoachUserListRow | null;
   onSelect: (user: CoachUserListRow | null) => void;
@@ -43,6 +78,9 @@ export function CoachActivityCohorts({ selectedUser, onSelect }: CoachActivityCo
   const [users, setUsers] = useState<CoachUserListRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [guests, setGuests] = useState<CoachGuestListRow[]>([]);
+  const [guestsLoading, setGuestsLoading] = useState(false);
+  const [guestsError, setGuestsError] = useState<string | null>(null);
   const [selectedAnonId, setSelectedAnonId] = useState<string | null>(null);
   const onlineUserIds = useOnlineUserIds();
   const onlineAnonIds = useOnlineAnonIds();
@@ -54,12 +92,15 @@ export function CoachActivityCohorts({ selectedUser, onSelect }: CoachActivityCo
 
     setCohort(next);
 
+    if (!isGuestCapableCohort(next)) {
+      setSelectedAnonId(null);
+    }
+
     if (next === 'anon_now') {
       setLoading(false);
       setError(null);
       setUsers([]);
     } else {
-      setSelectedAnonId(null);
       setLoading(true);
     }
   }
@@ -94,10 +135,42 @@ export function CoachActivityCohorts({ selectedUser, onSelect }: CoachActivityCo
     };
   }, [cohort]);
 
+  useEffect(() => {
+    if (!isGuestHistoryCohort(cohort)) {
+      setGuests([]);
+      setGuestsError(null);
+      setGuestsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setGuestsLoading(true);
+    fetchCoachGuestList({
+      activityBucket: cohort,
+      limit: COHORT_FETCH_LIMIT,
+    }).then((result) => {
+      if (cancelled) {
+        return;
+      }
+      setGuestsLoading(false);
+      if (result.error) {
+        setGuestsError(result.error.message);
+        setGuests([]);
+        return;
+      }
+      setGuestsError(null);
+      setGuests(result.data ?? []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [cohort]);
+
   const visibleUsers =
     cohort === 'active_now' ? users.filter((user) => onlineUserIds.has(user.userId)) : users;
 
   const anonRows = Array.from(onlineAnonIds).map((anonId) => ({ anonId }));
+  const showGuestHistory = isGuestHistoryCohort(cohort);
 
   return (
     <section className="space-y-3" data-testid="coach-activity-cohorts">
@@ -141,18 +214,11 @@ export function CoachActivityCohorts({ selectedUser, onSelect }: CoachActivityCo
                 {
                   header: 'Anon id',
                   render: (row) => (
-                    <button
-                      type="button"
-                      title={row.anonId}
-                      className={
-                        selectedAnonId === row.anonId
-                          ? 'font-mono text-sm font-semibold text-accent hover:underline'
-                          : 'font-mono text-sm text-ink hover:text-accent hover:underline'
-                      }
-                      onClick={() => handleSelectAnon(row.anonId)}
-                    >
-                      {truncateAnonId(row.anonId)}
-                    </button>
+                    <AnonIdButton
+                      anonId={row.anonId}
+                      selected={selectedAnonId === row.anonId}
+                      onSelect={handleSelectAnon}
+                    />
                   ),
                 },
                 { header: 'Type', render: () => 'Guest' },
@@ -172,39 +238,91 @@ export function CoachActivityCohorts({ selectedUser, onSelect }: CoachActivityCo
         ) : null}
 
         {!loading && !error && cohort !== 'anon_now' ? (
-          <CoachDataTable
-            rows={visibleUsers}
-            rowKey={(row) => row.userId}
-            emptyLabel={
-              cohort === 'active_now' ? 'No one is currently active.' : 'No users in this cohort.'
-            }
-            scrollAfterRows={10}
-            columns={[
-              {
-                header: 'User',
-                render: (row) => (
-                  <button
-                    type="button"
-                    className={
-                      selectedUser?.userId === row.userId
-                        ? 'font-semibold text-accent hover:underline'
-                        : 'font-semibold text-ink hover:text-accent hover:underline'
-                    }
-                    onClick={() => onSelect(row)}
-                  >
-                    {row.nickname}
-                  </button>
-                ),
-              },
-              {
-                header: 'Online',
-                render: (row) => <OnlineDot online={onlineUserIds.has(row.userId)} />,
-              },
-              { header: 'Email', render: (row) => row.email },
-              { header: 'Missions', render: (row) => row.totalMissions, align: 'right' },
-              { header: 'Last active', render: (row) => formatLastActive(row.lastActiveAt) },
-            ]}
-          />
+          <div className="space-y-3">
+            {showGuestHistory ? (
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-secondary">
+                Accounts
+              </h3>
+            ) : null}
+            <CoachDataTable
+              rows={visibleUsers}
+              rowKey={(row) => row.userId}
+              emptyLabel={
+                cohort === 'active_now' ? 'No one is currently active.' : 'No users in this cohort.'
+              }
+              scrollAfterRows={10}
+              columns={[
+                {
+                  header: 'User',
+                  render: (row) => (
+                    <button
+                      type="button"
+                      className={
+                        selectedUser?.userId === row.userId
+                          ? 'font-semibold text-accent hover:underline'
+                          : 'font-semibold text-ink hover:text-accent hover:underline'
+                      }
+                      onClick={() => onSelect(row)}
+                    >
+                      {row.nickname}
+                    </button>
+                  ),
+                },
+                {
+                  header: 'Online',
+                  render: (row) => <OnlineDot online={onlineUserIds.has(row.userId)} />,
+                },
+                { header: 'Email', render: (row) => row.email },
+                { header: 'Missions', render: (row) => row.totalMissions, align: 'right' },
+                { header: 'Last active', render: (row) => formatLastActive(row.lastActiveAt) },
+              ]}
+            />
+          </div>
+        ) : null}
+
+        {showGuestHistory ? (
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-secondary">Guests</h3>
+            {guestsLoading ? <p className="text-sm text-secondary">Loading guests…</p> : null}
+            {guestsError ? <p className="text-error text-sm">{guestsError}</p> : null}
+            {!guestsLoading && !guestsError ? (
+              <>
+                <CoachDataTable
+                  rows={guests}
+                  rowKey={(row) => row.anonId}
+                  emptyLabel="No guests in this cohort."
+                  scrollAfterRows={10}
+                  columns={[
+                    {
+                      header: 'Anon id',
+                      render: (row) => (
+                        <AnonIdButton
+                          anonId={row.anonId}
+                          selected={selectedAnonId === row.anonId}
+                          onSelect={handleSelectAnon}
+                        />
+                      ),
+                    },
+                    { header: 'Type', render: () => 'Guest' },
+                    {
+                      header: 'Online',
+                      render: (row) => <OnlineDot online={onlineAnonIds.has(row.anonId)} />,
+                    },
+                    {
+                      header: 'Last seen',
+                      render: (row) => formatLastActive(row.lastOccurredAt),
+                    },
+                  ]}
+                />
+                {selectedAnonId ? (
+                  <CoachAnonDossierCard
+                    anonId={selectedAnonId}
+                    onDismiss={() => setSelectedAnonId(null)}
+                  />
+                ) : null}
+              </>
+            ) : null}
+          </div>
         ) : null}
       </div>
     </section>
