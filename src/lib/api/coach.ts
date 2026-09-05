@@ -1,6 +1,11 @@
 import { callRpc } from '@/lib/api/callRpc';
 import { isLinkableAnonId } from '@/lib/api/linkAnonIdentity';
 import { isGuestHistoryCohort, type ActivityCohortId } from '@/lib/coach/activityCohorts';
+import {
+  isGuestBrowsersWindow,
+  type GuestBrowsersGrain,
+  type GuestBrowsersWindow,
+} from '@/lib/coach/guestBrowsersWindows';
 import type { HudOvertraining } from '@/lib/hud/types';
 
 export type CoachApiError = { message: string };
@@ -132,6 +137,25 @@ export interface CoachGuestListRow {
 export interface CoachOnlineNow {
   userIds: string[];
   anonIds: string[];
+}
+
+export interface CoachGuestBrowsersPoint {
+  bucketStart: string;
+  count: number;
+}
+
+export interface CoachGuestBrowsersSeries {
+  window: GuestBrowsersWindow;
+  grain: GuestBrowsersGrain;
+  total: number;
+  points: CoachGuestBrowsersPoint[];
+}
+
+export interface CoachChartNote {
+  bucketStart: string;
+  body: string;
+  updatedAt: string;
+  updatedBy: string;
 }
 
 export type CoachOnboardingStuckStatus = 'needs_profile' | 'intake_incomplete';
@@ -767,4 +791,141 @@ export async function fetchCoachOnlineNow(): Promise<{
     },
     error: null,
   };
+}
+
+function parseGuestBrowsersPoint(row: Record<string, unknown>): CoachGuestBrowsersPoint | null {
+  const bucketStart = str(row, 'bucketStart');
+  if (!bucketStart) {
+    return null;
+  }
+  return {
+    bucketStart,
+    count: nonNegativeNum(row, 'count'),
+  };
+}
+
+export async function fetchCoachGuestBrowsersSeries(
+  window: GuestBrowsersWindow
+): Promise<{ data: CoachGuestBrowsersSeries | null; error: CoachApiError | null }> {
+  if (!isGuestBrowsersWindow(window)) {
+    return { data: null, error: { message: 'Invalid activity window.' } };
+  }
+
+  const { data, error } = await callRpc('coach_guest_browsers_series', { p_window: window });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    if (raw.reason === 'invalid_window') {
+      return { data: null, error: { message: 'Invalid activity window.' } };
+    }
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const grainRaw = str(raw, 'grain');
+  const grain: GuestBrowsersGrain = grainRaw === 'hour' ? 'hour' : 'day';
+  const windowRaw = str(raw, 'window');
+  const resolvedWindow = isGuestBrowsersWindow(windowRaw) ? windowRaw : window;
+
+  return {
+    data: {
+      window: resolvedWindow,
+      grain,
+      total: nonNegativeNum(raw, 'total'),
+      points: asArray(raw.points)
+        .map(parseGuestBrowsersPoint)
+        .filter((row): row is CoachGuestBrowsersPoint => row !== null),
+    },
+    error: null,
+  };
+}
+
+function parseCoachChartNote(row: Record<string, unknown>): CoachChartNote | null {
+  const bucketStart = str(row, 'bucketStart');
+  const body = str(row, 'body');
+  const updatedAt = str(row, 'updatedAt');
+  const updatedBy = str(row, 'updatedBy');
+  if (!bucketStart || !body || !updatedAt || !updatedBy) {
+    return null;
+  }
+  return { bucketStart, body, updatedAt, updatedBy };
+}
+
+export async function fetchCoachChartNotesForRange(input: {
+  metric: string;
+  grain: GuestBrowsersGrain;
+  from: string;
+  to: string;
+}): Promise<{ data: CoachChartNote[] | null; error: CoachApiError | null }> {
+  const { data, error } = await callRpc('coach_chart_notes_for_range', {
+    p_metric: input.metric,
+    p_grain: input.grain,
+    p_from: input.from,
+    p_to: input.to,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    if (raw.reason === 'invalid_args') {
+      return { data: null, error: { message: 'Invalid chart note request.' } };
+    }
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  return {
+    data: asArray(raw.notes)
+      .map(parseCoachChartNote)
+      .filter((row): row is CoachChartNote => row !== null),
+    error: null,
+  };
+}
+
+export async function upsertCoachChartNote(input: {
+  metric: string;
+  grain: GuestBrowsersGrain;
+  bucketStart: string;
+  body: string;
+}): Promise<{
+  data: { deleted: boolean; note: CoachChartNote | null } | null;
+  error: CoachApiError | null;
+}> {
+  const { data, error } = await callRpc('coach_chart_note_upsert', {
+    p_metric: input.metric,
+    p_grain: input.grain,
+    p_bucket_start: input.bucketStart,
+    p_body: input.body,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    if (raw.reason === 'body_too_long') {
+      return { data: null, error: { message: 'Note is too long (500 characters max).' } };
+    }
+    if (raw.reason === 'invalid_args') {
+      return { data: null, error: { message: 'Invalid chart note request.' } };
+    }
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  if (raw.deleted === true) {
+    return { data: { deleted: true, note: null }, error: null };
+  }
+
+  const note = parseCoachChartNote(asRecord(raw.note));
+  if (!note) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  return { data: { deleted: false, note }, error: null };
 }

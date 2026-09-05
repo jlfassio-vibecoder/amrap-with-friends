@@ -5,12 +5,14 @@ import { CoachActivityCohorts } from '@/components/coach/CoachActivityCohorts';
 import { CoachDataTable } from '@/components/coach/CoachDataTable';
 import { CoachEventsExplorer } from '@/components/coach/CoachEventsExplorer';
 import { CoachFunnelCard } from '@/components/coach/CoachFunnelCard';
+import { CoachGuestBrowsersPanel } from '@/components/coach/CoachGuestBrowsersPanel';
 import { CoachOnboardingStuckTable } from '@/components/coach/CoachOnboardingStuckTable';
 import { CoachSectionHeader } from '@/components/coach/CoachSectionHeader';
 import { CoachStatGrid } from '@/components/coach/CoachStatGrid';
 import { CoachUserDetailPanel } from '@/components/coach/CoachUserDetailPanel';
 import { CoachUserPicker } from '@/components/coach/CoachUserPicker';
 import { fetchCoachDashboard, type CoachDashboard, type CoachUserListRow } from '@/lib/api/coach';
+import { GUEST_BROWSERS_STAT_ID } from '@/lib/coach/guestBrowsersWindows';
 import { formatCoachLabel } from '@/lib/coach/formatCoachLabel';
 import { useOnlineAnonIds } from '@/hooks/useOnlineUserIds';
 
@@ -23,6 +25,7 @@ export default function CoachPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<CoachUserListRow | null>(null);
+  const [guestBrowsersOpen, setGuestBrowsersOpen] = useState(false);
   const onlineAnonIds = useOnlineAnonIds();
 
   useEffect(() => {
@@ -79,6 +82,8 @@ export default function CoachPage() {
             <section className="space-y-3">
               <CoachSectionHeader title="Overview" />
               <CoachStatGrid
+                selectedId={guestBrowsersOpen ? GUEST_BROWSERS_STAT_ID : null}
+                onSelect={(id) => setGuestBrowsersOpen(id === GUEST_BROWSERS_STAT_ID)}
                 stats={[
                   { label: 'Missions created (7d)', value: dashboard.topStrip.missionsCreated7d },
                   { label: 'Missions created (30d)', value: dashboard.topStrip.missionsCreated30d },
@@ -87,7 +92,12 @@ export default function CoachPage() {
                     label: 'Missions finished (30d)',
                     value: dashboard.topStrip.missionsFinished30d,
                   },
-                  { label: 'Guest browsers (7d)', value: dashboard.topStrip.guestBrowsers7d },
+                  {
+                    id: GUEST_BROWSERS_STAT_ID,
+                    selectable: true,
+                    label: 'Guest browsers (7d)',
+                    value: dashboard.topStrip.guestBrowsers7d,
+                  },
                   { label: 'Anonymous now', value: onlineAnonIds.size },
                   { label: 'Registered users', value: dashboard.topStrip.registeredUsers },
                   { label: 'Live missions created', value: dashboard.topStrip.liveMissionsCreated },
@@ -97,6 +107,9 @@ export default function CoachPage() {
                   },
                 ]}
               />
+              {guestBrowsersOpen ? (
+                <CoachGuestBrowsersPanel onDismiss={() => setGuestBrowsersOpen(false)} />
+              ) : null}
             </section>
 
             <section className="space-y-3">
