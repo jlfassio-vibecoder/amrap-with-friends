@@ -32,7 +32,7 @@ const VALID_ARTICLE = {
   cannibalisationNote: 'Timely opinion, not a guide rewrite.',
   libraryLinks: ['/exercises/push-up', '/amrap-workouts'],
   relatedPostSlugs: [],
-  photos: [],
+  photos: [{ path: 'coach/art/p1.jpg', alt: 'Easy day demo', caption: 'Hold back' }],
   publishedAt: null,
   modifiedAt: null,
   createdAt: '2026-09-05T10:00:00.000Z',
@@ -103,6 +103,9 @@ describe('fetchCoachArticle', () => {
     expect(result.error).toBeNull();
     expect(result.data?.slug).toBe('why-easy-days-matter');
     expect(result.data?.libraryLinks).toEqual(['/exercises/push-up', '/amrap-workouts']);
+    expect(result.data?.photos).toEqual([
+      { path: 'coach/art/p1.jpg', alt: 'Easy day demo', caption: 'Hold back' },
+    ]);
   });
 });
 
@@ -123,6 +126,7 @@ describe('upsertCoachArticle', () => {
       cannibalisationNote: VALID_ARTICLE.cannibalisationNote,
       libraryLinks: VALID_ARTICLE.libraryLinks,
       relatedPostSlugs: [],
+      photos: VALID_ARTICLE.photos,
     });
 
     expect(callRpcMock).toHaveBeenCalledWith('coach_upsert_article', {
@@ -139,6 +143,7 @@ describe('upsertCoachArticle', () => {
       p_cannibalisation_note: VALID_ARTICLE.cannibalisationNote,
       p_library_links: VALID_ARTICLE.libraryLinks,
       p_related_post_slugs: [],
+      p_photos: VALID_ARTICLE.photos,
     });
     expect(result.error).toBeNull();
     expect(result.data?.id).toBe(VALID_ARTICLE.id);

@@ -3,11 +3,17 @@ import {
   setCoachArticleStatus,
   upsertCoachArticle,
   type CoachArticle,
+  type CoachArticlePhoto,
 } from '@/lib/api/coachArticles';
+import {
+  CoachArticlePhotoEditor,
+  type ArticlePhotoRow,
+} from '@/components/coachArticles/CoachArticlePhotoEditor';
 import { ARTICLE_ARCHETYPES, ARTICLE_CATEGORIES } from '@/lib/coach/articles/taxonomy';
 import { articlePillarPaths } from '@/lib/coach/articles/pillarPaths';
 import { isValidArticleSlug, slugifyArticleTitle } from '@/lib/coach/articles/slugify';
 import { softValidateArticle } from '@/lib/coach/articles/validateArticle';
+import { uploadCoachArticlePhoto } from '@/lib/media/coachArticleMedia';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { callsignFromEmail } from '@/lib/missionIdentity';
 
@@ -19,6 +25,27 @@ function wordCount(text: string): number {
 
 function defaultAuthorName(email: string | null | undefined): string {
   return callsignFromEmail(email) ?? '';
+}
+
+function photosFromArticle(article: CoachArticle | null | undefined): ArticlePhotoRow[] {
+  return (article?.photos ?? []).map((photo, index) => ({
+    key: `existing-${index}-${photo.path}`,
+    kind: 'existing' as const,
+    path: photo.path,
+    alt: photo.alt,
+    caption: photo.caption ?? '',
+  }));
+}
+
+function toPersistedPhotos(rows: ArticlePhotoRow[]): CoachArticlePhoto[] {
+  return rows
+    .filter((row): row is Extract<ArticlePhotoRow, { kind: 'existing' }> => row.kind === 'existing')
+    .map((row) => {
+      const alt = row.alt.trim();
+      const caption = row.caption.trim();
+      return caption ? { path: row.path, alt, caption } : { path: row.path, alt };
+    })
+    .filter((photo) => photo.path && photo.alt);
 }
 
 interface CoachArticleFormProps {
@@ -59,12 +86,13 @@ export function CoachArticleForm({
   const [relatedPostSlugs, setRelatedPostSlugs] = useState(
     (article?.relatedPostSlugs ?? []).join(', ')
   );
+  const [photoRows, setPhotoRows] = useState<ArticlePhotoRow[]>(() => photosFromArticle(article));
   const [status, setStatus] = useState(article?.status ?? 'draft');
   const [warnings, setWarnings] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  function buildInput() {
+  function buildInput(photos: CoachArticlePhoto[]) {
     return {
       id: articleId,
       title: title.trim(),
@@ -82,37 +110,112 @@ export function CoachArticleForm({
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean),
+      photos,
     };
   }
 
   async function saveDraft() {
     setError(null);
-    const input = buildInput();
-    if (!input.title) {
+    const baseInput = buildInput(toPersistedPhotos(photoRows));
+    if (!baseInput.title) {
       setError('Title is required.');
       return null;
     }
-    if (!input.slug) {
+    if (!baseInput.slug) {
       setError('Slug is required.');
       return null;
     }
-    if (!isValidArticleSlug(input.slug)) {
+    if (!isValidArticleSlug(baseInput.slug)) {
       setError('Slug must be lowercase kebab-case.');
       return null;
     }
 
-    setSubmitting(true);
-    const result = await upsertCoachArticle(input);
-    setSubmitting(false);
-
-    if (result.error || !result.data) {
-      setError(result.error?.message ?? 'Something went wrong. Please try again.');
+    const hasPhotoWithoutAlt = photoRows.some((row) => !row.alt.trim());
+    if (hasPhotoWithoutAlt) {
+      setError('Add alt text for every photo before saving.');
       return null;
     }
 
-    setArticleId(result.data.id);
-    setStatus(result.data.status);
-    return result.data;
+    setSubmitting(true);
+
+    const firstSave = await upsertCoachArticle(baseInput);
+    if (firstSave.error || !firstSave.data) {
+      setSubmitting(false);
+      setError(firstSave.error?.message ?? 'Something went wrong. Please try again.');
+      return null;
+    }
+
+    let saved = firstSave.data;
+    setArticleId(saved.id);
+    setStatus(saved.status);
+
+    const pending = photoRows.filter(
+      (row): row is Extract<ArticlePhotoRow, { kind: 'pending' }> => row.kind === 'pending'
+    );
+
+    if (pending.length > 0) {
+      if (!user) {
+        setSubmitting(false);
+        setError('Sign in to upload images.');
+        return null;
+      }
+
+      const uploadedByKey = new Map<string, CoachArticlePhoto>();
+      for (const row of pending) {
+        const uploadResult = await uploadCoachArticlePhoto(
+          user.id,
+          saved.id,
+          crypto.randomUUID(),
+          row.file
+        );
+        if (uploadResult.error || !uploadResult.path) {
+          setSubmitting(false);
+          setError(uploadResult.error ?? 'Something went wrong. Please try again.');
+          return null;
+        }
+        const alt = row.alt.trim();
+        const caption = row.caption.trim();
+        uploadedByKey.set(
+          row.key,
+          caption ? { path: uploadResult.path, alt, caption } : { path: uploadResult.path, alt }
+        );
+      }
+
+      const mergedPhotos: CoachArticlePhoto[] = [];
+      for (const row of photoRows) {
+        if (row.kind === 'existing') {
+          const alt = row.alt.trim();
+          const caption = row.caption.trim();
+          if (alt) {
+            mergedPhotos.push(caption ? { path: row.path, alt, caption } : { path: row.path, alt });
+          }
+        } else {
+          const uploaded = uploadedByKey.get(row.key);
+          if (uploaded) {
+            mergedPhotos.push(uploaded);
+          }
+        }
+      }
+
+      const withPhotos = await upsertCoachArticle({
+        ...buildInput(mergedPhotos),
+        id: saved.id,
+      });
+
+      if (withPhotos.error || !withPhotos.data) {
+        setSubmitting(false);
+        setError(withPhotos.error?.message ?? 'Something went wrong. Please try again.');
+        return null;
+      }
+
+      saved = withPhotos.data;
+      setPhotoRows(photosFromArticle(saved));
+    } else {
+      setPhotoRows(photosFromArticle(saved));
+    }
+
+    setSubmitting(false);
+    return saved;
   }
 
   async function handleSaveDraft(event: FormEvent<HTMLFormElement>) {
@@ -126,18 +229,22 @@ export function CoachArticleForm({
 
   async function handleMarkReady() {
     setError(null);
-    const input = buildInput();
     const softIssues = softValidateArticle({
-      title: input.title,
-      slug: input.slug,
-      category: input.category,
-      archetype: input.archetype,
-      answerFirst: input.answerFirst,
-      description: input.description,
-      authorDisplayName: input.authorDisplayName,
-      pillarPath: input.pillarPath,
-      cannibalisationNote: input.cannibalisationNote,
-      libraryLinks: input.libraryLinks,
+      title: title.trim(),
+      slug: slug.trim().toLowerCase(),
+      category,
+      archetype,
+      answerFirst,
+      description,
+      authorDisplayName: authorDisplayName.trim(),
+      pillarPath,
+      cannibalisationNote,
+      libraryLinks: libraryLinks.map((l) => l.trim()).filter(Boolean),
+      photos: photoRows.map((row) => ({
+        path: row.kind === 'existing' ? row.path : undefined,
+        alt: row.alt,
+        caption: row.caption,
+      })),
     });
     setWarnings(softIssues.map((issue) => issue.message));
 
@@ -411,6 +518,8 @@ export function CoachArticleForm({
           placeholder="other-slug, another-slug"
         />
       </label>
+
+      <CoachArticlePhotoEditor photos={photoRows} onChange={setPhotoRows} />
 
       <div className="flex flex-wrap gap-2">
         <button type="submit" className="btn-primary text-sm" disabled={submitting}>

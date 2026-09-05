@@ -4,6 +4,12 @@ export type CoachArticleApiError = { message: string };
 
 export type CoachArticleStatus = 'draft' | 'ready' | 'published' | 'archived';
 
+export interface CoachArticlePhoto {
+  path: string;
+  alt: string;
+  caption?: string;
+}
+
 export interface CoachArticleSummary {
   id: string;
   title: string;
@@ -29,7 +35,7 @@ export interface CoachArticle {
   cannibalisationNote: string;
   libraryLinks: string[];
   relatedPostSlugs: string[];
-  photos: unknown[];
+  photos: CoachArticlePhoto[];
   publishedAt: string | null;
   modifiedAt: string | null;
   createdAt: string;
@@ -50,6 +56,7 @@ export interface UpsertCoachArticleInput {
   cannibalisationNote: string;
   libraryLinks: string[];
   relatedPostSlugs: string[];
+  photos?: CoachArticlePhoto[];
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -83,6 +90,24 @@ function readStatus(value: unknown): CoachArticleStatus {
     return value;
   }
   return 'draft';
+}
+
+function readPhotos(value: unknown): CoachArticlePhoto[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const photos: CoachArticlePhoto[] = [];
+  for (const item of value) {
+    const row = asRecord(item);
+    const path = readString(row.path);
+    const alt = readString(row.alt);
+    if (!path || !alt) {
+      continue;
+    }
+    const caption = readString(row.caption);
+    photos.push(caption ? { path, alt, caption } : { path, alt });
+  }
+  return photos;
 }
 
 export function mapCoachArticleError(message: string | undefined): string {
@@ -139,7 +164,7 @@ function parseArticle(row: Record<string, unknown>): CoachArticle | null {
     cannibalisationNote: readStringAllowEmpty(row.cannibalisationNote),
     libraryLinks: asStringArray(row.libraryLinks),
     relatedPostSlugs: asStringArray(row.relatedPostSlugs),
-    photos: Array.isArray(row.photos) ? row.photos : [],
+    photos: readPhotos(row.photos),
     publishedAt: readString(row.publishedAt),
     modifiedAt: readString(row.modifiedAt),
     createdAt,
@@ -216,6 +241,7 @@ export async function upsertCoachArticle(input: UpsertCoachArticleInput): Promis
     p_cannibalisation_note: input.cannibalisationNote,
     p_library_links: input.libraryLinks,
     p_related_post_slugs: input.relatedPostSlugs,
+    p_photos: input.photos ?? [],
   });
 
   if (error) {

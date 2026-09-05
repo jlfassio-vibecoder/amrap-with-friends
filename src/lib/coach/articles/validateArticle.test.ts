@@ -40,4 +40,15 @@ describe('softValidateArticle', () => {
     const issues = softValidateArticle({ ...base, description: 'short' });
     expect(issues.some((i) => i.field === 'description')).toBe(true);
   });
+
+  it('flags photos missing alt text', () => {
+    const issues = softValidateArticle({
+      ...base,
+      photos: [
+        { path: 'a/b.jpg', alt: '' },
+        { path: 'a/c.jpg', alt: 'Ok' },
+      ],
+    });
+    expect(issues.some((i) => i.field === 'photos')).toBe(true);
+  });
 });

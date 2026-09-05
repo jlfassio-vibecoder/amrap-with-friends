@@ -162,15 +162,10 @@ frontmatter shape the Astro collection will expect, without uploading media yet.
 
 ### Phase 2 — Photos
 
-**Reuse:** Coach media upload patterns (`coach-exercise-media` ownership model
-as a template; prefer a dedicated `blog-media` or `coach-article-media` bucket
-with `{auth.uid()}/…` prefixes and coach-only write policies).
-
-**UI:** Attach 1–N images, require alt, optional caption; reorder; preview.
-
-**Publish path:** Public URLs must be stable for Astro builds (same lesson as
-exercise media: either commit resolved URLs into the exported MD, or a
-manifest). Do **not** rely on browser extension fallbacks on static pages.
+**Status: shipped.** Dedicated `coach-article-media` bucket (public read, owner-folder
+writes); `{path, alt, caption?}` on `coach_articles.photos`; upload + reorder +
+preview in Article Builder; soft alt warnings on Mark ready; frontmatter serialize
+emits public `src` URLs (Astro export still Phase 4).
 
 **Done when:** A draft can include images with alt text, and the export format
 references real public URLs.

@@ -2,6 +2,12 @@ import { isArticleArchetypeId, isArticleCategoryId } from './taxonomy';
 import { isArticlePillarPath } from './pillarPaths';
 import { isValidArticleSlug } from './slugify';
 
+export type ArticlePhotoDraft = {
+  path?: string;
+  alt: string;
+  caption?: string;
+};
+
 export type ArticleDraftFields = {
   title: string;
   slug: string;
@@ -13,10 +19,11 @@ export type ArticleDraftFields = {
   pillarPath: string;
   cannibalisationNote: string;
   libraryLinks: string[];
+  photos?: ArticlePhotoDraft[];
 };
 
 export type ArticleValidationIssue = {
-  field: keyof ArticleDraftFields | 'bodyMarkdown';
+  field: keyof ArticleDraftFields | 'bodyMarkdown' | 'photos';
   message: string;
 };
 
@@ -82,6 +89,14 @@ export function softValidateArticle(fields: ArticleDraftFields): ArticleValidati
     issues.push({
       field: 'libraryLinks',
       message: 'Add at least two library links (workouts or exercises).',
+    });
+  }
+
+  const photos = fields.photos ?? [];
+  if (photos.some((photo) => !photo.alt.trim())) {
+    issues.push({
+      field: 'photos',
+      message: 'Every photo needs alt text.',
     });
   }
 
