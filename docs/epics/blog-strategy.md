@@ -249,6 +249,13 @@ Content system assesses sitewide rather than per page.
 
 ---
 
+## The science pillar
+
+A properly sourced physiology reference is the strongest link-earning asset
+available to this site, and the plan for it — plus an audit of the Gemini
+research artifact it came from, which is **not publishable as-is** — is in
+[the AMRAP science hub plan](../plans/amrap-science-hub.md).
+
 ## Authoring
 
 The voice specification, the twenty-four article briefs and the twelve-month
