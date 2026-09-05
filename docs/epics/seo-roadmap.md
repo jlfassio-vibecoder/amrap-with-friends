@@ -2,7 +2,7 @@
 
 **Branch:** `claude/amrap-seo-roadmap-xwf1sk`
 **Status:** Approved — Astro content site + existing SPA (option A, Part 2)
-**Last updated:** 2026-09-01 (Phases 0–2 shipped)
+**Last updated:** 2026-09-01 (Phases 0–3 shipped)
 
 ---
 
@@ -25,7 +25,7 @@ and AI assistants cannot see a single word of a client-rendered React SPA.
 | `robots.txt`            | ~~`User-agent: * / Allow: /`~~                                                                            | **Fixed in Phase 0** — every AI agent named explicitly                       |
 | Structured data         | Helpers on content pages; app shell unchanged                                                             | No `ExercisePlan`, `HowTo`, `FAQPage`, `BreadcrumbList`, `Organization`      |
 | Bot handling            | [`middleware.ts`](../../middleware.ts) serves OG HTML to unfurlers, plus `X-Robots-Tag` and 404s sitewide | Search-safe; still no content to serve                                       |
-| Content pages           | 108 static pages                                                                                          | **Phase 2** — workouts, movements and collections, all zero-JS               |
+| Content pages           | 117 static pages                                                                                          | **Phase 3** — plus guides, campaigns and an original-data page               |
 | 404s                    | ~~`/anything` returned **HTTP 200** with an empty shell~~                                                 | **Fixed in Phase 0** — real 404 from the edge                                |
 | Fonts                   | 4 Google Fonts families loaded render-blocking from `fonts.googleapis.com`                                | LCP tax on the page that matters most                                        |
 
@@ -448,13 +448,56 @@ Two smaller ones: no exercise has a `videoUrl`, and the photos in the library
 live in a Supabase Storage bucket, so the static pages do not yet show them —
 worth wiring up, since a movement page without an image is weaker than one with.
 
-### Phase 3 — Editorial & authority _(weeks 8–16)_
+### Phase 3 — Editorial & authority _(weeks 8–16)_ — **shipped, except outreach**
 
-- [ ] The `/guides/` set, answer-first throughout
-- [ ] `/campaigns/`
-- [ ] `/stats/` — first original-data publication
-- [ ] Roundup and press outreach begins
-- [ ] Widen workout pages based on what Phase 2 proved
+- [x] The `/guides/` set, answer-first throughout — six guides plus a hub
+- [x] `/campaigns/`
+- [x] `/stats/` — first original-data publication
+- [ ] Roundup and press outreach — not a code task; see Part 6
+- [ ] Widen workout pages beyond the first 20, once Phase 2's prove out in GSC
+
+**117 pages now, 118 sitemap URLs.** Guides run 3,400–3,600 characters each;
+`/campaigns` 3,100; `/stats` 2,400.
+
+**Answer-first is enforced by the layout, not by discipline.** `GuideLayout`
+takes an `answer` prop — the direct answer in 40–60 words, rendered above the
+fold before any detail — and an `faqs` array that becomes _both_ the visible
+copy and the `FAQPage` markup. Markup that does not match what a reader sees is
+a spam signal, so the two are built from one source and cannot drift.
+
+**The pacing guide publishes something nobody else has.** The Pace Variance
+Index — `(slowest round − fastest round) ÷ average round × 100` — with its four
+bands, straight out of `getPviMultiplier`. A specific, named, reproducible
+metric is exactly the shape of thing an assistant quotes, and it is ours.
+
+#### `/stats` publishes what is honest today
+
+The roadmap wanted athlete-side data: median rounds on a workout, the
+distribution of pacing scores, typical improvement across a campaign. **We do not
+have the volume for those numbers to be honest, and inventing them would be worse
+than not publishing.** So `/stats` publishes what is real right now — how the
+library itself is built, computed at build time from the templates:
+
+- Round density scales with the cap: 2.1 movements and 27 reps per round at 5
+  minutes, 4.0 movements and 60 reps at 20 minutes
+- Air squats appear in 16.7% of all workouts, more than any other movement
+- 20 of the 73 movements appear in exactly one workout; the median movement is
+  used in 4
+
+The page says plainly what is missing and why, and commits to publishing it when
+the numbers are real. That section is the one to delete first once there is
+volume.
+
+#### What the first GSC impressions say
+
+Five impressions, zero clicks, on `amrap workouts`, `bodyweight amrap` and
+`amrap exercise`. **That is confirmation of indexing, not a signal about
+ranking** — five impressions is noise, and drawing conclusions from it would be
+a mistake. What is worth noting is that all three are informational head terms
+and all three now have a page aimed squarely at them: `/amrap-workouts` leads on
+"bodyweight", `/exercises` on "amrap exercise", `/guides/what-is-amrap` on the
+definitional query. Re-read the query report in four to six weeks, when there is
+enough data to mean something.
 
 ### Phase 4 — Compounding _(ongoing)_
 

@@ -1,0 +1,148 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { breadcrumbList, faqPage } from '@/lib/seo/structuredData';
+import {
+  CAMPAIGN_WEEK_COUNTS,
+  MAX_MISSIONS_PER_WEEK,
+  MIN_MISSIONS_PER_WEEK,
+} from '@/lib/campaign/constants';
+
+const faqs = [
+  {
+    question: 'How long should a training campaign be?',
+    answer:
+      'Four to twelve weeks. Shorter than four and you are measuring noise rather than adaptation; longer than twelve and life intervenes before the retest arrives. Eight weeks is the usual sweet spot — long enough to change something, short enough to finish.',
+  },
+  {
+    question: 'Why retest the same workout instead of a harder one?',
+    answer:
+      'Because a different workout produces a different number, and a different number tells you nothing. The retest has to be identical — same movements, same reps, same cap — or you are comparing two things that were never comparable.',
+  },
+  {
+    question: 'Why an easy day before a retest?',
+    answer:
+      'So the retest measures fitness rather than fatigue. Testing the day after a hard session reliably produces a worse score than the training earned, which is the opposite of what a test is for.',
+  },
+];
+
+const jsonLd = [
+  faqPage(faqs),
+  breadcrumbList([
+    { name: 'Home', path: '/' },
+    { name: 'Campaigns', path: '/campaigns' },
+  ]),
+];
+---
+
+<BaseLayout jsonLd={jsonLd}>
+  <div class="mx-auto w-full max-w-[44rem] space-y-12 px-6 py-12 lg:px-10 lg:py-16">
+    <header class="space-y-5">
+      <p class="eyebrow text-accent">Programming</p>
+      <h1 class="text-display text-[clamp(2.5rem,7vw,4rem)] leading-[0.9] text-ink">
+        AMRAP training campaigns
+      </h1>
+      <p class="border-l-2 border-accent pl-5 text-lg leading-[1.6] text-ink">
+        A campaign is a {CAMPAIGN_WEEK_COUNTS[0]} to {
+          CAMPAIGN_WEEK_COUNTS[CAMPAIGN_WEEK_COUNTS.length - 1]
+        } week AMRAP programme that opens with a benchmark workout, trains around it, and then retests
+        that exact workout later — so at the end you know whether the training moved the number, rather
+        than guessing.
+      </p>
+    </header>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">The problem it solves</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        Most people train hard and never find out whether it worked. Every session is a different
+        workout, so every score is a different number, and none of them can be compared. Six weeks
+        later you feel fitter, which is not evidence.
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        A campaign fixes that by making one workout the measuring stick and everything else the
+        training.
+      </p>
+    </section>
+
+    <section class="space-y-5">
+      <h2 class="text-display text-2xl text-ink">The four kinds of day</h2>
+      <div class="space-y-4">
+        <div class="card space-y-2 p-5">
+          <h3 class="font-semibold text-ink">Benchmark</h3>
+          <p class="text-sm leading-[1.6] text-secondary">
+            The opening mission. Go hard and record it honestly — this score is the number the whole
+            campaign is measured against.
+          </p>
+        </div>
+        <div class="card space-y-2 p-5">
+          <h3 class="font-semibold text-ink">Retest</h3>
+          <p class="text-sm leading-[1.6] text-secondary">
+            The same workout again, later. Identical movements, reps and cap, so the difference is
+            attributable to the training rather than to the workout being easier.
+          </p>
+        </div>
+        <div class="card space-y-2 p-5">
+          <h3 class="font-semibold text-ink">Easy day</h3>
+          <p class="text-sm leading-[1.6] text-secondary">
+            The light mission before a retest. Deliberately held back, so the test measures fitness
+            and not accumulated fatigue.
+          </p>
+        </div>
+        <div class="card space-y-2 p-5">
+          <h3 class="font-semibold text-ink">Everything else</h3>
+          <p class="text-sm leading-[1.6] text-secondary">
+            The training itself — varied workouts across the time domains and training stimuli. The
+            benchmark workout is deliberately kept out of this rotation, so the retest measures
+            fitness rather than practice at one specific workout.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">How it is scheduled</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        You pick the length — {CAMPAIGN_WEEK_COUNTS.join(', ')} weeks — and how many missions a week,
+        from {MIN_MISSIONS_PER_WEEK} to {MAX_MISSIONS_PER_WEEK}. The calendar is built from there. A
+        short campaign tests at the start and the end; longer ones add a checkpoint in the middle,
+        so an eight-week campaign tests in weeks 1, 4 and 8.
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        Campaigns below eight weeks do not schedule a deload: a six-week campaign that goes easy
+        twice has given up a sixth of its training to recovery it did not need yet.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Run it with other people</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        A campaign works alone and works better with a crew. Everyone benchmarks the same workout in
+        week one, trains the same calendar, and retests together — so the standings show who
+        improved most, not just who was fittest to begin with.
+      </p>
+      <div class="flex flex-wrap gap-3">
+        <a
+          class="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
+          href="/campaign/new">Plan a campaign</a
+        >
+        <a
+          class="rounded-card border border-border bg-surface px-6 py-3.5 font-semibold text-ink"
+          href="/guides/what-is-a-good-amrap-score">Why retesting is the only real measure</a
+        >
+      </div>
+    </section>
+
+    <section class="space-y-8">
+      <h2 class="text-display text-[clamp(1.75rem,4vw,2.5rem)] leading-[0.95] text-ink">
+        Related questions
+      </h2>
+      {
+        faqs.map((faq) => (
+          <div class="space-y-3">
+            <h3 class="text-base font-semibold text-ink">{faq.question}</h3>
+            <p class="text-base leading-[1.7] text-secondary">{faq.answer}</p>
+          </div>
+        ))
+      }
+    </section>
+  </div>
+</BaseLayout>
