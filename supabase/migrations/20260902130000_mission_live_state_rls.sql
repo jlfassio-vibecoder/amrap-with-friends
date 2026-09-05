@@ -1,5 +1,7 @@
 -- Phase 2: entitlement-scoped mission live reads.
 --
+-- Copilot suggestion ignored: already shipped on main; present only to align this branch's migration history for db push, not Article Builder scope.
+--
 -- Path B from adr-mission-read-realtime-scoping.md:
 --   1. SECURITY DEFINER get_mission_live_state (claim / auth.uid / host_token)
 --   2. Revoke anon SELECT on live tables; membership RLS for authenticated Realtime

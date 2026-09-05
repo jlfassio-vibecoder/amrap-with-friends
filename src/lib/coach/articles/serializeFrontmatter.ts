@@ -15,7 +15,7 @@ export function serializeArticleFrontmatter(
 ): Record<string, unknown> {
   return {
     title: input.title.trim(),
-    slug: input.slug.trim(),
+    slug: input.slug.trim().toLowerCase(),
     category: input.category.trim(),
     archetype: input.archetype.trim(),
     answerFirst: input.answerFirst.trim(),

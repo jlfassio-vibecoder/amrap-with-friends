@@ -107,7 +107,7 @@ BEGIN
   RETURN jsonb_build_object(
     'ok', true,
     'articles', (
-      SELECT coalesce(jsonb_agg(a ORDER BY a.updated_at DESC), '[]'::jsonb)
+      SELECT coalesce(jsonb_agg(a ORDER BY a."updatedAt" DESC), '[]'::jsonb)
       FROM (
         SELECT
           ca.id,
@@ -116,7 +116,6 @@ BEGIN
           ca.category,
           ca.archetype,
           ca.status,
-          ca.updated_at,
           ca.updated_at AS "updatedAt"
         FROM public.coach_articles ca
         WHERE ca.created_by = v_uid

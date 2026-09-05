@@ -5,7 +5,7 @@ describe('serializeArticleFrontmatter', () => {
   it('maps draft fields to Astro-shaped keys', () => {
     const result = serializeArticleFrontmatter({
       title: '  Title  ',
-      slug: ' title-slug ',
+      slug: ' Title-Slug ',
       category: 'programming',
       archetype: 'data-story',
       answerFirst: ' Answer ',
