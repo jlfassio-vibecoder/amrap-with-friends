@@ -52,7 +52,7 @@ export const CONTENT_ROUTES: RouteSeo[] = [
   },
   {
     path: '/amrap-workouts',
-    title: 'AMRAP Workouts — 150 Bodyweight Sessions, 5 to 20 Minutes',
+    title: 'AMRAP Workouts — 150 Bodyweight Workouts, 5 to 20 Minutes',
     description:
       'Browse 150 bodyweight AMRAP workouts by time (5–20 min) or training stimulus, with coaching cues and a shared live timer.',
     index: true,
