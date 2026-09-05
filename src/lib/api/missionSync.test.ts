@@ -255,6 +255,42 @@ describe('missionSync API', () => {
     });
   });
 
+  it('treats score_already_locked as a recoverable success', async () => {
+    invokeMock.mockResolvedValue({
+      data: { ok: false, reason: 'score_already_locked' },
+      error: null,
+    });
+
+    const result = await submitParticipantResult({
+      missionId: MISSION_ID,
+      participantId: PARTICIPANT_ID,
+      claimToken: 'claim-token',
+      partialReps: 0,
+      segmentIndex: 0,
+    });
+
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual({ ok: false, reason: 'score_already_locked' });
+  });
+
+  it('maps ok:false reasons into an error message', async () => {
+    invokeMock.mockResolvedValue({
+      data: { ok: false, reason: 'rounds_unavailable' },
+      error: null,
+    });
+
+    const result = await submitParticipantResult({
+      missionId: MISSION_ID,
+      participantId: PARTICIPANT_ID,
+      claimToken: 'claim-token',
+      partialReps: 0,
+      segmentIndex: 0,
+    });
+
+    expect(result.data).toEqual({ ok: false, reason: 'rounds_unavailable' });
+    expect(result.error?.message).toBe('Could not load your rounds. Please try again.');
+  });
+
   it('setRallyPointCountdown calls RPC and parses ends_at', async () => {
     rpcMock.mockResolvedValue({
       data: {

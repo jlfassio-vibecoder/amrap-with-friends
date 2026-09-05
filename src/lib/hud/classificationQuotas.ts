@@ -28,28 +28,13 @@ export function ageBracket(age: number): AgeBracket {
   return 'delta';
 }
 
-export function getClassificationQuotas(
-  age: number,
-  sex: BiologicalSex
-): ClassificationQuotas {
+export function getClassificationQuotas(age: number, sex: BiologicalSex): ClassificationQuotas {
   const bracket = ageBracket(age);
   const young = bracket === 'alpha' || bracket === 'bravo';
 
-  const civilianMinutes = young
-    ? sex === 'M'
-      ? 150
-      : 135
-    : sex === 'M'
-      ? 135
-      : 120;
+  const civilianMinutes = young ? (sex === 'M' ? 150 : 135) : sex === 'M' ? 135 : 120;
 
-  const operatorMinutes = young
-    ? sex === 'M'
-      ? 240
-      : 220
-    : bracket === 'charlie'
-      ? 210
-      : 180;
+  const operatorMinutes = young ? (sex === 'M' ? 240 : 220) : bracket === 'charlie' ? 210 : 180;
 
   return {
     civilianMinutes,
@@ -65,10 +50,10 @@ export function getClassificationQuotas(
 export const ALPHA_MALE_QUOTAS = getClassificationQuotas(22, 'M');
 
 export function quotasFromProfile(
-  profile: { birthYear: number; biologicalSex: BiologicalSex } | null | undefined,
+  profile: { birthYear: number | null; biologicalSex: BiologicalSex | null } | null | undefined,
   nowYear: number = new Date().getFullYear()
 ): ClassificationQuotas {
-  if (!profile) {
+  if (!profile?.birthYear || !profile.biologicalSex) {
     return ALPHA_MALE_QUOTAS;
   }
   return getClassificationQuotas(nowYear - profile.birthYear, profile.biologicalSex);

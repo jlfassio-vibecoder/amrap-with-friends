@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   fetchAthleteProfile,
+  upsertAthleteIdentity,
   upsertAthleteProfile,
+  type AthleteIdentityInput,
   type AthleteProfile,
+  type AthleteProfileMetricsInput,
 } from '@/lib/api/athleteProfile';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 
@@ -52,8 +55,19 @@ export function useAthleteProfile() {
     };
   }, [isAuthLoading, isAuthenticated, user]);
 
-  const save = useCallback(async (input: AthleteProfile) => {
+  const save = useCallback(async (input: AthleteProfileMetricsInput) => {
     const result = await upsertAthleteProfile(input);
+    if (result.error) {
+      return { error: result.error.message };
+    }
+    setProfile(result.data);
+    setMissing(false);
+    setError(null);
+    return { error: null };
+  }, []);
+
+  const saveIdentity = useCallback(async (input: AthleteIdentityInput) => {
+    const result = await upsertAthleteIdentity(input);
     if (result.error) {
       return { error: result.error.message };
     }
@@ -73,5 +87,6 @@ export function useAthleteProfile() {
     isAuthenticated,
     isAuthLoading,
     save,
+    saveIdentity,
   };
 }

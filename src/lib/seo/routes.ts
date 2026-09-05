@@ -52,7 +52,7 @@ export const CONTENT_ROUTES: RouteSeo[] = [
   },
   {
     path: '/amrap-workouts',
-    title: 'AMRAP Workouts — 150 Bodyweight Sessions, 5 to 20 Minutes',
+    title: 'AMRAP Workouts — 150 Bodyweight Workouts, 5 to 20 Minutes',
     description:
       'Browse 150 bodyweight AMRAP workouts by time (5–20 min) or training stimulus, with coaching cues and a shared live timer.',
     index: true,
@@ -138,7 +138,7 @@ export const CONTENT_ROUTES: RouteSeo[] = [
     path: '/privacy',
     title: 'Privacy — AMRAP With Friends',
     description:
-      'How AMRAP With Friends handles accounts, workout data, and cookies — and how to request deletion of what we store.',
+      'How AMRAP With Friends handles accounts, workout data, and browser data — and how to request deletion of what we store.',
     index: true,
   },
   {
@@ -175,6 +175,7 @@ export const APP_ROUTES: RouteSeo[] = [
   { path: '/squad', title: 'Your squad', description: '', index: false },
   { path: '/my-missions', title: 'My missions', description: '', index: false },
   { path: '/intake', title: 'Your profile', description: '', index: false },
+  { path: '/reset-password', title: 'Reset password', description: '', index: false },
   { path: '/hud', title: 'HUD', description: '', index: false },
   { path: '/coach', title: 'Coach', description: '', index: false },
   { path: '/coach/wods', title: 'WOD Builder', description: '', index: false },

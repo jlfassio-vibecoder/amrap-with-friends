@@ -8,6 +8,16 @@ const previewMock = vi.fn();
 const joinMock = vi.fn();
 const navigateMock = vi.fn();
 let authenticated = true;
+const profileState = vi.hoisted(() => ({
+  profile: null as { username: string; nickname: string } | null,
+  missing: false,
+  loading: false,
+  error: null as string | null,
+}));
+const ensureThenMock = vi.hoisted(() => vi.fn((action: () => void) => action()));
+const identityOverlayState = vi.hoisted(() => ({
+  open: false,
+}));
 
 vi.mock('@/lib/api/campaigns', () => ({
   fetchCampaignInvitePreview: (...args: unknown[]) => previewMock(...args),
@@ -26,7 +36,27 @@ vi.mock('@/hooks/useAmrapAuth', () => ({
   }),
 }));
 vi.mock('@/hooks/useAthleteProfile', () => ({
-  useAthleteProfile: () => ({ profile: null, missing: false, loading: false, error: null }),
+  useAthleteProfile: () => ({
+    profile: profileState.profile,
+    missing: profileState.missing,
+    loading: profileState.loading,
+    error: profileState.error,
+  }),
+}));
+vi.mock('@/hooks/useEnsureAthleteIdentity', () => ({
+  useEnsureAthleteIdentity: () => ({
+    ensureThen: ensureThenMock,
+    open: identityOverlayState.open,
+    overlayProps: {
+      acceptLabel: 'Accept & join',
+      dismissible: true,
+      onClose: vi.fn(),
+      onAccept: vi.fn(),
+    },
+  }),
+}));
+vi.mock('@/components/onboarding/IdentityOverlay', () => ({
+  IdentityOverlay: () => <div>Identity overlay</div>,
 }));
 vi.mock('@/components/AuthModal', () => ({
   AuthModal: () => <div>Auth modal</div>,
@@ -64,6 +94,12 @@ beforeEach(() => {
   joinMock.mockReset();
   navigateMock.mockReset();
   authenticated = true;
+  profileState.profile = { username: 'maya', nickname: 'Maya' };
+  profileState.missing = false;
+  profileState.loading = false;
+  profileState.error = null;
+  ensureThenMock.mockClear();
+  identityOverlayState.open = false;
   previewMock.mockResolvedValue({ data: preview(), error: null });
   joinMock.mockResolvedValue({
     data: { campaignId: 'c1', name: 'Winter', alreadyMember: false },
@@ -149,5 +185,39 @@ describe('JoinCampaignPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Join campaign' }));
     await waitFor(() => expect(screen.getByText('This campaign is full.')).toBeTruthy());
     expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it('opens the identity overlay path before join when identity is missing', async () => {
+    profileState.profile = null;
+    profileState.missing = true;
+    identityOverlayState.open = true;
+    ensureThenMock.mockImplementationOnce(() => {});
+    renderPage();
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Join campaign' })).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Join campaign' }));
+
+    expect(ensureThenMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Identity overlay')).toBeTruthy();
+  });
+
+  it('retries through the identity overlay when the RPC says profile is required', async () => {
+    joinMock
+      .mockResolvedValueOnce({
+        data: null,
+        error: { message: 'Complete your profile before starting a campaign.' },
+      })
+      .mockResolvedValueOnce({
+        data: { campaignId: 'c1', name: 'Winter', alreadyMember: false },
+        error: null,
+      });
+    renderPage();
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Join campaign' })).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Join campaign' }));
+
+    await waitFor(() => expect(joinMock).toHaveBeenCalledTimes(2));
+    expect(ensureThenMock).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/campaign/c1'));
   });
 });

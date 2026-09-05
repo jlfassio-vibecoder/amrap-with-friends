@@ -54,6 +54,9 @@ function mapRpcError(message: string | undefined): string {
   if (message.includes('Authentication required')) {
     return 'Sign in to create a mission.';
   }
+  if (message.includes('Sign in to schedule a mission')) {
+    return 'Sign in to schedule a mission.';
+  }
   if (message.includes('Intake required')) {
     return 'Complete intake before creating a mission.';
   }

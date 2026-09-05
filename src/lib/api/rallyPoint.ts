@@ -31,7 +31,7 @@ export type RallyPointSnapshot = {
   status: 'open' | 'closed';
   createdAt: string;
   updatedAt: string;
-  /** Host announced Daisy-chain; crew should hang on for the next mission. */
+  /** Host announced Daisy-chain; squad should hang on for the next mission. */
   nextMissionPendingAt: string | null;
   members: RallyPointMember[];
 };
@@ -64,6 +64,13 @@ export function isLiveRallyPointMissionState(
   state: string | null | undefined
 ): state is 'waiting' | 'setup' | 'work' {
   return state === 'waiting' || state === 'setup' || state === 'work';
+}
+
+/** Hub Close must not run while a linked mission is in work. */
+export function isCloseBlockedByLiveMission(
+  activeMissionState: RallyPointMissionState | null | undefined
+): boolean {
+  return activeMissionState === 'work';
 }
 
 function parseRallyPointMissionState(value: unknown): RallyPointMissionState | null {
@@ -109,6 +116,9 @@ function mapRpcError(message: string | undefined): string {
   }
   if (message.includes('Only the host can close')) {
     return 'Only the host can close the rally point.';
+  }
+  if (message.includes('Cannot close while a mission is live')) {
+    return 'Finish the live mission before closing.';
   }
   if (message.includes('Target is not an active crew member')) {
     return 'That athlete is not at the rally point.';

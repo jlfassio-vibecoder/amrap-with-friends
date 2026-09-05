@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   announceNextMission,
+  closeRallyPoint,
   createRallyPointMission,
   getRallyPoint,
+  isCloseBlockedByLiveMission,
   joinRallyPoint,
   leaveRallyPoint,
   passRallyPointCommand,
@@ -411,6 +413,38 @@ describe('rally point API', () => {
 
       expect(result.error).toBeNull();
       expect(result.data?.nextMissionPendingAt).toBe('2026-09-01T12:00:00Z');
+    });
+  });
+
+  describe('closeRallyPoint', () => {
+    it('blocks close when the active mission is live', () => {
+      expect(isCloseBlockedByLiveMission('work')).toBe(true);
+      expect(isCloseBlockedByLiveMission('waiting')).toBe(false);
+      expect(isCloseBlockedByLiveMission('finished')).toBe(false);
+      expect(isCloseBlockedByLiveMission(null)).toBe(false);
+    });
+
+    it('maps live-mission close refusal to plain copy', async () => {
+      rpcMock.mockResolvedValue({
+        data: null,
+        error: {
+          message: 'Cannot close while a mission is live',
+          details: '',
+          hint: '',
+          code: 'P0001',
+        },
+        count: null,
+        status: 400,
+        statusText: 'Bad Request',
+      } as never);
+
+      const result = await closeRallyPoint(RALLY_POINT_ID);
+
+      expect(rpcMock).toHaveBeenCalledWith('close_rally_point', {
+        p_rally_point_id: RALLY_POINT_ID,
+      });
+      expect(result.data).toBeNull();
+      expect(result.error?.message).toBe('Finish the live mission before closing.');
     });
   });
 });

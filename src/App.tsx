@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { FeaturedWodCard } from '@/components/home/FeaturedWodCard';
 import { GlobalPresenceBroadcaster } from '@/components/GlobalPresenceBroadcaster';
+import { PasswordRecoveryRedirect } from '@/components/PasswordRecoveryRedirect';
 import { RequireIntake } from '@/components/RequireIntake';
 import { RequireCoach } from '@/components/RequireCoach';
 import { useSeo } from '@/hooks/useSeo';
@@ -18,6 +18,7 @@ const SquadPage = lazy(() => import('./pages/SquadPage'));
 const JoinSquadPage = lazy(() => import('./pages/JoinSquadPage'));
 const HUDPage = lazy(() => import('./pages/HUDPage'));
 const IntakePage = lazy(() => import('./pages/IntakePage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const CoachPage = lazy(() => import('./pages/CoachPage'));
 const CoachWodsPage = lazy(() => import('./pages/CoachWodsPage'));
 const TimerDevPage = lazy(() => import('./pages/dev/TimerDevPage'));
@@ -37,16 +38,10 @@ function App() {
   return (
     <>
       <GlobalPresenceBroadcaster />
+      <PasswordRecoveryRedirect />
       <Suspense fallback={<RouteFallback />}>
         <Routes>
-          <Route
-            path="/create"
-            element={
-              <RequireIntake guestMode="sign-in" signedOutPreview={<FeaturedWodCard />}>
-                <CreateMissionPage />
-              </RequireIntake>
-            }
-          />
+          <Route path="/create" element={<CreateMissionPage />} />
           <Route path="/join" element={<JoinMissionPage />} />
           <Route path="/rally-point/:rallyPointId" element={<RallyPointPage />} />
           {/* Public: the invite preview is what convinces someone to sign up,
@@ -95,11 +90,12 @@ function App() {
           <Route path="/mission/:missionId" element={<MissionWaitingRoomPage />} />
           <Route path="/my-missions" element={<MyMissionsPage />} />
           <Route path="/intake" element={<IntakePage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route
             path="/hud"
             element={
               // Copilot suggestion ignored: passthrough keeps HUDPage guest copy; RequireIntake still redirects signed-in users missing a dossier.
-              <RequireIntake guestMode="passthrough">
+              <RequireIntake guestMode="passthrough" identityGate="redirect">
                 <HUDPage />
               </RequireIntake>
             }

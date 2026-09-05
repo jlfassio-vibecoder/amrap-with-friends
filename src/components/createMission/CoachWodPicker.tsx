@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CoachExerciseInfoModal } from '@/components/coachWod/CoachExerciseInfoModal';
+import { RecoveryLockMessage } from '@/components/createMission/RecoveryLockMessage';
+import { SmartRecoveryToggle } from '@/components/createMission/SmartRecoveryToggle';
 import { fetchPublishedCoachWorkouts, type PublishedCoachWorkout } from '@/lib/api/coachWod';
+import { coachWorkoutLockId } from '@/lib/smartRecovery/deriveCoachWorkoutPatterns';
+import type { TemplateRecoveryLock } from '@/lib/smartRecovery/computeRecoveryLocks';
 
 const INTENSITY_LABEL: Record<number, string> = {
   1: 'Active Recovery',
@@ -13,23 +17,39 @@ const INTENSITY_LABEL: Record<number, string> = {
 interface CoachWodCardProps {
   workout: PublishedCoachWorkout;
   selected: boolean;
+  locked: boolean;
+  recoveryLock: TemplateRecoveryLock | null;
   onSelect: (workout: PublishedCoachWorkout) => void;
 }
 
-function CoachWodCard({ workout, selected, onSelect }: CoachWodCardProps) {
+function CoachWodCard({ workout, selected, locked, recoveryLock, onSelect }: CoachWodCardProps) {
   const [howtoExercise, setHowtoExercise] = useState<NonNullable<
     (typeof workout.movements)[number]['exercise']
   > | null>(null);
 
+  function handleSelect() {
+    if (locked) {
+      return;
+    }
+    onSelect(workout);
+  }
+
   return (
     <div
       className={
-        selected
-          ? 'bg-accent-tint/40 space-y-3 rounded-card border-2 border-accent p-4'
-          : 'space-y-3 rounded-card border border-border bg-surface p-4'
+        locked
+          ? 'space-y-3 rounded-card border border-border bg-surface p-4 opacity-50'
+          : selected
+            ? 'bg-accent-tint/40 space-y-3 rounded-card border-2 border-accent p-4'
+            : 'space-y-3 rounded-card border border-border bg-surface p-4'
       }
     >
-      <button type="button" className="block w-full text-left" onClick={() => onSelect(workout)}>
+      <button
+        type="button"
+        className={locked ? 'block w-full cursor-not-allowed text-left' : 'block w-full text-left'}
+        aria-disabled={locked}
+        onClick={handleSelect}
+      >
         <p className="text-sm font-semibold text-ink">{workout.name}</p>
         {workout.focus ? <p className="text-xs text-secondary">{workout.focus}</p> : null}
         <p className="mt-1 text-xs text-secondary">
@@ -37,6 +57,7 @@ function CoachWodCard({ workout, selected, onSelect }: CoachWodCardProps) {
           {INTENSITY_LABEL[workout.intensityTier] ?? workout.intensityTier}
           {workout.tags.length > 0 ? ` · ${workout.tags.join(', ')}` : ''}
         </p>
+        {locked && recoveryLock ? <RecoveryLockMessage lock={recoveryLock} /> : null}
       </button>
 
       <ul className="space-y-1 text-xs text-secondary">
@@ -71,16 +92,45 @@ function CoachWodCard({ workout, selected, onSelect }: CoachWodCardProps) {
 
 interface CoachWodPickerProps {
   selectedWorkoutId: string | null;
+  smartRecoveryEnabled: boolean;
+  onSmartRecoveryEnabledChange: (enabled: boolean) => void;
+  recoveryLocks: Map<string, TemplateRecoveryLock>;
+  smartRecoveryActive: boolean;
+  smartRecoveryLoading?: boolean;
+  smartRecoveryError?: string | null;
+  isAuthenticated: boolean;
+  /** When provided, skips the internal fetch and uses these workouts instead. */
+  coachWorkouts?: PublishedCoachWorkout[] | null;
+  coachWorkoutsLoading?: boolean;
+  coachWorkoutsError?: string | null;
   onSelect: (workout: PublishedCoachWorkout) => void;
 }
 
-export function CoachWodPicker({ selectedWorkoutId, onSelect }: CoachWodPickerProps) {
+export function CoachWodPicker({
+  selectedWorkoutId,
+  smartRecoveryEnabled,
+  onSmartRecoveryEnabledChange,
+  recoveryLocks,
+  smartRecoveryActive,
+  smartRecoveryLoading = false,
+  smartRecoveryError = null,
+  isAuthenticated,
+  coachWorkouts: coachWorkoutsFromParent,
+  coachWorkoutsLoading = false,
+  coachWorkoutsError = null,
+  onSelect,
+}: CoachWodPickerProps) {
+  const usesParentWorkouts = coachWorkoutsFromParent !== undefined;
   const [workouts, setWorkouts] = useState<PublishedCoachWorkout[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!usesParentWorkouts);
   const [error, setError] = useState<string | null>(null);
   const [activeTag, setActiveTag] = useState<string | null>(null);
 
   useEffect(() => {
+    if (usesParentWorkouts) {
+      return;
+    }
+
     let cancelled = false;
     fetchPublishedCoachWorkouts({}).then((result) => {
       if (cancelled) {
@@ -97,27 +147,36 @@ export function CoachWodPicker({ selectedWorkoutId, onSelect }: CoachWodPickerPr
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [usesParentWorkouts]);
+
+  const resolvedWorkouts = useMemo(
+    () => (usesParentWorkouts ? (coachWorkoutsFromParent ?? []) : workouts),
+    [usesParentWorkouts, coachWorkoutsFromParent, workouts]
+  );
+  const resolvedLoading = usesParentWorkouts ? coachWorkoutsLoading : loading;
+  const resolvedError = usesParentWorkouts ? coachWorkoutsError : error;
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
-    for (const workout of workouts) {
+    for (const workout of resolvedWorkouts) {
       for (const tag of workout.tags) {
         tags.add(tag);
       }
     }
     return Array.from(tags).sort();
-  }, [workouts]);
+  }, [resolvedWorkouts]);
 
-  const visibleWorkouts = activeTag ? workouts.filter((w) => w.tags.includes(activeTag)) : workouts;
+  const visibleWorkouts = activeTag
+    ? resolvedWorkouts.filter((w) => w.tags.includes(activeTag))
+    : resolvedWorkouts;
 
-  if (loading) {
+  if (resolvedLoading) {
     return <p className="text-sm text-secondary">Loading coach workouts…</p>;
   }
-  if (error) {
-    return <p className="text-error text-sm">{error}</p>;
+  if (resolvedError) {
+    return <p className="text-error text-sm">{resolvedError}</p>;
   }
-  if (workouts.length === 0) {
+  if (resolvedWorkouts.length === 0) {
     return (
       <p className="rounded-card border border-border bg-page p-4 text-sm text-secondary">
         No coach workouts published yet.
@@ -127,6 +186,14 @@ export function CoachWodPicker({ selectedWorkoutId, onSelect }: CoachWodPickerPr
 
   return (
     <div className="space-y-3">
+      <SmartRecoveryToggle
+        enabled={smartRecoveryEnabled}
+        onChange={onSmartRecoveryEnabledChange}
+        isAuthenticated={isAuthenticated}
+        loading={smartRecoveryLoading}
+        error={smartRecoveryError}
+      />
+
       {allTags.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           <button
@@ -150,14 +217,21 @@ export function CoachWodPicker({ selectedWorkoutId, onSelect }: CoachWodPickerPr
       ) : null}
 
       <div className="max-h-[32rem] space-y-3 overflow-y-auto pr-1">
-        {visibleWorkouts.map((workout) => (
-          <CoachWodCard
-            key={workout.id}
-            workout={workout}
-            selected={selectedWorkoutId === workout.id}
-            onSelect={onSelect}
-          />
-        ))}
+        {visibleWorkouts.map((workout) => {
+          const recoveryLock = recoveryLocks.get(coachWorkoutLockId(workout.id)) ?? null;
+          const locked = smartRecoveryActive && recoveryLock !== null;
+
+          return (
+            <CoachWodCard
+              key={workout.id}
+              workout={workout}
+              selected={selectedWorkoutId === workout.id}
+              locked={locked}
+              recoveryLock={recoveryLock}
+              onSelect={onSelect}
+            />
+          );
+        })}
       </div>
     </div>
   );

@@ -87,6 +87,8 @@ export function mapSendMessageReason(reason: string): string {
       return `Message must be ${MESSAGE_MAX_LENGTH} characters or fewer.`;
     case 'invalid_claim_token':
       return 'Could not send message. Rejoin from this device if you still have access.';
+    case 'rate_limited':
+      return 'Slow down — wait a moment before sending again.';
     default:
       return `Could not send message: ${reason}`;
   }

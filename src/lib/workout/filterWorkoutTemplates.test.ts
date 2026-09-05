@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  WORKOUT_CATEGORIES,
-  WORKOUT_TEMPLATES,
-  type TimeDomain,
-} from '@/data/workoutTemplates';
+import { WORKOUT_CATEGORIES, WORKOUT_TEMPLATES, type TimeDomain } from '@/data/workoutTemplates';
 import {
   filterWorkoutTemplates,
   firstAvailableCategoryForDuration,
@@ -32,13 +28,13 @@ describe('filterWorkoutTemplates', () => {
     ).toHaveLength(10);
   });
 
-  it('returns 10 Blood Shunt templates at 15 minutes', () => {
+  it('returns 11 Blood Shunt templates at 15 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
         durationMinutes: 15,
         category: 'blood-shunt',
       })
-    ).toHaveLength(10);
+    ).toHaveLength(11);
   });
 
   it('returns 10 Localized Trap templates at 5 minutes', () => {
@@ -77,13 +73,13 @@ describe('filterWorkoutTemplates', () => {
     ).toHaveLength(10);
   });
 
-  it('returns 10 Engine Room templates at 10 minutes', () => {
+  it('returns 11 Engine Room templates at 10 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
         durationMinutes: 10,
         category: 'engine-room',
       })
-    ).toHaveLength(10);
+    ).toHaveLength(11);
   });
 
   it('returns 10 Engine Room templates at 15 minutes', () => {
@@ -169,33 +165,30 @@ describe('WORKOUT_TEMPLATES data integrity', () => {
     expect(WORKOUT_TEMPLATES.filter((template) => template.name === 'The Metronome')).toHaveLength(
       2
     );
-    expect(WORKOUT_TEMPLATES.find((template) => template.id === 'the-metronome')?.durationMinutes).toBe(
-      5
-    );
     expect(
-      WORKOUT_TEMPLATES.find((template) => template.id === 'the-metronome-endurance')?.durationMinutes
+      WORKOUT_TEMPLATES.find((template) => template.id === 'the-metronome')?.durationMinutes
+    ).toBe(5);
+    expect(
+      WORKOUT_TEMPLATES.find((template) => template.id === 'the-metronome-endurance')
+        ?.durationMinutes
     ).toBe(15);
   });
 
   it('keeps distinct ids for The See-Saw across durations', () => {
-    expect(WORKOUT_TEMPLATES.filter((template) => template.name === 'The See-Saw')).toHaveLength(
-      2
-    );
-    expect(WORKOUT_TEMPLATES.find((template) => template.id === 'the-see-saw')?.durationMinutes).toBe(
-      5
-    );
+    expect(WORKOUT_TEMPLATES.filter((template) => template.name === 'The See-Saw')).toHaveLength(2);
+    expect(
+      WORKOUT_TEMPLATES.find((template) => template.id === 'the-see-saw')?.durationMinutes
+    ).toBe(5);
     expect(
       WORKOUT_TEMPLATES.find((template) => template.id === 'the-see-saw-push-pull')?.durationMinutes
     ).toBe(10);
   });
 
   it('keeps distinct ids for The Fulcrum across durations', () => {
-    expect(WORKOUT_TEMPLATES.filter((template) => template.name === 'The Fulcrum')).toHaveLength(
-      2
-    );
-    expect(WORKOUT_TEMPLATES.find((template) => template.id === 'the-fulcrum')?.durationMinutes).toBe(
-      10
-    );
+    expect(WORKOUT_TEMPLATES.filter((template) => template.name === 'The Fulcrum')).toHaveLength(2);
+    expect(
+      WORKOUT_TEMPLATES.find((template) => template.id === 'the-fulcrum')?.durationMinutes
+    ).toBe(10);
     expect(
       WORKOUT_TEMPLATES.find((template) => template.id === 'the-fulcrum-systemic-shift')
         ?.durationMinutes
@@ -203,9 +196,9 @@ describe('WORKOUT_TEMPLATES data integrity', () => {
   });
 
   it('keeps distinct ids for The Long Stride across durations', () => {
-    expect(WORKOUT_TEMPLATES.filter((template) => template.name === 'The Long Stride')).toHaveLength(
-      2
-    );
+    expect(
+      WORKOUT_TEMPLATES.filter((template) => template.name === 'The Long Stride')
+    ).toHaveLength(2);
     expect(
       WORKOUT_TEMPLATES.find((template) => template.id === 'the-long-stride')?.durationMinutes
     ).toBe(10);
@@ -217,9 +210,9 @@ describe('WORKOUT_TEMPLATES data integrity', () => {
 
   it('keeps distinct ids for The Cruiser across durations', () => {
     expect(WORKOUT_TEMPLATES.filter((template) => template.name === 'The Cruiser')).toHaveLength(2);
-    expect(WORKOUT_TEMPLATES.find((template) => template.id === 'the-cruiser')?.durationMinutes).toBe(
-      10
-    );
+    expect(
+      WORKOUT_TEMPLATES.find((template) => template.id === 'the-cruiser')?.durationMinutes
+    ).toBe(10);
     expect(
       WORKOUT_TEMPLATES.find((template) => template.id === 'the-cruiser-endurance')?.durationMinutes
     ).toBe(15);
@@ -227,9 +220,9 @@ describe('WORKOUT_TEMPLATES data integrity', () => {
 
   it('keeps distinct ids for The Piston across durations', () => {
     expect(WORKOUT_TEMPLATES.filter((template) => template.name === 'The Piston')).toHaveLength(2);
-    expect(WORKOUT_TEMPLATES.find((template) => template.id === 'the-piston')?.durationMinutes).toBe(
-      5
-    );
+    expect(
+      WORKOUT_TEMPLATES.find((template) => template.id === 'the-piston')?.durationMinutes
+    ).toBe(5);
     expect(
       WORKOUT_TEMPLATES.find((template) => template.id === 'the-piston-cascade')?.durationMinutes
     ).toBe(20);
@@ -239,9 +232,9 @@ describe('WORKOUT_TEMPLATES data integrity', () => {
     expect(WORKOUT_TEMPLATES.filter((template) => template.name === 'The Sentinel')).toHaveLength(
       2
     );
-    expect(
-      WORKOUT_TEMPLATES.find((template) => template.id === 'the-sentinel')?.category
-    ).toBe('aerobic-matrix');
+    expect(WORKOUT_TEMPLATES.find((template) => template.id === 'the-sentinel')?.category).toBe(
+      'aerobic-matrix'
+    );
     expect(
       WORKOUT_TEMPLATES.find((template) => template.id === 'the-sentinel-cascade')?.category
     ).toBe('four-point-cascade');
@@ -271,9 +264,7 @@ describe('isCategoryAvailable', () => {
   });
 
   it('is true for midline-tension at 10 minutes', () => {
-    const midlineTension = WORKOUT_CATEGORIES.find(
-      (category) => category.id === 'midline-tension'
-    );
+    const midlineTension = WORKOUT_CATEGORIES.find((category) => category.id === 'midline-tension');
     expect(midlineTension).toBeDefined();
     if (!midlineTension) {
       return;
@@ -283,9 +274,7 @@ describe('isCategoryAvailable', () => {
   });
 
   it('is true for midline-tension at 15 minutes', () => {
-    const midlineTension = WORKOUT_CATEGORIES.find(
-      (category) => category.id === 'midline-tension'
-    );
+    const midlineTension = WORKOUT_CATEGORIES.find((category) => category.id === 'midline-tension');
     expect(midlineTension).toBeDefined();
     if (!midlineTension) {
       return;
@@ -295,9 +284,7 @@ describe('isCategoryAvailable', () => {
   });
 
   it('is true for aerobic-matrix at 20 minutes', () => {
-    const aerobicMatrix = WORKOUT_CATEGORIES.find(
-      (category) => category.id === 'aerobic-matrix'
-    );
+    const aerobicMatrix = WORKOUT_CATEGORIES.find((category) => category.id === 'aerobic-matrix');
     expect(aerobicMatrix).toBeDefined();
     if (!aerobicMatrix) {
       return;
@@ -329,9 +316,7 @@ describe('isCategoryAvailable', () => {
   });
 
   it('is false for aerobic-matrix at 5, 10, and 15 minutes', () => {
-    const aerobicMatrix = WORKOUT_CATEGORIES.find(
-      (category) => category.id === 'aerobic-matrix'
-    );
+    const aerobicMatrix = WORKOUT_CATEGORIES.find((category) => category.id === 'aerobic-matrix');
     expect(aerobicMatrix).toBeDefined();
     if (!aerobicMatrix) {
       return;
@@ -386,9 +371,7 @@ describe('isCategoryAvailable', () => {
   });
 
   it('is true for localized-trap at 5 minutes', () => {
-    const localizedTrap = WORKOUT_CATEGORIES.find(
-      (category) => category.id === 'localized-trap'
-    );
+    const localizedTrap = WORKOUT_CATEGORIES.find((category) => category.id === 'localized-trap');
     expect(localizedTrap).toBeDefined();
     if (!localizedTrap) {
       return;
@@ -398,9 +381,7 @@ describe('isCategoryAvailable', () => {
   });
 
   it('is true for localized-trap at 10 minutes', () => {
-    const localizedTrap = WORKOUT_CATEGORIES.find(
-      (category) => category.id === 'localized-trap'
-    );
+    const localizedTrap = WORKOUT_CATEGORIES.find((category) => category.id === 'localized-trap');
     expect(localizedTrap).toBeDefined();
     if (!localizedTrap) {
       return;
@@ -410,9 +391,7 @@ describe('isCategoryAvailable', () => {
   });
 
   it('is true for localized-trap at 15 minutes', () => {
-    const localizedTrap = WORKOUT_CATEGORIES.find(
-      (category) => category.id === 'localized-trap'
-    );
+    const localizedTrap = WORKOUT_CATEGORIES.find((category) => category.id === 'localized-trap');
     expect(localizedTrap).toBeDefined();
     if (!localizedTrap) {
       return;
@@ -452,9 +431,7 @@ describe('isCategoryAvailable', () => {
   });
 
   it('is true for midline-tension at 5 minutes', () => {
-    const midlineTension = WORKOUT_CATEGORIES.find(
-      (category) => category.id === 'midline-tension'
-    );
+    const midlineTension = WORKOUT_CATEGORIES.find((category) => category.id === 'midline-tension');
     expect(midlineTension).toBeDefined();
     if (!midlineTension) {
       return;
@@ -589,9 +566,7 @@ describe('categoryDisplayForDuration', () => {
   });
 
   it('returns base label and description for categories without overrides', () => {
-    const localizedTrap = WORKOUT_CATEGORIES.find(
-      (category) => category.id === 'localized-trap'
-    );
+    const localizedTrap = WORKOUT_CATEGORIES.find((category) => category.id === 'localized-trap');
     expect(localizedTrap).toBeDefined();
     if (!localizedTrap) {
       return;
@@ -604,9 +579,7 @@ describe('categoryDisplayForDuration', () => {
   });
 
   it('returns override label and description for localized-trap at 10 minutes', () => {
-    const localizedTrap = WORKOUT_CATEGORIES.find(
-      (category) => category.id === 'localized-trap'
-    );
+    const localizedTrap = WORKOUT_CATEGORIES.find((category) => category.id === 'localized-trap');
     expect(localizedTrap).toBeDefined();
     if (!localizedTrap) {
       return;
@@ -620,9 +593,7 @@ describe('categoryDisplayForDuration', () => {
   });
 
   it('returns override label and description for localized-trap at 15 minutes', () => {
-    const localizedTrap = WORKOUT_CATEGORIES.find(
-      (category) => category.id === 'localized-trap'
-    );
+    const localizedTrap = WORKOUT_CATEGORIES.find((category) => category.id === 'localized-trap');
     expect(localizedTrap).toBeDefined();
     if (!localizedTrap) {
       return;
@@ -664,9 +635,7 @@ describe('categoryDisplayForDuration', () => {
   });
 
   it('returns override label and description for midline-tension at 10 minutes', () => {
-    const midlineTension = WORKOUT_CATEGORIES.find(
-      (category) => category.id === 'midline-tension'
-    );
+    const midlineTension = WORKOUT_CATEGORIES.find((category) => category.id === 'midline-tension');
     expect(midlineTension).toBeDefined();
     if (!midlineTension) {
       return;
@@ -680,9 +649,7 @@ describe('categoryDisplayForDuration', () => {
   });
 
   it('returns override label and description for midline-tension at 15 minutes', () => {
-    const midlineTension = WORKOUT_CATEGORIES.find(
-      (category) => category.id === 'midline-tension'
-    );
+    const midlineTension = WORKOUT_CATEGORIES.find((category) => category.id === 'midline-tension');
     expect(midlineTension).toBeDefined();
     if (!midlineTension) {
       return;

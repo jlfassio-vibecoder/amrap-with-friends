@@ -41,6 +41,7 @@ describe('mapSendMessageReason', () => {
     expect(mapSendMessageReason('empty_body')).toContain('empty');
     expect(mapSendMessageReason('body_too_long')).toContain(String(MESSAGE_MAX_LENGTH));
     expect(mapSendMessageReason('invalid_claim_token')).toContain('Rejoin');
+    expect(mapSendMessageReason('rate_limited')).toContain('Slow down');
   });
 });
 
