@@ -287,7 +287,7 @@ function ScheduleForm({ workouts, schedule, onSaved, onCancel }: ScheduleFormPro
   );
 }
 
-/** Join rally point appears in the same lead window as the public Join mission CTA. */
+/** Join mission appears in the same lead window as the public Join mission CTA. */
 function JoinRallyPointLink({ scheduleActive }: { scheduleActive: boolean }) {
   const [missionId, setMissionId] = useState<string | null>(null);
   const [scheduledAt, setScheduledAt] = useState<string | null>(null);
@@ -355,7 +355,7 @@ function JoinRallyPointLink({ scheduleActive }: { scheduleActive: boolean }) {
       className="text-xs uppercase tracking-wide text-accent hover:underline"
       to={`/mission/${activeMissionId}`}
     >
-      Join rally point
+      Join mission
     </Link>
   );
 }

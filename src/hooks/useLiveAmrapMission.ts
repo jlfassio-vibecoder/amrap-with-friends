@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { updateMissionState, logRound, submitParticipantResult } from '@/lib/api/missionSync';
+import { resetLiveMission } from '@/lib/api/resetLiveMission';
 import { computeElapsedSecForLogRound } from '@/lib/amrapTimer/computeElapsedSecForLogRound';
 import {
   computeMissedRoundElapsedSec,
@@ -31,10 +32,11 @@ import {
   getStoredHostToken,
   getStoredNickname,
   getStoredParticipantId,
+  persistMissionIdentity,
 } from '@/lib/missionIdentity';
 import { track, trackBeacon } from '@/lib/analytics/track';
 
-const PUSH_INTERVAL_MS = 3000;
+const PUSH_INTERVAL_MS = 15_000;
 
 export interface UseLiveAmrapMissionReturn {
   phase: LiveMissionPhase;
@@ -65,6 +67,11 @@ export interface UseLiveAmrapMissionReturn {
   start: () => Promise<void>;
   startPractice: () => void;
   endPractice: () => void;
+  /** Live host rematch (new mission id) or practice local restart. */
+  resetMission: () => Promise<{
+    missionId: string | null;
+    error: string | null;
+  }>;
   pause: () => Promise<void>;
   resume: () => Promise<void>;
   finish: () => Promise<void>;
@@ -405,7 +412,10 @@ export function useLiveAmrapMission(
       return true;
     }
     return channel.segmentResults.some(
-      (result) => result.participant_id === participantId && result.segment_index === segmentIndex
+      (result) =>
+        result.participant_id === participantId &&
+        result.segment_index === segmentIndex &&
+        result.score_breakdown !== null
     );
   }, [localPartialSubmitted, channel.segmentResults, participantId, segmentIndex]);
 
@@ -532,25 +542,65 @@ export function useLiveAmrapMission(
     timer.reset();
   }, [isPractice, timer, missionId, participantId]);
 
+  const resetMission = useCallback(async () => {
+    if (isPractice) {
+      if (timer.phase !== 'work' && timer.phase !== 'setup' && timer.phase !== 'finished') {
+        return { missionId: null, error: null };
+      }
+      timer.reset();
+      timer.start({
+        setupDurationSec,
+        workDurationSec: PRACTICE_WORK_DURATION_SEC,
+      });
+      setIsPractice(true);
+      return { missionId: null, error: null };
+    }
+
+    if (!isHost) {
+      return { missionId: null, error: 'Only the host can reset this mission.' };
+    }
+
+    const hostToken = getStoredHostToken(missionId);
+    if (!hostToken) {
+      return { missionId: null, error: 'Only the host can reset this mission.' };
+    }
+
+    const result = await resetLiveMission({ missionId, hostToken });
+    if (result.error || !result.data) {
+      const message = result.error?.message ?? 'Something went wrong. Please try again.';
+      setSyncError(message);
+      return { missionId: null, error: message };
+    }
+
+    persistMissionIdentity(result.data.missionId, {
+      nickname: getStoredNickname(missionId) ?? nickname,
+      participantId: result.data.participantId,
+      hostToken: result.data.hostToken,
+      claimToken: result.data.claimToken,
+    });
+
+    return { missionId: result.data.missionId, error: null };
+  }, [isPractice, timer, setupDurationSec, isHost, missionId, nickname]);
+
   const pause = useCallback(async () => {
     if (timer.phase !== 'work' || timer.isPaused) {
       return;
     }
-    if (!isPractice && !isHost) {
+    if (!isPractice) {
       return;
     }
     timer.pause();
-  }, [isPractice, isHost, timer]);
+  }, [isPractice, timer]);
 
   const resume = useCallback(async () => {
     if (timer.phase !== 'work' || !timer.isPaused) {
       return;
     }
-    if (!isPractice && !isHost) {
+    if (!isPractice) {
       return;
     }
     timer.resume();
-  }, [isPractice, isHost, timer]);
+  }, [isPractice, timer]);
 
   const finish = useCallback(async () => {
     if (timer.phase !== 'work') {
@@ -711,6 +761,8 @@ export function useLiveAmrapMission(
         return;
       }
 
+      setSyncError(null);
+
       const tokenForRpc = claimToken ?? '';
       if (!tokenForRpc && !isAuthenticated) {
         setSyncError(
@@ -727,6 +779,12 @@ export function useLiveAmrapMission(
         segmentIndex,
       });
 
+      if (result.data?.ok === false && result.data.reason === 'score_already_locked') {
+        setSyncError(null);
+        setLocalPartialSubmitted(true);
+        return;
+      }
+
       if (result.error) {
         setSyncError(result.error.message);
         return;
@@ -737,6 +795,7 @@ export function useLiveAmrapMission(
         return;
       }
 
+      setSyncError(null);
       setLocalPartialSubmitted(true);
     },
     [
@@ -779,6 +838,7 @@ export function useLiveAmrapMission(
     start,
     startPractice,
     endPractice,
+    resetMission,
     pause,
     resume,
     finish,

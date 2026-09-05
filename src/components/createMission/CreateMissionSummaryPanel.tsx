@@ -1,4 +1,5 @@
 import type { FormEvent, ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import type { WorkoutTemplate } from '@/data/workoutTemplates';
 import { formatTemplateMovementLine } from '@/lib/workout/templateToExercises';
 import type { RallyDay } from '@/lib/mission/rallySchedule';
@@ -23,6 +24,10 @@ interface CreateMissionSummaryPanelProps {
   rallyTime: string;
   capReached: boolean;
   error: string | null;
+  /** Optional link shown under the error (e.g. finish profile). */
+  errorAction?: { to: string; label: string } | null;
+  /** Soft copy when the visitor is signed out. */
+  unsignedHint?: string | null;
   loading: boolean;
   onNicknameChange: (value: string) => void;
   onDurationChange: (value: number) => void;
@@ -58,6 +63,8 @@ export function CreateMissionSummaryPanel({
   rallyTime,
   capReached,
   error,
+  errorAction = null,
+  unsignedHint = null,
   loading,
   onNicknameChange,
   onDurationChange,
@@ -74,10 +81,10 @@ export function CreateMissionSummaryPanel({
     ? 'Creating…'
     : scheduleMode === 'rally'
       ? 'Schedule rally point'
-      : 'Open rally point';
+      : 'Launch';
 
   return (
-    <form className="card space-y-4 p-6" onSubmit={onSubmit}>
+    <form id="create-mission-form" className="card space-y-4 p-6" onSubmit={onSubmit}>
       <SummaryField label="Your nickname">
         <input
           className="input-field"
@@ -180,13 +187,26 @@ export function CreateMissionSummaryPanel({
         />
       ) : null}
 
+      {unsignedHint ? <p className="text-sm text-secondary">{unsignedHint}</p> : null}
+
       {capReached ? (
         <p className="alert-error text-sm">
           You already have {HOST_ACTIVE_MISSION_LIMIT} active missions.
         </p>
       ) : null}
 
-      {error ? <p className="text-error">Error: {error}</p> : null}
+      {error ? (
+        <div className="space-y-2">
+          <p className="text-error">Error: {error}</p>
+          {errorAction ? (
+            <p className="text-sm">
+              <Link className="link-accent" to={errorAction.to}>
+                {errorAction.label}
+              </Link>
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       <button type="submit" className="btn-primary w-full" disabled={submitDisabled}>
         {submitLabel}

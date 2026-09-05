@@ -9,8 +9,8 @@
     "@/lib/scoring/getPacingDurations": "../../src/lib/scoring/getPacingDurations.ts",
     "@/lib/scoring/getPviMultiplier": "../../src/lib/scoring/getPviMultiplier.ts",
     "@/lib/scoring/types": "../../src/lib/scoring/types.ts",
-    "@/lib/api/sessionTypes": "../../src/lib/api/sessionTypes.ts",
-    "@/lib/sessionSync/types": "../../src/lib/sessionSync/types.ts",
+    "@/lib/api/missionTypes": "../../src/lib/api/missionTypes.ts",
+    "@/lib/missionSync/types": "../../src/lib/missionSync/types.ts",
     "@supabase/supabase-js": "jsr:@supabase/supabase-js@2"
   }
 }

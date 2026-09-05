@@ -114,7 +114,7 @@ describe('HostScheduledMissionsPanel', () => {
     await waitFor(() => {
       expect(screen.getByText('Burpees')).toBeTruthy();
     });
-    expect(screen.getByRole('link', { name: 'Enter rally point' }).getAttribute('href')).toBe(
+    expect(screen.getByRole('link', { name: 'Enter mission' }).getAttribute('href')).toBe(
       '/mission/22222222-2222-4222-8222-222222222222'
     );
     expect(screen.getByRole('link', { name: 'All my missions' }).getAttribute('href')).toBe(

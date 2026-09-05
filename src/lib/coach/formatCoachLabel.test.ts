@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { formatCoachEventLabel, formatCoachLabel, formatCoachProps } from './formatCoachLabel';
+import {
+  formatCoachEventLabel,
+  formatCoachLabel,
+  formatCoachProps,
+  truncateAnonId,
+} from './formatCoachLabel';
+
+describe('truncateAnonId', () => {
+  it('keeps short ids and truncates a UUID to 8…4', () => {
+    expect(truncateAnonId('short')).toBe('short');
+    expect(truncateAnonId('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee')).toBe('aaaaaaaa…eeee');
+  });
+});
 
 describe('formatCoachLabel', () => {
   it('formats snake_case RPC and event names', () => {

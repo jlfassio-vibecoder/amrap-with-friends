@@ -1,6 +1,6 @@
 export const VAULT_SAMPLE_URLS = {
   roundLog: '/audio/vault/vault-round-log.mp3',
-  missionStart: '/audio/vault/vault-mission-start.mp3',
+  missionStart: '/audio/vault/vault-session-start.mp3',
 } as const;
 
 export type VaultSampleId = keyof typeof VAULT_SAMPLE_URLS;

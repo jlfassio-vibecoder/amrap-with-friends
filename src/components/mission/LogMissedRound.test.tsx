@@ -82,6 +82,41 @@ describe('LogMissedRound', () => {
     expect(onConfirm).toHaveBeenCalledWith(2);
   });
 
+  it('does not allow confirming when the estimate is uncorrected', () => {
+    const onConfirm = renderControl();
+    fireEvent.click(screen.getByRole('button', { name: 'Forgot to log a round?' }));
+
+    expect(screen.getByRole('button', { name: 'Log round 3' }).hasAttribute('disabled')).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Log round 3' }));
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it('keeps confirm disabled when there is no time window to split', () => {
+    const onConfirm = vi.fn();
+    render(
+      <LogMissedRound
+        roundNumber={3}
+        repsPerRound={20}
+        preview={(reps) =>
+          computeMissedRoundElapsedSec({
+            previousElapsedSec: 100,
+            nowElapsedSec: 100,
+            repsPerRound: 20,
+            repsIntoNextRound: reps,
+          })
+        }
+        onConfirm={onConfirm}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Forgot to log a round?' }));
+    fireEvent.click(screen.getByRole('button', { name: /More reps/ }));
+
+    expect(screen.getByText(/at the clock as it stands now/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Log round 3' }).hasAttribute('disabled')).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Log round 3' }));
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
   it('closes without logging when cancelled', () => {
     const onConfirm = renderControl();
     fireEvent.click(screen.getByRole('button', { name: 'Forgot to log a round?' }));

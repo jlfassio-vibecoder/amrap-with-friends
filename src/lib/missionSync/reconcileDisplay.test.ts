@@ -74,7 +74,7 @@ describe('reconcileDisplay', () => {
     expect(display.timeLeftSec).toBe(500);
   });
 
-  it('freezes non-featured display after stale threshold when host stops pushing', () => {
+  it('freezes non-featured display after stale threshold when started_at is missing', () => {
     const snapshot = createAuthoritativeSnapshot(
       makeInput({ state: 'work', time_left_sec: 400 }),
       BASE_MS
@@ -82,6 +82,22 @@ describe('reconcileDisplay', () => {
     const display = snapshotToDisplay(snapshot, BASE_MS + PUSH_STALE_MS + 1000);
     expect(display.timeLeftSec).toBe(400);
     expect(display.phase).toBe('work');
+  });
+
+  it('derives non-featured work remaining from started_at when stale', () => {
+    const startedAtMs = BASE_MS - 60_000;
+    const snapshot = createAuthoritativeSnapshot(
+      makeInput({
+        state: 'work',
+        time_left_sec: 400,
+        started_at: new Date(startedAtMs).toISOString(),
+        is_featured: false,
+      }),
+      BASE_MS
+    );
+    const display = snapshotToDisplay(snapshot, BASE_MS + PUSH_STALE_MS + 1000);
+    expect(display.phase).toBe('work');
+    expect(display.timeLeftSec).toBe(900 - 60 - Math.floor((PUSH_STALE_MS + 1000) / 1000));
   });
 
   it('derives featured work remaining from started_at when stale', () => {
@@ -112,7 +128,10 @@ describe('reconcileDisplay', () => {
       }),
       SCHEDULED_MS - 10_000
     );
-    const display = snapshotToDisplay(snapshot, SCHEDULED_MS + 3000);
+    const display = snapshotToDisplay(
+      snapshot,
+      SCHEDULED_MS - 10_000 + PUSH_STALE_MS + 1000
+    );
     expect(display.phase).toBe('setup');
     expect(display.timeLeftSec).toBe(10);
     expect(display.workStartedAtMs).toBeNull();

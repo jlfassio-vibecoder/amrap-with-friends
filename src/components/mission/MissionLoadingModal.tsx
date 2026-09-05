@@ -23,7 +23,7 @@ export function MissionLoadingModal({ onConfirm }: MissionLoadingModalProps) {
           Next mission loading
         </h2>
         <p className="text-sm leading-relaxed text-secondary">
-          Hang tight — another mission is on the way. Stay with the crew, hydrate, and do a light
+          Hang tight — another mission is on the way. Stay with your squad, hydrate, and do a light
           dynamic warm-up until it starts.
         </p>
         <button type="button" className="btn-primary w-full" onClick={onConfirm}>

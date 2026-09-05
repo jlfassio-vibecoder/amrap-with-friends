@@ -15,9 +15,11 @@ import {
   categoryDisplayForDuration,
 } from '@/lib/workout/filterWorkoutTemplates';
 import { WorkoutTemplateCard } from '@/components/createMission/WorkoutTemplateCard';
+import { SmartRecoveryToggle } from '@/components/createMission/SmartRecoveryToggle';
 import { WorkoutStyleInfoModal } from '@/components/workoutStyle/WorkoutStyleInfoModal';
 import type { ClassificationQuotas } from '@/lib/hud/classificationQuotas';
 import type { ClassificationRank, HudClassification } from '@/lib/hud/types';
+import type { TemplateRecoveryLock } from '@/lib/smartRecovery/computeRecoveryLocks';
 
 interface WorkoutTemplatePickerProps {
   durationMinutes: TimeDomain;
@@ -26,6 +28,13 @@ interface WorkoutTemplatePickerProps {
   classification?: HudClassification | null;
   perceivedClassification?: ClassificationRank | null;
   quotas?: ClassificationQuotas;
+  smartRecoveryEnabled: boolean;
+  onSmartRecoveryEnabledChange: (enabled: boolean) => void;
+  recoveryLocks: Map<string, TemplateRecoveryLock>;
+  smartRecoveryActive: boolean;
+  smartRecoveryLoading?: boolean;
+  smartRecoveryError?: string | null;
+  isAuthenticated: boolean;
   onDurationChange: (duration: TimeDomain) => void;
   onCategoryChange: (category: WorkoutCategory) => void;
   onTemplateSelect: (template: WorkoutTemplate) => void;
@@ -38,6 +47,13 @@ export function WorkoutTemplatePicker({
   classification = null,
   perceivedClassification = null,
   quotas,
+  smartRecoveryEnabled,
+  onSmartRecoveryEnabledChange,
+  recoveryLocks,
+  smartRecoveryActive,
+  smartRecoveryLoading = false,
+  smartRecoveryError = null,
+  isAuthenticated,
   onDurationChange,
   onCategoryChange,
   onTemplateSelect,
@@ -141,6 +157,14 @@ export function WorkoutTemplatePicker({
         ) : null}
       </div>
 
+      <SmartRecoveryToggle
+        enabled={smartRecoveryEnabled}
+        onChange={onSmartRecoveryEnabledChange}
+        isAuthenticated={isAuthenticated}
+        loading={smartRecoveryLoading}
+        error={smartRecoveryError}
+      />
+
       <div className="max-h-[32rem] overflow-y-auto pr-1">
         {visibleTemplates.length > 0 ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -152,6 +176,8 @@ export function WorkoutTemplatePicker({
                 classification={classification}
                 perceivedClassification={perceivedClassification}
                 quotas={quotas}
+                recoveryLock={recoveryLocks.get(template.id) ?? null}
+                smartRecoveryActive={smartRecoveryActive}
                 onSelect={onTemplateSelect}
               />
             ))}

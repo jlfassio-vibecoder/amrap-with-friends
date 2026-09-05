@@ -3,8 +3,10 @@ import {
   buildLeaderboard,
   buildParticipantRoundSummaries,
   buildPresenceList,
+  mergeMissionClock,
   mergePresenceState,
   parseMessageRow,
+  parseMissionClockFields,
   parseParticipantRow,
   parseRoundRow,
   parseSegmentResultRow,
@@ -43,6 +45,62 @@ describe('missionChannelUtils', () => {
     expect(row?.scheduled_at).toBeNull();
     expect(row?.rally_point_countdown_ends_at).toBeNull();
     expect(row?.is_featured).toBe(false);
+  });
+
+  it('parseMissionClockFields accepts rows without workout', () => {
+    const clock = parseMissionClockFields({
+      id: MISSION_ID,
+      duration_minutes: 15,
+      state: 'work',
+      time_left_sec: 400,
+      is_paused: false,
+      started_at: '2026-08-22T12:00:00.000Z',
+      segment_index: 0,
+      created_at: '2026-08-22T12:00:00.000Z',
+    });
+
+    expect(clock?.time_left_sec).toBe(400);
+    expect(
+      parseMissionRow({
+        id: MISSION_ID,
+        duration_minutes: 15,
+        state: 'work',
+        time_left_sec: 400,
+        is_paused: false,
+        started_at: '2026-08-22T12:00:00.000Z',
+        segment_index: 0,
+        created_at: '2026-08-22T12:00:00.000Z',
+      })
+    ).toBeNull();
+  });
+
+  it('mergeMissionClock keeps workout from the bootstrap row', () => {
+    const previous = parseMissionRow({
+      id: MISSION_ID,
+      duration_minutes: 15,
+      workout: WORKOUT,
+      state: 'waiting',
+      time_left_sec: 10,
+      is_paused: false,
+      started_at: null,
+      segment_index: 0,
+      created_at: '2026-08-22T12:00:00.000Z',
+    })!;
+    const clock = parseMissionClockFields({
+      id: MISSION_ID,
+      duration_minutes: 15,
+      state: 'work',
+      time_left_sec: 880,
+      is_paused: false,
+      started_at: '2026-08-22T12:01:00.000Z',
+      segment_index: 0,
+      created_at: '2026-08-22T12:00:00.000Z',
+    })!;
+
+    const merged = mergeMissionClock(previous, clock);
+    expect(merged?.state).toBe('work');
+    expect(merged?.time_left_sec).toBe(880);
+    expect(merged?.workout).toEqual(WORKOUT);
   });
 
   it('parseMissionRow keeps scheduled_at when present', () => {

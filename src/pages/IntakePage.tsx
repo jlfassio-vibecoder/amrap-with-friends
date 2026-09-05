@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type RefObject } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppLink } from '@/components/AppLink';
+import { AuthForm } from '@/components/AuthForm';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { track, trackBeacon } from '@/lib/analytics/track';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
-import type { AthleteProfile } from '@/lib/api/athleteProfile';
+import {
+  type AthleteIdentityInput,
+  type AthleteProfile,
+  type AthleteProfileMetricsInput,
+} from '@/lib/api/athleteProfile';
 import type { BiologicalSex } from '@/lib/hud/classificationQuotas';
 import {
   canSetPerceivedClassification,
@@ -20,6 +25,7 @@ import {
   lbToKg,
   type BodyMetricUnitSystem,
 } from '@/lib/units/bodyMetrics';
+import { AUTH_MIN_PASSWORD_LENGTH } from '@/lib/auth/passwordPolicy';
 
 const RANKS: Array<{ id: PerceivedClassification; label: string }> = [
   { id: 'civilian', label: 'CIVILIAN' },
@@ -71,6 +77,22 @@ function nicknameValidationMessage(value: string): string | null {
     return 'Enter a nickname (1–50 characters).';
   }
   return null;
+}
+
+function intakeMetricsAreBlank(input: {
+  height: string;
+  weight: string;
+  age: string;
+  biologicalSex: BiologicalSex | null;
+  rank: PerceivedClassification | null;
+}): boolean {
+  return (
+    input.height.trim() === '' &&
+    input.weight.trim() === '' &&
+    input.age.trim() === '' &&
+    input.biologicalSex === null &&
+    input.rank === null
+  );
 }
 
 type IntakeFieldKey =
@@ -141,7 +163,8 @@ interface IntakeFormProps {
   initialEmail: string;
   nowYear: number;
   userId: string | null;
-  onSaveProfile: (input: AthleteProfile) => Promise<{ error: string | null }>;
+  onSaveProfile: (input: AthleteProfileMetricsInput) => Promise<{ error: string | null }>;
+  onSaveIdentity: (input: AthleteIdentityInput) => Promise<{ error: string | null }>;
   onUpdateEmail: (
     email: string
   ) => Promise<{ error: string | null; needsEmailConfirmation: boolean }>;
@@ -157,12 +180,14 @@ function IntakeForm({
   nowYear,
   userId,
   onSaveProfile,
+  onSaveIdentity,
   onUpdateEmail,
   onUpdatePassword,
   onSaved,
 }: IntakeFormProps) {
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState(() => {
     if (initial?.username) {
       return initial.username;
@@ -170,8 +195,13 @@ function IntakeForm({
     return suggestUsernameFromEmail(initialEmail);
   });
   const [nickname, setNickname] = useState(initial?.nickname ?? '');
+  const hasPersistedBodyMetrics =
+    initial != null &&
+    initial.heightCm != null &&
+    initial.weightKg != null &&
+    initial.birthYear != null;
   const [unitSystem, setUnitSystem] = useState<BodyMetricUnitSystem>(() => {
-    if (!initial) {
+    if (!hasPersistedBodyMetrics || !initial?.heightCm || !initial.weightKg) {
       return 'imperial';
     }
     const inches = cmToIn(initial.heightCm);
@@ -183,7 +213,7 @@ function IntakeForm({
     return 'metric';
   });
   const [height, setHeight] = useState(() => {
-    if (!initial) {
+    if (!hasPersistedBodyMetrics || !initial?.heightCm || !initial.weightKg) {
       return '';
     }
     const inches = cmToIn(initial.heightCm);
@@ -192,7 +222,7 @@ function IntakeForm({
     return String(preferImperial ? inches : initial.heightCm);
   });
   const [weight, setWeight] = useState(() => {
-    if (!initial) {
+    if (!hasPersistedBodyMetrics || !initial?.heightCm || !initial.weightKg) {
       return '';
     }
     const inches = cmToIn(initial.heightCm);
@@ -201,7 +231,9 @@ function IntakeForm({
     return String(preferImperial ? pounds : initial.weightKg);
   });
   const [age, setAge] = useState(
-    initial ? String(ageFromBirthYear(initial.birthYear, nowYear)) : ''
+    hasPersistedBodyMetrics && initial?.birthYear != null
+      ? String(ageFromBirthYear(initial.birthYear, nowYear))
+      : ''
   );
   const [rank, setRank] = useState<PerceivedClassification | null>(
     initial?.perceivedClassification ?? null
@@ -277,35 +309,44 @@ function IntakeForm({
     if (nicknameMsg) {
       errors.push({ key: 'nickname', message: nicknameMsg });
     }
-    const h = Number(height);
-    const w = Number(weight);
-    const a = Number(age);
-    if (!isValidHeight(h, unitSystem)) {
-      errors.push({
-        key: 'height',
-        message:
-          unitSystem === 'imperial'
-            ? 'Enter a valid height in inches.'
-            : 'Enter a valid height in centimeters.',
-      });
-    }
-    if (!isValidWeight(w, unitSystem)) {
-      errors.push({
-        key: 'weight',
-        message:
-          unitSystem === 'imperial'
-            ? 'Enter a valid weight in pounds.'
-            : 'Enter a valid weight in kilograms.',
-      });
-    }
-    if (!Number.isInteger(a) || a < 13 || a > 120) {
-      errors.push({ key: 'age', message: 'Enter an age between 13 and 120.' });
-    }
-    if (biologicalSex === null) {
-      errors.push({ key: 'biologicalSex', message: 'Select biological sex.' });
-    }
-    if (rank === null) {
-      errors.push({ key: 'declaration', message: 'Select a declaration.' });
+    const metricsBlank = intakeMetricsAreBlank({
+      height,
+      weight,
+      age,
+      biologicalSex,
+      rank,
+    });
+    if (!metricsBlank) {
+      const h = Number(height);
+      const w = Number(weight);
+      const a = Number(age);
+      if (!isValidHeight(h, unitSystem)) {
+        errors.push({
+          key: 'height',
+          message:
+            unitSystem === 'imperial'
+              ? 'Enter a valid height in inches.'
+              : 'Enter a valid height in centimeters.',
+        });
+      }
+      if (!isValidWeight(w, unitSystem)) {
+        errors.push({
+          key: 'weight',
+          message:
+            unitSystem === 'imperial'
+              ? 'Enter a valid weight in pounds.'
+              : 'Enter a valid weight in kilograms.',
+        });
+      }
+      if (!Number.isInteger(a) || a < 13 || a > 120) {
+        errors.push({ key: 'age', message: 'Enter an age between 13 and 120.' });
+      }
+      if (biologicalSex === null) {
+        errors.push({ key: 'biologicalSex', message: 'Select biological sex.' });
+      }
+      if (rank === null) {
+        errors.push({ key: 'declaration', message: 'Select a declaration.' });
+      }
     }
     return FIELD_ORDER.flatMap((key) => errors.filter((e) => e.key === key));
   }, [email, username, nickname, height, weight, age, rank, biologicalSex, unitSystem]);
@@ -359,7 +400,14 @@ function IntakeForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!canSubmit || !rank || !biologicalSex) {
+    const metricsBlank = intakeMetricsAreBlank({
+      height,
+      weight,
+      age,
+      biologicalSex,
+      rank,
+    });
+    if (!canSubmit || (!metricsBlank && (!rank || !biologicalSex))) {
       setAttemptedSubmit(true);
       const first = fieldErrors[0];
       if (first) {
@@ -370,19 +418,20 @@ function IntakeForm({
     setSubmitting(true);
     setError(null);
     try {
-      const heightValue = Number(height);
-      const weightValue = Number(weight);
-      const heightCm = unitSystem === 'imperial' ? inToCm(heightValue) : heightValue;
-      const weightKg = unitSystem === 'imperial' ? lbToKg(weightValue) : weightValue;
-      const profileResult = await onSaveProfile({
-        heightCm,
-        weightKg,
-        birthYear: nowYear - Number(age),
-        biologicalSex,
-        perceivedClassification: rank,
+      const identity = {
         username: username.trim(),
         nickname: nickname.trim(),
-      });
+      };
+      const profileResult = metricsBlank
+        ? await onSaveIdentity(identity)
+        : await onSaveProfile({
+            heightCm: unitSystem === 'imperial' ? inToCm(Number(height)) : Number(height),
+            weightKg: unitSystem === 'imperial' ? lbToKg(Number(weight)) : Number(weight),
+            birthYear: nowYear - Number(age),
+            biologicalSex: biologicalSex!,
+            perceivedClassification: rank!,
+            ...identity,
+          });
       if (profileResult.error) {
         track(
           'intake_save_failed',
@@ -485,17 +534,61 @@ function IntakeForm({
           <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
             Password
           </span>
-          <input
-            className="input-field"
-            type="password"
-            autoComplete="new-password"
-            placeholder="Leave blank to keep current"
-            value={password}
-            onChange={(event) => {
-              setPassword(event.target.value);
-              markDirty();
-            }}
-          />
+          <div className="relative">
+            <input
+              className="input-field pr-10"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              minLength={AUTH_MIN_PASSWORD_LENGTH}
+              placeholder="Leave blank to keep current"
+              value={password}
+              onChange={(event) => {
+                setPassword(event.target.value);
+                markDirty();
+              }}
+            />
+            <button
+              type="button"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted hover:text-ink"
+              // Copilot suggestion ignored: AuthForm password toggle uses aria-label only, not aria-pressed.
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              onClick={() => setShowPassword((visible) => !visible)}
+            >
+              {showPassword ? (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="h-4 w-4"
+                  aria-hidden
+                >
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                  <path d="M1 1l22 22" />
+                  <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+                </svg>
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="h-4 w-4"
+                  aria-hidden
+                >
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              )}
+            </button>
+          </div>
+          <span className="text-xs text-muted">
+            At least {AUTH_MIN_PASSWORD_LENGTH} characters. Leave blank to keep your current
+            password.
+          </span>
         </label>
         <label className="block space-y-1">
           <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
@@ -542,7 +635,7 @@ function IntakeForm({
             {nicknameError}
           </p>
         ) : (
-          <p className="text-xs text-muted">Default workout callsign (max 50 characters)</p>
+          <p className="text-xs text-muted">Your name (max 50 characters)</p>
         )}
       </div>
 
@@ -759,12 +852,12 @@ export default function IntakePage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { isAuthenticated, isAuthLoading, user, updateEmail, updatePassword } = useAmrapAuth();
-  const { profile, loading, save } = useAthleteProfile();
+  const { profile, loading, save, saveIdentity } = useAthleteProfile();
   const nowYear = new Date().getFullYear();
 
   if (isAuthLoading || loading) {
     return (
-      <NarrowPageLayout title="Your profile" subtitle="Athlete details">
+      <NarrowPageLayout title="Your profile" subtitle="Edit profile / HUD metrics">
         <p className="text-sm text-secondary">Loading…</p>
       </NarrowPageLayout>
     );
@@ -772,8 +865,9 @@ export default function IntakePage() {
 
   if (!isAuthenticated) {
     return (
-      <NarrowPageLayout title="Your profile" subtitle="Athlete details">
+      <NarrowPageLayout title="Your profile" subtitle="Edit profile / HUD metrics">
         <p className="text-sm text-secondary">Sign in to set up your profile.</p>
+        <AuthForm variant="compact" guestAllowed={false} showAuthMethodSelector={false} />
         <p className="text-center text-sm">
           <AppLink className="link-accent" to="/">
             Back home
@@ -784,11 +878,11 @@ export default function IntakePage() {
   }
 
   return (
-    <NarrowPageLayout title="Your profile" subtitle="Athlete details">
+    <NarrowPageLayout title="Your profile" subtitle="Edit profile / HUD metrics">
       <p className="text-sm text-secondary lg:hidden">State the claim. Telemetry decides.</p>
       <div className="hidden space-y-2 lg:block">
         <h1 className="text-display text-5xl text-ink">Your profile</h1>
-        <p className="text-sm text-secondary">State the claim. Telemetry decides.</p>
+        <p className="text-sm text-secondary">Edit profile / HUD metrics</p>
       </div>
 
       <IntakeForm
@@ -798,6 +892,7 @@ export default function IntakePage() {
         nowYear={nowYear}
         userId={user?.id ?? null}
         onSaveProfile={save}
+        onSaveIdentity={saveIdentity}
         onUpdateEmail={updateEmail}
         onUpdatePassword={updatePassword}
         onSaved={(notices) =>

@@ -5,6 +5,8 @@ import { getTemplatePrescription } from '@/lib/hud/getTemplatePrescription';
 import type { ClassificationQuotas } from '@/lib/hud/classificationQuotas';
 import { ALPHA_MALE_QUOTAS } from '@/lib/hud/classificationQuotas';
 import type { ClassificationRank, HudClassification } from '@/lib/hud/types';
+import type { TemplateRecoveryLock } from '@/lib/smartRecovery/computeRecoveryLocks';
+import { RecoveryLockMessage } from '@/components/createMission/RecoveryLockMessage';
 import { formatTemplateMovementLine } from '@/lib/workout/templateToExercises';
 
 interface WorkoutTemplateCardProps {
@@ -14,6 +16,8 @@ interface WorkoutTemplateCardProps {
   classification?: HudClassification | null;
   perceivedClassification?: ClassificationRank | null;
   quotas?: ClassificationQuotas;
+  recoveryLock?: TemplateRecoveryLock | null;
+  smartRecoveryActive?: boolean;
 }
 
 export function WorkoutTemplateCard({
@@ -23,8 +27,11 @@ export function WorkoutTemplateCard({
   classification = null,
   perceivedClassification = null,
   quotas = ALPHA_MALE_QUOTAS,
+  recoveryLock = null,
+  smartRecoveryActive = false,
 }: WorkoutTemplateCardProps) {
   const intensityTier = template.intensityTier;
+  const locked = smartRecoveryActive && recoveryLock !== null;
   const prescription = classification
     ? getTemplatePrescription(
         template,
@@ -36,23 +43,36 @@ export function WorkoutTemplateCard({
     : { required: false as const };
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (locked) {
+      return;
+    }
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       onSelect(template);
     }
   }
 
+  function handleClick() {
+    if (locked) {
+      return;
+    }
+    onSelect(template);
+  }
+
   return (
     <div
       role="button"
-      tabIndex={0}
+      tabIndex={locked ? -1 : 0}
       aria-pressed={selected}
+      aria-disabled={locked}
       className={
-        selected
-          ? 'card relative w-full cursor-pointer space-y-3 border-2 border-accent p-4 text-left shadow-card'
-          : 'card hover:border-accent/40 relative w-full cursor-pointer space-y-3 p-4 text-left'
+        locked
+          ? 'card relative w-full cursor-not-allowed space-y-3 p-4 text-left opacity-50'
+          : selected
+            ? 'card relative w-full cursor-pointer space-y-3 border-2 border-accent p-4 text-left shadow-card'
+            : 'card hover:border-accent/40 relative w-full cursor-pointer space-y-3 p-4 text-left'
       }
-      onClick={() => onSelect(template)}
+      onClick={handleClick}
       onKeyDown={handleKeyDown}
     >
       {selected ? (
@@ -81,6 +101,7 @@ export function WorkoutTemplateCard({
             {prescription.label}
           </span>
         ) : null}
+        {locked && recoveryLock ? <RecoveryLockMessage lock={recoveryLock} /> : null}
         {template.focus ? (
           <span className="inline-block rounded-full border border-border bg-page px-2 py-0.5 text-xs font-semibold text-secondary">
             {template.focus}

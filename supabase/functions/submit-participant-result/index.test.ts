@@ -1,21 +1,44 @@
-import {
-  assertEquals,
-  assertExists,
-} from 'https://deno.land/std@0.224.0/assert/mod.ts';
+import { assertEquals, assertExists } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 import {
   computeLockedScore,
   deriveRoundDurationsSec,
   handleSubmitParticipantResult,
+  normalizeSubmitRequest,
   type RoundRow,
 } from './handler.ts';
 
-const CLAIM_TOKEN_HASH =
-  'abfc1de71d4684842800719f5d6407b1e0ef7965ad4473a1cd8632462eec1b8c';
+const CLAIM_TOKEN_HASH = 'abfc1de71d4684842800719f5d6407b1e0ef7965ad4473a1cd8632462eec1b8c';
 
 const WORKOUT = [
   { name: 'Burpees', target: 20, unit: 'reps' },
   { name: 'Air squats', target: 20, unit: 'reps' },
 ];
+
+const MISSION_ID = '11111111-1111-4111-8111-111111111111';
+const PARTICIPANT_ID = '22222222-2222-4222-8222-222222222222';
+
+Deno.test('normalizeSubmitRequest prefers missionId and accepts legacy sessionId', () => {
+  assertEquals(
+    normalizeSubmitRequest({
+      missionId: MISSION_ID,
+      participantId: PARTICIPANT_ID,
+      claimToken: 't',
+      partialReps: 1,
+      segmentIndex: 0,
+    }).missionId,
+    MISSION_ID
+  );
+  assertEquals(
+    normalizeSubmitRequest({
+      sessionId: MISSION_ID,
+      participantId: PARTICIPANT_ID,
+      claimToken: 't',
+      partialReps: 1,
+      segmentIndex: 0,
+    }).missionId,
+    MISSION_ID
+  );
+});
 
 Deno.test('deriveRoundDurationsSec computes elapsed deltas', () => {
   const rounds: RoundRow[] = [
@@ -43,6 +66,12 @@ Deno.test('computeLockedScore derives 302 from 4 rounds and 15 partial reps', ()
   }
 
   assertEquals(result.repsPerRound, 40);
+
+  assertEquals('breakdown' in result, true);
+  if (!('breakdown' in result)) {
+    return;
+  }
+
   assertEquals(result.breakdown, {
     baseScore: 175,
     pvi: 0,
@@ -59,8 +88,8 @@ Deno.test('handleSubmitParticipantResult rejects second submit when score is loc
 
   const first = await handleSubmitParticipantResult(
     {
-      sessionId: '11111111-1111-4111-8111-111111111111',
-      participantId: '22222222-2222-4222-8222-222222222222',
+      missionId: MISSION_ID,
+      participantId: PARTICIPANT_ID,
       claimToken: 'claim-token',
       partialReps: 15,
       segmentIndex: 0,
@@ -69,10 +98,10 @@ Deno.test('handleSubmitParticipantResult rejects second submit when score is loc
       authUserId: null,
       fetchParticipant: async () => ({
         claim_token_hash: CLAIM_TOKEN_HASH,
-        session_id: '11111111-1111-4111-8111-111111111111',
+        mission_id: MISSION_ID,
         user_id: null,
       }),
-      fetchSession: async () => ({
+      fetchMission: async () => ({
         state: 'finished',
         segment_index: 0,
         workout: WORKOUT,
@@ -100,8 +129,8 @@ Deno.test('handleSubmitParticipantResult rejects second submit when score is loc
 
   const second = await handleSubmitParticipantResult(
     {
-      sessionId: '11111111-1111-4111-8111-111111111111',
-      participantId: '22222222-2222-4222-8222-222222222222',
+      missionId: MISSION_ID,
+      participantId: PARTICIPANT_ID,
       claimToken: 'claim-token',
       partialReps: 10,
       segmentIndex: 0,
@@ -110,10 +139,10 @@ Deno.test('handleSubmitParticipantResult rejects second submit when score is loc
       authUserId: null,
       fetchParticipant: async () => ({
         claim_token_hash: CLAIM_TOKEN_HASH,
-        session_id: '11111111-1111-4111-8111-111111111111',
+        mission_id: MISSION_ID,
         user_id: null,
       }),
-      fetchSession: async () => ({
+      fetchMission: async () => ({
         state: 'finished',
         segment_index: 0,
         workout: WORKOUT,
@@ -143,8 +172,8 @@ Deno.test('handleSubmitParticipantResult rejects second submit when score is loc
 Deno.test('handleSubmitParticipantResult ignores client-side score tampering inputs', async () => {
   const result = await handleSubmitParticipantResult(
     {
-      sessionId: '11111111-1111-4111-8111-111111111111',
-      participantId: '22222222-2222-4222-8222-222222222222',
+      missionId: MISSION_ID,
+      participantId: PARTICIPANT_ID,
       claimToken: 'claim-token',
       partialReps: 15,
       segmentIndex: 0,
@@ -153,10 +182,10 @@ Deno.test('handleSubmitParticipantResult ignores client-side score tampering inp
       authUserId: null,
       fetchParticipant: async () => ({
         claim_token_hash: CLAIM_TOKEN_HASH,
-        session_id: '11111111-1111-4111-8111-111111111111',
+        mission_id: MISSION_ID,
         user_id: null,
       }),
-      fetchSession: async () => ({
+      fetchMission: async () => ({
         state: 'finished',
         segment_index: 0,
         workout: WORKOUT,
@@ -176,4 +205,35 @@ Deno.test('handleSubmitParticipantResult ignores client-side score tampering inp
   assertEquals(result.ok, true);
   assertEquals(result.finalScore, 302);
   assertEquals(result.scoreBreakdown?.baseScore, 175);
+});
+
+Deno.test('handleSubmitParticipantResult fails closed when rounds cannot be loaded', async () => {
+  const result = await handleSubmitParticipantResult(
+    {
+      missionId: MISSION_ID,
+      participantId: PARTICIPANT_ID,
+      claimToken: 'claim-token',
+      partialReps: 0,
+      segmentIndex: 0,
+    },
+    {
+      authUserId: null,
+      fetchParticipant: async () => ({
+        claim_token_hash: CLAIM_TOKEN_HASH,
+        mission_id: MISSION_ID,
+        user_id: null,
+      }),
+      fetchMission: async () => ({
+        state: 'finished',
+        segment_index: 0,
+        workout: WORKOUT,
+        duration_minutes: 15,
+      }),
+      fetchExistingResult: async () => ({ score_breakdown: null }),
+      fetchRounds: async () => null,
+      persistResult: async () => ({ ok: true }),
+    }
+  );
+
+  assertEquals(result, { ok: false, reason: 'rounds_unavailable' });
 });

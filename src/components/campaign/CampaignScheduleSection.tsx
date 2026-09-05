@@ -11,7 +11,7 @@ import {
 
 const OCCURRENCE_LABEL: Record<string, string> = {
   planned: 'Planned',
-  generated: 'Rally point open',
+  generated: 'Mission open',
   done: 'Done',
   skipped: 'Skipped',
 };

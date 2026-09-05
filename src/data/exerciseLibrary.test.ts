@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { getExerciseInfo } from './exerciseLibrary';
+import { EXERCISE_LIBRARY, getExerciseInfo } from './exerciseLibrary';
+import { EXERCISE_PATTERN_TAGS } from '@/lib/smartRecovery/exercisePatternTags';
+import { isMovementPattern } from '@/lib/smartRecovery/movementPatterns';
 
 describe('getExerciseInfo', () => {
   it('returns the Burpees entry when found', () => {
@@ -57,12 +59,8 @@ describe('getExerciseInfo', () => {
     expect(getExerciseInfo('Floor Dips')?.id).toBe('floor-dips');
     expect(getExerciseInfo('Hollow Hold')?.id).toBe('hollow-hold');
     expect(getExerciseInfo('Reverse Lunges')?.id).toBe('reverse-lunges');
-    expect(getExerciseInfo('Single-Leg Glute Bridges')?.id).toBe(
-      'single-leg-glute-bridges'
-    );
-    expect(getExerciseInfo('Standard Glute Bridges')?.id).toBe(
-      'standard-glute-bridges'
-    );
+    expect(getExerciseInfo('Single-Leg Glute Bridges')?.id).toBe('single-leg-glute-bridges');
+    expect(getExerciseInfo('Standard Glute Bridges')?.id).toBe('standard-glute-bridges');
     expect(getExerciseInfo('Wide Push-ups')?.id).toBe('wide-push-ups');
     expect(getExerciseInfo('Side Plank Dips')?.id).toBe('side-plank-dips');
     expect(getExerciseInfo('Pogo Jumps')?.id).toBe('pogo-jumps');
@@ -70,9 +68,7 @@ describe('getExerciseInfo', () => {
   });
 
   it('strips parenthetical for Sphinx Push-ups from Localized Trap templates', () => {
-    expect(getExerciseInfo('Sphinx Push-ups (Forearm to hand)')?.id).toBe(
-      'sphinx-push-ups'
-    );
+    expect(getExerciseInfo('Sphinx Push-ups (Forearm to hand)')?.id).toBe('sphinx-push-ups');
   });
 
   it('strips parenthetical for batch 2 Localized Trap template names', () => {
@@ -86,9 +82,7 @@ describe('getExerciseInfo', () => {
 
   it('keeps Glute Bridges separate from Standard Glute Bridges', () => {
     expect(getExerciseInfo('Glute Bridges')?.id).toBe('glute-bridges');
-    expect(getExerciseInfo('Standard Glute Bridges')?.id).toBe(
-      'standard-glute-bridges'
-    );
+    expect(getExerciseInfo('Standard Glute Bridges')?.id).toBe('standard-glute-bridges');
   });
 
   it('hides empty common mistakes for Localized Trap entries', () => {
@@ -121,17 +115,11 @@ describe('getExerciseInfo', () => {
 
   it('strips parenthetical for Engine Room template names', () => {
     expect(getExerciseInfo('Sprawls (No-Push-up Burpees)')?.id).toBe('sprawls');
-    expect(getExerciseInfo('Mountain Climbers (Total)')?.id).toBe(
-      'mountain-climbers'
-    );
+    expect(getExerciseInfo('Mountain Climbers (Total)')?.id).toBe('mountain-climbers');
     expect(getExerciseInfo('High Knees (Total)')?.id).toBe('high-knees');
     expect(getExerciseInfo('Butt Kicks (Total)')?.id).toBe('butt-kicks');
-    expect(getExerciseInfo('Half-Burpees (Plank to squat stance)')?.id).toBe(
-      'half-burpees'
-    );
-    expect(getExerciseInfo('Double-Tap Jumps (Penguin Taps)')?.id).toBe(
-      'double-tap-jumps'
-    );
+    expect(getExerciseInfo('Half-Burpees (Plank to squat stance)')?.id).toBe('half-burpees');
+    expect(getExerciseInfo('Double-Tap Jumps (Penguin Taps)')?.id).toBe('double-tap-jumps');
   });
 
   it('keeps Cross-Body Mountain Climbers separate from Mountain Climbers', () => {
@@ -152,18 +140,14 @@ describe('getExerciseInfo', () => {
     expect(getExerciseInfo('Leg Raises')?.id).toBe('leg-raises');
     expect(getExerciseInfo('Russian Twists')?.id).toBe('russian-twists');
     expect(getExerciseInfo('Bicycle Crunches')?.id).toBe('bicycle-crunches');
-    expect(getExerciseInfo('Plank Knee-to-Elbows')?.id).toBe(
-      'plank-knee-to-elbows'
-    );
+    expect(getExerciseInfo('Plank Knee-to-Elbows')?.id).toBe('plank-knee-to-elbows');
     expect(getExerciseInfo('Dead Bugs')?.id).toBe('dead-bugs');
     expect(getExerciseInfo('Flutter Kicks')?.id).toBe('flutter-kicks');
     expect(getExerciseInfo('Superman Raises')?.id).toBe('superman-raises');
   });
 
   it('keeps Plank Knee-to-Elbows separate from Plank Shoulder Taps', () => {
-    expect(getExerciseInfo('Plank Knee-to-Elbows')?.id).toBe(
-      'plank-knee-to-elbows'
-    );
+    expect(getExerciseInfo('Plank Knee-to-Elbows')?.id).toBe('plank-knee-to-elbows');
     expect(getExerciseInfo('Plank Shoulder Taps')?.id).toBe('plank-shoulder-taps');
   });
 
@@ -183,18 +167,14 @@ describe('getExerciseInfo', () => {
     expect(getExerciseInfo('V-Sit Hold')?.id).toBe('v-sit-hold');
     expect(getExerciseInfo('Butterfly Sit-ups')?.id).toBe('butterfly-sit-ups');
     expect(getExerciseInfo('Cross-Body Climbers')?.id).toBe('cross-body-climbers');
-    expect(getExerciseInfo('Bodyweight Good Mornings')?.id).toBe(
-      'bodyweight-good-mornings'
-    );
+    expect(getExerciseInfo('Bodyweight Good Mornings')?.id).toBe('bodyweight-good-mornings');
     expect(getExerciseInfo('Glute Bridge Hold')?.id).toBe('glute-bridge-hold');
     expect(getExerciseInfo('Glute Bridge Walkouts')?.id).toBe('glute-bridge-walkouts');
     expect(getExerciseInfo('Reverse Snow Angels')?.id).toBe('reverse-snow-angels');
     expect(getExerciseInfo('Superman Hold')?.id).toBe('superman-hold');
     expect(getExerciseInfo('Superman Pull-downs')?.id).toBe('superman-pull-downs');
     expect(getExerciseInfo('Supermans')?.id).toBe('supermans');
-    expect(getExerciseInfo('Bear Crawl to Broad Jumps')?.id).toBe(
-      'bear-crawl-to-broad-jumps'
-    );
+    expect(getExerciseInfo('Bear Crawl to Broad Jumps')?.id).toBe('bear-crawl-to-broad-jumps');
     expect(getExerciseInfo('Strict Reverse Lunges')?.id).toBe('strict-reverse-lunges');
     expect(getExerciseInfo('Walking Lunges')?.id).toBe('walking-lunges');
   });
@@ -222,5 +202,26 @@ describe('getExerciseInfo', () => {
     expect(getExerciseInfo('Supermans')?.id).toBe('supermans');
     expect(getExerciseInfo('Superman Raises')?.id).toBe('superman-raises');
     expect(getExerciseInfo('Superman Hold')?.id).toBe('superman-hold');
+  });
+});
+
+describe('EXERCISE_LIBRARY primaryPatterns', () => {
+  it('assigns at least one valid pattern to every entry', () => {
+    for (const entry of EXERCISE_LIBRARY) {
+      expect(entry.primaryPatterns.length, entry.id).toBeGreaterThan(0);
+      for (const pattern of entry.primaryPatterns) {
+        expect(isMovementPattern(pattern), `${entry.id}:${pattern}`).toBe(true);
+      }
+    }
+  });
+
+  it('matches EXERCISE_PATTERN_TAGS keys to library ids exactly', () => {
+    const libraryIds = new Set(EXERCISE_LIBRARY.map((entry) => entry.id));
+    const tagIds = new Set(Object.keys(EXERCISE_PATTERN_TAGS));
+    expect(tagIds).toEqual(libraryIds);
+  });
+
+  it('exposes primaryPatterns through getExerciseInfo', () => {
+    expect(getExerciseInfo('Burpees')?.primaryPatterns).toEqual(['full-body-conditioning']);
   });
 });

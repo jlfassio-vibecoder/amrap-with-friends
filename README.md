@@ -84,7 +84,16 @@ supabase functions deploy submit-participant-result
 
 ### Auth (manual verification)
 
-Enable Supabase Auth **email** provider and redirect URLs for your dev origin (e.g. `http://localhost:5173`). Sign-in options: **magic link** or **email + password**. Set `VITE_AUTH_MAGIC_LINK_ENABLED=false` in `.env` (and Vercel) to hide magic link until custom SMTP (e.g. Resend) is configured.
+Enable Supabase Auth **email** provider and redirect URLs for your dev origin (e.g. `http://localhost:5173`). Sign-in is **email + password** by default. Set `VITE_AUTH_MAGIC_LINK_ENABLED=true` in `.env` (and Vercel) only after custom SMTP (e.g. Resend) is configured. Password reset (`Forgot password?` + `/reset-password`) stays off until `VITE_AUTH_PASSWORD_RESET_ENABLED=true` after the same SMTP setup; add `/reset-password` to the Auth redirect allow-list before flipping that flag.
+
+**Google OAuth** (`Continue with Google`) stays off until `VITE_AUTH_GOOGLE_ENABLED=true`. Before enabling: create a Google Cloud OAuth 2.0 Web client with authorized redirect URI `https://<project-ref>.supabase.co/auth/v1/callback`, enable Google under Dashboard → Authentication → Providers, and keep Site URL / redirect allow-list covering production (`https://www.amrapwithfriends.com/**`), apex if used, and `http://localhost:5173/**`. `VITE_*` flags are bake-in at build time — set the Vercel env var, then **redeploy**.
+
+**Google HITL (after the flag is on):**
+
+1. Password account → **Continue with Google** (same email) → one user with both providers in Dashboard → Auth → Users.
+2. Google-only account → set a password on `/intake` → email/password sign-in works.
+3. Cancel Google consent → land on the same path with cancel copy; `error` query params are stripped from the URL.
+4. Keep Dashboard automatic identity linking on (default). Do not enable manual linking unless a later phase needs it.
 
 **Hosted vs local auth settings:** Local `supabase/config.toml` sets `enable_confirmations = false` and `minimum_password_length = 6`. The hosted dashboard may differ (Confirm email is often ON by default; password minimum may change). Before shipping to prod, check Dashboard → **Authentication → Providers → Email** and align [`AUTH_MIN_PASSWORD_LENGTH`](src/lib/auth/passwordPolicy.ts) with the hosted minimum if needed.
 
@@ -95,7 +104,7 @@ After `supabase db push` for `20260822140000_auth_claim.sql`:
 3. Optional: sign in mid-mission, save, then **Log round** still works after claim.
 4. Password sign-up: if email confirmation is enabled on hosted, UI should prompt to check email; local dev may sign in immediately.
 
-**Follow-up (out of scope):** forgot-password / password reset flow.
+**Follow-up (out of scope):** Resend confirmation email; confirm-password on Create account.
 
 ## Architecture decisions
 

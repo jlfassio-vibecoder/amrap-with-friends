@@ -172,7 +172,7 @@ describe('CoachFeaturedWodPanel attendee list', () => {
 });
 
 describe('CoachFeaturedWodPanel join rally point', () => {
-  it('hides Join rally point more than 15 minutes before start', async () => {
+  it('hides Join mission more than 15 minutes before start', async () => {
     fetchCurrentFeaturedWodMock.mockResolvedValue({
       data: {
         workoutName: 'Sunrise AMRAP',
@@ -194,10 +194,10 @@ describe('CoachFeaturedWodPanel join rally point', () => {
     await waitFor(() => {
       expect(fetchCurrentFeaturedWodMock).toHaveBeenCalled();
     });
-    expect(screen.queryByRole('link', { name: /Join rally point/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Join mission/i })).toBeNull();
   });
 
-  it('shows Join rally point within 15 minutes of start', async () => {
+  it('shows Join mission within 15 minutes of start', async () => {
     fetchCurrentFeaturedWodMock.mockResolvedValue({
       data: {
         workoutName: 'Sunrise AMRAP',
@@ -217,9 +217,9 @@ describe('CoachFeaturedWodPanel join rally point', () => {
     await renderWithExistingSchedule();
 
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: /Join rally point/i })).toBeTruthy();
+      expect(screen.getByRole('link', { name: /Join mission/i })).toBeTruthy();
     });
-    expect(screen.getByRole('link', { name: /Join rally point/i }).getAttribute('href')).toBe(
+    expect(screen.getByRole('link', { name: /Join mission/i }).getAttribute('href')).toBe(
       '/mission/mission-1'
     );
   });

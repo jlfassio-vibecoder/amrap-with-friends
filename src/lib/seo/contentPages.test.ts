@@ -28,6 +28,7 @@ describe('hasEnoughToSay', () => {
       hasEnoughToSay({
         id: 'thin',
         name: 'Burpees',
+        primaryPatterns: ['full-body-conditioning'],
         setupAndExecution: ['Do it.'],
         commonMistakes: [],
         coachingCue: 'Go.',
