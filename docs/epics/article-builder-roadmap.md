@@ -172,20 +172,9 @@ references real public URLs.
 
 ### Phase 3 — Quality gates (soft → hard)
 
-Wire strategy gates into “Mark ready” / “Publish”:
-
-| Gate                             | Ready     | Publish |
-| -------------------------------- | --------- | ------- |
-| Title, slug, category, archetype | Soft warn | Hard    |
-| Answer-first 40–60 words         | Soft warn | Hard    |
-| Description 50–160 chars         | Soft warn | Hard    |
-| Cannibalisation + pillar         | Soft warn | Hard    |
-| ≥2 library links                 | Soft warn | Hard    |
-| Every image has alt              | Soft warn | Hard    |
-| Author set                       | Soft warn | Hard    |
-
-Unit-test pure validators in `src/lib/seo/` or `src/lib/coach/articles/` (repo
-convention: logic beside tests, not only in components).
+**Status: shipped.** Shared `articleQualityGates` power soft Mark ready warnings and
+hard Publish blocks; `coach_set_article_status` allows `published` with
+`published_at` stamp (status-only — Astro export is Phase 4).
 
 **Done when:** CI tests lock the validators; UI blocks publish on hard failures.
 

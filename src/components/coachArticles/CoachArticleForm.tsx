@@ -12,7 +12,7 @@ import {
 import { ARTICLE_ARCHETYPES, ARTICLE_CATEGORIES } from '@/lib/coach/articles/taxonomy';
 import { articlePillarPaths } from '@/lib/coach/articles/pillarPaths';
 import { isValidArticleSlug, slugifyArticleTitle } from '@/lib/coach/articles/slugify';
-import { softValidateArticle } from '@/lib/coach/articles/validateArticle';
+import { softValidateArticle, hardValidateArticle } from '@/lib/coach/articles/validateArticle';
 import { uploadCoachArticlePhoto } from '@/lib/media/coachArticleMedia';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { callsignFromEmail } from '@/lib/missionIdentity';
@@ -89,8 +89,29 @@ export function CoachArticleForm({
   const [photoRows, setPhotoRows] = useState<ArticlePhotoRow[]>(() => photosFromArticle(article));
   const [status, setStatus] = useState(article?.status ?? 'draft');
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [publishErrors, setPublishErrors] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  function draftFieldsForValidation() {
+    return {
+      title: title.trim(),
+      slug: slug.trim().toLowerCase(),
+      category,
+      archetype,
+      answerFirst,
+      description,
+      authorDisplayName: authorDisplayName.trim(),
+      pillarPath,
+      cannibalisationNote,
+      libraryLinks: libraryLinks.map((l) => l.trim()).filter(Boolean),
+      photos: photoRows.map((row) => ({
+        path: row.kind === 'existing' ? row.path : undefined,
+        alt: row.alt,
+        caption: row.caption,
+      })),
+    };
+  }
 
   function buildInput(photos: CoachArticlePhoto[]) {
     return {
@@ -221,6 +242,7 @@ export function CoachArticleForm({
   async function handleSaveDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setWarnings([]);
+    setPublishErrors([]);
     const saved = await saveDraft();
     if (saved) {
       onSaved(saved);
@@ -229,23 +251,8 @@ export function CoachArticleForm({
 
   async function handleMarkReady() {
     setError(null);
-    const softIssues = softValidateArticle({
-      title: title.trim(),
-      slug: slug.trim().toLowerCase(),
-      category,
-      archetype,
-      answerFirst,
-      description,
-      authorDisplayName: authorDisplayName.trim(),
-      pillarPath,
-      cannibalisationNote,
-      libraryLinks: libraryLinks.map((l) => l.trim()).filter(Boolean),
-      photos: photoRows.map((row) => ({
-        path: row.kind === 'existing' ? row.path : undefined,
-        alt: row.alt,
-        caption: row.caption,
-      })),
-    });
+    setPublishErrors([]);
+    const softIssues = softValidateArticle(draftFieldsForValidation());
     setWarnings(softIssues.map((issue) => issue.message));
 
     const saved = await saveDraft();
@@ -266,14 +273,61 @@ export function CoachArticleForm({
     onStatusChanged?.(result.data);
   }
 
+  async function handlePublish() {
+    setError(null);
+    setWarnings([]);
+    const hardIssues = hardValidateArticle(draftFieldsForValidation());
+    if (hardIssues.length > 0) {
+      setPublishErrors(hardIssues.map((issue) => issue.message));
+      return;
+    }
+    setPublishErrors([]);
+
+    const saved = await saveDraft();
+    if (!saved) {
+      return;
+    }
+
+    setSubmitting(true);
+    const result = await setCoachArticleStatus(saved.id, 'published');
+    setSubmitting(false);
+
+    if (result.error || !result.data) {
+      setError(result.error?.message ?? 'Something went wrong. Please try again.');
+      return;
+    }
+
+    setStatus(result.data.status);
+    onStatusChanged?.(result.data);
+  }
+
   async function handleReturnToDraft() {
     if (!articleId) {
       return;
     }
     setError(null);
     setWarnings([]);
+    setPublishErrors([]);
     setSubmitting(true);
     const result = await setCoachArticleStatus(articleId, 'draft');
+    setSubmitting(false);
+    if (result.error || !result.data) {
+      setError(result.error?.message ?? 'Something went wrong. Please try again.');
+      return;
+    }
+    setStatus(result.data.status);
+    onStatusChanged?.(result.data);
+  }
+
+  async function handleReturnToReady() {
+    if (!articleId) {
+      return;
+    }
+    setError(null);
+    setWarnings([]);
+    setPublishErrors([]);
+    setSubmitting(true);
+    const result = await setCoachArticleStatus(articleId, 'ready');
     setSubmitting(false);
     if (result.error || !result.data) {
       setError(result.error?.message ?? 'Something went wrong. Please try again.');
@@ -291,9 +345,11 @@ export function CoachArticleForm({
         </h3>
         <span
           className={
-            status === 'ready'
+            status === 'published'
               ? 'rounded-card bg-success-tint px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success-text'
-              : 'rounded-card border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary'
+              : status === 'ready'
+                ? 'rounded-card bg-accent-tint px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent'
+                : 'rounded-card border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary'
           }
         >
           {status}
@@ -301,6 +357,16 @@ export function CoachArticleForm({
       </div>
 
       {error ? <p className="text-error text-sm">{error}</p> : null}
+      {publishErrors.length > 0 ? (
+        <div className="alert-error space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-wide">Fix before publishing</p>
+          <ul className="list-disc space-y-1 pl-4 text-sm font-normal">
+            {publishErrors.map((message) => (
+              <li key={message}>{message}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       {warnings.length > 0 ? (
         <div className="space-y-1 rounded-card border border-border bg-page p-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-secondary">
@@ -522,29 +588,59 @@ export function CoachArticleForm({
       <CoachArticlePhotoEditor photos={photoRows} onChange={setPhotoRows} />
 
       <div className="flex flex-wrap gap-2">
-        <button type="submit" className="btn-primary text-sm" disabled={submitting}>
+        <button
+          type="submit"
+          className="btn-primary text-sm"
+          disabled={submitting || status === 'published'}
+        >
           {submitting ? 'Saving…' : 'Save draft'}
         </button>
-        <button
-          type="button"
-          className="btn-outline text-sm"
-          disabled={submitting}
-          onClick={() => {
-            void handleMarkReady();
-          }}
-        >
-          Mark ready
-        </button>
-        {status === 'ready' && articleId ? (
+        {status !== 'published' ? (
           <button
             type="button"
             className="btn-outline text-sm"
             disabled={submitting}
             onClick={() => {
-              void handleReturnToDraft();
+              void handleMarkReady();
             }}
           >
-            Return to draft
+            Mark ready
+          </button>
+        ) : null}
+        {status === 'ready' && articleId ? (
+          <>
+            <button
+              type="button"
+              className="btn-outline text-sm"
+              disabled={submitting}
+              onClick={() => {
+                void handlePublish();
+              }}
+            >
+              Publish
+            </button>
+            <button
+              type="button"
+              className="btn-outline text-sm"
+              disabled={submitting}
+              onClick={() => {
+                void handleReturnToDraft();
+              }}
+            >
+              Return to draft
+            </button>
+          </>
+        ) : null}
+        {status === 'published' && articleId ? (
+          <button
+            type="button"
+            className="btn-outline text-sm"
+            disabled={submitting}
+            onClick={() => {
+              void handleReturnToReady();
+            }}
+          >
+            Return to ready
           </button>
         ) : null}
         <button

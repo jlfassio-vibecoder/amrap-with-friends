@@ -33,8 +33,8 @@ function wordCount(text: string): number {
   return trimmed.split(/\s+/).length;
 }
 
-/** Soft checks for Mark ready — warnings only; hard gate is title + slug. */
-export function softValidateArticle(fields: ArticleDraftFields): ArticleValidationIssue[] {
+/** Shared quality gates for Mark ready (soft) and Publish (hard). */
+export function articleQualityGates(fields: ArticleDraftFields): ArticleValidationIssue[] {
   const issues: ArticleValidationIssue[] = [];
 
   if (!fields.title.trim()) {
@@ -101,4 +101,14 @@ export function softValidateArticle(fields: ArticleDraftFields): ArticleValidati
   }
 
   return issues;
+}
+
+/** Mark ready — show as warnings; still allow ready. */
+export function softValidateArticle(fields: ArticleDraftFields): ArticleValidationIssue[] {
+  return articleQualityGates(fields);
+}
+
+/** Publish — same gates; UI must block when any issue is present. */
+export function hardValidateArticle(fields: ArticleDraftFields): ArticleValidationIssue[] {
+  return articleQualityGates(fields);
 }

@@ -165,4 +165,27 @@ describe('setCoachArticleStatus', () => {
     });
     expect(result.data?.status).toBe('ready');
   });
+
+  it('sets published', async () => {
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        article: {
+          ...VALID_ARTICLE,
+          status: 'published',
+          publishedAt: '2026-09-05T12:00:00.000Z',
+        },
+      },
+      error: null,
+    });
+
+    const result = await setCoachArticleStatus(VALID_ARTICLE.id, 'published');
+
+    expect(callRpcMock).toHaveBeenCalledWith('coach_set_article_status', {
+      p_id: VALID_ARTICLE.id,
+      p_status: 'published',
+    });
+    expect(result.data?.status).toBe('published');
+    expect(result.data?.publishedAt).toBe('2026-09-05T12:00:00.000Z');
+  });
 });
