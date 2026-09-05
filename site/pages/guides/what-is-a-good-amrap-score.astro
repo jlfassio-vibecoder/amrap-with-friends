@@ -1,0 +1,90 @@
+---
+import GuideLayout from '../../layouts/GuideLayout.astro';
+
+const answer =
+  'There is no universal good AMRAP score, and any single number quoted as one is guessing. A score is rounds and reps of one specific workout at one specific time cap, so it only means something against that same workout — done by you before, or by someone beside you today.';
+
+const faqs = [
+  {
+    question: 'Is 10 rounds good for a 20 minute AMRAP?',
+    answer:
+      'Unanswerable without the workout. Ten rounds of 5 air squats is a slow twenty minutes; ten rounds of 20 burpees is exceptional. The rep count and the movements decide what a round costs, so the round number on its own carries no information at all.',
+  },
+  {
+    question: 'How do I know if I am improving?',
+    answer:
+      'Repeat the exact same workout after a block of training and compare. Same movements, same reps, same cap, ideally same time of day and similar sleep. If the score went up, the training worked. That repeatability is the entire reason benchmark workouts exist.',
+  },
+  {
+    question: 'How often should I retest a benchmark?',
+    answer:
+      'Every four to twelve weeks. More often than that and you are measuring noise rather than adaptation; much less often and you cannot tell which block of training did anything. Go into a retest reasonably fresh, or you are measuring fatigue.',
+  },
+];
+---
+
+<GuideLayout heading="What is a good AMRAP score?" answer={answer} faqs={faqs}>
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">Why nobody can give you a number</h2>
+    <p class="text-base leading-[1.7] text-secondary">
+      An AMRAP score has no units. "12+5" is twelve rounds of something, and the something changes
+      everything: how many movements, how many reps of each, how heavy, how technical, how long the
+      cap. Two workouts with the same time cap can differ by a factor of five in how many rounds a
+      given athlete gets.
+    </p>
+    <p class="text-base leading-[1.7] text-secondary">
+      So when a page tells you a good score for a 20-minute AMRAP is such-and-such, it is either
+      talking about one specific famous workout, or it is making the number up. Ask which workout.
+      If there is no answer, there is no number.
+    </p>
+  </section>
+
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">What to measure instead</h2>
+    <p class="text-base leading-[1.7] text-secondary">
+      Three comparisons actually carry information, in descending order of usefulness:
+    </p>
+    <ul class="space-y-3 text-base leading-[1.7] text-secondary">
+      <li>
+        <strong class="font-semibold text-ink">You, on the same workout, earlier.</strong> The only comparison
+        with no confounds. This is what a benchmark and retest are for.
+      </li>
+      <li>
+        <strong class="font-semibold text-ink">Other people, on the same workout, today.</strong>
+        Same movements, same clock, same conditions. This is what a shared leaderboard gives you and why
+        running an AMRAP as a group is worth more than running it alone.
+      </li>
+      <li>
+        <strong class="font-semibold text-ink">Your own round times within the workout.</strong>
+        Independent of the movements entirely — an even split is an even split whatever you were doing.
+        See <a class="link-accent" href="/guides/amrap-pacing">AMRAP pacing</a>.
+      </li>
+    </ul>
+  </section>
+
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">Build your own baseline</h2>
+    <p class="text-base leading-[1.7] text-secondary">
+      Pick one workout you can repeat with no equipment, run it honestly, and write down the score
+      with the full workout beside it. That is your baseline. Train for four to eight weeks, arrive
+      at the retest reasonably fresh, and run it again under the same conditions. The difference is
+      the only number that was ever going to tell you anything.
+    </p>
+    <p class="text-base leading-[1.7] text-secondary">
+      This is exactly what a <a class="link-accent" href="/campaigns">training campaign</a> automates:
+      it opens with a benchmark, keeps that workout out of the training rotation so the retest is not
+      just practice, and schedules an easy day before each retest so you are measuring fitness rather
+      than fatigue.
+    </p>
+  </section>
+
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">Pick a benchmark</h2>
+    <p class="text-base leading-[1.7] text-secondary">
+      Any workout in the <a class="link-accent" href="/amrap-workouts">library</a> works as a benchmark
+      as long as you repeat it exactly. The
+      <a class="link-accent" href="/amrap-workouts/10-minute">10-minute AMRAPs</a> are a reasonable place
+      to start: long enough that pacing matters, short enough to repeat often.
+    </p>
+  </section>
+</GuideLayout>

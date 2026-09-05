@@ -1,0 +1,91 @@
+---
+import GuideLayout from '../../layouts/GuideLayout.astro';
+
+const answer =
+  'AMRAP stands for As Many Rounds (or Reps) As Possible. You are given a fixed time cap and a short list of movements, and you cycle through them in order for the whole cap. Your score is the number of complete rounds you finished, plus any reps of the round you were partway through.';
+
+const faqs = [
+  {
+    question: 'Does AMRAP mean rounds or reps?',
+    answer:
+      'Both, depending on the workout. Most AMRAPs list several movements and you score complete rounds; a single-movement AMRAP — one minute of burpees, say — scores total reps instead. The acronym covers both because the principle is the same: fixed time, maximum work.',
+  },
+  {
+    question: 'Is AMRAP good for beginners?',
+    answer:
+      'Yes, and better than most formats. The clock is fixed, so a beginner and an experienced athlete finish at the same moment and neither is left behind. You scale by doing fewer reps per round or moving more slowly, not by stopping early.',
+  },
+  {
+    question: 'How many rounds should you get in an AMRAP?',
+    answer:
+      'There is no target. The number depends entirely on the movements, the rep counts and the time cap, so a good score on one workout is meaningless on another. Compare a score only against the same workout done by you or by someone next to you.',
+  },
+];
+---
+
+<GuideLayout heading="What does AMRAP mean?" answer={answer} faqs={faqs}>
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">How a round works</h2>
+    <p class="text-base leading-[1.7] text-secondary">
+      An AMRAP gives you a list of movements with rep counts — say 10 air squats, 10 push-ups, 10
+      sit-ups. You do all three in order. That is one round. Then you start again at the top, and
+      keep going until the clock hits zero. There are no rest intervals built in; if you rest, it
+      comes out of your own time.
+    </p>
+    <p class="text-base leading-[1.7] text-secondary">
+      That is the whole format, and it is why it has spread so far beyond CrossFit. It needs one
+      timer, no equipment if you programme it that way, and it produces a single number you can
+      write down.
+    </p>
+  </section>
+
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">Why the score is written 7+12</h2>
+    <p class="text-base leading-[1.7] text-secondary">
+      When the clock stops you are almost never exactly at the end of a round. So the score records
+      both parts: seven complete rounds, plus twelve reps into the eighth. Written
+      <strong class="font-semibold text-ink">7+12</strong>. That partial round matters — it is often
+      the difference between two athletes who both finished seven.
+      <a class="link-accent" href="/guides/how-to-score-an-amrap">How to score an AMRAP</a> covers the
+      counting rules and the edge cases.
+    </p>
+  </section>
+
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">Why it scales to anyone</h2>
+    <p class="text-base leading-[1.7] text-secondary">
+      Most workout formats punish the least fit person in the room by making them finish last, or
+      not finish at all. An AMRAP cannot do that: the clock is the same for everyone and it stops
+      when it stops. A fitter athlete gets more rounds in the same twenty minutes; a beginner gets
+      fewer. Both did twenty minutes of work, both have a number, and both can compare that number
+      against themselves next month.
+    </p>
+    <p class="text-base leading-[1.7] text-secondary">
+      That property is also what makes AMRAP the natural format for training in a group. Everyone
+      starts together, everyone stops together, and nobody is standing around watching.
+    </p>
+  </section>
+
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">How long should the cap be?</h2>
+    <p class="text-base leading-[1.7] text-secondary">
+      Five to twenty minutes covers almost everything. Short caps —
+      <a class="link-accent" href="/amrap-workouts/5-minute">5</a> and
+      <a class="link-accent" href="/amrap-workouts/10-minute">10 minutes</a> — reward going hard immediately.
+      Longer caps —
+      <a class="link-accent" href="/amrap-workouts/15-minute">15</a> and
+      <a class="link-accent" href="/amrap-workouts/20-minute">20</a> — become pacing tests, where starting
+      too fast costs more than it gains. That trade-off is the subject of
+      <a class="link-accent" href="/guides/amrap-pacing">AMRAP pacing</a>.
+    </p>
+  </section>
+
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">Try one</h2>
+    <p class="text-base leading-[1.7] text-secondary">
+      Every workout in our <a class="link-accent" href="/amrap-workouts">AMRAP workout library</a> is
+      bodyweight, so you can run one now with no equipment. If you just want a clock, the
+      <a class="link-accent" href="/amrap-timer">free AMRAP timer</a> needs no account.
+    </p>
+  </section>
+</GuideLayout>

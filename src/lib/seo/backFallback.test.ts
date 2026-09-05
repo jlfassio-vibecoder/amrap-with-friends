@@ -17,9 +17,14 @@ describe('backFallbackFor', () => {
     expect(backFallbackFor('/amrap-workouts/10-minute')).toBe('/amrap-workouts');
   });
 
+  it('sends guides to the guides hub', () => {
+    expect(backFallbackFor('/guides/amrap-pacing')).toBe('/guides');
+  });
+
   it('sends hubs to home', () => {
     expect(backFallbackFor('/exercises')).toBe('/');
     expect(backFallbackFor('/amrap-workouts')).toBe('/');
+    expect(backFallbackFor('/guides')).toBe('/');
   });
 
   it('defaults everything else to home', () => {

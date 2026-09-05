@@ -1,0 +1,84 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import { breadcrumbList, faqPage, type FaqEntry, type JsonLd } from '@/lib/seo/structuredData';
+import { resolveSeo } from '@/lib/seo/routes';
+
+interface Props {
+  heading: string;
+  /**
+   * The answer-first opener: the direct answer to the page's question, in 40-60
+   * words, before any detail. This is the chunk an assistant lifts, so it has to
+   * stand alone.
+   */
+  answer: string;
+  /** Rendered as visible copy *and* as FAQPage markup — never one without the other. */
+  faqs?: FaqEntry[];
+  jsonLd?: JsonLd[];
+}
+
+const { heading, answer, faqs = [], jsonLd = [] } = Astro.props;
+const seo = resolveSeo(Astro.url.pathname);
+
+const graph: JsonLd[] = [
+  ...(faqs.length > 0 ? [faqPage(faqs)] : []),
+  breadcrumbList([
+    { name: 'Home', path: '/' },
+    { name: 'Guides', path: '/guides' },
+    { name: heading, path: seo.canonical ? new URL(seo.canonical).pathname : '/guides' },
+  ]),
+  ...jsonLd,
+];
+---
+
+<BaseLayout jsonLd={graph}>
+  <article class="mx-auto w-full max-w-[44rem] space-y-12 px-6 py-12 lg:px-10 lg:py-16">
+    <nav aria-label="Breadcrumb" class="text-xs text-muted">
+      <a class="link-accent" href="/guides">Guides</a> / {heading}
+    </nav>
+
+    <header class="space-y-5">
+      <h1 class="text-display text-[clamp(2.25rem,6vw,3.5rem)] leading-[0.95] text-ink">
+        {heading}
+      </h1>
+      <p class="border-l-2 border-accent pl-5 text-lg leading-[1.6] text-ink">{answer}</p>
+    </header>
+
+    <div class="space-y-12">
+      <slot />
+    </div>
+
+    {
+      faqs.length > 0 && (
+        <section class="space-y-8">
+          <h2 class="text-display text-[clamp(1.75rem,4vw,2.5rem)] leading-[0.95] text-ink">
+            Related questions
+          </h2>
+          {faqs.map((faq) => (
+            <div class="space-y-3">
+              <h3 class="text-base font-semibold text-ink">{faq.question}</h3>
+              <p class="text-base leading-[1.7] text-secondary">{faq.answer}</p>
+            </div>
+          ))}
+        </section>
+      )
+    }
+
+    <section class="card space-y-4 p-6">
+      <h2 class="text-display text-2xl text-ink">Run an AMRAP with your friends</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        One shared countdown, one leaderboard, everyone on the same clock — wherever they are
+        training.
+      </p>
+      <div class="flex flex-wrap gap-3">
+        <a
+          class="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
+          href="/create">Create a mission</a
+        >
+        <a
+          class="rounded-card border border-border bg-surface px-6 py-3.5 font-semibold text-ink"
+          href="/amrap-workouts">Browse AMRAP workouts</a
+        >
+      </div>
+    </section>
+  </article>
+</BaseLayout>

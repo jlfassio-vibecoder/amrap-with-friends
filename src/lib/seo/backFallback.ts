@@ -9,6 +9,7 @@ export function backFallbackFor(pathname: string): string {
     return path.replace(/\/[^/]+$/, '');
   }
   if (/^\/amrap-workouts\/(style\/[^/]+|\d+-minute)$/.test(path)) return '/amrap-workouts';
-  if (path === '/exercises' || path === '/amrap-workouts') return '/';
+  if (/^\/guides\/[^/]+$/.test(path)) return '/guides';
+  if (path === '/exercises' || path === '/amrap-workouts' || path === '/guides') return '/';
   return '/';
 }

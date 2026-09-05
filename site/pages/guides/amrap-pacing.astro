@@ -1,0 +1,118 @@
+---
+import GuideLayout from '../../layouts/GuideLayout.astro';
+
+const answer =
+  'Most AMRAPs are lost in the first ninety seconds. The score tracks how evenly you split your rounds far more closely than how fast your best round was — an athlete whose rounds all take about the same time almost always beats one who opened faster and faded, on the same workout.';
+
+const faqs = [
+  {
+    question: 'Should you rest during an AMRAP?',
+    answer:
+      'Plan short breaks rather than taking them when you break. A five-second pause before a set you know will be hard costs less than the thirty seconds you lose after failing mid-set. Unplanned rest is a symptom of a pace you already could not hold.',
+  },
+  {
+    question: 'Why is my first round always the fastest?',
+    answer:
+      'Because you are fresh and there is no feedback yet telling you otherwise. That is normal, which is why the first round is often excluded from pacing analysis. The question is not whether round one is fastest — it is how far the rest drift from it.',
+  },
+  {
+    question: 'How do you pace a 20 minute AMRAP?',
+    answer:
+      'Decide on a round time before you start, then hold it. Break each movement into planned sets rather than going to failure, and check your split every few rounds. The score is decided in minutes twelve to twenty, and what happens there is set by what you did in the first five.',
+  },
+];
+---
+
+<GuideLayout heading="AMRAP pacing" answer={answer} faqs={faqs}>
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">Measuring how evenly you paced</h2>
+    <p class="text-base leading-[1.7] text-secondary">
+      There is a simple way to put a number on it. Take your round times, then compute the spread
+      between the slowest and the fastest as a percentage of your average round:
+    </p>
+    <p class="card p-5 text-center text-base text-ink">
+      <strong class="font-semibold">(slowest round − fastest round) ÷ average round × 100</strong>
+    </p>
+    <p class="text-base leading-[1.7] text-secondary">
+      We call this the Pace Variance Index, and AMRAP With Friends computes it for every mission. A
+      low number means your rounds looked alike. A high number means the workout took something from
+      you that you never got back.
+    </p>
+  </section>
+
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">What the bands mean</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[30rem] border-collapse text-left text-sm">
+        <thead>
+          <tr class="border-b border-border">
+            <th class="py-3 pr-4 font-semibold text-ink">Variance</th>
+            <th class="py-3 pr-4 font-semibold text-ink">Reads as</th>
+            <th class="py-3 font-semibold text-ink">What happened</th>
+          </tr>
+        </thead>
+        <tbody class="text-secondary">
+          <tr class="border-b border-divider">
+            <td class="py-3 pr-4 font-semibold text-ink">Under 10%</td>
+            <td class="py-3 pr-4">Elite pacing</td>
+            <td class="py-3">You picked a pace and held it for the whole cap.</td>
+          </tr>
+          <tr class="border-b border-divider">
+            <td class="py-3 pr-4 font-semibold text-ink">10–20%</td>
+            <td class="py-3 pr-4">Standard</td>
+            <td class="py-3">Normal degradation. You slowed, but not badly.</td>
+          </tr>
+          <tr class="border-b border-divider">
+            <td class="py-3 pr-4 font-semibold text-ink">20–30%</td>
+            <td class="py-3 pr-4">Power leak</td>
+            <td class="py-3">You went out too fast and paid for it later.</td>
+          </tr>
+          <tr>
+            <td class="py-3 pr-4 font-semibold text-ink">Over 30%</td>
+            <td class="py-3 pr-4">Collapse</td>
+            <td class="py-3">The back half looks nothing like the front half.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="text-base leading-[1.7] text-secondary">
+      The first round is normally excluded from the calculation. Everyone's first round is fast
+      because they are fresh and have no feedback yet; including it would mark honest pacing as a
+      collapse.
+    </p>
+  </section>
+
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">How to actually hold a pace</h2>
+    <ul class="space-y-3 text-base leading-[1.7] text-secondary">
+      <li>
+        <strong class="font-semibold text-ink">Decide the round time before you start.</strong> Look at
+        the movements, estimate what one round costs, and pick a number you believe you can repeat for
+        the whole cap — not your best possible round.
+      </li>
+      <li>
+        <strong class="font-semibold text-ink">Break sets before you have to.</strong> Ten push-ups as
+        six and four, from round one, beats ten unbroken in round one and a grind from round four.
+      </li>
+      <li>
+        <strong class="font-semibold text-ink">Move on the transitions.</strong> The seconds between movements
+        are free time nobody trains. In a 20-minute AMRAP they are worth more than a faster set.
+      </li>
+      <li>
+        <strong class="font-semibold text-ink">Log every round.</strong> You cannot correct a split you
+        cannot see. Round times mid-workout are the only feedback the format gives you.
+      </li>
+    </ul>
+  </section>
+
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">Longer caps punish this harder</h2>
+    <p class="text-base leading-[1.7] text-secondary">
+      In a <a class="link-accent" href="/amrap-workouts/5-minute">5-minute AMRAP</a> there is barely time
+      to pay for a fast start. In a
+      <a class="link-accent" href="/amrap-workouts/20-minute">20-minute AMRAP</a> the cost compounds for
+      fifteen more minutes. The longer the cap, the more the score is a pacing test wearing a workout
+      costume.
+    </p>
+  </section>
+</GuideLayout>

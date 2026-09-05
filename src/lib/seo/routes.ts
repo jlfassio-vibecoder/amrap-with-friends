@@ -52,7 +52,7 @@ export const CONTENT_ROUTES: RouteSeo[] = [
   },
   {
     path: '/amrap-workouts',
-    title: 'AMRAP Workouts — 150 Bodyweight Sessions, 5 to 20 Minutes',
+    title: 'AMRAP Workouts — 150 Bodyweight Workouts, 5 to 20 Minutes',
     description:
       'Browse 150 bodyweight AMRAP workouts by time (5–20 min) or training stimulus, with coaching cues and a shared live timer.',
     index: true,
@@ -62,6 +62,69 @@ export const CONTENT_ROUTES: RouteSeo[] = [
     title: 'AMRAP Exercise Library — Form and Coaching Cues',
     description:
       'Every movement in the AMRAP workout library: setup and execution, the coaching cue that holds under fatigue, and the workouts that use it.',
+    index: true,
+  },
+  {
+    path: '/guides',
+    title: 'AMRAP Guides — How the Format Actually Works',
+    description:
+      'Plain answers to what people actually ask about AMRAP training: what it means, how to score it, how to pace it, and how it differs from EMOM and Tabata.',
+    index: true,
+  },
+  {
+    path: '/guides/what-is-amrap',
+    title: 'What Does AMRAP Mean? — As Many Rounds As Possible',
+    description:
+      'AMRAP means As Many Rounds (or Reps) As Possible. What the format is, how a round works, how the score is written, and why it scales to any fitness level.',
+    index: true,
+  },
+  {
+    path: '/guides/amrap-vs-emom-vs-tabata',
+    title: 'AMRAP vs EMOM vs Tabata — What Each Format Trains',
+    description:
+      'AMRAP, EMOM and Tabata are three different clocks, and they train three different things. How each one works, what it asks of you, and when to pick which.',
+    index: true,
+  },
+  {
+    path: '/guides/how-to-score-an-amrap',
+    title: 'How to Score an AMRAP — Rounds Plus Reps, Explained',
+    description:
+      'An AMRAP score is rounds plus reps, written 7+12. How to count it, what to do with a partial round, the tiebreak rules, and how to record it usefully.',
+    index: true,
+  },
+  {
+    path: '/guides/what-is-a-good-amrap-score',
+    title: 'What Is a Good AMRAP Score? — An Honest Answer',
+    description:
+      'There is no universal good AMRAP score, and anyone quoting one is guessing. Why it only means something against the same workout, and how to build a baseline.',
+    index: true,
+  },
+  {
+    path: '/guides/amrap-pacing',
+    title: 'AMRAP Pacing — Why the First Round Decides the Score',
+    description:
+      'Most AMRAPs are lost in the first ninety seconds. How round-time variance predicts your score, what an even split actually looks like, and how to hold one.',
+    index: true,
+  },
+  {
+    path: '/guides/group-workouts-remotely',
+    title: 'How to Work Out With Friends Remotely',
+    description:
+      'Training together when you are not in the same room: what actually breaks, why separate timers drift, and how a shared clock and leaderboard fix it.',
+    index: true,
+  },
+  {
+    path: '/campaigns',
+    title: 'AMRAP Training Campaigns — Benchmark, Train, Retest',
+    description:
+      'A campaign is a 2 to 12 week AMRAP programme that opens with a benchmark workout and retests it later, so you find out whether the training moved the number.',
+    index: true,
+  },
+  {
+    path: '/stats',
+    title: 'How 150 AMRAP Workouts Are Built — The Data',
+    description:
+      'Original data from our workout library: which movements get programmed most, how round density changes with the time cap, and the shape of the long tail.',
     index: true,
   },
   {
