@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import {
+  publishCoachArticle,
   setCoachArticleStatus,
   upsertCoachArticle,
   type CoachArticle,
@@ -9,6 +10,7 @@ import {
   CoachArticlePhotoEditor,
   type ArticlePhotoRow,
 } from '@/components/coachArticles/CoachArticlePhotoEditor';
+import { buildArticleExportSnapshotFromArticle } from '@/lib/coach/articles/buildArticleExportSnapshot';
 import { ARTICLE_ARCHETYPES, ARTICLE_CATEGORIES } from '@/lib/coach/articles/taxonomy';
 import { articlePillarPaths } from '@/lib/coach/articles/pillarPaths';
 import { isValidArticleSlug, slugifyArticleTitle } from '@/lib/coach/articles/slugify';
@@ -289,7 +291,8 @@ export function CoachArticleForm({
     }
 
     setSubmitting(true);
-    const result = await setCoachArticleStatus(saved.id, 'published');
+    const snapshot = buildArticleExportSnapshotFromArticle(saved);
+    const result = await publishCoachArticle(saved.id, snapshot);
     setSubmitting(false);
 
     if (result.error || !result.data) {
@@ -607,29 +610,29 @@ export function CoachArticleForm({
             Mark ready
           </button>
         ) : null}
+        {(status === 'ready' || status === 'published') && articleId ? (
+          <button
+            type="button"
+            className="btn-outline text-sm"
+            disabled={submitting}
+            onClick={() => {
+              void handlePublish();
+            }}
+          >
+            {status === 'published' ? 'Update published' : 'Publish'}
+          </button>
+        ) : null}
         {status === 'ready' && articleId ? (
-          <>
-            <button
-              type="button"
-              className="btn-outline text-sm"
-              disabled={submitting}
-              onClick={() => {
-                void handlePublish();
-              }}
-            >
-              Publish
-            </button>
-            <button
-              type="button"
-              className="btn-outline text-sm"
-              disabled={submitting}
-              onClick={() => {
-                void handleReturnToDraft();
-              }}
-            >
-              Return to draft
-            </button>
-          </>
+          <button
+            type="button"
+            className="btn-outline text-sm"
+            disabled={submitting}
+            onClick={() => {
+              void handleReturnToDraft();
+            }}
+          >
+            Return to draft
+          </button>
         ) : null}
         {status === 'published' && articleId ? (
           <button

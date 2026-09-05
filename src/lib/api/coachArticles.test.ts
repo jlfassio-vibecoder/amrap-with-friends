@@ -3,6 +3,7 @@ import {
   fetchCoachArticle,
   fetchCoachArticles,
   mapCoachArticleError,
+  publishCoachArticle,
   setCoachArticleStatus,
   upsertCoachArticle,
 } from './coachArticles';
@@ -35,6 +36,7 @@ const VALID_ARTICLE = {
   photos: [{ path: 'coach/art/p1.jpg', alt: 'Easy day demo', caption: 'Hold back' }],
   publishedAt: null,
   modifiedAt: null,
+  exportSnapshot: null,
   createdAt: '2026-09-05T10:00:00.000Z',
   updatedAt: '2026-09-05T10:00:00.000Z',
 };
@@ -187,5 +189,45 @@ describe('setCoachArticleStatus', () => {
     });
     expect(result.data?.status).toBe('published');
     expect(result.data?.publishedAt).toBe('2026-09-05T12:00:00.000Z');
+  });
+});
+
+describe('publishCoachArticle', () => {
+  it('sends the export snapshot to coach_publish_article', async () => {
+    const snapshot = {
+      title: VALID_ARTICLE.title,
+      slug: VALID_ARTICLE.slug,
+      description: VALID_ARTICLE.description,
+      answerFirst: VALID_ARTICLE.answerFirst,
+      author: VALID_ARTICLE.authorDisplayName,
+      body: VALID_ARTICLE.bodyMarkdown,
+      publishedAt: '2026-09-05T12:00:00.000Z',
+      modifiedAt: '2026-09-05T12:00:00.000Z',
+      photos: [],
+    };
+
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        article: {
+          ...VALID_ARTICLE,
+          status: 'published',
+          publishedAt: snapshot.publishedAt,
+          modifiedAt: snapshot.modifiedAt,
+          exportSnapshot: snapshot,
+        },
+      },
+      error: null,
+    });
+
+    const result = await publishCoachArticle(VALID_ARTICLE.id, snapshot);
+
+    expect(callRpcMock).toHaveBeenCalledWith('coach_publish_article', {
+      p_id: VALID_ARTICLE.id,
+      p_snapshot: snapshot,
+    });
+    expect(result.error).toBeNull();
+    expect(result.data?.status).toBe('published');
+    expect(result.data?.exportSnapshot).toEqual(snapshot);
   });
 });

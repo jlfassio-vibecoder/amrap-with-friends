@@ -38,6 +38,7 @@ export interface CoachArticle {
   photos: CoachArticlePhoto[];
   publishedAt: string | null;
   modifiedAt: string | null;
+  exportSnapshot: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -167,6 +168,10 @@ function parseArticle(row: Record<string, unknown>): CoachArticle | null {
     photos: readPhotos(row.photos),
     publishedAt: readString(row.publishedAt),
     modifiedAt: readString(row.modifiedAt),
+    exportSnapshot:
+      row.exportSnapshot && typeof row.exportSnapshot === 'object'
+        ? (row.exportSnapshot as Record<string, unknown>)
+        : null,
     createdAt,
     updatedAt,
   };
@@ -268,6 +273,32 @@ export async function setCoachArticleStatus(
   const { data, error } = await callRpc('coach_set_article_status', {
     p_id: id,
     p_status: status,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachArticleError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const article = parseArticle(asRecord(raw.article));
+  if (!article) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  return { data: article, error: null };
+}
+
+export async function publishCoachArticle(
+  id: string,
+  snapshot: Record<string, unknown>
+): Promise<{ data: CoachArticle | null; error: CoachArticleApiError | null }> {
+  const { data, error } = await callRpc('coach_publish_article', {
+    p_id: id,
+    p_snapshot: snapshot,
   });
 
   if (error) {

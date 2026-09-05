@@ -26,6 +26,8 @@ interface Props {
    */
   title?: string;
   description?: string;
+  /** Absolute OG image URL. Defaults to the brand card. */
+  ogImage?: string;
 }
 
 const {
@@ -35,6 +37,7 @@ const {
   backFallback,
   title,
   description,
+  ogImage: ogImageProp,
 } = Astro.props;
 const showBack = !hideHeader && !hideBack;
 const resolvedBackFallback = backFallback ?? backFallbackFor(Astro.url.pathname);
@@ -48,7 +51,7 @@ const seo = {
   title: title ?? resolved.title,
   description: description ?? resolved.description,
 };
-const ogImage = new URL('/og-image-f.png', Astro.site).href;
+const ogImage = ogImageProp ?? new URL('/og-image-f.png', Astro.site).href;
 const graph = serializeJsonLd([organization(), ...jsonLd]);
 ---
 

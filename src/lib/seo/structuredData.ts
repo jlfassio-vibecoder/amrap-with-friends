@@ -136,6 +136,36 @@ export function exercisePlan(input: {
   };
 }
 
+/**
+ * A blog post. Dates come from the export snapshot / committed MD — never
+ * `Date.now()` at build time.
+ */
+export function blogPosting(input: {
+  title: string;
+  description: string;
+  path: string;
+  authorName: string;
+  datePublished: string;
+  dateModified: string;
+  image?: string;
+}): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: input.title,
+    description: input.description,
+    url: `${SITE_ORIGIN}${input.path}`,
+    datePublished: input.datePublished,
+    dateModified: input.dateModified,
+    author: {
+      '@type': 'Person',
+      name: input.authorName,
+    },
+    publisher: { '@id': `${SITE_ORIGIN}/#organization` },
+    ...(input.image ? { image: input.image } : {}),
+  };
+}
+
 /** `</script>` inside a JSON string would close the tag early and inject markup. */
 export function serializeJsonLd(data: JsonLd | JsonLd[]): string {
   return JSON.stringify(data).replace(/</g, '\\u003c');

@@ -72,6 +72,13 @@ export const CONTENT_ROUTES: RouteSeo[] = [
     index: true,
   },
   {
+    path: '/blog',
+    title: 'AMRAP Blog — Training Notes from the Field',
+    description:
+      'Timely takes on programming, pacing, and training together — separate from the evergreen guides in the library.',
+    index: true,
+  },
+  {
     path: '/guides/what-is-amrap',
     title: 'What Does AMRAP Mean? — As Many Rounds As Possible',
     description:
@@ -218,6 +225,19 @@ export const DYNAMIC_CONTENT_ROUTES: RouteSeo[] = [
   {
     path: '/amrap-workouts/:duration/:workoutSlug',
     title: 'AMRAP workout',
+    description: '',
+    index: true,
+  },
+  // Category hubs before `/blog/:slug`, or `/blog/category/x` would match as a post.
+  {
+    path: '/blog/category/:id',
+    title: 'Blog category',
+    description: '',
+    index: true,
+  },
+  {
+    path: '/blog/:slug',
+    title: 'Blog post',
     description: '',
     index: true,
   },
