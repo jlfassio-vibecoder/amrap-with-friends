@@ -2,11 +2,19 @@
 
 **Branch:** `claude/blog-strategy`
 **Status:** Draft for approval
-**Last updated:** 2026-09-01
+**Last updated:** 2026-09-05
 
 Execution detail for [the blog strategy](blog-strategy.md). That document argues
 _why_ and _how often_; this one is the voice spec, the twenty-four briefs, and
-the calendar.
+the calendar. The workflow that turns a brief into a published post is
+[Article Builder](article-builder-roadmap.md) — the persona block below is what
+belongs in front of a coach drafting there, and this calendar is what its Phase 5
+cadence tooling should seed from.
+
+**This is the canonical editorial calendar.** It supersedes the twelve-post list
+that used to live in the strategy document; all twelve are still here, retitled
+for search-result length and reordered so seasonal posts land before their
+season.
 
 ---
 

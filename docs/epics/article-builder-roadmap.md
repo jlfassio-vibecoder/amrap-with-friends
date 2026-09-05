@@ -212,7 +212,19 @@ Not a second product — just coach affordances for the strategy cadence:
 ## Mapping to the first twelve posts
 
 Article Builder does not invent the editorial calendar; it **loads the strategy
-list** as suggested starters (category + archetype pre-filled, empty body):
+list** as suggested starters (category + archetype pre-filled, empty body).
+
+> **The canonical list moved.** [blog-authoring.md](blog-authoring.md) now holds
+> twenty-four articles with briefs and a twelve-month calendar, and it reorders
+> and retitles these twelve — the seasonal posts moved earlier so they are
+> indexed before their season. Seed from that document, not from the snapshot
+> below, or the builder will suggest a calendar nobody is publishing.
+>
+> It also answers open question 1: the byline is a real named person or the
+> team, never an invented coach. The persona in that document is a voice
+> specification, not a human.
+
+Snapshot of the superseded ordering, kept so the change is visible:
 
 1. What 150 AMRAP workouts taught us… — The data / Data story
 2. The 12-minute AMRAP… — Programming / Scenario
@@ -258,7 +270,9 @@ Phase 1–3 on perfect attribution.
 ## Open questions
 
 1. **Who is `author`?** — free-text display name shipped; selectable staff bios /
-   `/authors/*` still open (E-E-A-T).
+   `/authors/*` still open (E-E-A-T). [blog-authoring.md](blog-authoring.md)
+   settles the policy: a real named person or the team, never a fabricated
+   coach. The remaining work is the `/authors/*` page, not the decision.
 2. **Body editor** — Markdown textarea v1 vs block editor later.
 3. **Multi-coach drafts** — shared queue or owner-only until published.
 
