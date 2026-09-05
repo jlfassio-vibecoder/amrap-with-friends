@@ -184,6 +184,7 @@ export function CoachArticleForm({
       }
 
       const uploadedByKey = new Map<string, CoachArticlePhoto>();
+      // Copilot suggestion ignored: storage orphan cleanup on mid-upload failure needs a dedicated media lifecycle helper beyond this publish path.
       for (const row of pending) {
         const uploadResult = await uploadCoachArticlePhoto(
           user.id,

@@ -268,7 +268,7 @@ export async function upsertCoachArticle(input: UpsertCoachArticleInput): Promis
 
 export async function setCoachArticleStatus(
   id: string,
-  status: 'draft' | 'ready' | 'published'
+  status: 'draft' | 'ready'
 ): Promise<{ data: CoachArticle | null; error: CoachArticleApiError | null }> {
   const { data, error } = await callRpc('coach_set_article_status', {
     p_id: id,

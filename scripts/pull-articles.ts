@@ -192,15 +192,29 @@ async function main(): Promise<void> {
     }
     unlinkSync(path.join(BLOG_DIR, name));
     pruned += 1;
-    const ogPath = path.join(OG_DIR, `${slug}.png`);
-    if (existsSync(ogPath)) {
-      unlinkSync(ogPath);
+  }
+
+  let prunedOg = 0;
+  if (existsSync(OG_DIR)) {
+    for (const name of readdirSync(OG_DIR)) {
+      if (!name.endsWith('.png')) {
+        continue;
+      }
+      const slug = name.slice(0, -4);
+      if (keptSlugs.has(slug)) {
+        continue;
+      }
+      unlinkSync(path.join(OG_DIR, name));
+      prunedOg += 1;
     }
   }
 
   console.log(`Wrote ${written} article(s) to site/content/blog/.`);
   if (pruned > 0) {
     console.log(`Pruned ${pruned} orphaned MD file(s).`);
+  }
+  if (prunedOg > 0) {
+    console.log(`Pruned ${prunedOg} orphaned OG card(s).`);
   }
   console.log('Commit the content (and public/og/blog) diff when ready.');
 }

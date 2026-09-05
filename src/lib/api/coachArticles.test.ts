@@ -168,27 +168,19 @@ describe('setCoachArticleStatus', () => {
     expect(result.data?.status).toBe('ready');
   });
 
-  it('sets published', async () => {
+  it('demotes to draft', async () => {
     callRpcMock.mockResolvedValue({
-      data: {
-        ok: true,
-        article: {
-          ...VALID_ARTICLE,
-          status: 'published',
-          publishedAt: '2026-09-05T12:00:00.000Z',
-        },
-      },
+      data: { ok: true, article: { ...VALID_ARTICLE, status: 'draft' } },
       error: null,
     });
 
-    const result = await setCoachArticleStatus(VALID_ARTICLE.id, 'published');
+    const result = await setCoachArticleStatus(VALID_ARTICLE.id, 'draft');
 
     expect(callRpcMock).toHaveBeenCalledWith('coach_set_article_status', {
       p_id: VALID_ARTICLE.id,
-      p_status: 'published',
+      p_status: 'draft',
     });
-    expect(result.data?.status).toBe('published');
-    expect(result.data?.publishedAt).toBe('2026-09-05T12:00:00.000Z');
+    expect(result.data?.status).toBe('draft');
   });
 });
 
