@@ -62,6 +62,21 @@ export default function CoachPage() {
           </Link>
         </section>
 
+        <section className="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold text-ink">Article Builder</h2>
+            <p className="text-sm text-secondary">
+              Draft blog posts with copy and photos for the SEO content layer.
+            </p>
+          </div>
+          <Link
+            className="btn-primary inline-flex shrink-0 items-center justify-center text-sm"
+            to="/coach/articles"
+          >
+            Open Article Builder
+          </Link>
+        </section>
+
         <CoachActivityCohorts selectedUser={selectedUser} onSelect={setSelectedUser} />
         <CoachUserPicker selectedUser={selectedUser} onSelect={setSelectedUser} />
 

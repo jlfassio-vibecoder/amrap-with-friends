@@ -19,7 +19,7 @@ without fighting the evergreen pages.
 
 ## Why this exists
 
-[blog-strategy.md](blog-strategy.md) defines *what* to publish and *why* (AI
+[blog-strategy.md](blog-strategy.md) defines _what_ to publish and _why_ (AI
 freshness, cannibalisation rule, categories, archetypes, answer-first). It does
 not give a workflow. Today the only path is hand-editing
 `site/content/blog/*.md` in a PR — fine for engineers, wrong for coaches.
@@ -48,22 +48,22 @@ posts.**
 
 Immediately **below** the WOD Builder card, same card pattern:
 
-| Field   | Copy                                                                 |
-| ------- | -------------------------------------------------------------------- |
-| Title   | Article Builder                                                      |
-| Blurb   | Draft blog posts with copy and photos for the SEO content layer.     |
-| CTA     | Open Article Builder → `/coach/articles`                             |
+| Field | Copy                                                             |
+| ----- | ---------------------------------------------------------------- |
+| Title | Article Builder                                                  |
+| Blurb | Draft blog posts with copy and photos for the SEO content layer. |
+| CTA   | Open Article Builder → `/coach/articles`                         |
 
 `WOD` stays coach jargon; **Article** / **post** on this surface (athletes see
 **Blog** on the public site).
 
 ### Routes (all `index: false`)
 
-| Path                         | Job                                      |
-| ---------------------------- | ---------------------------------------- |
-| `/coach/articles`            | List drafts, scheduled, published        |
-| `/coach/articles/new`        | Create draft                             |
-| `/coach/articles/:articleId` | Edit draft / refresh published snapshot  |
+| Path                         | Job                                     |
+| ---------------------------- | --------------------------------------- |
+| `/coach/articles`            | List drafts, scheduled, published       |
+| `/coach/articles/new`        | Create draft                            |
+| `/coach/articles/:articleId` | Edit draft / refresh published snapshot |
 
 Add rows to `APP_ROUTES` and `vercel.json` rewrites to `/_app-shell`, matching
 `/coach/wods`.
@@ -94,21 +94,21 @@ guides in v1).
 
 ### 2. Taxonomy (frontmatter)
 
-| Field        | Values / rules                                                                 |
-| ------------ | ------------------------------------------------------------------------------ |
-| `title`      | Required                                                                       |
-| `slug`       | Flat `/blog/{slug}` — no dates in the path                                     |
-| `category`   | One of: Programming, Movement, Pacing & scoring, Training together, The data |
-| `archetype`  | Data story · Specific scenario · Seasonal / timely · Opinion / POV · Teardown |
-| `answerFirst`| 40–60 words; rendered above the body (same discipline as `GuideLayout`)        |
-| `description`| Meta description, 50–160 chars (existing SEO band)                             |
-| `author`     | Real person id / display name (stable author entity)                           |
-| `status`     | `draft` · `ready` · `published` · `archived`                                   |
-| `publishedAt`| Set on first publish; never from build clock                                   |
-| `modifiedAt` | Set on meaningful refresh; drives `dateModified` in JSON-LD                    |
-| `pillarPath` | Required internal link target                                                  |
-| `libraryLinks` | ≥2 paths into workouts/exercises (validated against known routes)            |
-| `relatedPosts` | 0–2 other post slugs when they exist                                         |
+| Field          | Values / rules                                                                |
+| -------------- | ----------------------------------------------------------------------------- |
+| `title`        | Required                                                                      |
+| `slug`         | Flat `/blog/{slug}` — no dates in the path                                    |
+| `category`     | One of: Programming, Movement, Pacing & scoring, Training together, The data  |
+| `archetype`    | Data story · Specific scenario · Seasonal / timely · Opinion / POV · Teardown |
+| `answerFirst`  | 40–60 words; rendered above the body (same discipline as `GuideLayout`)       |
+| `description`  | Meta description, 50–160 chars (existing SEO band)                            |
+| `author`       | Real person id / display name (stable author entity)                          |
+| `status`       | `draft` · `ready` · `published` · `archived`                                  |
+| `publishedAt`  | Set on first publish; never from build clock                                  |
+| `modifiedAt`   | Set on meaningful refresh; drives `dateModified` in JSON-LD                   |
+| `pillarPath`   | Required internal link target                                                 |
+| `libraryLinks` | ≥2 paths into workouts/exercises (validated against known routes)             |
+| `relatedPosts` | 0–2 other post slugs when they exist                                          |
 
 Category **hub pages** still wait until three published posts (strategy rule) —
 the builder can show a counter (“Training together: 1/3 toward category page”).
@@ -125,8 +125,8 @@ Editor layout:
 
 Must be true to publish:
 
-- [ ] Links **up** to the pillar  
-- [ ] Links **down** to ≥2 library pages  
+- [ ] Links **up** to the pillar
+- [ ] Links **down** to ≥2 library pages
 - [ ] Links **across** to related posts when the archive has them (soft until ≥3 posts exist)
 
 ### 5. Refresh vs new
@@ -141,8 +141,8 @@ button.
 
 ### Phase 0 — Shell and placement
 
-**Ship:** Coach hub card + empty `/coach/articles` list (coach-gated like WOD
-Builder) + route/SEO/vercel wiring (`noindex`).
+**Status: shipped.** Coach hub card + empty `/coach/articles` list (coach-gated
+like WOD Builder) + route/SEO/vercel wiring (`noindex`).
 
 **Done when:** A coach sees Article Builder under WOD Builder and can open a
 blank list page.
@@ -179,15 +179,15 @@ references real public URLs.
 
 Wire strategy gates into “Mark ready” / “Publish”:
 
-| Gate                         | Ready | Publish |
-| ---------------------------- | ----- | ------- |
-| Title, slug, category, archetype | Soft warn | Hard |
-| Answer-first 40–60 words     | Soft warn | Hard |
-| Description 50–160 chars     | Soft warn | Hard |
-| Cannibalisation + pillar     | Soft warn | Hard |
-| ≥2 library links             | Soft warn | Hard |
-| Every image has alt          | Soft warn | Hard |
-| Author set                   | Soft warn | Hard |
+| Gate                             | Ready     | Publish |
+| -------------------------------- | --------- | ------- |
+| Title, slug, category, archetype | Soft warn | Hard    |
+| Answer-first 40–60 words         | Soft warn | Hard    |
+| Description 50–160 chars         | Soft warn | Hard    |
+| Cannibalisation + pillar         | Soft warn | Hard    |
+| ≥2 library links                 | Soft warn | Hard    |
+| Every image has alt              | Soft warn | Hard    |
+| Author set                       | Soft warn | Hard    |
 
 Unit-test pure validators in `src/lib/seo/` or `src/lib/coach/articles/` (repo
 convention: logic beside tests, not only in components).
@@ -211,11 +211,11 @@ This is the load-bearing phase. Strategy wants **content collections**
 
 **Alternatives (decide before Phase 4 build):**
 
-| Option | Pros | Cons |
-| ------ | ---- | ---- |
-| A. Export script → committed MD (above) | Matches strategy; reviewable diffs | Needs a human or bot commit |
-| B. Build-time fetch from Supabase | No commit step | Couples Vercel build to DB; weaker offline story |
-| C. Edge-render posts | Fast iteration | Fights the static/AI-HTML strategy |
+| Option                                  | Pros                               | Cons                                             |
+| --------------------------------------- | ---------------------------------- | ------------------------------------------------ |
+| A. Export script → committed MD (above) | Matches strategy; reviewable diffs | Needs a human or bot commit                      |
+| B. Build-time fetch from Supabase       | No commit step                     | Couples Vercel build to DB; weaker offline story |
+| C. Edge-render posts                    | Fast iteration                     | Fights the static/AI-HTML strategy               |
 
 **Default: A.** Same philosophy as `seo:resolve-exercise-media`.
 
@@ -247,18 +247,18 @@ Not a second product — just coach affordances for the strategy cadence:
 Article Builder does not invent the editorial calendar; it **loads the strategy
 list** as suggested starters (category + archetype pre-filled, empty body):
 
-1. What 150 AMRAP workouts taught us… — The data / Data story  
-2. The 12-minute AMRAP… — Programming / Scenario  
-3. How to run an AMRAP with a friend in another time zone — Training together / Scenario  
-4. Why we refuse to tell you what a good AMRAP score is — Pacing & scoring / Opinion  
-5. Hotel-room AMRAPs… — Programming / Scenario  
-6. Air squats are in one in six… — Movement / Teardown  
-7. Building an eight-week campaign… — Training together / Teardown  
-8. The first ninety seconds… — Pacing & scoring / Teardown  
-9. AMRAP workouts for two people… — Training together / Scenario  
-10. January: how to restart… — Programming / Seasonal  
-11. The case against the live leaderboard — Training together / Opinion  
-12. Push-up variations ranked… — Movement / Teardown  
+1. What 150 AMRAP workouts taught us… — The data / Data story
+2. The 12-minute AMRAP… — Programming / Scenario
+3. How to run an AMRAP with a friend in another time zone — Training together / Scenario
+4. Why we refuse to tell you what a good AMRAP score is — Pacing & scoring / Opinion
+5. Hotel-room AMRAPs… — Programming / Scenario
+6. Air squats are in one in six… — Movement / Teardown
+7. Building an eight-week campaign… — Training together / Teardown
+8. The first ninety seconds… — Pacing & scoring / Teardown
+9. AMRAP workouts for two people… — Training together / Scenario
+10. January: how to restart… — Programming / Seasonal
+11. The case against the live leaderboard — Training together / Opinion
+12. Push-up variations ranked… — Movement / Teardown
 
 Over-invest UI hint on **Training together** suggestions (strategy wedge).
 
