@@ -137,6 +137,7 @@ export function CoachGuestBrowsersChart({
                       style={{ cursor: 'pointer' }}
                       onMouseEnter={() => setHover(point.bucketStart)}
                       onFocus={() => setHover(point.bucketStart)}
+                      onBlur={() => setHover(null)}
                       onClick={() => onSelectBucket?.(point.bucketStart)}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter' || event.key === ' ') {

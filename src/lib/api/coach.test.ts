@@ -714,6 +714,18 @@ describe('coach_guest_browsers_series migration contract', () => {
       'GRANT EXECUTE ON FUNCTION public.coach_guest_browsers_series(text) TO authenticated'
     );
   });
+
+  it('aligns series buckets to exact window lengths', () => {
+    const sql = readFileSync(
+      join(root, 'supabase/migrations/20260905140000_coach_guest_browsers_series_bucket_align.sql'),
+      'utf8'
+    );
+
+    expect(sql).toContain('CREATE OR REPLACE FUNCTION public.coach_guest_browsers_series');
+    expect(sql).toContain('v_bucket_count');
+    expect(sql).toContain('v_series_start := v_series_end - (v_bucket_count - 1) * v_step');
+    expect(sql).toContain('generate_series(v_series_start, v_series_end, v_step)');
+  });
 });
 
 describe('fetchCoachChartNotesForRange', () => {

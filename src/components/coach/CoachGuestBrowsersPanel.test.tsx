@@ -44,7 +44,7 @@ describe('CoachGuestBrowsersPanel', () => {
       data: {
         deleted: false,
         note: {
-          bucketStart: '2026-09-01T00:00:00.000Z',
+          bucketStart: '2026-09-04T15:00:00.000Z',
           body: 'Saved note',
           updatedAt: '2026-09-05T13:00:00.000Z',
           updatedBy: '11111111-1111-4111-8111-111111111111',
@@ -67,15 +67,29 @@ describe('CoachGuestBrowsersPanel', () => {
     expect(screen.getByText('53')).toBeTruthy();
     expect(screen.getByTestId('guest-browsers-note-marker-2026-09-02T00:00:00.000Z')).toBeTruthy();
 
+    fetchSeriesMock.mockResolvedValue({
+      data: {
+        window: '24h',
+        grain: 'hour',
+        total: 12,
+        points: [
+          { bucketStart: '2026-09-04T14:00:00.000Z', count: 2 },
+          { bucketStart: '2026-09-04T15:00:00.000Z', count: 5 },
+        ],
+      },
+      error: null,
+    });
+    fetchNotesMock.mockResolvedValue({ data: [], error: null });
     fireEvent.click(screen.getByRole('button', { name: 'Past 24 Hours' }));
+
     await waitFor(() => {
       expect(fetchSeriesMock).toHaveBeenCalledWith('24h');
     });
     await waitFor(() => {
-      expect(screen.getByTestId('guest-browsers-bar-2026-09-01T00:00:00.000Z')).toBeTruthy();
+      expect(screen.getByTestId('guest-browsers-bar-2026-09-04T15:00:00.000Z')).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByTestId('guest-browsers-bar-2026-09-01T00:00:00.000Z'));
+    fireEvent.click(screen.getByTestId('guest-browsers-bar-2026-09-04T15:00:00.000Z'));
     expect(screen.getByTestId('guest-browsers-note-editor')).toBeTruthy();
 
     fireEvent.change(screen.getByPlaceholderText('Add a shared note for this bar…'), {
@@ -86,8 +100,8 @@ describe('CoachGuestBrowsersPanel', () => {
     await waitFor(() => {
       expect(upsertNoteMock).toHaveBeenCalledWith({
         metric: 'guest_browsers',
-        grain: 'day',
-        bucketStart: '2026-09-01T00:00:00.000Z',
+        grain: 'hour',
+        bucketStart: '2026-09-04T15:00:00.000Z',
         body: 'Saved note',
       });
     });

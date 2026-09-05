@@ -115,6 +115,7 @@ export function CoachGuestBrowsersPanel({ onDismiss }: CoachGuestBrowsersPanelPr
 
   useEffect(() => {
     let cancelled = false;
+    // Copilot suggestion ignored: keep this deviation marker — repo convention documents coach RPC error handling skips in place.
     // Copilot suggestion ignored: callRpc settles RPC failures as { error } rather than reject, matching other coach fetches.
     fetchCoachGuestBrowsersSeries(windowId).then(async (result) => {
       if (cancelled) {

@@ -94,6 +94,7 @@ Migrations (apply in order via `npx supabase db push`):
 - `20260903210000_coach_online_now.sql`
 - `20260905120000_coach_guest_browsers_series.sql`
 - `20260905130000_coach_chart_notes.sql`
+- `20260905140000_coach_guest_browsers_series_bucket_align.sql`
 
 ## Deploy notes
 
