@@ -20,13 +20,17 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public, extensions
 AS $$
 DECLARE
-  v_uid uuid := auth.uid();
+  v_uid uuid;
   v_current text;
-  v_row public.coach_articles;
+  v_row public.coach_articles%ROWTYPE;
   v_previous jsonb;
 BEGIN
+  v_uid := auth.uid();
   IF v_uid IS NULL THEN
-    RAISE EXCEPTION 'Not authenticated';
+    RAISE EXCEPTION 'Authentication required';
+  END IF;
+  IF NOT public.is_coach() THEN
+    RAISE EXCEPTION 'Not authorized';
   END IF;
 
   IF p_snapshot IS NULL
