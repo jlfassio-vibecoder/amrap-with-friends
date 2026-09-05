@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { fetchCoachArticles, type CoachArticleSummary } from '@/lib/api/coachArticles';
+import { useMemo } from 'react';
+import type { CoachArticleSummary } from '@/lib/api/coachArticles';
 import {
   ARTICLE_STARTERS,
   REFRESH_STALE_MONTHS,
@@ -12,39 +12,20 @@ import {
 } from '@/lib/coach/articles/articleStarters';
 
 interface CoachArticleCadencePanelProps {
-  refreshKey: number;
+  articles: CoachArticleSummary[];
+  loading: boolean;
+  error: string | null;
   onStartDraft: (draft: ArticleInitialDraft) => void;
   onOpenArticle: (summary: CoachArticleSummary) => void;
 }
 
 export function CoachArticleCadencePanel({
-  refreshKey,
+  articles,
+  loading,
+  error,
   onStartDraft,
   onOpenArticle,
 }: CoachArticleCadencePanelProps) {
-  const [articles, setArticles] = useState<CoachArticleSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchCoachArticles({}).then((result) => {
-      if (cancelled) {
-        return;
-      }
-      setLoading(false);
-      if (result.error) {
-        setError(result.error.message);
-        return;
-      }
-      setError(null);
-      setArticles(result.data ?? []);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [refreshKey]);
-
   const matches = useMemo(() => matchStarterToArticles(ARTICLE_STARTERS, articles), [articles]);
   const writeNext = useMemo(() => nextStartersToWrite(matches), [matches]);
   const counts = useMemo(() => monthlyCadenceCounts(articles), [articles]);
