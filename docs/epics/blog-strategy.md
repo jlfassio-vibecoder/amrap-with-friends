@@ -249,6 +249,13 @@ Content system assesses sitewide rather than per page.
 
 ---
 
+## Authoring
+
+The voice specification, the twenty-four article briefs and the twelve-month
+calendar live in [blog authoring](blog-authoring.md). It also covers the byline
+question raised below — the short version being that the persona is a voice, not
+a fictional person, and articles get a real name or the team's name on them.
+
 ## First twelve posts
 
 Ordered to front-load the categories that have the least competition and the
