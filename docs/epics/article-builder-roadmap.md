@@ -220,9 +220,10 @@ list** as suggested starters (category + archetype pre-filled, empty body).
 > indexed before their season. Seed from that document, not from the snapshot
 > below, or the builder will suggest a calendar nobody is publishing.
 >
-> It also answers open question 1: the byline is a real named person or the
-> team, never an invented coach. The persona in that document is a voice
-> specification, not a human.
+> It also answers open question 1: the author is Justin Fassio, and the
+> drafting rule that replaces the fake-persona concern is that a model must
+> never invent a first-person claim under a real byline — it leaves a marked
+> placeholder for him to fill.
 
 Snapshot of the superseded ordering, kept so the change is visible:
 
@@ -269,10 +270,13 @@ Phase 1–3 on perfect attribution.
 
 ## Open questions
 
-1. **Who is `author`?** — free-text display name shipped; selectable staff bios /
-   `/authors/*` still open (E-E-A-T). [blog-authoring.md](blog-authoring.md)
-   settles the policy: a real named person or the team, never a fabricated
-   coach. The remaining work is the `/authors/*` page, not the decision.
+1. **Who is `author`?** — **Settled: Justin Fassio.** Certified Master Fitness
+   Trainer and Commander's Total Fitness Program Manager (1998), owner of San
+   Diego Core Fitness, co-founder of gymgo and aiworkoutgenerator.com. The
+   free-text display name shipped is fine for now; the outstanding work is an
+   indexable `/authors/justin-fassio` page with `Person` schema and `sameAs`
+   corroboration, referenced as `founder` from the `Organization` node. See
+   [blog-authoring.md](blog-authoring.md).
 2. **Body editor** — Markdown textarea v1 vs block editor later.
 3. **Multi-coach drafts** — shared queue or owner-only until published.
 

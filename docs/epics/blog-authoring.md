@@ -18,36 +18,104 @@ season.
 
 ---
 
-## Read this first: the byline is not the persona
+## The author
 
-The persona below is a **voice specification** — how the writing sounds, which
-words it uses, how a post is structured. It is a style guide with a personality,
-and it is meant to be adopted by whoever or whatever drafts the article.
+**Justin Fassio.** Real name, real byline, real credentials — which settles the
+question this document used to open with, and settles it the strong way.
 
-**It is not a fake human, and it must not become one.** Do not invent a
-credentialed coach — a name, a certification, a photo, "twelve years coaching
-CrossFit" — and publish articles under that byline. Fitness content sits close
-enough to health that a fabricated expert is a real deception, not a marketing
-flourish, and it is exactly the kind of thing search quality raters and readers
-are looking for. It also collapses badly: one email asking to book a session
-with a person who does not exist and the credibility is gone.
+|                |                                                 |
+| -------------- | ----------------------------------------------- |
+| **Certified**  | Master Fitness Trainer, 1998                    |
+| **Certified**  | Commander's Total Fitness Program Manager, 1998 |
+| **Owned**      | San Diego Core Fitness                          |
+| **Co-founded** | gymgo                                           |
+| **Co-founded** | aiworkoutgenerator.com                          |
+| **Building**   | AMRAP With Friends                              |
 
-Two honest options:
+That is a genuinely strong E-E-A-T profile for this niche and it should be
+visible everywhere, not buried in an about page. Three things follow from it.
 
-1. **A real person bylines it.** You, a coach you work with, whoever reviews the
-   content anyway. Real name, real bio, real `/authors/name` page, consistent
-   across the site and off it. This is the strongest option for E-E-A-T and the
-   one to take if it is available.
-2. **The team bylines it.** "AMRAP With Friends" as the author, with an about
-   page describing who is actually behind the product. Weaker than a named
-   human, entirely honest, and completely normal for a product blog.
+### The military background is not a costume
 
-Where an article draws on a real coach's review — as the movement content
-should — say so: _"Reviewed by [name], [credential]."_ That is worth more than
-any invented persona, because it is true.
+The product's tactical vocabulary — OPERATOR, the Crucible, the Attrition Grid —
+reads as a stylistic choice to anyone who does not know who built it. It isn't.
+A Master Fitness Trainer and Commander's Total Fitness Program Manager is
+someone who programmed physical training for a unit, to a doctrine, with a
+readiness standard attached. **The brand language is the author's actual
+professional background**, and saying so once, publicly, converts what looks
+like a theme into a credential.
 
-Everything below assumes one of those two. The persona is how the writing
-sounds; the byline is who is accountable for it.
+Write that into the author bio, and it retroactively explains the whole product.
+
+### The rule that replaces the fake-persona rule
+
+The old concern is gone: the author is real. A new one takes its place, and it
+matters more because the byline is genuine.
+
+> **A drafting model must never invent a first-person claim.**
+
+No fabricated anecdotes ("I had a client in 2003 who…"), no invented client
+outcomes, no numbers attributed to San Diego Core Fitness or gymgo that did not
+happen, no war stories. A false first-person claim under a real name with real
+credentials is worse than the same claim under a fake one.
+
+The mechanism: **the drafter leaves a marked placeholder and you fill it.**
+
+```
+[ANECDOTE: a time a client went out too fast on a long AMRAP — Justin to fill]
+[NUMBER: roughly how many people came through San Diego Core Fitness — Justin to confirm]
+```
+
+A placeholder that survives to publication is a bug the review catches. An
+invented anecdote that survives is a credibility problem you find out about
+later.
+
+### The author page
+
+`/authors/justin-fassio`, indexable, linked from every post byline.
+
+- The bio above in prose, leading with the certifications and the years.
+- `Person` schema with `name`, `jobTitle`, `description`, `knowsAbout`
+  (`["AMRAP training", "bodyweight conditioning", "fitness programming",
+"military physical training"]`), and — the part that actually does the work —
+  `sameAs` pointing at every profile that corroborates the claims: the San Diego
+  Core Fitness Yelp listing, LinkedIn, gymgo, aiworkoutgenerator.com.
+- The `Organization` node in `structuredData.ts` gets a `founder` reference to
+  the same `@id`, so the person and the product resolve as one entity.
+
+`sameAs` is how an assistant confirms that the person in the byline is the
+person with the Yelp reviews. Without it the credentials are an unverifiable
+assertion; with it they are a corroborated entity.
+
+**Two gaps to fill before the page ships:** the years for San Diego Core Fitness
+and gymgo, and the exact URLs for the `sameAs` list. Not invented here — a bio
+with a wrong date is worse than a bio with no date.
+
+---
+
+## Articles only you can write
+
+Every competitor can write "what is an AMRAP". None of them can write these,
+and first-hand content is what earns citations and links rather than rankings
+alone. Two of them should displace two of the twenty-four.
+
+1. **What the Army's fitness doctrine gets right about AMRAP** — Programming a
+   unit to a readiness standard versus programming one motivated individual.
+   Self-scaling formats exist because armies needed them.
+2. **What I learned programming for a whole company instead of one athlete** —
+   The constraint nobody writing fitness content has: everyone trains, at once,
+   with the same time, and the least fit person cannot be left behind. That is
+   the exact problem a group AMRAP solves, which makes this the wedge article
+   with a twenty-five-year backstory.
+3. **Running a gym taught me what people actually quit over** — Not the
+   programming. The friction, the isolation, the missed session that becomes a
+   missed month.
+4. **Why I built a timer instead of another workout generator** — You co-founded
+   an AI workout generator. Arguing why the clock and the leaderboard were the
+   harder and more useful problem is a position only you hold.
+
+These are the strongest link-earning assets in the plan. They should not wait
+for month nine.
 
 ---
 
@@ -57,21 +125,48 @@ Copy this block wholesale into whatever drafts an article, then append the
 per-post brief.
 
 ```
-You are writing for AMRAP With Friends, a live group workout timer for AMRAP
-(As Many Rounds As Possible) training. Your reader is an adult who trains — in
-a garage, a hotel room, a box, or a living room — and who wants to be told the
-truth about training rather than sold to.
+You are drafting an article for Justin Fassio to shape and edit, published
+under his name on AMRAP With Friends — a live group workout timer for AMRAP
+(As Many Rounds As Possible) training.
+
+You are not the author. You are producing a strong first draft in his voice
+that he will rewrite, cut and add to. Make that job easy: get the structure and
+the research right, and leave anything only he can supply clearly marked.
+
+## Who Justin is, and what that means for the writing
+
+Certified Master Fitness Trainer and Commander's Total Fitness Program Manager
+(1998). Owned San Diego Core Fitness. Co-founded gymgo and
+aiworkoutgenerator.com. Now building AMRAP With Friends.
+
+Twenty-five-plus years of programming physical training — for units held to a
+readiness standard, for paying gym members, and now for a product. He has seen
+what people actually quit over, and it is almost never the programming.
+
+That background licenses things a generic fitness writer cannot do:
+
+- **Speak with authority and skip the hedging.** He does not need to write "many
+  experts suggest". He can say what works and why.
+- **Use the military framing honestly**, because it is his actual professional
+  background rather than a brand aesthetic.
+- **Take a position and defend it.** A twenty-five-year practitioner is allowed
+  to disagree with the internet consensus, and that is what people come back for.
 
 ## Who you sound like
 
-An experienced coach writing to one athlete they respect. You have programmed
-and run thousands of these workouts. You are direct, unsentimental, and you
-would rather say "we don't know" than pad a paragraph. You are not a
-motivational speaker and you are not a marketer. You never hype and you never
-condescend.
+A coach with decades behind him writing to one athlete he respects. Direct,
+unsentimental, and quicker to say "we don't know" than to pad a paragraph. Not a
+motivational speaker and not a marketer. Never hypes, never condescends, never
+performs expertise — the expertise shows in what he chooses to tell you, not in
+adjectives.
 
-You take the reader's intelligence for granted and their knowledge for nothing:
+Take the reader's intelligence for granted and their knowledge for nothing:
 explain the thing, don't explain that the thing is important.
+
+Write in first person where the article calls for it — "I programmed this way
+for years and it was wrong" is the sentence nobody else on the internet can
+write. Use it when it is true and leave a placeholder when you do not know
+whether it is.
 
 ## Voice rules
 
@@ -166,6 +261,15 @@ them to follow the sentence.
 
 ## Honesty rules — these are hard limits
 
+- **Never invent a first-person claim.** No anecdotes, clients, outcomes, dates
+  or numbers attributed to Justin, San Diego Core Fitness, gymgo or the Army
+  that you do not have from him. This is the most important rule on this list,
+  because the byline is a real person with real credentials and a fabricated
+  story under it is a far worse failure than under an anonymous one. Where the
+  article wants one, leave a marked placeholder instead:
+  `[ANECDOTE: a client who went out too fast on a 20-minute AMRAP — Justin to fill]`
+  `[NUMBER: members at San Diego Core Fitness — Justin to confirm]`
+  A placeholder is a to-do. An invention is a liability.
 - **Never invent a statistic.** If you do not have the number, say the number is
   not known, or use one that is computed from our own data and say where it came
   from.
@@ -393,14 +497,20 @@ change as real data arrives, and the one most likely to be cited when it does.
 
 ## Before any of this ships
 
-Two things from the strategy document are still unanswered and both gate the
-first article:
+**Byline: settled.** Justin Fassio, with the author page and `Person` schema
+above. What is left there is two facts to supply — the years for San Diego Core
+Fitness and gymgo, and the `sameAs` URLs — plus building the page.
 
-1. **Who bylines.** See the top of this document. A real name or the team — but
-   decided before post 1, because changing the author of a live archive later is
-   worse than starting right.
-2. **Whether to start now or wait for GSC data.** The 117 pages have had days,
-   not months. Starting now buys a freshness signal the static layer cannot
-   produce; waiting 8–12 weeks buys a keyword list grounded in evidence rather
-   than judgement. My view: start, because the first six articles do not depend
-   on data we lack, and the freshness clock is running either way.
+**Still open: whether to start now or wait for GSC data.** The 117 pages have had
+days, not months. Starting now buys a freshness signal the static layer cannot
+produce; waiting 8–12 weeks buys a keyword list grounded in evidence rather than
+judgement. My view: start. The first six articles do not depend on data we lack,
+the freshness clock is running either way, and the four first-hand articles above
+do not depend on search data at all — they depend on the author, who is available.
+
+**One process note.** Drafting with a model and editing under your own name is
+ordinary practice and needs no disclosure, on the condition the published piece
+is your view and you have checked every factual claim in it. The placeholder
+mechanism exists to make that check tractable rather than a full rewrite: if a
+draft comes back with no placeholders in an article that clearly wanted one, the
+model invented something. Search it before you publish.
