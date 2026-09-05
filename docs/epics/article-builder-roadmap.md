@@ -59,14 +59,17 @@ Immediately **below** the WOD Builder card, same card pattern:
 
 ### Routes (all `index: false`)
 
-| Path                         | Job                                     |
-| ---------------------------- | --------------------------------------- |
-| `/coach/articles`            | List drafts, scheduled, published       |
-| `/coach/articles/new`        | Create draft                            |
-| `/coach/articles/:articleId` | Edit draft / refresh published snapshot |
+| Path              | Job                                                                    |
+| ----------------- | ---------------------------------------------------------------------- |
+| `/coach/articles` | List + in-page new/edit (same pattern as WOD Builder — no nested URLs) |
 
-Add rows to `APP_ROUTES` and `vercel.json` rewrites to `/_app-shell`, matching
-`/coach/wods`.
+Phase 0 shipped the list shell on this single route. Nested `/new` and
+`/:articleId` paths were sketched earlier but Phase 1 kept in-page
+`list | new | edit` state instead — do not add those routes without updating
+this table.
+
+Add the `/coach/articles` row to `APP_ROUTES` and `vercel.json` rewrites to
+`/_app-shell`, matching `/coach/wods`.
 
 ---
 
@@ -149,13 +152,10 @@ blank list page.
 
 ### Phase 1 — Draft model + copy editor
 
-**Data (sketch):** `coach_articles` (or `blog_articles`) via SECURITY DEFINER
-RPCs only — same posture as coach WODs. Fields cover the taxonomy table above;
-body as Markdown text for v1.
-
-**UI:** List (filter by status/category) · New · Edit form with answer-first +
-body + metadata · Save draft · Mark ready (runs soft validation, does not
-publish).
+**Status: shipped.** `coach_articles` + list/get/upsert/set_status RPCs;
+in-page list/new/edit on `/coach/articles` (not nested routes); Markdown body;
+`draft` ↔ `ready` only (no publish); soft validators on Mark ready; empty
+`photos` jsonb reserved for Phase 2.
 
 **Done when:** A coach can create and edit a full draft that serializes to the
 frontmatter shape the Astro collection will expect, without uploading media yet.
