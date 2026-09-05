@@ -306,10 +306,10 @@ policy cannot disagree between what a browser sees and what a crawler sees.
 
 **Needs a human with account access:**
 
-- [ ] Verify Google Search Console; submit the sitemap
-- [ ] Verify Bing Webmaster Tools (feeds Copilot + DuckDuckGo)
-- [ ] Wire `npm run seo:indexnow` to a Vercel post-deploy hook
-- [ ] Confirm no CDN- or platform-level bot blocking of the AI agents in Part 4
+- [x] Verify Google Search Console; submit the sitemap
+- [x] Verify Bing Webmaster Tools (feeds Copilot + DuckDuckGo)
+- [x] Wire `npm run seo:indexnow` to a Vercel post-deploy hook
+- [x] Confirm no CDN- or platform-level bot blocking of the AI agents in Part 4
 - [ ] Watch GSC Coverage as the soft-404 backlog clears
 
 **Blocked / deferred:**
@@ -512,6 +512,15 @@ and all three now have a page aimed squarely at them: `/amrap-workouts` leads on
 "bodyweight", `/exercises` on "amrap exercise", `/guides/what-is-amrap` on the
 definitional query. Re-read the query report in four to six weeks, when there is
 enough data to mean something.
+
+### Phase 3.5 — The blog _(proposed)_
+
+A content layer of 117 evergreen pages is permanently dated the moment it ships,
+and AI assistants weight recency heavily — roughly half of AI-cited content is
+under 13 weeks old, and the median citation half-life is about 4.5 weeks. The
+blog is the mechanism that keeps the domain producing recent, citable material.
+See [the blog strategy](blog-strategy.md) for cadence, categories, archetypes
+and the cannibalisation rule that keeps it from competing with `/guides`.
 
 ### Phase 4 — Compounding _(ongoing)_
 
