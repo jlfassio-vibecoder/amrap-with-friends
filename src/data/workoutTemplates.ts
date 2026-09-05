@@ -2234,7 +2234,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     intensityTier: 1,
     movements: [
       { name: 'Air Squats', reps: 15 },
-      { name: 'Sit-Ups', reps: 15 },
+      { name: 'Strict Sit-Ups', reps: 15 },
       { name: 'Push-Ups', reps: 10 },
     ],
     tacticalNote:
