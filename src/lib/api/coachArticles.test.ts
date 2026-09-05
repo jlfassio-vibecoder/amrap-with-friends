@@ -63,6 +63,8 @@ describe('fetchCoachArticles', () => {
             category: VALID_ARTICLE.category,
             archetype: VALID_ARTICLE.archetype,
             status: 'ready',
+            publishedAt: null,
+            modifiedAt: null,
             updatedAt: VALID_ARTICLE.updatedAt,
           },
           { id: 'bad' },
@@ -80,6 +82,34 @@ describe('fetchCoachArticles', () => {
     expect(result.error).toBeNull();
     expect(result.data).toHaveLength(1);
     expect(result.data?.[0].status).toBe('ready');
+    expect(result.data?.[0].publishedAt).toBeNull();
+    expect(result.data?.[0].modifiedAt).toBeNull();
+  });
+
+  it('parses publishedAt and modifiedAt on summaries', async () => {
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        articles: [
+          {
+            id: VALID_ARTICLE.id,
+            title: VALID_ARTICLE.title,
+            slug: VALID_ARTICLE.slug,
+            category: VALID_ARTICLE.category,
+            archetype: VALID_ARTICLE.archetype,
+            status: 'published',
+            publishedAt: '2026-01-01T00:00:00.000Z',
+            modifiedAt: '2026-09-01T00:00:00.000Z',
+            updatedAt: VALID_ARTICLE.updatedAt,
+          },
+        ],
+      },
+      error: null,
+    });
+
+    const result = await fetchCoachArticles({});
+    expect(result.data?.[0].publishedAt).toBe('2026-01-01T00:00:00.000Z');
+    expect(result.data?.[0].modifiedAt).toBe('2026-09-01T00:00:00.000Z');
   });
 
   it('maps authentication errors', async () => {

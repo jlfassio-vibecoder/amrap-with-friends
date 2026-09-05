@@ -17,6 +17,8 @@ export interface CoachArticleSummary {
   category: string;
   archetype: string;
   status: CoachArticleStatus;
+  publishedAt: string | null;
+  modifiedAt: string | null;
   updatedAt: string;
 }
 
@@ -139,6 +141,8 @@ function parseArticleSummary(row: Record<string, unknown>): CoachArticleSummary 
     category: readStringAllowEmpty(row.category),
     archetype: readStringAllowEmpty(row.archetype),
     status: readStatus(row.status),
+    publishedAt: readString(row.publishedAt),
+    modifiedAt: readString(row.modifiedAt),
     updatedAt,
   };
 }

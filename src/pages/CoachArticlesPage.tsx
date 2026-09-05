@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
+import { CoachArticleCadencePanel } from '@/components/coachArticles/CoachArticleCadencePanel';
 import { CoachArticleForm } from '@/components/coachArticles/CoachArticleForm';
 import { CoachArticleList } from '@/components/coachArticles/CoachArticleList';
 import {
@@ -8,8 +9,12 @@ import {
   type CoachArticle,
   type CoachArticleSummary,
 } from '@/lib/api/coachArticles';
+import type { ArticleInitialDraft } from '@/lib/coach/articles/articleStarters';
 
-type View = { mode: 'list' } | { mode: 'new' } | { mode: 'edit'; article: CoachArticle };
+type View =
+  | { mode: 'list' }
+  | { mode: 'new'; initialDraft?: ArticleInitialDraft }
+  | { mode: 'edit'; article: CoachArticle };
 
 export default function CoachArticlesPage() {
   const [view, setView] = useState<View>({ mode: 'list' });
@@ -46,20 +51,33 @@ export default function CoachArticlesPage() {
         {loadError ? <p className="text-error text-sm">{loadError}</p> : null}
 
         {view.mode === 'list' ? (
-          <CoachArticleList
-            refreshKey={refreshKey}
-            onSelect={(summary) => {
-              void handleSelect(summary);
-            }}
-            onCreateNew={() => {
-              setFormKey((k) => k + 1);
-              setView({ mode: 'new' });
-            }}
-          />
+          <>
+            <CoachArticleCadencePanel
+              refreshKey={refreshKey}
+              onStartDraft={(draft) => {
+                setFormKey((k) => k + 1);
+                setView({ mode: 'new', initialDraft: draft });
+              }}
+              onOpenArticle={(summary) => {
+                void handleSelect(summary);
+              }}
+            />
+            <CoachArticleList
+              refreshKey={refreshKey}
+              onSelect={(summary) => {
+                void handleSelect(summary);
+              }}
+              onCreateNew={() => {
+                setFormKey((k) => k + 1);
+                setView({ mode: 'new' });
+              }}
+            />
+          </>
         ) : (
           <CoachArticleForm
             key={formKey}
             article={view.mode === 'edit' ? view.article : null}
+            initialDraft={view.mode === 'new' ? view.initialDraft : undefined}
             onSaved={handleSaved}
             onStatusChanged={handleStatusChanged}
             onCancel={() => setView({ mode: 'list' })}
