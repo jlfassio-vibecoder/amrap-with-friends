@@ -262,6 +262,37 @@ Phase 1–3 on perfect attribution.
 
 ---
 
+## Freshness: when `modifiedAt` advances
+
+`dateModified` is what a search engine's freshness signal reads, and AI
+assistants weight recency heavily, so it only means something if it is true.
+
+The publish path used to set it to `now()` unconditionally, in both the client
+snapshot and the `modified_at` column. Re-publishing an article nobody had
+edited claimed an update, which broke two things: the post showed an "Updated"
+line and a fresh `dateModified` it had not earned, and the refresh queue counted
+the no-op as a refresh — resetting the staleness clock on a post nobody had
+improved, so it dropped out of the queue.
+
+Now, in both layers:
+
+- `buildArticleExportSnapshot` fingerprints the content-bearing fields — title,
+  slug, category, archetype, answer-first, description, author, pillar, links,
+  related posts, photos and body — and keeps the previous `modifiedAt` when the
+  fingerprint matches. `publishedAt` and `modifiedAt` are excluded by
+  construction, since they are what the comparison decides.
+- The previous value is read **from the previous snapshot, not the column.** The
+  column records when a publish last ran, so reading it there would let a chain
+  of no-op republishes walk the date forward one publish at a time.
+- `coach_publish_article` applies the same rule in SQL, comparing
+  `export_snapshot - 'modifiedAt'` against the incoming snapshot, so the column
+  the refresh queue reads stays honest too.
+
+An unreadable previous snapshot counts as changed: bumping unnecessarily is a
+smaller error than silently withholding a real update.
+
+---
+
 ## Open questions
 
 1. **Who is `author`?** — **Settled: Justin Fassio.** Certified Master Fitness

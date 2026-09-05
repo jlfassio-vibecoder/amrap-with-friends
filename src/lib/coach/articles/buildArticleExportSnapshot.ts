@@ -34,9 +34,67 @@ export type BuildArticleExportSnapshotInput = {
   bodyMarkdown: string;
   /** Existing first-publish timestamp when re-publishing. */
   publishedAt: string | null;
+  /**
+   * The snapshot stored by the last publish, when there was one. Compared
+   * against the new snapshot so `modifiedAt` only advances on a real change.
+   */
+  previousSnapshot?: Record<string, unknown> | null;
+  /** `modifiedAt` from the last publish, kept when nothing changed. */
+  previousModifiedAt?: string | null;
   nowIso?: string;
   resolvePhotoUrl?: ArticlePhotoUrlResolver;
 };
+
+/** The content fields a reader sees. Excludes both timestamps by construction. */
+type ArticleSnapshotContent = Omit<ArticleExportSnapshot, 'publishedAt' | 'modifiedAt'>;
+
+/**
+ * Everything about a snapshot except when it was published or changed.
+ *
+ * `dateModified` is what a search engine's freshness signal reads, so a
+ * re-publish that changed nothing must not claim the article was updated — if
+ * every republish bumps the date, the date stops meaning anything and the page
+ * shows an "Updated" line that is not true.
+ */
+export function articleContentFingerprint(snapshot: ArticleSnapshotContent): string {
+  return JSON.stringify([
+    snapshot.title,
+    snapshot.slug,
+    snapshot.category,
+    snapshot.archetype,
+    snapshot.answerFirst,
+    snapshot.description,
+    snapshot.author,
+    snapshot.pillar,
+    snapshot.libraryLinks,
+    snapshot.relatedPosts,
+    snapshot.photos.map((photo) => [photo.src, photo.alt, photo.caption ?? '']),
+    snapshot.body,
+  ]);
+}
+
+/**
+ * True when the previous publish is readable and identical to this one.
+ *
+ * A previous snapshot we cannot parse counts as different: bumping the date
+ * unnecessarily is a smaller error than silently withholding a real update.
+ */
+function contentUnchanged(
+  next: ArticleSnapshotContent,
+  previous: Record<string, unknown> | null | undefined
+): boolean {
+  if (!previous) {
+    return false;
+  }
+  try {
+    return (
+      articleContentFingerprint(previous as unknown as ArticleSnapshotContent) ===
+      articleContentFingerprint(next)
+    );
+  } catch {
+    return false;
+  }
+}
 
 /** Build the immutable export snapshot stored on publish and pulled into Astro MD. */
 export function buildArticleExportSnapshot(
@@ -59,7 +117,7 @@ export function buildArticleExportSnapshot(
     })
     .filter((photo): photo is { src: string; alt: string; caption?: string } => photo !== null);
 
-  return {
+  const content: ArticleSnapshotContent = {
     title: input.title.trim(),
     slug: input.slug.trim().toLowerCase(),
     category: input.category.trim(),
@@ -71,10 +129,22 @@ export function buildArticleExportSnapshot(
     libraryLinks: input.libraryLinks.map((l) => l.trim()).filter(Boolean),
     relatedPosts: input.relatedPostSlugs.map((s) => s.trim()).filter(Boolean),
     photos,
-    publishedAt: input.publishedAt?.trim() || nowIso,
-    modifiedAt: nowIso,
     body: input.bodyMarkdown,
   };
+
+  const publishedAt = input.publishedAt?.trim() || nowIso;
+  const previousModifiedAt = input.previousModifiedAt?.trim();
+  const modifiedAt =
+    contentUnchanged(content, input.previousSnapshot) && previousModifiedAt
+      ? previousModifiedAt
+      : nowIso;
+
+  return { ...content, publishedAt, modifiedAt };
+}
+
+function readSnapshotModifiedAt(snapshot: Record<string, unknown> | null): string | null {
+  const value = snapshot?.modifiedAt;
+  return typeof value === 'string' && value.trim() ? value : null;
 }
 
 export function buildArticleExportSnapshotFromArticle(
@@ -95,6 +165,11 @@ export function buildArticleExportSnapshotFromArticle(
     photos: article.photos,
     bodyMarkdown: article.bodyMarkdown,
     publishedAt: article.publishedAt,
+    previousSnapshot: article.exportSnapshot,
+    // From the previous snapshot, not the `modifiedAt` column: the column
+    // records when a publish last ran, so reading it here would let a chain of
+    // no-op republishes walk the date forward one publish at a time.
+    previousModifiedAt: readSnapshotModifiedAt(article.exportSnapshot),
     nowIso: options?.nowIso,
     resolvePhotoUrl: options?.resolvePhotoUrl,
   });
