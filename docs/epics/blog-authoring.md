@@ -70,26 +70,42 @@ A placeholder that survives to publication is a bug the review catches. An
 invented anecdote that survives is a credibility problem you find out about
 later.
 
-### The author page
+### The author page — shipped
 
-`/authors/justin-fassio`, indexable, linked from every post byline.
+`/authors/justin-fassio`, indexable, and linked from `/about`, `/blog`, every
+post byline and every post footer.
 
-- The bio above in prose, leading with the certifications and the years.
-- `Person` schema with `name`, `jobTitle`, `description`, `knowsAbout`
-  (`["AMRAP training", "bodyweight conditioning", "fitness programming",
-"military physical training"]`), and — the part that actually does the work —
-  `sameAs` pointing at every profile that corroborates the claims: the San Diego
-  Core Fitness Yelp listing, LinkedIn, gymgo, aiworkoutgenerator.com.
-- The `Organization` node in `structuredData.ts` gets a `founder` reference to
-  the same `@id`, so the person and the product resolve as one entity.
+- `src/lib/seo/author.ts` holds the author as one entity. Articles keep their
+  free-text `authorDisplayName`, so a guest author still needs no code change;
+  `isSiteAuthor` matches loosely on name and upgrades the byline when it is ours.
+- `person()` emits `@id`, `url`, `jobTitle`, `knowsAbout` and the two
+  certifications as dated `EducationalOccupationalCredential` nodes.
+- `organization()` now carries `founder`, and `blogPosting()` references the
+  person by `@id` rather than inlining a bare name — so the product and the
+  person resolve as one entity instead of two unrelated ones.
 
-`sameAs` is how an assistant confirms that the person in the byline is the
-person with the Yelp reviews. Without it the credentials are an unverifiable
-assertion; with it they are a corroborated entity.
+**One field is deliberately empty: `sameAs`.** It is the property that turns a
+credential from an assertion into something an assistant can verify, and the
+schema omits it entirely rather than emitting `[]`, because an empty array
+asserts "this person exists nowhere else" — a worse claim than making none.
 
-**Two gaps to fill before the page ships:** the years for San Diego Core Fitness
-and gymgo, and the exact URLs for the `sameAs` list. Not invented here — a bio
-with a wrong date is worse than a bio with no date.
+Fill it with the real URLs and everything else is already wired:
+
+```ts
+// src/lib/seo/author.ts
+sameAs: [
+  'https://www.yelp.com/biz/…',      // San Diego Core Fitness
+  'https://www.linkedin.com/in/…',
+  'https://gymgo.com',
+  'https://aiworkoutgenerator.com',
+],
+```
+
+The years for San Diego Core Fitness and gymgo are still not in the bio, for the
+same reason: a wrong year is worse than no year. Add them to `ventures` when you
+have them.
+
+---
 
 ---
 
