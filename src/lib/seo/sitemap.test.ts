@@ -1,15 +1,20 @@
 import { describe, it, expect } from 'vitest';
 import { ROUTE_SEO, SITE_ORIGIN, isRoutePattern, resolveSeo } from '@/lib/seo/routes';
 import { generatedContentPages } from '@/lib/seo/contentPages';
+import { blogCategoryHubPaths, blogPostPaths, listCommittedBlogPosts } from '@/lib/seo/blogPosts';
 import { buildLlmsTxt, buildSitemapXml, indexableUrls } from '@/lib/seo/sitemap';
 
 describe('indexableUrls', () => {
-  it('lists the hand-written pages followed by every generated one', () => {
+  it('lists the hand-written pages followed by every generated one and committed blog posts', () => {
     const fixed = ROUTE_SEO.filter((route) => route.index && !isRoutePattern(route.path)).map(
       (route) => `${SITE_ORIGIN}${route.path}`
     );
     const generated = generatedContentPages().map((page) => `${SITE_ORIGIN}${page.path}`);
-    expect(indexableUrls()).toEqual([...fixed, ...generated]);
+    const posts = listCommittedBlogPosts();
+    const blog = [...blogPostPaths(posts), ...blogCategoryHubPaths(posts)].map(
+      (path) => `${SITE_ORIGIN}${path}`
+    );
+    expect(indexableUrls()).toEqual([...fixed, ...generated, ...blog]);
   });
 
   it('never lists a route pattern, which is not a URL', () => {
@@ -43,6 +48,7 @@ describe('indexableUrls', () => {
     const urls = indexableUrls();
     expect(urls).toContain(`${SITE_ORIGIN}/amrap-timer`);
     expect(urls).toContain(`${SITE_ORIGIN}/about`);
+    expect(urls).toContain(`${SITE_ORIGIN}/blog`);
   });
 
   it('excludes every noindex route', () => {

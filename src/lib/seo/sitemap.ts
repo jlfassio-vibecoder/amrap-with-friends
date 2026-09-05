@@ -1,17 +1,23 @@
 import { ROUTE_SEO, SITE_ORIGIN, isRoutePattern, normalizePathname } from '@/lib/seo/routes';
 import { generatedContentPages } from '@/lib/seo/contentPages';
+import { blogCategoryHubPaths, blogPostPaths, listCommittedBlogPosts } from '@/lib/seo/blogPosts';
 
 /**
  * Absolute URLs for every page we want in the index: the hand-written rows
- * first, then everything generated from the workout and exercise data. Pattern
- * rows are skipped — `/exercises/:exerciseSlug` is not a URL.
+ * first, then everything generated from the workout and exercise data, then
+ * committed blog posts (and category hubs once a category has ≥3 posts).
+ * Pattern rows are skipped — `/exercises/:exerciseSlug` is not a URL.
  */
 export function indexableUrls(): string[] {
   const fixed = ROUTE_SEO.filter((route) => route.index && !isRoutePattern(route.path)).map(
     (route) => `${SITE_ORIGIN}${normalizePathname(route.path)}`
   );
   const generated = generatedContentPages().map((page) => `${SITE_ORIGIN}${page.path}`);
-  return [...fixed, ...generated];
+  const posts = listCommittedBlogPosts();
+  const blog = [...blogPostPaths(posts), ...blogCategoryHubPaths(posts)].map(
+    (path) => `${SITE_ORIGIN}${path}`
+  );
+  return [...fixed, ...generated, ...blog];
 }
 
 /**

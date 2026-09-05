@@ -2,6 +2,18 @@
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import path from 'node:path';
+import { loadEnv } from 'vite';
+
+const root = path.resolve(import.meta.dirname);
+const mode = process.env.NODE_ENV === 'production' ? 'production' : 'development';
+const env = loadEnv(mode, root, '');
+
+/** Astro's srcDir is site/, so Vite's default envDir misses the repo-root .env. */
+const viteEnvDefine = Object.fromEntries(
+  Object.entries(env)
+    .filter(([key]) => key.startsWith('VITE_'))
+    .map(([key, value]) => [`import.meta.env.${key}`, JSON.stringify(value)])
+);
 
 /**
  * The content layer. Astro owns the marketing and editorial pages; the React SPA
@@ -26,9 +38,11 @@ export default defineConfig({
     format: 'file',
   },
   vite: {
+    envDir: root,
+    define: viteEnvDefine,
     resolve: {
       alias: {
-        '@': path.resolve(import.meta.dirname, './src'),
+        '@': path.resolve(root, './src'),
       },
     },
   },

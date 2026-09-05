@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { ACTIVITY_COHORTS, cohortToActivityBucketParam } from './activityCohorts';
+import {
+  ACTIVITY_COHORTS,
+  cohortToActivityBucketParam,
+  isGuestHistoryCohort,
+} from './activityCohorts';
 
 describe('activityCohorts', () => {
   it('defines cohorts with Active Now and Anonymous Now before recency buckets', () => {
@@ -25,5 +29,15 @@ describe('activityCohorts', () => {
     expect(cohortToActivityBucketParam('all')).toBeNull();
     expect(cohortToActivityBucketParam('active_now')).toBeNull();
     expect(cohortToActivityBucketParam('anon_now')).toBeNull();
+  });
+
+  it('marks only the four recency tabs as guest history cohorts', () => {
+    expect(isGuestHistoryCohort('last_24h')).toBe(true);
+    expect(isGuestHistoryCohort('last_3d')).toBe(true);
+    expect(isGuestHistoryCohort('last_7d')).toBe(true);
+    expect(isGuestHistoryCohort('lapsed')).toBe(true);
+    expect(isGuestHistoryCohort('all')).toBe(false);
+    expect(isGuestHistoryCohort('active_now')).toBe(false);
+    expect(isGuestHistoryCohort('anon_now')).toBe(false);
   });
 });

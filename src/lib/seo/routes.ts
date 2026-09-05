@@ -52,7 +52,7 @@ export const CONTENT_ROUTES: RouteSeo[] = [
   },
   {
     path: '/amrap-workouts',
-    title: 'AMRAP Workouts — 150 Bodyweight Sessions, 5 to 20 Minutes',
+    title: 'AMRAP Workouts — 150 Bodyweight Workouts, 5 to 20 Minutes',
     description:
       'Browse 150 bodyweight AMRAP workouts by time (5–20 min) or training stimulus, with coaching cues and a shared live timer.',
     index: true,
@@ -69,6 +69,13 @@ export const CONTENT_ROUTES: RouteSeo[] = [
     title: 'AMRAP Guides — How the Format Actually Works',
     description:
       'Plain answers to what people actually ask about AMRAP training: what it means, how to score it, how to pace it, and how it differs from EMOM and Tabata.',
+    index: true,
+  },
+  {
+    path: '/blog',
+    title: 'AMRAP Blog — Training Notes from the Field',
+    description:
+      'Timely takes on programming, pacing, and training together — separate from the evergreen guides in the library.',
     index: true,
   },
   {
@@ -138,7 +145,7 @@ export const CONTENT_ROUTES: RouteSeo[] = [
     path: '/privacy',
     title: 'Privacy — AMRAP With Friends',
     description:
-      'How AMRAP With Friends handles accounts, workout data, and cookies — and how to request deletion of what we store.',
+      'How AMRAP With Friends handles accounts, workout data, and browser data — and how to request deletion of what we store.',
     index: true,
   },
   {
@@ -175,9 +182,11 @@ export const APP_ROUTES: RouteSeo[] = [
   { path: '/squad', title: 'Your squad', description: '', index: false },
   { path: '/my-missions', title: 'My missions', description: '', index: false },
   { path: '/intake', title: 'Your profile', description: '', index: false },
+  { path: '/reset-password', title: 'Reset password', description: '', index: false },
   { path: '/hud', title: 'HUD', description: '', index: false },
   { path: '/coach', title: 'Coach', description: '', index: false },
   { path: '/coach/wods', title: 'WOD Builder', description: '', index: false },
+  { path: '/coach/articles', title: 'Article Builder', description: '', index: false },
 ];
 
 /**
@@ -216,6 +225,19 @@ export const DYNAMIC_CONTENT_ROUTES: RouteSeo[] = [
   {
     path: '/amrap-workouts/:duration/:workoutSlug',
     title: 'AMRAP workout',
+    description: '',
+    index: true,
+  },
+  // Category hubs before `/blog/:slug`, or `/blog/category/x` would match as a post.
+  {
+    path: '/blog/category/:id',
+    title: 'Blog category',
+    description: '',
+    index: true,
+  },
+  {
+    path: '/blog/:slug',
+    title: 'Blog post',
     description: '',
     index: true,
   },

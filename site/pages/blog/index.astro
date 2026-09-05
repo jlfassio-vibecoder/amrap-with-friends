@@ -1,0 +1,79 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { breadcrumbList } from '@/lib/seo/structuredData';
+import { ARTICLE_CATEGORIES } from '@/lib/coach/articles/taxonomy';
+
+let posts: Awaited<ReturnType<typeof getCollection>> = [];
+try {
+  posts = await getCollection('blog');
+} catch {
+  posts = [];
+}
+posts = posts.sort(
+  (a, b) => new Date(b.data.publishedAt).getTime() - new Date(a.data.publishedAt).getTime()
+);
+
+const categoryLabel = (id: string): string =>
+  ARTICLE_CATEGORIES.find((c) => c.id === id)?.label ?? id;
+
+const jsonLd = [
+  breadcrumbList([
+    { name: 'Home', path: '/' },
+    { name: 'Blog', path: '/blog' },
+  ]),
+];
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) {
+    return iso;
+  }
+  return d.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+---
+
+<BaseLayout jsonLd={jsonLd}>
+  <div class="mx-auto w-full max-w-[46rem] space-y-12 px-6 py-12 lg:px-10 lg:py-16">
+    <header class="space-y-4">
+      <p class="eyebrow text-accent">Blog</p>
+      <h1 class="text-display text-[clamp(2.5rem,7vw,4rem)] leading-[0.9] text-ink">
+        Training notes from the field
+      </h1>
+      <p class="text-base leading-[1.7] text-secondary">
+        Timely takes on programming, pacing, and training together — separate from the evergreen
+        guides.
+      </p>
+      <p class="text-sm text-muted">
+        <a class="link-accent" href="/blog/rss.xml">RSS feed</a>
+      </p>
+    </header>
+
+    {
+      posts.length === 0 ? (
+        <p class="text-base leading-[1.7] text-secondary">
+          No posts yet. Check back after the next publish cycle.
+        </p>
+      ) : (
+        <ul class="space-y-4">
+          {posts.map((post) => (
+            <li class="card p-5">
+              <p class="text-xs uppercase tracking-wide text-muted">
+                {categoryLabel(post.data.category)}
+                <span aria-hidden="true"> · </span>
+                <time datetime={post.data.publishedAt}>{formatDate(post.data.publishedAt)}</time>
+              </p>
+              <a
+                class="text-display mt-2 block text-xl text-ink hover:text-accent"
+                href={`/blog/${post.data.slug}`}
+              >
+                {post.data.title}
+              </a>
+              <p class="mt-2 text-sm leading-[1.6] text-secondary">{post.data.description}</p>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </div>
+</BaseLayout>

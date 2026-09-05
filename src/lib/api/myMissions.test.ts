@@ -5,7 +5,9 @@ import {
   computeMyMissionBaseScore,
   deleteIncompleteMission,
   displayMyMissionScore,
+  formatMyMissionExerciseLine,
   formatMyMissionScoreDisplay,
+  formatMyMissionShareText,
   myMissionWorkoutTitle,
 } from './myMissions';
 import type { MyMissionEntry } from './myMissions';
@@ -121,6 +123,52 @@ describe('myMissions helpers', () => {
     });
 
     expect(formatMyMissionScoreDisplay(entry)).toBe('4 rounds');
+  });
+
+  it('formatMyMissionExerciseLine includes target and unit', () => {
+    expect(formatMyMissionExerciseLine({ name: 'T-Push-ups', target: 10, unit: 'reps' })).toBe(
+      'T-Push-ups — 10 reps'
+    );
+    expect(formatMyMissionExerciseLine({ name: 'Burpees' })).toBe('Burpees');
+  });
+
+  it('formatMyMissionShareText includes title, movements, and meta', () => {
+    const entry = baseEntry({
+      coachWorkoutName: 'Tension Grid',
+      createdAt: '2026-08-31T18:00:00.000Z',
+      durationMinutes: 10,
+      state: 'finished',
+      finalScore: 424,
+      workout: [
+        { name: 'T-Push-ups', target: 10, unit: 'reps' },
+        { name: 'Strict Sit-ups', target: 12, unit: 'reps' },
+        { name: 'High Knees', target: 20, unit: 'reps' },
+      ],
+    });
+
+    const text = formatMyMissionShareText(entry);
+    expect(text).toContain('Tension Grid');
+    expect(text).toContain('T-Push-ups — 10 reps');
+    expect(text).toContain('Strict Sit-ups — 12 reps');
+    expect(text).toContain('High Knees — 20 reps');
+    expect(text).toContain('10 min · 424 reps · finished');
+    expect(text.indexOf('Tension Grid')).toBeLessThan(text.indexOf('T-Push-ups'));
+    expect(text.indexOf('High Knees')).toBeLessThan(text.indexOf('10 min'));
+  });
+
+  it('formatMyMissionShareText omits movements when workout is empty', () => {
+    const entry = baseEntry({
+      coachWorkoutName: 'Empty Grid',
+      workout: [],
+      durationMinutes: 5,
+      state: 'waiting',
+    });
+
+    const text = formatMyMissionShareText(entry);
+    expect(text).toContain('Empty Grid');
+    expect(text).not.toContain('—');
+    expect(text).toContain('5 min · 0 rounds · waiting');
+    expect(text.split('\n\n')).toHaveLength(2);
   });
 
   it('canDeleteMyMission is true for host without score breakdown', () => {

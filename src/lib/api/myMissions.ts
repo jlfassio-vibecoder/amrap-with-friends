@@ -86,6 +86,33 @@ export function formatMyMissionScoreDisplay(entry: MyMissionEntry): string {
   return `${computeMyMissionBaseScore(entry)} reps`;
 }
 
+export function formatMyMissionExerciseLine(exercise: WorkoutExercise): string {
+  if (exercise.target === undefined) {
+    return exercise.name;
+  }
+  return `${exercise.name} — ${exercise.target}${exercise.unit ? ` ${exercise.unit}` : ''}`;
+}
+
+/** Plain-text card summary for Web Share / clipboard (title, movements, meta). */
+export function formatMyMissionShareText(entry: MyMissionEntry): string {
+  const title = myMissionWorkoutTitle(entry);
+  const when = entry.scheduledAt ?? entry.createdAt;
+  const meta = [
+    new Date(when).toLocaleString(),
+    `${entry.durationMinutes} min`,
+    formatMyMissionScoreDisplay(entry),
+    entry.state,
+    ...(entry.isFeatured ? ['Featured'] : []),
+  ].join(' · ');
+
+  if (entry.workout.length === 0) {
+    return `${title}\n\n${meta}`;
+  }
+
+  const movements = entry.workout.map(formatMyMissionExerciseLine).join('\n');
+  return `${title}\n\n${movements}\n\n${meta}`;
+}
+
 export function canDeleteMyMission(entry: MyMissionEntry): boolean {
   return entry.role === 'host' && entry.scoreBreakdown === null;
 }

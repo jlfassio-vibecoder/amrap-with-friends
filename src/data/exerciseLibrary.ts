@@ -1,3 +1,6 @@
+import { EXERCISE_PATTERN_TAGS } from '@/lib/smartRecovery/exercisePatternTags';
+import type { MovementPattern } from '@/lib/smartRecovery/movementPatterns';
+
 export interface ExercisePhoto {
   /**
    * Relative path in the `exercise-media` Storage bucket.
@@ -12,6 +15,8 @@ export interface ExercisePhoto {
 }
 
 export interface ExerciseInfo {
+  /** Primary movement patterns this exercise loads. At least one required. */
+  primaryPatterns: MovementPattern[];
   id: string;
   name: string;
   setupAndExecution: string[];
@@ -52,8 +57,16 @@ export function getExerciseInfo(name: string): ExerciseInfo | undefined {
   return undefined;
 }
 
+function libEntry(entry: Omit<ExerciseInfo, 'primaryPatterns'>): ExerciseInfo {
+  const primaryPatterns = EXERCISE_PATTERN_TAGS[entry.id];
+  if (!primaryPatterns?.length) {
+    throw new Error(`Missing primaryPatterns for exercise id "${entry.id}"`);
+  }
+  return { ...entry, primaryPatterns };
+}
+
 export const EXERCISE_LIBRARY: ExerciseInfo[] = [
-  {
+  libEntry({
     id: 'burpees',
     name: 'Burpees',
     setupAndExecution: [
@@ -68,8 +81,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Find a breathing cadence. Exhale on the drop, inhale on the floor, exhale on the jump. If you hold your breath on burpees, you will redline in 45 seconds.',
     photos: sequencePhotos('burpees'),
-  },
-  {
+  }),
+  libEntry({
     id: 'air-squat',
     name: 'Air Squats',
     setupAndExecution: [
@@ -85,8 +98,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Let gravity do the work on the way down. Pull yourself into the bottom quickly, then explode up. Use your arms for rhythm.',
     photos: sequencePhotos('air-squat', 'Full squat sequence — stand, descent, ascent'),
-  },
-  {
+  }),
+  libEntry({
     id: 'alternating-lunges',
     name: 'Alternating Lunges',
     setupAndExecution: [
@@ -102,8 +115,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Reverse lunges are superior for AMRAPs. They protect the deceleration forces on the knee and allow for a faster, springier return to the standing position.',
     photos: sequencePhotos('alternating-lunges'),
-  },
-  {
+  }),
+  libEntry({
     id: 'surrenders',
     name: 'Surrenders',
     setupAndExecution: [
@@ -119,8 +132,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       "Alternate your lead leg every round, not every rep, so you don't have to waste mental energy remembering which leg goes first.",
     photos: sequencePhotos('surrenders'),
-  },
-  {
+  }),
+  libEntry({
     id: 'glute-bridges',
     name: 'Glute Bridges',
     setupAndExecution: [
@@ -135,8 +148,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Keep your toes slightly elevated off the floor to force the drive exclusively through your heels and hamstrings.',
     photos: sequencePhotos('glute-bridges'),
-  },
-  {
+  }),
+  libEntry({
     id: 'standard-push-ups',
     name: 'Standard Push-ups',
     setupAndExecution: [
@@ -152,8 +165,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Breathe in on the descent, aggressively exhale on the press. Do not hold your breath, or your heart rate will redline instantly.',
     photos: sequencePhotos('standard-push-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'wide-grip-push-ups',
     name: 'Wide-Grip Push-ups',
     setupAndExecution: [
@@ -168,8 +181,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Breathe in on the descent, aggressively exhale on the press. Do not hold your breath, or your heart rate will redline instantly.',
     photos: sequencePhotos('wide-grip-push-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'hand-release-push-ups',
     name: 'Hand-Release Push-ups',
     setupAndExecution: [
@@ -184,8 +197,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'This enforces a dead-stop and prevents cheating the depth. Use this variation to humble users who claim they can do 50 push-ups unbroken.',
     photos: sequencePhotos('hand-release-push-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'diamond-push-ups',
     name: 'Diamond Push-ups',
     setupAndExecution: [
@@ -200,8 +213,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Muscular failure happens suddenly here. Break your sets earlier than you think you need to.',
     photos: sequencePhotos('diamond-push-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'pike-push-ups',
     name: 'Pike Push-ups',
     setupAndExecution: [
@@ -216,8 +229,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Keep your legs straight. If your hamstrings are tight, widen your foot stance to maintain the high hip position.',
     photos: sequencePhotos('pike-push-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'dive-bomber-push-ups',
     name: 'Dive-Bomber Push-ups',
     setupAndExecution: [
@@ -231,8 +244,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'This is a slow, tension-heavy movement. Focus on continuous, unbroken motion rather than speed.',
     photos: sequencePhotos('dive-bomber-push-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 't-push-ups',
     name: 'T-Push-ups',
     setupAndExecution: [
@@ -248,8 +261,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Widen your foot stance slightly to provide a more stable base during the rotational phase.',
     photos: sequencePhotos('t-push-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'plank-shoulder-taps',
     name: 'Plank Shoulder Taps',
     setupAndExecution: [
@@ -264,8 +277,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Widen your feet. A wider base of support kills the rotation in the hips, making the core work harder but the movement faster.',
     photos: sequencePhotos('plank-shoulder-taps'),
-  },
-  {
+  }),
+  libEntry({
     id: 'commando-planks',
     name: 'Commando Planks',
     setupAndExecution: [
@@ -280,8 +293,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Widen your feet. A wider base of support kills the rotation in the hips, making the core work harder but the movement faster.',
     photos: sequencePhotos('commando-planks'),
-  },
-  {
+  }),
+  libEntry({
     id: 'plank-jacks',
     name: 'Plank Jacks',
     setupAndExecution: [
@@ -295,8 +308,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Keep the jumps small and fast. A massive lateral jump slows down the transition and compromises the spine.',
     photos: sequencePhotos('plank-jacks'),
-  },
-  {
+  }),
+  libEntry({
     id: 'jump-squats',
     name: 'Jump Squats',
     setupAndExecution: [
@@ -311,8 +324,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       "You only need an inch of air to make it plyometric. Don't waste energy jumping for the ceiling.",
     photos: sequencePhotos('jump-squats'),
-  },
-  {
+  }),
+  libEntry({
     id: 'jumping-lunges',
     name: 'Jumping Lunges',
     setupAndExecution: [
@@ -328,8 +341,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Use your arms as a counterweight. Pumping the opposite arm forward provides stability and upward momentum.',
     photos: sequencePhotos('jumping-lunges'),
-  },
-  {
+  }),
+  libEntry({
     id: 'skater-jumps',
     name: 'Skater Jumps',
     setupAndExecution: [
@@ -344,8 +357,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Keep the chest up. Looking down at the floor rounds the back and cuts off your airway.',
     photos: sequencePhotos('skater-jumps'),
-  },
-  {
+  }),
+  libEntry({
     id: 'tuck-jumps',
     name: 'Tuck Jumps',
     setupAndExecution: [
@@ -360,8 +373,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'This is incredibly demanding neurologically. Do these in small, unbroken bursts (e.g., 5 reps) and take a two-second reset.',
     photos: sequencePhotos('tuck-jumps'),
-  },
-  {
+  }),
+  libEntry({
     id: 'broad-jumps',
     name: 'Broad Jumps',
     setupAndExecution: [
@@ -377,8 +390,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'For an AMRAP, do not aim for maximum distance on every jump. Aim for a consistent, sustainable 4-5 foot bound that allows for rapid turnarounds.',
     photos: sequencePhotos('broad-jumps'),
-  },
-  {
+  }),
+  libEntry({
     id: 'bottom-squat-hold',
     name: 'Bottom Squat Hold',
     setupAndExecution: [
@@ -394,8 +407,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Lactic acid floods the legs rapidly here. Breathe deep into your diaphragm to delay the panic reflex.',
     photos: sequencePhotos('bottom-squat-hold'),
-  },
-  {
+  }),
+  libEntry({
     id: 'sphinx-push-ups',
     name: 'Sphinx Push-ups',
     setupAndExecution: [
@@ -410,8 +423,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Keep your elbows tucked tight to your ribs to maximize triceps recruitment and protect the shoulder joint.',
     photos: sequencePhotos('sphinx-push-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'floor-dips',
     name: 'Floor Dips',
     setupAndExecution: [
@@ -426,8 +439,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Keep your hips planted close to your wrists to prevent shifting the workload away from the arms.',
     photos: sequencePhotos('floor-dips'),
-  },
-  {
+  }),
+  libEntry({
     id: 'hollow-hold',
     name: 'Hollow Hold',
     setupAndExecution: [
@@ -442,8 +455,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Fatigue causes the back to arch. Regress the movement immediately by tucking your knees toward your chest when this happens.',
     photos: sequencePhotos('hollow-hold'),
-  },
-  {
+  }),
+  libEntry({
     id: 'reverse-lunges',
     name: 'Reverse Lunges',
     setupAndExecution: [
@@ -458,8 +471,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Keep your torso completely upright. Leaning forward shifts the load to the lower back and robs the quads of the intended tension.',
     photos: sequencePhotos('reverse-lunges'),
-  },
-  {
+  }),
+  libEntry({
     id: 'single-leg-glute-bridges',
     name: 'Single-Leg Glute Bridges',
     setupAndExecution: [
@@ -474,8 +487,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Keep both thighs parallel to each other throughout the entire movement. Do not let the extended leg drift up or drop down.',
     photos: sequencePhotos('single-leg-glute-bridges'),
-  },
-  {
+  }),
+  libEntry({
     id: 'standard-glute-bridges',
     name: 'Standard Glute Bridges',
     setupAndExecution: [
@@ -490,8 +503,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'If you begin to feel a deep ache in your lower back, your abdominals have turned off. Brace your core tightly before initiating the bridge.',
     photos: sequencePhotos('standard-glute-bridges'),
-  },
-  {
+  }),
+  libEntry({
     id: 'wide-push-ups',
     name: 'Wide Push-ups',
     setupAndExecution: [
@@ -506,8 +519,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'This angle completely isolates the chest and removes the triceps from the equation. When pectoral failure hits, it hits instantly. Break your sets into 3s or 4s before the muscle completely shuts down.',
     photos: sequencePhotos('wide-push-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'side-plank-dips',
     name: 'Side Plank Dips',
     setupAndExecution: [
@@ -521,8 +534,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Do not let the top shoulder roll forward toward the floor. Keep the chest completely open to keep the tension locked entirely on the obliques.',
     photos: sequencePhotos('side-plank-dips'),
-  },
-  {
+  }),
+  libEntry({
     id: 'pogo-jumps',
     name: 'Pogo Jumps',
     setupAndExecution: [
@@ -536,8 +549,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Minimize ground contact time. The heels should never touch the floor. The moment the ball of the foot strikes the mat, rebound instantly.',
     photos: sequencePhotos('pogo-jumps'),
-  },
-  {
+  }),
+  libEntry({
     id: 'fast-calf-raises',
     name: 'Fast Calf Raises',
     setupAndExecution: [
@@ -553,8 +566,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'As the calves fill with lactic acid, your body will naturally try to shorten the range of motion. Fight for maximum height on the 20th rep just like you did on the 1st rep.',
     photos: sequencePhotos('fast-calf-raises'),
-  },
-  {
+  }),
+  libEntry({
     id: 'sprawls',
     name: 'Sprawls',
     setupAndExecution: [
@@ -569,8 +582,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Keep a wide stance. Landing with your feet outside your hands reduces the distance your hips have to travel and speeds up the transition to standing.',
     photos: sequencePhotos('sprawls'),
-  },
-  {
+  }),
+  libEntry({
     id: 'combat-sprawls',
     name: 'Combat Sprawls',
     setupAndExecution: [
@@ -585,8 +598,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'You must land with your entire foot completely flat on the mat when returning from the plank. Landing on your toes in this wide stance places severe shearing force on the knee capsule and kills your ability to rebound.',
     photos: sequencePhotos('combat-sprawls'),
-  },
-  {
+  }),
+  libEntry({
     id: 'down-ups',
     name: 'Down-Ups',
     setupAndExecution: [
@@ -601,8 +614,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'This movement is all about hip-hinge efficiency. Minimize the time spent with your hands on the floor.',
     photos: sequencePhotos('down-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'half-burpees',
     name: 'Half-Burpees',
     setupAndExecution: [
@@ -617,8 +630,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Your quads will burn intensely. Keep your weight shifted slightly forward over your shoulders to give your legs a mechanical advantage.',
     photos: sequencePhotos('half-burpees'),
-  },
-  {
+  }),
+  libEntry({
     id: 'mountain-climbers',
     name: 'Mountain Climbers',
     setupAndExecution: [
@@ -633,8 +646,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Keep your shoulders stacked directly over your wrists. If you drift backward, you lose leverage and the movement slows down completely.',
     photos: sequencePhotos('mountain-climbers'),
-  },
-  {
+  }),
+  libEntry({
     id: 'cross-body-mountain-climbers',
     name: 'Cross-Body Mountain Climbers',
     setupAndExecution: [
@@ -649,8 +662,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Because of the rotation, these are slightly slower than standard mountain climbers. Focus on the hard muscular contraction rather than pure foot speed.',
     photos: sequencePhotos('cross-body-mountain-climbers'),
-  },
-  {
+  }),
+  libEntry({
     id: 'high-knees',
     name: 'High Knees',
     setupAndExecution: [
@@ -665,8 +678,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Land lightly on the balls of your feet. If you are stomping flat-footed, you are destroying your momentum and your knees.',
     photos: sequencePhotos('high-knees'),
-  },
-  {
+  }),
+  libEntry({
     id: 'butt-kicks',
     name: 'Butt Kicks',
     setupAndExecution: [
@@ -680,8 +693,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Lean slightly forward from the ankles (not the waist) to maintain an aggressive, forward-driving posture even while stationary.',
     photos: sequencePhotos('butt-kicks'),
-  },
-  {
+  }),
+  libEntry({
     id: 'jumping-jacks',
     name: 'Jumping Jacks',
     setupAndExecution: [
@@ -696,8 +709,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Use this movement for active recovery. When paired with burpees or mountain climbers, the jumping jack is your opportunity to catch your breath.',
     photos: sequencePhotos('jumping-jacks'),
-  },
-  {
+  }),
+  libEntry({
     id: 'lateral-line-hops',
     name: 'Lateral Line Hops',
     setupAndExecution: [
@@ -712,8 +725,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Keep your eyes up. Looking down at the line naturally rounds the shoulders and constricts the airway.',
     photos: sequencePhotos('lateral-line-hops'),
-  },
-  {
+  }),
+  libEntry({
     id: 'double-tap-jumps',
     name: 'Double-Tap Jumps',
     setupAndExecution: [
@@ -728,8 +741,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'This perfectly simulates the neurological timing of a double-under with a jump rope. Keep the torso completely hollow and rigid in the air.',
     photos: sequencePhotos('double-tap-jumps'),
-  },
-  {
+  }),
+  libEntry({
     id: 'v-ups',
     name: 'V-Ups',
     setupAndExecution: [
@@ -742,8 +755,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     coachingCue: '"Fold like a steel trapdoor."',
     amrapTip: 'If you bend your knees to reach your toes, you are cheating the lower abdominals.',
     photos: sequencePhotos('v-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'strict-sit-ups',
     name: 'Strict Sit-Ups',
     setupAndExecution: [
@@ -757,8 +770,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Do not throw your arms forward to generate momentum; force the core to pull the weight.',
     photos: sequencePhotos('strict-sit-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'leg-raises',
     name: 'Leg Raises',
     setupAndExecution: [
@@ -771,8 +784,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     coachingCue: '"Pin the ribcage to the floor."',
     amrapTip: 'Stop lowering your legs the exact millisecond your lower back arches off the mat.',
     photos: sequencePhotos('leg-raises'),
-  },
-  {
+  }),
+  libEntry({
     id: 'russian-twists',
     name: 'Russian Twists',
     setupAndExecution: [
@@ -786,8 +799,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Cross your ankles to lock the lower body and isolate the rotation to the thoracic spine.',
     photos: sequencePhotos('russian-twists'),
-  },
-  {
+  }),
+  libEntry({
     id: 'bicycle-crunches',
     name: 'Bicycle Crunches',
     setupAndExecution: [
@@ -800,8 +813,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     coachingCue: '"Rotate from the sternum, not by pulling the neck."',
     amrapTip: 'Keep elbows pinned wide; pulling on the back of your head is a fake rep.',
     photos: sequencePhotos('bicycle-crunches'),
-  },
-  {
+  }),
+  libEntry({
     id: 'plank-knee-to-elbows',
     name: 'Plank Knee-to-Elbows',
     setupAndExecution: [
@@ -814,8 +827,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     coachingCue: '"Crunch the obliques sideways."',
     amrapTip: 'Keep hips completely level to avoid shifting the workload to the hip flexors.',
     photos: sequencePhotos('plank-knee-to-elbows'),
-  },
-  {
+  }),
+  libEntry({
     id: 'dead-bugs',
     name: 'Dead Bugs',
     setupAndExecution: [
@@ -828,8 +841,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     coachingCue: '"Crush a grape under your lumbar spine."',
     amrapTip: 'Speed is your enemy here. Move deliberately to maximize time under tension.',
     photos: sequencePhotos('dead-bugs'),
-  },
-  {
+  }),
+  libEntry({
     id: 'flutter-kicks',
     name: 'Flutter Kicks',
     setupAndExecution: ['Supine, legs six inches off the floor, rapidly kicking up and down.'],
@@ -841,8 +854,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Tuck your chin firmly to your chest to lock down the upper abdominals and protect the neck.',
     photos: sequencePhotos('flutter-kicks'),
-  },
-  {
+  }),
+  libEntry({
     id: 'superman-raises',
     name: 'Superman Raises',
     setupAndExecution: [
@@ -856,8 +869,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Aggressively squeeze the glutes before lifting the chest to protect the lower back from hyperextension.',
     photos: sequencePhotos('superman-raises'),
-  },
-  {
+  }),
+  libEntry({
     id: 'alternating-bird-dogs',
     name: 'Alternating Bird-Dogs',
     setupAndExecution: [
@@ -872,8 +885,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Reach long, not high. Hyperextending the back to get your leg higher defeats the core stabilization purpose entirely.',
     photos: sequencePhotos('alternating-bird-dogs'),
-  },
-  {
+  }),
+  libEntry({
     id: 'bear-crawl-hover',
     name: 'Bear Crawl Hover',
     setupAndExecution: [
@@ -887,8 +900,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'As your quads burn, your hips will naturally try to pike up toward the ceiling to relieve the tension. Pin them down.',
     photos: sequencePhotos('bear-crawl-hover'),
-  },
-  {
+  }),
+  libEntry({
     id: 'high-plank-hold',
     name: 'High Plank Hold',
     setupAndExecution: [
@@ -903,8 +916,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Squeeze your glutes. A plank is not just a shoulder exercise; it is a full-body isometric lock.',
     photos: sequencePhotos('high-plank-hold'),
-  },
-  {
+  }),
+  libEntry({
     id: 'hollow-rocks',
     name: 'Hollow Rocks',
     setupAndExecution: [
@@ -918,8 +931,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'The rocking motion should be miniature. If your lower back peels off the floor, you are using momentum, not your core.',
     photos: sequencePhotos('hollow-rocks'),
-  },
-  {
+  }),
+  libEntry({
     id: 'plank-hold',
     name: 'Plank Hold',
     setupAndExecution: [
@@ -934,8 +947,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Keep your forearms parallel. Do not interlock your fingers, which internally rotates the shoulders and compromises the posture.',
     photos: sequencePhotos('plank-hold'),
-  },
-  {
+  }),
+  libEntry({
     id: 'plank-reaches',
     name: 'Plank Reaches',
     setupAndExecution: [
@@ -949,8 +962,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Widen your feet slightly wider than shoulder-width to create a tripod base before you lift a hand.',
     photos: sequencePhotos('plank-reaches'),
-  },
-  {
+  }),
+  libEntry({
     id: 'side-plank-hold',
     name: 'Side Plank Hold',
     setupAndExecution: [
@@ -963,8 +976,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     coachingCue: '"Imagine a steel cable pulling your top hip directly into the ceiling."',
     amrapTip: 'Squeeze the bottom glute aggressively to prevent the hips from hinging backward.',
     photos: sequencePhotos('side-plank-hold'),
-  },
-  {
+  }),
+  libEntry({
     id: 'v-sit-hold',
     name: 'V-Sit Hold',
     setupAndExecution: [
@@ -978,8 +991,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'If your lower back rounds, the hold is broken. Pull your knees slightly toward your chest to reset the flat spine.',
     photos: sequencePhotos('v-sit-hold'),
-  },
-  {
+  }),
+  libEntry({
     id: 'butterfly-sit-ups',
     name: 'Butterfly Sit-ups',
     setupAndExecution: [
@@ -993,8 +1006,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'The butterfly leg position mechanically disables the hip flexors, forcing pure abdominal contraction. Do not use your arms to swing forward.',
     photos: sequencePhotos('butterfly-sit-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'cross-body-climbers',
     name: 'Cross-Body Climbers',
     setupAndExecution: [
@@ -1007,8 +1020,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     coachingCue: '"Wring out the towel." Force a deep rotational twist in the torso on every rep.',
     amrapTip: 'Focus on the hard muscular contraction and the twist rather than pure foot speed.',
     photos: sequencePhotos('cross-body-climbers'),
-  },
-  {
+  }),
+  libEntry({
     id: 'bodyweight-good-mornings',
     name: 'Bodyweight Good Mornings',
     setupAndExecution: [
@@ -1023,8 +1036,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'The moment your lower back starts to round, you have gone too deep. The stretch must be felt entirely in the hamstrings.',
     photos: sequencePhotos('bodyweight-good-mornings'),
-  },
-  {
+  }),
+  libEntry({
     id: 'glute-bridge-hold',
     name: 'Glute Bridge Hold',
     setupAndExecution: [
@@ -1038,8 +1051,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Drive through your heels, not your toes. Pressing through the toes shifts the load to the quads.',
     photos: sequencePhotos('glute-bridge-hold'),
-  },
-  {
+  }),
+  libEntry({
     id: 'glute-bridge-walkouts',
     name: 'Glute Bridge Walkouts',
     setupAndExecution: [
@@ -1053,8 +1066,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'If you rush this, your hamstrings will instantly cramp. Move in slow, deliberate micro-steps.',
     photos: sequencePhotos('glute-bridge-walkouts'),
-  },
-  {
+  }),
+  libEntry({
     id: 'reverse-snow-angels',
     name: 'Reverse Snow Angels',
     setupAndExecution: [
@@ -1068,8 +1081,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Do not let your hands rest on the floor during the sweep. Keep constant tension on the upper back and rear deltoids.',
     photos: sequencePhotos('reverse-snow-angels'),
-  },
-  {
+  }),
+  libEntry({
     id: 'superman-hold',
     name: 'Superman Hold',
     setupAndExecution: [
@@ -1083,8 +1096,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Aggressively squeeze the glutes before you lift the chest to protect the lower back from absorbing all the force.',
     photos: sequencePhotos('superman-hold'),
-  },
-  {
+  }),
+  libEntry({
     id: 'superman-pull-downs',
     name: 'Superman Pull-downs',
     setupAndExecution: [
@@ -1098,8 +1111,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'You must create artificial tension. If you just wave your arms in the air, you are wasting your time.',
     photos: sequencePhotos('superman-pull-downs'),
-  },
-  {
+  }),
+  libEntry({
     id: 'supermans',
     name: 'Supermans',
     setupAndExecution: [
@@ -1113,8 +1126,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'The pause at the top of every rep is mandatory to ensure muscular contraction, not momentum.',
     photos: sequencePhotos('supermans'),
-  },
-  {
+  }),
+  libEntry({
     id: 'bear-crawl-to-broad-jumps',
     name: 'Bear Crawl to Broad Jumps',
     setupAndExecution: [
@@ -1128,8 +1141,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Use the momentum of standing up from the crawl to instantly launch into the broad jump. Do not stutter-step.',
     photos: sequencePhotos('bear-crawl-to-broad-jumps'),
-  },
-  {
+  }),
+  libEntry({
     id: 'fast-air-squats',
     name: 'Fast Air Squats',
     setupAndExecution: [
@@ -1143,8 +1156,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Speed often ruins depth. The moment your squats become "half-squats," your round time is invalid.',
     photos: sequencePhotos('fast-air-squats'),
-  },
-  {
+  }),
+  libEntry({
     id: 'push-ups',
     name: 'Push-ups',
     setupAndExecution: [
@@ -1157,8 +1170,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     coachingCue: '"Your body is a single sheet of steel."',
     amrapTip: 'Do not let your hips sag to touch the floor before your chest does.',
     photos: sequencePhotos('push-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'strict-reverse-lunges',
     name: 'Strict Reverse Lunges',
     setupAndExecution: [
@@ -1172,8 +1185,8 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Do not push off the back toe to stand up. Pull yourself up by driving through the heel of the front foot.',
     photos: sequencePhotos('strict-reverse-lunges'),
-  },
-  {
+  }),
+  libEntry({
     id: 'walking-lunges',
     name: 'Walking Lunges',
     setupAndExecution: [
@@ -1187,7 +1200,7 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Keep your torso vertical. If you lean forward over your front knee as you walk, you are putting massive shear force on the patella.',
     photos: sequencePhotos('walking-lunges'),
-  },
+  }),
 ];
 
 // Force a full reload when this data module changes — partial HMR can leave

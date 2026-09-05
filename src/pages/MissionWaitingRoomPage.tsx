@@ -45,10 +45,17 @@ import { useStaleRallyPointHostClaim } from '@/hooks/useStaleRallyPointHostClaim
 import { useRallyPointChannel } from '@/lib/realtime/useRallyPointChannel';
 import {
   announceNextMission,
+  getRallyPoint,
+  isLiveRallyPointMissionState,
+  joinRallyPoint,
   passRallyPointCommand,
   touchRallyPointPresence,
 } from '@/lib/api/rallyPoint';
 import { canPassRallyPointCommand } from '@/lib/rallyPoint/canPassRallyPointCommand';
+import { shouldHandleLogRoundHotkey } from '@/lib/mission/logRoundHotkey';
+import { shouldShowMissionReset } from '@/lib/mission/shouldShowMissionReset';
+import { shouldSubscribeRallyPointOnMission } from '@/lib/rallyPoint/shouldSubscribeRallyPointOnMission';
+import { shouldUseMissionRealtimeTables } from '@/lib/realtime/shouldUseMissionRealtimeTables';
 import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
 import {
   getStoredRallyPointIdForMission,
@@ -413,10 +420,14 @@ function LiveMissionView({
   const [passError, setPassError] = useState<string | null>(null);
   const [forceNavError, setForceNavError] = useState<string | null>(null);
   const [daisyExitError, setDaisyExitError] = useState<string | null>(null);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [hostRestartedDeadEnd, setHostRestartedDeadEnd] = useState(false);
   const [isSubmittingPartialReps, setIsSubmittingPartialReps] = useState(false);
   const [scorecardDismissed, setScorecardDismissed] = useState(false);
   const [missionLoadingDismissed, setMissionLoadingDismissed] = useState(false);
   const [authOpenForSave, setAuthOpenForSave] = useState(false);
+  const [chatExpanded, setChatExpanded] = useState(false);
   const pendingSaveAfterAuth = useRef(false);
   const [ghostSelection, setGhostSelection] = useState<StoredGhostSelection | null>(() =>
     getStoredGhostSelection(missionId)
@@ -431,7 +442,18 @@ function LiveMissionView({
     confirmSafetyNotice,
   } = useMissionSafetyNotices(missionId);
 
-  const channel = useMissionChannel(missionId, { participantId, nickname });
+  const useRealtimeTables = shouldUseMissionRealtimeTables({
+    isAuthenticated,
+    hasClaimToken: Boolean(claimToken),
+  });
+
+  const channel = useMissionChannel(
+    missionId,
+    { participantId, nickname },
+    {
+      realtimeTables: useRealtimeTables,
+    }
+  );
   const live = useLiveAmrapMission(missionId, channel);
   const { isHost, start: startMission, phase: livePhase } = live;
 
@@ -452,11 +474,9 @@ function LiveMissionView({
       ? { memberId: rallyPointMemberId, nickname: rallyPointNickname }
       : null;
   const rallyPointChannel = useRallyPointChannel(
-    rallyPointId && (livePhase === 'waiting' || livePhase === 'setup' || livePhase === 'finished')
-      ? rallyPointId
-      : undefined,
+    rallyPointId && shouldSubscribeRallyPointOnMission(livePhase) ? rallyPointId : undefined,
     rallyPointChannelPresence,
-    { realtimeTables: isAuthenticated }
+    { realtimeTables: useRealtimeTables }
   );
 
   useRallyPointHostHandoff({
@@ -626,9 +646,37 @@ function LiveMissionView({
         ) : null}
       </div>
     ) : null;
-  const showPause = livePhase === 'work' && !live.isPaused && (isHost || live.isPractice);
-  const showResume = livePhase === 'work' && live.isPaused && (isHost || live.isPractice);
+  const showReset = shouldShowMissionReset({
+    isPractice: live.isPractice,
+    isHost,
+    isFeatured: channel.mission?.is_featured === true,
+    phase: livePhase,
+  });
   const showLogRound = livePhase === 'work' && !live.isPaused;
+
+  function handleLogRound() {
+    playRoundLogged();
+    void live.logRound();
+  }
+
+  const handleLogRoundRef = useRef(handleLogRound);
+  handleLogRoundRef.current = handleLogRound;
+
+  useEffect(() => {
+    if (!showLogRound) {
+      return;
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (!shouldHandleLogRoundHotkey(event)) {
+        return;
+      }
+      event.preventDefault();
+      handleLogRoundRef.current();
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showLogRound]);
+
   const showEndPractice = live.isPractice && livePhase === 'finished';
   const showPartialRepsModal =
     !live.isPractice &&
@@ -653,10 +701,109 @@ function LiveMissionView({
     activeMissionId: rallyPointChannel.rallyPoint?.activeMissionId,
     activeMissionState: rallyPointChannel.rallyPoint?.activeMissionState,
     currentMissionId: missionId,
-    // Hold straggler pull until AAR is dismissed — Daisy-chain / Close are the exits.
-    enabled: livePhase === 'finished' && !showPartialRepsModal && !showScorecard,
+    // Pull stragglers after AAR, and pull joiners when the host resets to a new rematch.
+    enabled:
+      Boolean(rallyPointId) &&
+      ((livePhase === 'finished' && !showPartialRepsModal && !showScorecard) ||
+        ((livePhase === 'waiting' || livePhase === 'setup' || livePhase === 'work') &&
+          Boolean(rallyPointChannel.rallyPoint?.activeMissionId) &&
+          rallyPointChannel.rallyPoint?.activeMissionId !== missionId)),
     onError: setForceNavError,
   });
+
+  useEffect(() => {
+    if (isHost || live.isPractice || channel.mission || !channel.error) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      const storedRallyPointId = getStoredRallyPointIdForMission(missionId);
+      if (!storedRallyPointId) {
+        if (!cancelled) {
+          setHostRestartedDeadEnd(true);
+        }
+        return;
+      }
+
+      const snapshot = await getRallyPoint(storedRallyPointId);
+      if (cancelled) {
+        return;
+      }
+      if (snapshot.error || !snapshot.data) {
+        setHostRestartedDeadEnd(true);
+        return;
+      }
+
+      const nextId = snapshot.data.activeMissionId;
+      const nextState = snapshot.data.activeMissionState;
+      if (!nextId || nextId === missionId || !isLiveRallyPointMissionState(nextState)) {
+        setHostRestartedDeadEnd(true);
+        return;
+      }
+
+      const joined = await joinRallyPoint({
+        rallyPointId: storedRallyPointId,
+        nickname:
+          getStoredRallyPointNickname(storedRallyPointId) ??
+          getStoredNickname(missionId) ??
+          nickname,
+      });
+      if (cancelled) {
+        return;
+      }
+      if (joined.error) {
+        setHostRestartedDeadEnd(true);
+        setForceNavError(joined.error.message);
+        return;
+      }
+
+      if (joined.data?.missionId) {
+        setStoredRallyPointIdForMission(joined.data.missionId, storedRallyPointId);
+        navigate(`/mission/${joined.data.missionId}`, { replace: true });
+        return;
+      }
+
+      setHostRestartedDeadEnd(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isHost, live.isPractice, channel.mission, channel.error, missionId, nickname, navigate]);
+
+  async function handleResetMission() {
+    if (resetBusy) {
+      return;
+    }
+    if (!live.isPractice) {
+      const confirmed = window.confirm('You are ending this mission and restarting the mission');
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    setResetBusy(true);
+    setResetError(null);
+    try {
+      const result = await live.resetMission();
+      if (result.error) {
+        setResetError(result.error);
+        return;
+      }
+      if (result.missionId) {
+        const rp =
+          getStoredRallyPointIdForMission(missionId) ?? channel.mission?.rally_point_id ?? null;
+        if (rp) {
+          setStoredRallyPointIdForMission(result.missionId, rp);
+        }
+        navigate(`/mission/${result.missionId}`, { replace: true });
+      }
+    } finally {
+      setResetBusy(false);
+    }
+  }
 
   async function handlePassCommand(toUserId: string) {
     if (!rallyPointId) {
@@ -799,6 +946,26 @@ function LiveMissionView({
       ? 'You are the host.'
       : 'Waiting on host for mission control.';
 
+  if (hostRestartedDeadEnd) {
+    return (
+      <main className="mx-auto max-w-lg space-y-4 p-6">
+        <AppHeader title="Rally point" />
+        <p className="text-error">
+          The host restarted this mission. Ask them for a new invite link.
+        </p>
+        {forceNavError ? <p className="text-error text-sm">{forceNavError}</p> : null}
+        <div className="flex flex-wrap gap-4 text-sm">
+          <Link className="link-accent" to="/join">
+            Join mission
+          </Link>
+          <AppLink className="link-accent" to="/">
+            Back home
+          </AppLink>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main
       className="mx-auto max-w-lg space-y-6 bg-page px-6 pb-6 pt-0 lg:flex lg:h-dvh lg:max-w-none lg:flex-col lg:space-y-0 lg:overflow-hidden lg:p-0"
@@ -842,6 +1009,11 @@ function LiveMissionView({
           ) : null}
 
           {live.syncError && <p className="alert-error">{live.syncError}</p>}
+          {resetError ? <p className="alert-error">{resetError}</p> : null}
+
+          {rallyPointId && rallyPointChannel.error ? (
+            <p className="alert-error">{rallyPointChannel.error}</p>
+          ) : null}
 
           {claim.claimError && <p className="alert-error">{claim.claimError}</p>}
 
@@ -998,38 +1170,24 @@ function LiveMissionView({
                 className="flex flex-wrap gap-2 lg:justify-center"
                 {...(waitingStartPracticeActions ? {} : { 'data-walkthrough-id': 'actions' })}
               >
-                {showPause && (
+                {showReset && (
                   <button
                     type="button"
                     className="btn-outline px-3 py-1.5 text-sm lg:px-6 lg:py-3 lg:text-base"
+                    disabled={resetBusy}
                     onClick={() => {
                       handleAudioUnlock();
-                      void live.pause();
+                      void handleResetMission();
                     }}
                   >
-                    Pause
-                  </button>
-                )}
-                {showResume && (
-                  <button
-                    type="button"
-                    className="btn-primary px-3 py-1.5 text-sm lg:px-6 lg:py-3 lg:text-base"
-                    onClick={() => {
-                      handleAudioUnlock();
-                      void live.resume();
-                    }}
-                  >
-                    Resume
+                    {resetBusy ? 'Resetting…' : 'Reset'}
                   </button>
                 )}
                 {showLogRound && (
                   <button
                     type="button"
                     className="btn-success px-3 py-1.5 text-sm lg:px-6 lg:py-3 lg:text-base"
-                    onClick={() => {
-                      playRoundLogged();
-                      void live.logRound();
-                    }}
+                    onClick={handleLogRound}
                   >
                     Log round
                   </button>
@@ -1098,15 +1256,6 @@ function LiveMissionView({
                 </ul>
               </section>
             )}
-
-            <MissionChat
-              missionId={missionId}
-              participantId={participantId}
-              claimToken={claimToken}
-              isAuthenticated={isAuthenticated}
-              messages={channel.messages}
-              className="min-h-[12rem] flex-1 overflow-hidden"
-            />
           </div>
 
           <div className="flex min-h-0 flex-col gap-6 lg:overflow-hidden">
@@ -1115,15 +1264,26 @@ function LiveMissionView({
               presence={live.presence}
               selfParticipantId={live.participantId}
               phase={live.phase}
+              className="lg:min-h-0 lg:flex-1 lg:overflow-hidden"
+            />
+
+            <MissionChat
+              missionId={missionId}
+              participantId={participantId}
+              claimToken={claimToken}
+              isAuthenticated={isAuthenticated}
+              messages={channel.messages}
+              expanded={chatExpanded}
+              onExpandedChange={setChatExpanded}
               className={
-                showRallyPointPass && rallyPointChannel.rallyPoint
-                  ? 'lg:min-h-0 lg:flex-[2] lg:overflow-hidden'
-                  : 'lg:min-h-0 lg:flex-1 lg:overflow-hidden'
+                chatExpanded
+                  ? 'lg:min-h-0 lg:flex-1 lg:overflow-hidden'
+                  : 'shrink-0 overflow-hidden'
               }
             />
 
             {showRallyPointPass && rallyPointChannel.rallyPoint ? (
-              <section className="card flex min-h-0 flex-col space-y-3 overflow-hidden p-4 lg:flex-1 lg:overflow-y-auto">
+              <section className="card flex max-h-48 min-h-0 shrink-0 flex-col space-y-3 overflow-hidden p-4 lg:max-h-56 lg:overflow-y-auto">
                 <h2 className="shrink-0 text-sm font-semibold uppercase tracking-widest text-secondary">
                   Pass Command
                 </h2>
@@ -1225,6 +1385,7 @@ function LiveMissionView({
         <PartialRepsModal
           repsPerRound={live.repsPerRound}
           isSubmitting={isSubmittingPartialReps}
+          error={live.syncError}
           onSubmit={handleSubmitPartialReps}
         />
       ) : null}

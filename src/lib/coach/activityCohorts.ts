@@ -32,3 +32,10 @@ export function cohortToActivityBucketParam(cohort: ActivityCohortId): string | 
   }
   return cohort;
 }
+
+/** Recency tabs that show a Guests table from analytics_events, not presence. */
+export function isGuestHistoryCohort(cohort: ActivityCohortId): boolean {
+  return (
+    cohort === 'last_24h' || cohort === 'last_3d' || cohort === 'last_7d' || cohort === 'lapsed'
+  );
+}

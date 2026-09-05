@@ -53,9 +53,9 @@ describe('matchRoutePath', () => {
     expect(resolveSeo('/campaign/join').title).toBe("You've been invited");
   });
 
-  it('matches style collections before the workout-detail pattern', () => {
-    expect(resolveSeo('/amrap-workouts/style/blood-shunt').title).toBe('AMRAP workout style');
-    expect(resolveSeo('/amrap-workouts/5-minute/the-hull-breach').title).toBe('AMRAP workout');
+  it('matches blog category hubs before post slugs', () => {
+    expect(resolveSeo('/blog/category/programming').title).toBe('Blog category');
+    expect(resolveSeo('/blog/why-easy-days-matter').title).toBe('Blog post');
   });
 });
 
@@ -95,6 +95,7 @@ describe('resolveSeo', () => {
       '/hud',
       '/coach',
       '/coach/wods',
+      '/coach/articles',
     ];
     for (const path of noindexed) {
       expect(resolveSeo(path).robots, path).toBe('noindex, follow');

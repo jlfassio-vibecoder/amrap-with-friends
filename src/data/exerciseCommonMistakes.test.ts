@@ -22,7 +22,12 @@ describe('commonMistakes', () => {
     for (const exercise of EXERCISE_LIBRARY) {
       for (const mistake of exercise.commonMistakes) {
         const key = mistake.trim().toLowerCase();
-        seen.set(key, [...(seen.get(key) ?? []), exercise.id]);
+        const ids = seen.get(key) ?? [];
+        // One id per movement — repeats inside the same entry are not cross-movement reuse.
+        if (!ids.includes(exercise.id)) {
+          ids.push(exercise.id);
+          seen.set(key, ids);
+        }
       }
     }
     const shared = [...seen.entries()]
@@ -54,7 +59,7 @@ describe('commonMistakes', () => {
     }
   });
 
-  it('does not repeat a movement own coaching cue back at the reader', () => {
+  it("does not repeat a movement's own coaching cue back at the reader", () => {
     // A mistake that restates the cue tells the athlete nothing new. Compare on
     // the cue's distinctive words rather than exact text, since a restatement is
     // usually a reworded one.

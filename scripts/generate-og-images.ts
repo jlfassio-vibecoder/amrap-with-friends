@@ -4,36 +4,17 @@
  */
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import sharp from 'sharp';
+import { renderOgCard } from './renderOgCard';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC = path.join(ROOT, 'public');
-const WIDTH = 1200;
-const HEIGHT = 630;
-const LOGO_SIZE = 520;
-const NIGHT = { r: 6, g: 21, b: 33, alpha: 1 };
+const BRAND = path.join(PUBLIC, 'brand');
 
 async function compose(logoFile: string, outFile: string): Promise<void> {
-  const logo = await sharp(path.join(PUBLIC, 'brand', logoFile))
-    .resize(LOGO_SIZE, LOGO_SIZE, { fit: 'contain', background: NIGHT })
-    .png()
-    .toBuffer();
-
-  const left = Math.round((WIDTH - LOGO_SIZE) / 2);
-  const top = Math.round((HEIGHT - LOGO_SIZE) / 2);
-
-  await sharp({
-    create: {
-      width: WIDTH,
-      height: HEIGHT,
-      channels: 4,
-      background: NIGHT,
-    },
-  })
-    .composite([{ input: logo, left, top }])
-    .png()
-    .toFile(path.join(PUBLIC, outFile));
-
+  await renderOgCard({
+    logoFile: path.join(BRAND, logoFile),
+    outFile: path.join(PUBLIC, outFile),
+  });
   console.log(`Wrote public/${outFile}`);
 }
 

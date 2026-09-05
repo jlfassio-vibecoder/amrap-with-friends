@@ -8,11 +8,12 @@ export interface TrackContext {
 }
 
 function buildPayload(eventName: string, props: Record<string, unknown>, context: TrackContext) {
+  const anonId = getOrCreateAnonId();
   return {
     event_name: eventName,
     occurred_at: new Date().toISOString(),
     user_id: context.userId ?? null,
-    anon_id: getOrCreateAnonId(),
+    ...(anonId ? { anon_id: anonId } : {}),
     mission_id: context.missionId ?? null,
     participant_id: context.participantId ?? null,
     route: typeof window !== 'undefined' ? window.location.pathname : null,

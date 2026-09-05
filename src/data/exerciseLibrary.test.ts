@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { getExerciseInfo } from './exerciseLibrary';
+import { EXERCISE_LIBRARY, getExerciseInfo } from './exerciseLibrary';
+import { EXERCISE_PATTERN_TAGS } from '@/lib/smartRecovery/exercisePatternTags';
+import { isMovementPattern } from '@/lib/smartRecovery/movementPatterns';
 
 describe('getExerciseInfo', () => {
   it('returns the Burpees entry when found', () => {
@@ -201,5 +203,26 @@ describe('getExerciseInfo', () => {
     expect(getExerciseInfo('Supermans')?.id).toBe('supermans');
     expect(getExerciseInfo('Superman Raises')?.id).toBe('superman-raises');
     expect(getExerciseInfo('Superman Hold')?.id).toBe('superman-hold');
+  });
+});
+
+describe('EXERCISE_LIBRARY primaryPatterns', () => {
+  it('assigns at least one valid pattern to every entry', () => {
+    for (const entry of EXERCISE_LIBRARY) {
+      expect(entry.primaryPatterns.length, entry.id).toBeGreaterThan(0);
+      for (const pattern of entry.primaryPatterns) {
+        expect(isMovementPattern(pattern), `${entry.id}:${pattern}`).toBe(true);
+      }
+    }
+  });
+
+  it('matches EXERCISE_PATTERN_TAGS keys to library ids exactly', () => {
+    const libraryIds = new Set(EXERCISE_LIBRARY.map((entry) => entry.id));
+    const tagIds = new Set(Object.keys(EXERCISE_PATTERN_TAGS));
+    expect(tagIds).toEqual(libraryIds);
+  });
+
+  it('exposes primaryPatterns through getExerciseInfo', () => {
+    expect(getExerciseInfo('Burpees')?.primaryPatterns).toEqual(['full-body-conditioning']);
   });
 });

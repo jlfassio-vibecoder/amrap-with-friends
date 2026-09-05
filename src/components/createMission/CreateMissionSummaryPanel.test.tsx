@@ -27,12 +27,13 @@ const baseProps = {
 };
 
 describe('CreateMissionSummaryPanel', () => {
-  it('shows Open rally point by default and Schedule rally point time controls when selected', () => {
+  it('shows Launch by default and Schedule rally point time controls when selected', () => {
     const { rerender } = render(
       <CreateMissionSummaryPanel {...baseProps} scheduleMode="now" capReached={false} />
     );
 
-    expect(screen.getByRole('button', { name: 'Open rally point' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Launch' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Open rally point' })).toBeTruthy();
     expect(screen.queryByLabelText('Scheduled time')).toBeNull();
 
     rerender(<CreateMissionSummaryPanel {...baseProps} scheduleMode="rally" capReached={false} />);
@@ -47,10 +48,7 @@ describe('CreateMissionSummaryPanel', () => {
     render(<CreateMissionSummaryPanel {...baseProps} scheduleMode="now" capReached />);
 
     expect(screen.getByText(/3 active missions/i)).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Open rally point' })).toHaveProperty(
-      'disabled',
-      true
-    );
+    expect(screen.getByRole('button', { name: 'Launch' })).toHaveProperty('disabled', true);
   });
 
   it('switches schedule mode via the tabs', () => {

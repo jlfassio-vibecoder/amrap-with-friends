@@ -110,6 +110,7 @@ export function LogMissedRound({
         <button
           type="button"
           className="btn-success text-sm"
+          disabled={estimate.isUncorrected}
           onClick={() => {
             onConfirm(reps);
             setOpen(false);

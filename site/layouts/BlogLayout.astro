@@ -1,0 +1,185 @@
+---
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import BaseLayout from './BaseLayout.astro';
+import { breadcrumbList, blogPosting, type JsonLd } from '@/lib/seo/structuredData';
+
+interface Photo {
+  src: string;
+  alt: string;
+  caption?: string;
+}
+
+interface Props {
+  title: string;
+  slug: string;
+  description: string;
+  answerFirst: string;
+  author: string;
+  publishedAt: string;
+  modifiedAt: string;
+  pillar: string;
+  libraryLinks: string[];
+  photos: Photo[];
+}
+
+const {
+  title,
+  slug,
+  description,
+  answerFirst,
+  author,
+  publishedAt,
+  modifiedAt,
+  pillar,
+  libraryLinks,
+  photos,
+} = Astro.props;
+
+const postPath = `/blog/${slug}`;
+const ogRelative = `/og/blog/${slug}.png`;
+const hasOg = existsSync(path.join(process.cwd(), 'public', 'og', 'blog', `${slug}.png`));
+const ogImage = hasOg ? new URL(ogRelative, Astro.site).href : undefined;
+
+const graph: JsonLd[] = [
+  blogPosting({
+    title,
+    description,
+    path: postPath,
+    authorName: author,
+    datePublished: publishedAt,
+    dateModified: modifiedAt,
+    image: ogImage ?? photos[0]?.src,
+  }),
+  breadcrumbList([
+    { name: 'Home', path: '/' },
+    { name: 'Blog', path: '/blog' },
+    { name: title, path: postPath },
+  ]),
+];
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) {
+    return iso;
+  }
+  return d.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+---
+
+<BaseLayout
+  title={`${title} — AMRAP With Friends`}
+  description={description}
+  jsonLd={graph}
+  ogImage={ogImage}
+>
+  <article class="mx-auto w-full max-w-[44rem] space-y-12 px-6 py-12 lg:px-10 lg:py-16">
+    <nav aria-label="Breadcrumb" class="text-xs text-muted">
+      <a class="link-accent" href="/blog">Blog</a> / {title}
+    </nav>
+
+    <header class="space-y-5">
+      <h1 class="text-display text-[clamp(2.25rem,6vw,3.5rem)] leading-[0.95] text-ink">
+        {title}
+      </h1>
+      <p class="text-sm text-muted">
+        By {author}
+        <span aria-hidden="true"> · </span>
+        <time datetime={publishedAt}>{formatDate(publishedAt)}</time>
+        {
+          modifiedAt !== publishedAt && (
+            <>
+              <span aria-hidden="true"> · </span>
+              Updated <time datetime={modifiedAt}>{formatDate(modifiedAt)}</time>
+            </>
+          )
+        }
+      </p>
+      <p class="border-l-2 border-accent pl-5 text-lg leading-[1.6] text-ink">{answerFirst}</p>
+    </header>
+
+    {
+      photos.length > 0 && (
+        <figure class="space-y-3">
+          <img
+            src={photos[0]!.src}
+            alt={photos[0]!.alt}
+            class="w-full rounded-card border border-border"
+            loading="eager"
+          />
+          {photos[0]!.caption && (
+            <figcaption class="text-sm text-muted">{photos[0]!.caption}</figcaption>
+          )}
+        </figure>
+      )
+    }
+
+    <div
+      class="prose-content [&_a]:link-accent [&_h2]:text-display space-y-6 text-base leading-[1.7] text-secondary [&_h2]:text-[clamp(1.5rem,3vw,2rem)] [&_h2]:leading-[0.95] [&_h2]:text-ink [&_h3]:font-semibold [&_h3]:text-ink [&_li]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-4 [&_ul]:list-disc [&_ul]:pl-5"
+    >
+      <slot />
+    </div>
+
+    {
+      photos.length > 1 && (
+        <div class="space-y-8">
+          {photos.slice(1).map((photo) => (
+            <figure class="space-y-3">
+              <img
+                src={photo.src}
+                alt={photo.alt}
+                class="w-full rounded-card border border-border"
+                loading="lazy"
+              />
+              {photo.caption && <figcaption class="text-sm text-muted">{photo.caption}</figcaption>}
+            </figure>
+          ))}
+        </div>
+      )
+    }
+
+    {
+      (pillar || libraryLinks.length > 0) && (
+        <section class="space-y-4">
+          <h2 class="text-display text-[clamp(1.75rem,4vw,2.5rem)] leading-[0.95] text-ink">
+            Keep going
+          </h2>
+          <ul class="space-y-2 text-base text-secondary">
+            {pillar && (
+              <li>
+                <a class="link-accent" href={pillar}>
+                  Related guide / pillar
+                </a>
+              </li>
+            )}
+            {libraryLinks.map((href) => (
+              <li>
+                <a class="link-accent" href={href}>
+                  {href}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
+
+    <section class="card space-y-4 p-6">
+      <h2 class="text-display text-2xl text-ink">Run an AMRAP with your friends</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        One shared countdown, one leaderboard, everyone on the same clock — wherever they are
+        training.
+      </p>
+      <div class="flex flex-wrap gap-3">
+        <a
+          class="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
+          href="/create">Create a mission</a
+        >
+        <a
+          class="rounded-card border border-border bg-surface px-6 py-3.5 font-semibold text-ink"
+          href="/amrap-workouts">Browse AMRAP workouts</a
+        >
+      </div>
+    </section>
+  </article>
+</BaseLayout>

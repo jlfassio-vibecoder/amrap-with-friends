@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import ScheduledMissions from '../islands/ScheduledMissions';
+import HeroBelowLogo from '../islands/HeroBelowLogo';
 import TodaysMission from '../islands/TodaysMission';
 import WorkoutStyles from '../islands/WorkoutStyles';
 import { HeroLogoDissolve } from '@/components/home/HeroLogoDissolve';
@@ -113,16 +113,11 @@ const jsonLd = [webApplication(), faqPage(faqs)];
         </div>
       </div>
 
-      <div class="-mx-2 lg:mx-0">
+      <div class="-mx-2 space-y-4 lg:mx-0">
         <HeroLogoDissolve client:visible />
+        <HeroBelowLogo client:only="react" />
       </div>
     </section>
-
-    <div class="mx-auto w-full max-w-[1240px] px-6 pb-14 lg:px-10 lg:pb-20">
-      <div class="rounded-card border border-night-border bg-surface p-5 text-ink shadow-card">
-        <ScheduledMissions client:only="react" />
-      </div>
-    </div>
   </div>
 
   <div class="mx-auto w-full max-w-[1080px] space-y-16 px-6 py-14 lg:px-10 lg:py-20">
