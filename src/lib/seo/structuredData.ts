@@ -108,6 +108,46 @@ export function faqPage(entries: FaqEntry[]): JsonLd {
   };
 }
 
+export interface ArticleCitation {
+  title: string;
+  url: string;
+}
+
+/**
+ * A sourced reference page.
+ *
+ * `Article`, not `ScholarlyArticle`: this is a practitioner's synthesis of
+ * published research, not original research, and claiming otherwise would be
+ * the same overreach as calling an uncited document peer-reviewed.
+ */
+export function referenceArticle(input: {
+  title: string;
+  description: string;
+  path: string;
+  datePublished: string;
+  dateModified: string;
+  citations: ArticleCitation[];
+  about?: string[];
+}): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: input.title,
+    description: input.description,
+    url: `${SITE_ORIGIN}${input.path}`,
+    datePublished: input.datePublished,
+    dateModified: input.dateModified,
+    author: { '@id': AUTHOR_ID },
+    publisher: { '@id': `${SITE_ORIGIN}/#organization` },
+    ...(input.about && input.about.length > 0 ? { about: input.about } : {}),
+    citation: input.citations.map((citation) => ({
+      '@type': 'CreativeWork',
+      name: citation.title,
+      url: citation.url,
+    })),
+  };
+}
+
 export interface HowToStep {
   name: string;
   text: string;

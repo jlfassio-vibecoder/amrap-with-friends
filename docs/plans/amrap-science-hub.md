@@ -68,6 +68,13 @@ unsourced precision is the signature of a generated number.
 - A typo, "Sclares glycogen store utilization", indicates the artifact has not
   had a careful read.
 
+**A correction to the first draft of this audit.** It grouped the Cindy
+telemetry with the invented numbers because it was unsourced. Checking them
+against the literature while writing `/science/energy-systems` showed they are
+real and traceable to a published pilot study. Unsourced is not the same as
+fabricated — the artifact mixed both, which is exactly why every number had to
+be checked individually rather than judged as a batch.
+
 **This is not a criticism of using an LLM for research.** It is a criticism of
 shipping the first pass. The concepts it surfaced are correct and genuinely
 useful; the job left undone is finding the papers and dropping everything that

@@ -1,0 +1,103 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { breadcrumbList } from '@/lib/seo/structuredData';
+import { SITE_AUTHOR } from '@/lib/seo/author';
+
+const live = [
+  {
+    path: '/science/energy-systems',
+    title: 'Energy systems and the time cap',
+    blurb:
+      'Both systems run from the first second, the crossover sits around 75 seconds, and heart rate cannot tell a 4-minute AMRAP from a 17-minute one.',
+  },
+];
+
+// Named honestly as not yet written. A hub that lists pages which do not exist
+// as though they do is the same overclaim this section is built to avoid.
+const planned = [
+  'Lactate: why the "burn" explanation is wrong',
+  'Pacing: teleoanticipation and what round splits reveal',
+  'Neuromuscular fatigue and movement selection',
+  'What has actually been measured on the benchmark workouts',
+];
+
+const jsonLd = [
+  breadcrumbList([
+    { name: 'Home', path: '/' },
+    { name: 'Science', path: '/science' },
+  ]),
+];
+---
+
+<BaseLayout jsonLd={jsonLd}>
+  <div class="mx-auto w-full max-w-[44rem] space-y-12 px-6 py-12 lg:px-10 lg:py-16">
+    <header class="space-y-5">
+      <p class="eyebrow text-accent">Research</p>
+      <h1 class="text-display text-[clamp(2.5rem,7vw,4rem)] leading-[0.9] text-ink">
+        The science of AMRAP training
+      </h1>
+      <p class="border-l-2 border-accent pl-5 text-lg leading-[1.6] text-ink">
+        What the published research actually shows about AMRAP training, with every claim cited and
+        every gap admitted. Written by a certified Master Fitness Trainer working from the papers,
+        not summarised from other people's blog posts.
+      </p>
+    </header>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">How these pages are sourced</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        One rule governs this section: <strong class="font-semibold text-ink"
+          >a claim ships with a citation, or it does not ship.</strong
+        > Every number is linked to the paper it came from, so you can check it rather than take our word
+        for it.
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        Where the evidence is thin, the study is small, or the field genuinely disagrees, the page
+        says so. Exercise science around functional fitness is younger and smaller than the
+        confidence of most articles about it suggests — sample sizes of nine to twenty-two are
+        common, and participants are mostly trained men. Pretending otherwise would make these pages
+        less useful, not more.
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        These are practitioner syntheses of published work. They are not original research, they are
+        not peer reviewed, and they are not medical advice.
+      </p>
+    </section>
+
+    <section class="space-y-5">
+      <h2 class="text-display text-2xl text-ink">Published</h2>
+      <ul class="space-y-4">
+        {
+          live.map((page) => (
+            <li class="card space-y-2 p-5">
+              <a class="text-display text-xl text-ink hover:text-accent" href={page.path}>
+                {page.title}
+              </a>
+              <p class="text-sm leading-[1.6] text-secondary">{page.blurb}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Being written</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        Each of these needs its sources pulled before it goes up. They are listed so you know what
+        is coming, not because they exist yet.
+      </p>
+      <ul class="space-y-2 text-base leading-[1.7] text-secondary">
+        {planned.map((title) => <li>{title}</li>)}
+      </ul>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Who writes this</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        <a class="link-accent" href={SITE_AUTHOR.path}>{SITE_AUTHOR.name}</a> — {
+          SITE_AUTHOR.shortBio
+        }
+      </p>
+    </section>
+  </div>
+</BaseLayout>

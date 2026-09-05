@@ -1,0 +1,326 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { breadcrumbList, faqPage, referenceArticle } from '@/lib/seo/structuredData';
+import { referencesFor } from '@/lib/seo/scienceReferences';
+import { SITE_AUTHOR } from '@/lib/seo/author';
+
+const PATH = '/science/energy-systems';
+const PUBLISHED = '2026-09-05';
+const CHECKED = '2026-09-05';
+
+const refs = referencesFor([
+  'gastin2001',
+  'gastin2026',
+  'rios2024',
+  'tibana2018',
+  'kliszczewicz2014',
+  'mangine2025',
+  'feito2018',
+]);
+const n = Object.fromEntries(refs.map((reference, index) => [reference.id, index + 1]));
+
+const faqs = [
+  {
+    question: 'Is an AMRAP aerobic or anaerobic?',
+    answer:
+      'Both, from the first second. Reviews of maximal exercise show all three energy pathways engage immediately rather than switching on in sequence, and equal contribution from anaerobic and aerobic metabolism arrives at roughly 75 to 80 seconds. Every AMRAP long enough to be called an AMRAP is already aerobically dominant.',
+  },
+  {
+    question: 'Does a longer AMRAP mean lower intensity?',
+    answer:
+      'Not by heart rate. In one direct comparison, a roughly 4-minute session and a roughly 17-minute session produced statistically indistinguishable heart rates — about 90 to 91% of maximum in both — while blood lactate was significantly higher after the shorter one. Duration changes the metabolic route more than it changes the effort.',
+  },
+  {
+    question: 'What does the time cap actually change?',
+    answer:
+      'Which qualities decide your score. When the same circuit was run for 5 and for 15 minutes, performance measures predicted the 5-minute result while training experience and body composition related more to how athletes managed the 15-minute version. The cap selects the trait being tested.',
+  },
+];
+
+const jsonLd = [
+  referenceArticle({
+    title: 'AMRAP Energy Systems: What the Research Shows',
+    description:
+      'What published exercise physiology shows about energy system contribution across AMRAP time caps.',
+    path: PATH,
+    datePublished: PUBLISHED,
+    dateModified: CHECKED,
+    citations: refs.map((reference) => ({ title: reference.title, url: reference.url })),
+    about: [
+      'Bioenergetics',
+      'AMRAP training',
+      'High-intensity functional training',
+      'Exercise physiology',
+    ],
+  }),
+  faqPage(faqs),
+  breadcrumbList([
+    { name: 'Home', path: '/' },
+    { name: 'Science', path: '/science' },
+    { name: 'Energy systems', path: PATH },
+  ]),
+];
+---
+
+<BaseLayout jsonLd={jsonLd}>
+  <article class="mx-auto w-full max-w-[44rem] space-y-12 px-6 py-12 lg:px-10 lg:py-16">
+    <nav aria-label="Breadcrumb" class="text-xs text-muted">
+      <a class="link-accent" href="/science">Science</a> / Energy systems
+    </nav>
+
+    <header class="space-y-5">
+      <p class="eyebrow text-accent">Sourced review</p>
+      <h1 class="text-display text-[clamp(2.25rem,6vw,3.5rem)] leading-[0.95] text-ink">
+        AMRAP energy systems: what the research shows
+      </h1>
+      <p class="border-l-2 border-accent pl-5 text-lg leading-[1.6] text-ink">
+        Aerobic and anaerobic metabolism both run from the first second of an AMRAP. They are not
+        sequential systems that hand off to each other. Equal contribution arrives at roughly 75 to
+        80 seconds of maximal effort, which means every AMRAP long enough to be worth programming is
+        already aerobically dominant — including the five-minute ones.
+      </p>
+      <p class="text-sm text-muted">
+        By <a class="link-accent" href={SITE_AUTHOR.path} rel="author">{SITE_AUTHOR.name}</a> · Sources
+        last checked <time datetime={CHECKED}>5 September 2026</time>
+      </p>
+    </header>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">The three systems all start together</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        The model most of us were taught — phosphagens for ten seconds, then glycolysis, then the
+        aerobic system takes over — is wrong in an important way. All three pathways are active from
+        the onset of exercise; what changes over time is their relative contribution, not whether
+        they are switched on.<sup>{n.gastin2001}</sup>
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        You can see it measured inside a real workout rather than on a cycle ergometer. When
+        researchers instrumented the CrossFit benchmark "Isabel" — a workout that took the
+        participants about 117 seconds — the energy came from oxidative phosphorylation (40%),
+        glycolysis (45%) and the phosphagen system (15%).<sup>{n.rios2024}</sup> Two minutes of all-out
+        work, and aerobic metabolism was already supplying two fifths of it.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">The crossover is around 75 seconds</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        The duration at which anaerobic and aerobic metabolism contribute equally during a single
+        bout of maximal exercise is around 75 seconds — considerably earlier than the older
+        textbooks suggested.<sup>{n.gastin2001}</sup> A 2026 systematic review covering 102 studies and
+        311 data points put the equal-contribution point at approximately 75 to 80 seconds.<sup
+          >{n.gastin2026}</sup
+        >
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        Worth being precise about what that figure is, because it gets quoted loosely: it describes
+        a <em>single continuous maximal bout</em>. An AMRAP is not that. It is a self-paced effort
+        with movement transitions, changing muscle groups and self-selected micro-rests. The
+        crossover tells you which system is doing the bulk of the work in the window you are
+        training; it does not model the workout.
+      </p>
+    </section>
+
+    <section class="space-y-5">
+      <h2 class="text-display text-2xl text-ink">
+        Heart rate will not tell you which time domain you are in
+      </h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        This is the finding most likely to change how you program. Nine trained men completed both a
+        short CrossFit session (about 4 minutes) and a long one (about 17 minutes). Heart rate was
+        statistically indistinguishable between them. Blood lactate was not.<sup>{n.tibana2018}</sup
+        >
+      </p>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[30rem] border-collapse text-left text-sm">
+          <thead>
+            <tr class="border-b border-border">
+              <th class="py-3 pr-4 font-semibold text-ink">&nbsp;</th>
+              <th class="py-3 pr-4 font-semibold text-ink">Shorter (~4 min)</th>
+              <th class="py-3 font-semibold text-ink">Longer (~17 min)</th>
+            </tr>
+          </thead>
+          <tbody class="text-secondary">
+            <tr class="border-b border-divider">
+              <td class="py-3 pr-4 font-semibold text-ink">Heart rate</td>
+              <td class="py-3 pr-4">176 ± 6 bpm (91 ± 4% max)</td>
+              <td class="py-3">174 ± 3 bpm (90 ± 3% max)</td>
+            </tr>
+            <tr class="border-b border-divider">
+              <td class="py-3 pr-4 font-semibold text-ink">Difference</td>
+              <td class="py-3 pr-4" colspan="2">Not significant (p = 0.387)</td>
+            </tr>
+            <tr class="border-b border-divider">
+              <td class="py-3 pr-4 font-semibold text-ink">Blood lactate in recovery</td>
+              <td class="py-3 pr-4">15.9 ± 2.2 mmol/L</td>
+              <td class="py-3">12.6 ± 2.6 mmol/L</td>
+            </tr>
+            <tr>
+              <td class="py-3 pr-4 font-semibold text-ink">Difference</td>
+              <td class="py-3" colspan="2">Significant (p = 0.019)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-base leading-[1.7] text-secondary">
+        Nine participants is a small study and one comparison is not a literature. But the direction
+        is worth taking seriously, because it matches the mechanism: near-maximal heart rate is
+        reached in almost any hard AMRAP and then has nowhere left to go. It saturates. Whatever
+        distinguishes a five-minute effort from a twenty-minute one, your heart rate monitor is not
+        going to show it to you.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">What a longer cap actually changes</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        It changes which qualities decide your score. Twenty-two experienced athletes performed the
+        same circuit — rowing, barbell thrusters, box jumps — for as many repetitions as possible in
+        either 5 or 15 minutes. Performance measures, rowing in particular, related more closely to
+        the 5-minute result; training experience and body composition related more to how athletes
+        handled the 15-minute version.<sup>{n.mangine2025}</sup>
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        That is a useful way to think about a time cap: it is not a dial for how hard the workout
+        is, it is a selector for what the workout is testing. A five-minute AMRAP asks what you can
+        do. A twenty-minute AMRAP asks what you can keep doing, and rewards the athlete who has done
+        this before.
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        It is also why the same movements at
+        <a class="link-accent" href="/amrap-workouts/5-minute">5 minutes</a> and
+        <a class="link-accent" href="/amrap-workouts/20-minute">20 minutes</a> are not the same workout
+        at two lengths. In our own library the programming reflects that: a five-minute cap averages 2.1
+        movements and 27 reps a round, a twenty-minute cap averages 4.0 movements and 60 reps. See <a
+          class="link-accent"
+          href="/stats">the library data</a
+        >.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">What has been measured in a 20-minute AMRAP</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        The most-studied long AMRAP is "Cindy" — as many rounds as possible in 20 minutes of 5
+        pull-ups, 10 push-ups and 15 air squats. In a pilot study of nine participants, it produced
+        a mean heart rate of 170.8 ± 13.5 bpm and oxygen consumption of 33.3 ± 5.5 ml/kg/min, which
+        was 63.8 ± 12.3% of the participants' VO₂max, at 9.5 ± 1.5 METs and 13 ± 2.9 kcal/min.<sup
+          >{n.kliszczewicz2014}</sup
+        >
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        The gap between those two numbers is the interesting part. Heart rate sat in the vigorous
+        range while oxygen uptake sat around two thirds of maximum. A twenty-minute AMRAP is not a
+        maximal aerobic test — the limit is local muscular fatigue and the transitions between
+        movements, not your ability to deliver oxygen. The authors call it a pilot study, and with
+        nine participants that is the right word for it.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">What the research does not show</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        Being straight about the gaps, because this field is younger and smaller than the confidence
+        of most articles about it suggests:
+      </p>
+      <ul class="space-y-3 text-base leading-[1.7] text-secondary">
+        <li>
+          <strong class="font-semibold text-ink">The sample sizes are small.</strong> Nine, fourteen,
+          twenty-two participants. These are pilot and exploratory studies, and effects that look clean
+          in a group of nine often shrink in a group of ninety.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">Participants are mostly trained men.</strong> Where women
+          are included the numbers are usually too small to analyse separately, so almost nothing here
+          should be assumed to transfer without qualification.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">
+            There is no per-minute energy system breakdown for a long AMRAP.
+          </strong>
+          The direct pathway measurement we have is on a two-minute workout.<sup>{n.rios2024}</sup>
+          Anyone giving you an exact aerobic percentage for minute fourteen of a twenty-minute AMRAP is
+          extrapolating, and should say so.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">HIFT is not HIIT.</strong> They are distinct modalities
+          — HIFT uses varied functional movements and may not include prescribed rest<sup
+            >{n.feito2018}</sup
+          > — so borrowing HIIT interval research to describe an AMRAP is a substitution worth flagging
+          rather than making quietly.
+        </li>
+      </ul>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">What to do with this</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        Three things follow that you can act on this week.
+      </p>
+      <ul class="space-y-3 text-base leading-[1.7] text-secondary">
+        <li>
+          <strong class="font-semibold text-ink">Stop programming by heart rate zone.</strong> In an AMRAP
+          it saturates near maximum and stops discriminating. Round times tell you far more — which is
+          what <a class="link-accent" href="/guides/amrap-pacing">pace variance</a> measures.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink"
+            >Pick the cap for the quality you want to test.</strong
+          >
+          Short caps reward what you can currently do; long caps reward what you can repeat.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink"
+            >Do not treat five and twenty minutes as the same workout scaled.</strong
+          > They select different traits, and programming them identically wastes one of them.
+        </li>
+      </ul>
+      <div class="flex flex-wrap gap-3 pt-2">
+        <a
+          class="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
+          href="/amrap-workouts">Browse AMRAP workouts by time domain</a
+        >
+        <a
+          class="rounded-card border border-border bg-surface px-6 py-3.5 font-semibold text-ink"
+          href="/guides/amrap-pacing">How pace variance works</a
+        >
+      </div>
+    </section>
+
+    <section class="space-y-8">
+      <h2 class="text-display text-2xl text-ink">Related questions</h2>
+      {
+        faqs.map((faq) => (
+          <div class="space-y-3">
+            <h3 class="text-base font-semibold text-ink">{faq.question}</h3>
+            <p class="text-base leading-[1.7] text-secondary">{faq.answer}</p>
+          </div>
+        ))
+      }
+    </section>
+
+    <section class="space-y-4 border-t border-border pt-8">
+      <h2 class="text-display text-2xl text-ink">References</h2>
+      <ol class="space-y-4 text-sm leading-[1.6] text-secondary">
+        {
+          refs.map((reference) => (
+            <li id={`ref-${reference.id}`}>
+              {reference.authors} ({reference.year}). {reference.title}. <em>{reference.source}</em>
+              .{' '}
+              <a class="link-accent" href={reference.url} rel="noopener" target="_blank">
+                {reference.url.replace(/^https?:\/\//, '')}
+              </a>
+              <span class="mt-1 block text-muted">{reference.note}</span>
+            </li>
+          ))
+        }
+      </ol>
+      <p class="text-sm leading-[1.6] text-muted">
+        This page is a practitioner's synthesis of published research, not original research and not
+        peer reviewed. Every claim above is sourced; where the evidence is thin or a study is small,
+        it says so. It is not medical advice — see <a class="link-accent" href="/terms">our terms</a
+        >.
+      </p>
+    </section>
+  </article>
+</BaseLayout>
