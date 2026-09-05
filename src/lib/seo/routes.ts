@@ -135,6 +135,13 @@ export const CONTENT_ROUTES: RouteSeo[] = [
     index: true,
   },
   {
+    path: '/authors/justin-fassio',
+    title: 'Justin Fassio — Master Fitness Trainer, Founder',
+    description:
+      'Certified Master Fitness Trainer since 1998. Owned San Diego Core Fitness, co-founded gymgo and aiworkoutgenerator.com, and writes the AMRAP With Friends blog.',
+    index: true,
+  },
+  {
     path: '/about',
     title: 'About AMRAP With Friends',
     description:

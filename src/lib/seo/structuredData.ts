@@ -1,4 +1,5 @@
 import { DEFAULT_DESCRIPTION, SITE_NAME, SITE_ORIGIN } from '@/lib/seo/routes';
+import { AUTHOR_ID, SITE_AUTHOR, isSiteAuthor } from '@/lib/seo/author';
 
 /** Loosely typed on purpose: schema.org shapes vary per type and we emit them verbatim. */
 export type JsonLd = Record<string, unknown>;
@@ -16,6 +17,37 @@ export function organization(): JsonLd {
     url: `${SITE_ORIGIN}/`,
     logo: LOGO,
     description: DEFAULT_DESCRIPTION,
+    // Resolves the product and the person as one entity rather than two
+    // unrelated ones, which is most of what the author page is for.
+    founder: { '@id': AUTHOR_ID },
+  };
+}
+
+/**
+ * The author as a full entity, for the author page.
+ *
+ * `sameAs` is the load-bearing property: it is how an assistant confirms the
+ * person in a byline is the person with the Yelp listing and the companies.
+ * Omitted entirely while the list is empty — an empty array asserts "this person
+ * exists nowhere else", which is worse than saying nothing.
+ */
+export function person(): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    '@id': AUTHOR_ID,
+    name: SITE_AUTHOR.name,
+    url: `${SITE_ORIGIN}${SITE_AUTHOR.path}`,
+    jobTitle: SITE_AUTHOR.jobTitle,
+    description: SITE_AUTHOR.shortBio,
+    knowsAbout: [...SITE_AUTHOR.knowsAbout],
+    hasCredential: SITE_AUTHOR.credentials.map((credential) => ({
+      '@type': 'EducationalOccupationalCredential',
+      name: credential.label,
+      ...(credential.year ? { dateCreated: String(credential.year) } : {}),
+    })),
+    worksFor: { '@id': `${SITE_ORIGIN}/#organization` },
+    ...(SITE_AUTHOR.sameAs.length > 0 ? { sameAs: [...SITE_AUTHOR.sameAs] } : {}),
   };
 }
 
@@ -157,10 +189,12 @@ export function blogPosting(input: {
     url: `${SITE_ORIGIN}${input.path}`,
     datePublished: input.datePublished,
     dateModified: input.dateModified,
-    author: {
-      '@type': 'Person',
-      name: input.authorName,
-    },
+    // A byline that matches the site author points at the full Person entity;
+    // a guest author still gets an inline node, so the builder's free-text
+    // field keeps working without a code change.
+    author: isSiteAuthor(input.authorName)
+      ? { '@id': AUTHOR_ID }
+      : { '@type': 'Person', name: input.authorName },
     publisher: { '@id': `${SITE_ORIGIN}/#organization` },
     ...(input.image ? { image: input.image } : {}),
   };

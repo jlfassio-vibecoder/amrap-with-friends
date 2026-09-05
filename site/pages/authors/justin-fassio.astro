@@ -1,0 +1,106 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { breadcrumbList, person } from '@/lib/seo/structuredData';
+import { SITE_AUTHOR } from '@/lib/seo/author';
+
+const jsonLd = [
+  person(),
+  breadcrumbList([
+    { name: 'Home', path: '/' },
+    { name: SITE_AUTHOR.name, path: SITE_AUTHOR.path },
+  ]),
+];
+---
+
+<BaseLayout jsonLd={jsonLd}>
+  <div class="mx-auto w-full max-w-[44rem] space-y-12 px-6 py-12 lg:px-10 lg:py-16">
+    <header class="space-y-5">
+      <p class="eyebrow text-accent">Author</p>
+      <h1 class="text-display text-[clamp(2.5rem,7vw,4rem)] leading-[0.9] text-ink">
+        {SITE_AUTHOR.name}
+      </h1>
+      <p class="border-l-2 border-accent pl-5 text-lg leading-[1.6] text-ink">
+        {SITE_AUTHOR.shortBio}
+      </p>
+    </header>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Certifications</h2>
+      <ul class="space-y-2 text-base leading-[1.7] text-secondary">
+        {
+          SITE_AUTHOR.credentials.map((credential) => (
+            <li>
+              <strong class="font-semibold text-ink">{credential.label}</strong>
+              {credential.year && <span> — {credential.year}</span>}
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Why this site sounds the way it does</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        A Master Fitness Trainer and Commander's Total Fitness Program Manager programmes physical
+        training for a whole unit, to a doctrine, against a readiness standard. Everybody trains at
+        once, in the same time, and the least fit person cannot be left behind.
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        That is the same problem a group AMRAP solves, and it is why this product exists. The
+        tactical language across the site — the classifications, the mission vocabulary — is not a
+        theme borrowed for effect. It is where the training came from.
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        Since then: a physical gym in San Diego, two software companies built around training, and
+        now a timer that puts a whole squad on one clock.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Built and run</h2>
+      <ul class="space-y-2 text-base leading-[1.7] text-secondary">
+        {
+          SITE_AUTHOR.ventures.map((venture) => (
+            <li>
+              <strong class="font-semibold text-ink">{venture.name}</strong> — {venture.role}
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    {
+      SITE_AUTHOR.sameAs.length > 0 && (
+        <section class="space-y-4">
+          <h2 class="text-display text-2xl text-ink">Elsewhere</h2>
+          <ul class="space-y-2 text-base leading-[1.7] text-secondary">
+            {SITE_AUTHOR.sameAs.map((url) => (
+              <li>
+                <a class="link-accent" href={url} rel="me noopener" target="_blank">
+                  {url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Writing</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        Articles on AMRAP programming, pacing and training with other people.
+      </p>
+      <div class="flex flex-wrap gap-3">
+        <a
+          class="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
+          href="/blog">Read the blog</a
+        >
+        <a
+          class="rounded-card border border-border bg-surface px-6 py-3.5 font-semibold text-ink"
+          href="/amrap-workouts">Browse the workout library</a
+        >
+      </div>
+    </section>
+  </div>
+</BaseLayout>

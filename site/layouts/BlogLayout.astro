@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import BaseLayout from './BaseLayout.astro';
 import { breadcrumbList, blogPosting, type JsonLd } from '@/lib/seo/structuredData';
+import { SITE_AUTHOR, isSiteAuthor } from '@/lib/seo/author';
 
 interface Photo {
   src: string;
@@ -37,6 +38,8 @@ const {
 } = Astro.props;
 
 const postPath = `/blog/${slug}`;
+// A guest byline stays plain text; ours links to the entity behind it.
+const authorIsSiteAuthor = isSiteAuthor(author);
 const ogRelative = `/og/blog/${slug}.png`;
 const hasOg = existsSync(path.join(process.cwd(), 'public', 'og', 'blog', `${slug}.png`));
 const ogImage = hasOg ? new URL(ogRelative, Astro.site).href : undefined;
@@ -83,7 +86,15 @@ function formatDate(iso: string): string {
         {title}
       </h1>
       <p class="text-sm text-muted">
-        By {author}
+        By {
+          authorIsSiteAuthor ? (
+            <a class="link-accent" href={SITE_AUTHOR.path} rel="author">
+              {author}
+            </a>
+          ) : (
+            author
+          )
+        }
         <span aria-hidden="true"> · </span>
         <time datetime={publishedAt}>{formatDate(publishedAt)}</time>
         {
@@ -160,6 +171,20 @@ function formatDate(iso: string): string {
               </li>
             ))}
           </ul>
+        </section>
+      )
+    }
+
+    {
+      authorIsSiteAuthor && (
+        <section class="space-y-3 border-t border-border pt-8">
+          <h2 class="text-display text-xl text-ink">About the author</h2>
+          <p class="text-base leading-[1.7] text-secondary">
+            <a class="link-accent font-semibold" href={SITE_AUTHOR.path} rel="author">
+              {SITE_AUTHOR.name}
+            </a>{' '}
+            — {SITE_AUTHOR.shortBio}
+          </p>
         </section>
       )
     }
