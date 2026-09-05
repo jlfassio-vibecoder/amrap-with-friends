@@ -2,7 +2,7 @@
 
 **Branch:** `claude/blog-strategy` (strategy); implementation branch TBD  
 **Status:** Draft for discussion  
-**Last updated:** 2026-09-05 (Phase 4 shipped)  
+**Last updated:** 2026-09-05 (Phase 5 shipped)  
 **Depends on:** [blog-strategy.md](blog-strategy.md), [seo-roadmap.md](seo-roadmap.md)  
 **Surfaces:** `/coach` (entry card), `/coach/articles` (builder) — both `noindex`
 
@@ -196,36 +196,30 @@ OG, and `dateModified`.
 
 ### Phase 5 — Cadence tooling (thin)
 
-Not a second product — just coach affordances for the strategy cadence:
-
-- **Refresh queue** list: posts with `modifiedAt` older than N months; page-2
-  GSC hooks later (manual CSV upload ok at first).
-- **First-twelve checklist** seeded as suggested drafts (titles from
-  blog-strategy), not auto-written bodies.
-- Counter: published this month / refreshes this month (informational).
+**Status: shipped.** On `/coach/articles` list mode: informational counters
+(published / refreshes this month), a **Write next** checklist seeded from all
+**24** titles in [blog-authoring.md](blog-authoring.md) (category + archetype +
+Justin Fassio byline prefilled; empty body), and a **Refresh queue** for
+published posts with `modifiedAt` (or `publishedAt`) older than **3 months**.
+Starters do not auto-insert DB rows. GSC page-2 hooks remain later.
 
 **Done when:** A coach can see what to write or refresh next without leaving
 `/coach/articles`.
 
 ---
 
-## Mapping to the first twelve posts
+## Mapping to the editorial calendar
 
-Article Builder does not invent the editorial calendar; it **loads the strategy
-list** as suggested starters (category + archetype pre-filled, empty body).
+Article Builder does not invent the editorial calendar; it **loads**
+[blog-authoring.md](blog-authoring.md) as suggested starters (category +
+archetype pre-filled, empty body). The twenty-four briefs and twelve-month
+schedule there are the source of truth — including seasonal reorder and titles
+tightened for search-result length.
 
-> **The canonical list moved.** [blog-authoring.md](blog-authoring.md) now holds
-> twenty-four articles with briefs and a twelve-month calendar, and it reorders
-> and retitles these twelve — the seasonal posts moved earlier so they are
-> indexed before their season. Seed from that document, not from the snapshot
-> below, or the builder will suggest a calendar nobody is publishing.
->
-> It also answers open question 1: the author is Justin Fassio, and the
-> drafting rule that replaces the fake-persona concern is that a model must
-> never invent a first-person claim under a real byline — it leaves a marked
-> placeholder for him to fill.
+Author byline for starters: **Justin Fassio**. A drafting model must never invent
+a first-person claim under that byline — placeholders only.
 
-Snapshot of the superseded ordering, kept so the change is visible:
+Snapshot of an older twelve-post ordering (superseded — do not seed from this):
 
 1. What 150 AMRAP workouts taught us… — The data / Data story
 2. The 12-minute AMRAP… — Programming / Scenario
@@ -298,7 +292,7 @@ Phase 3  hard quality gates                          ✓
    ↓
 Phase 4  Astro /blog + export/publish pipeline       ✓
    ↓
-Phase 5  refresh queue + first-twelve starters
+Phase 5  refresh queue + authoring starters          ✓
 ```
 
 Do not point coaches at a publish button that writes thin posts into the sitemap

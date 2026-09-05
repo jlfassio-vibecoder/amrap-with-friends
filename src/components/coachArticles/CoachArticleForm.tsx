@@ -11,6 +11,7 @@ import {
   type ArticlePhotoRow,
 } from '@/components/coachArticles/CoachArticlePhotoEditor';
 import { buildArticleExportSnapshotFromArticle } from '@/lib/coach/articles/buildArticleExportSnapshot';
+import type { ArticleInitialDraft } from '@/lib/coach/articles/articleStarters';
 import { ARTICLE_ARCHETYPES, ARTICLE_CATEGORIES } from '@/lib/coach/articles/taxonomy';
 import { articlePillarPaths } from '@/lib/coach/articles/pillarPaths';
 import { isValidArticleSlug, slugifyArticleTitle } from '@/lib/coach/articles/slugify';
@@ -52,6 +53,8 @@ function toPersistedPhotos(rows: ArticlePhotoRow[]): CoachArticlePhoto[] {
 
 interface CoachArticleFormProps {
   article?: CoachArticle | null;
+  /** Prefill for create mode only (cadence starters). Ignored when `article` is set. */
+  initialDraft?: ArticleInitialDraft;
   onSaved: (article: CoachArticle) => void;
   onStatusChanged?: (article: CoachArticle) => void;
   onCancel: () => void;
@@ -59,21 +62,23 @@ interface CoachArticleFormProps {
 
 export function CoachArticleForm({
   article,
+  initialDraft,
   onSaved,
   onStatusChanged,
   onCancel,
 }: CoachArticleFormProps) {
   const { user } = useAmrapAuth();
   const pillars = articlePillarPaths();
+  const createSeed = article ? undefined : initialDraft;
 
   const [articleId, setArticleId] = useState(article?.id);
-  const [title, setTitle] = useState(article?.title ?? '');
-  const [slug, setSlug] = useState(article?.slug ?? '');
-  const [slugDirty, setSlugDirty] = useState(Boolean(article?.slug));
-  const [category, setCategory] = useState(article?.category ?? '');
-  const [archetype, setArchetype] = useState(article?.archetype ?? '');
+  const [title, setTitle] = useState(article?.title ?? createSeed?.title ?? '');
+  const [slug, setSlug] = useState(article?.slug ?? createSeed?.slug ?? '');
+  const [slugDirty, setSlugDirty] = useState(Boolean(article?.slug || createSeed?.slug));
+  const [category, setCategory] = useState(article?.category ?? createSeed?.category ?? '');
+  const [archetype, setArchetype] = useState(article?.archetype ?? createSeed?.archetype ?? '');
   const [authorDisplayName, setAuthorDisplayName] = useState(
-    article?.authorDisplayName || defaultAuthorName(user?.email)
+    article?.authorDisplayName || createSeed?.authorDisplayName || defaultAuthorName(user?.email)
   );
   const [answerFirst, setAnswerFirst] = useState(article?.answerFirst ?? '');
   const [description, setDescription] = useState(article?.description ?? '');

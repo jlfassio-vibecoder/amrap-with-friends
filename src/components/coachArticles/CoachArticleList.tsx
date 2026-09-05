@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { fetchCoachArticles, type CoachArticleSummary } from '@/lib/api/coachArticles';
+import { useMemo, useState } from 'react';
+import type { CoachArticleSummary } from '@/lib/api/coachArticles';
 import { ARTICLE_CATEGORIES } from '@/lib/coach/articles/taxonomy';
 
 const STATUS_FILTERS = [
@@ -10,39 +10,34 @@ const STATUS_FILTERS = [
 ] as const;
 
 interface CoachArticleListProps {
+  articles: CoachArticleSummary[];
+  loading: boolean;
+  error: string | null;
   onSelect: (article: CoachArticleSummary) => void;
   onCreateNew: () => void;
-  refreshKey: number;
 }
 
-export function CoachArticleList({ onSelect, onCreateNew, refreshKey }: CoachArticleListProps) {
-  const [articles, setArticles] = useState<CoachArticleSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export function CoachArticleList({
+  articles,
+  loading,
+  error,
+  onSelect,
+  onCreateNew,
+}: CoachArticleListProps) {
   const [statusFilter, setStatusFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
 
-  useEffect(() => {
-    let cancelled = false;
-    fetchCoachArticles({
-      status: statusFilter || null,
-      category: categoryFilter || null,
-    }).then((result) => {
-      if (cancelled) {
-        return;
+  const filtered = useMemo(() => {
+    return articles.filter((article) => {
+      if (statusFilter && article.status !== statusFilter) {
+        return false;
       }
-      setLoading(false);
-      if (result.error) {
-        setError(result.error.message);
-        return;
+      if (categoryFilter && article.category !== categoryFilter) {
+        return false;
       }
-      setError(null);
-      setArticles(result.data ?? []);
+      return true;
     });
-    return () => {
-      cancelled = true;
-    };
-  }, [refreshKey, statusFilter, categoryFilter]);
+  }, [articles, statusFilter, categoryFilter]);
 
   return (
     <section className="card space-y-3 p-4">
@@ -91,13 +86,13 @@ export function CoachArticleList({ onSelect, onCreateNew, refreshKey }: CoachArt
       {loading ? <p className="text-sm text-secondary">Loading posts…</p> : null}
       {error ? <p className="text-error text-sm">{error}</p> : null}
 
-      {!loading && articles.length === 0 ? (
+      {!loading && filtered.length === 0 ? (
         <p className="text-sm text-secondary">No posts match these filters.</p>
       ) : null}
 
-      {!loading && articles.length > 0 ? (
+      {!loading && filtered.length > 0 ? (
         <ul className="divide-y divide-divider">
-          {articles.map((article) => (
+          {filtered.map((article) => (
             <li key={article.id} className="py-3">
               <button
                 type="button"

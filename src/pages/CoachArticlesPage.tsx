@@ -1,21 +1,66 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
+import { CoachArticleCadencePanel } from '@/components/coachArticles/CoachArticleCadencePanel';
 import { CoachArticleForm } from '@/components/coachArticles/CoachArticleForm';
 import { CoachArticleList } from '@/components/coachArticles/CoachArticleList';
 import {
   fetchCoachArticle,
+  fetchCoachArticles,
   type CoachArticle,
   type CoachArticleSummary,
 } from '@/lib/api/coachArticles';
+import type { ArticleInitialDraft } from '@/lib/coach/articles/articleStarters';
 
-type View = { mode: 'list' } | { mode: 'new' } | { mode: 'edit'; article: CoachArticle };
+type View =
+  | { mode: 'list' }
+  | { mode: 'new'; initialDraft?: ArticleInitialDraft }
+  | { mode: 'edit'; article: CoachArticle };
+
+type ListSnapshot = {
+  key: number;
+  articles: CoachArticleSummary[];
+  error: string | null;
+};
 
 export default function CoachArticlesPage() {
   const [view, setView] = useState<View>({ mode: 'list' });
   const [refreshKey, setRefreshKey] = useState(0);
   const [formKey, setFormKey] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [listSnapshot, setListSnapshot] = useState<ListSnapshot>({
+    key: -1,
+    articles: [],
+    error: null,
+  });
+
+  useEffect(() => {
+    if (view.mode !== 'list') {
+      return;
+    }
+    let cancelled = false;
+    fetchCoachArticles({}).then((result) => {
+      if (cancelled) {
+        return;
+      }
+      if (result.error) {
+        setListSnapshot({ key: refreshKey, articles: [], error: result.error.message });
+        return;
+      }
+      setListSnapshot({
+        key: refreshKey,
+        articles: result.data ?? [],
+        error: null,
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey, view.mode]);
+
+  const listLoading = listSnapshot.key !== refreshKey;
+  const listArticles = listSnapshot.articles;
+  const listError = listSnapshot.error;
 
   async function handleSelect(summary: CoachArticleSummary) {
     setLoadError(null);
@@ -46,20 +91,37 @@ export default function CoachArticlesPage() {
         {loadError ? <p className="text-error text-sm">{loadError}</p> : null}
 
         {view.mode === 'list' ? (
-          <CoachArticleList
-            refreshKey={refreshKey}
-            onSelect={(summary) => {
-              void handleSelect(summary);
-            }}
-            onCreateNew={() => {
-              setFormKey((k) => k + 1);
-              setView({ mode: 'new' });
-            }}
-          />
+          <>
+            <CoachArticleCadencePanel
+              articles={listArticles}
+              loading={listLoading}
+              error={listError}
+              onStartDraft={(draft) => {
+                setFormKey((k) => k + 1);
+                setView({ mode: 'new', initialDraft: draft });
+              }}
+              onOpenArticle={(summary) => {
+                void handleSelect(summary);
+              }}
+            />
+            <CoachArticleList
+              articles={listArticles}
+              loading={listLoading}
+              error={listError}
+              onSelect={(summary) => {
+                void handleSelect(summary);
+              }}
+              onCreateNew={() => {
+                setFormKey((k) => k + 1);
+                setView({ mode: 'new' });
+              }}
+            />
+          </>
         ) : (
           <CoachArticleForm
             key={formKey}
             article={view.mode === 'edit' ? view.article : null}
+            initialDraft={view.mode === 'new' ? view.initialDraft : undefined}
             onSaved={handleSaved}
             onStatusChanged={handleStatusChanged}
             onCancel={() => setView({ mode: 'list' })}
