@@ -116,8 +116,9 @@ planting a restatement of the mountain-climbers cue and watching it fail.
 ## Part 2 — Images on movement pages
 
 **Decision taken:** resolve public Supabase Storage URLs at build time.
-**Status: built.** `scripts/resolve-exercise-media.ts` and the manifest exist;
-the manifest is empty until someone runs the script with bucket access.
+**Status: built.** `scripts/resolve-exercise-media.ts` writes the committed
+manifest (`src/data/exerciseMediaManifest.ts`). Re-run the script whenever
+media is uploaded or replaced, then commit the diff.
 
 ### The problem with resolving at request time
 
@@ -168,9 +169,11 @@ the metric it defines.
 
 ### Still needed
 
-The probe has to run somewhere with network access to the bucket — this sandbox
-cannot reach Supabase. Until then the manifest is empty and all 69 pages render
-without images, exactly as they do today. Nothing regresses in the meantime.
+Re-run `npm run seo:resolve-exercise-media` with `VITE_SUPABASE_URL` and network
+access to the bucket after uploading or replacing media, then commit the
+manifest diff. Two library ids still have no `sequence.*` object
+(`alternating-bird-dogs`, `glute-bridge-hold`) — those pages correctly render
+without an image until stills are uploaded.
 
 ---
 

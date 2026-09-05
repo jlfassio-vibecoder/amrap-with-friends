@@ -1,6 +1,13 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
+import { AuthModal } from '@/components/AuthModal';
+import { IdentityOverlay } from '@/components/onboarding/IdentityOverlay';
+import { GuidedIgnitionOverlay } from '@/components/onboarding/GuidedIgnitionOverlay';
+import {
+  hasCompletedGuidedIgnition,
+  markGuidedIgnitionComplete,
+} from '@/lib/onboarding/guidedIgnitionPrefs';
 import { FeaturedWodCard } from '@/components/home/FeaturedWodCard';
 import {
   CreateMissionSummaryPanel,
@@ -22,18 +29,23 @@ import {
   type WorkoutCategory,
   type WorkoutTemplate,
 } from '@/data/workoutTemplates';
-import { fetchHostActiveMissionCount } from '@/lib/api/missions';
+import { createMission, fetchHostActiveMissionCount } from '@/lib/api/missions';
 import { createRallyPointMission } from '@/lib/api/rallyPoint';
 import { SendWorkoutToSquad } from '@/components/mission/SendWorkoutToSquad';
 import { getSupabaseConfigError } from '@/lib/supabase';
 import { track } from '@/lib/analytics/track';
 import { quotasFromProfile } from '@/lib/hud/classificationQuotas';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
+import { useEnsureAthleteIdentity } from '@/hooks/useEnsureAthleteIdentity';
 import { useHudTelemetry } from '@/hooks/useHudTelemetry';
+import { useSmartRecovery } from '@/hooks/useSmartRecovery';
+import { coachWorkoutLockId } from '@/lib/smartRecovery/deriveCoachWorkoutPatterns';
 import { firstAvailableCategoryForDuration } from '@/lib/workout/filterWorkoutTemplates';
 import { CUSTOM_WORKOUT_INTENSITY_TIER } from '@/lib/workout/resolveTemplateIntensity';
 import { applyTemplate } from '@/lib/workout/templateToExercises';
 import { parseWorkoutText } from '@/lib/workout/parseWorkoutLines';
+import { isIntakeRequiredMessage } from '@/lib/auth/profileNeedsIntake';
+import type { PasswordMode } from '@/components/AuthForm';
 import {
   HOST_ACTIVE_MISSION_LIMIT,
   defaultRallyTime,
@@ -59,11 +71,21 @@ export default function CreateMissionPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { telemetry } = useHudTelemetry();
+  const { telemetry, isAuthenticated } = useHudTelemetry();
   const { profile, loading: profileLoading } = useAthleteProfile();
+  const {
+    ensureThen,
+    open: identityOpen,
+    overlayProps,
+  } = useEnsureAthleteIdentity({
+    acceptLabel: 'Accept & Launch',
+  });
   const quotas = quotasFromProfile(profile);
   const [intakeNotices, setIntakeNotices] = useState<string[]>([]);
   const [workoutSource, setWorkoutSource] = useState<WorkoutSource>('library');
+  const smartRecovery = useSmartRecovery({
+    active: workoutSource === 'library' || workoutSource === 'coach',
+  });
   const [nickname, setNickname] = useState('');
   const [durationMinutes, setDurationMinutes] = useState<number>(5);
   const [selectedCategory, setSelectedCategory] = useState<WorkoutCategory>('blood-shunt');
@@ -80,6 +102,11 @@ export default function CreateMissionPage() {
     defaultRallyTime(new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone)
   );
   const [activeCount, setActiveCount] = useState<number | null>(null);
+  const [authOpenMode, setAuthOpenMode] = useState<PasswordMode | null>(null);
+  const submitAfterAuthRef = useRef(false);
+  const guidedLaunchTemplateRef = useRef<WorkoutTemplate | null>(null);
+  const [showGuidedIgnition, setShowGuidedIgnition] = useState(() => !hasCompletedGuidedIgnition());
+  const [guestNameOpen, setGuestNameOpen] = useState(false);
 
   useEffect(() => {
     const state = location.state as IntakeNavigationState | null;
@@ -170,8 +197,26 @@ export default function CreateMissionPage() {
     [selectedTemplateId]
   );
 
-  // What Start would send. Derived once so sending a workout to a squad friend
-  // and starting it here can never disagree about what "it" is.
+  useEffect(() => {
+    if (
+      smartRecovery.enabled &&
+      selectedTemplateId &&
+      smartRecovery.locks.has(selectedTemplateId)
+    ) {
+      setSelectedTemplateId(null);
+    }
+  }, [smartRecovery.enabled, smartRecovery.locks, selectedTemplateId]);
+
+  useEffect(() => {
+    if (!smartRecovery.enabled || !selectedCoachWorkout) {
+      return;
+    }
+    if (smartRecovery.locks.has(coachWorkoutLockId(selectedCoachWorkout.id))) {
+      setSelectedCoachWorkout(null);
+    }
+  }, [smartRecovery.enabled, smartRecovery.locks, selectedCoachWorkout]);
+
+  // What Start would send.
   const configuredWorkout = useMemo(() => {
     let movements: ReturnType<typeof parseWorkoutText> = [];
     try {
@@ -254,11 +299,12 @@ export default function CreateMissionPage() {
     });
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function beginLaunch(template?: WorkoutTemplate) {
     setError(null);
 
-    if (workoutSource === 'library' && !selectedTemplate) {
+    const launchTemplate = template ?? guidedLaunchTemplateRef.current ?? undefined;
+
+    if (workoutSource === 'library' && !selectedTemplate && !launchTemplate) {
       setError('Select a workout from the library before creating a mission.');
       return;
     }
@@ -279,6 +325,51 @@ export default function CreateMissionPage() {
       return;
     }
 
+    if (!isAuthenticated) {
+      if (scheduleMode === 'rally') {
+        submitAfterAuthRef.current = true;
+        setAuthOpenMode('sign-up');
+        return;
+      }
+
+      const hostNick = nickname.trim();
+      if (!hostNick) {
+        if (launchTemplate) {
+          guidedLaunchTemplateRef.current = launchTemplate;
+        }
+        setGuestNameOpen(true);
+        return;
+      }
+
+      void igniteMission(true, {
+        template: launchTemplate,
+        nickname: hostNick,
+      });
+      return;
+    }
+
+    if (profileLoading) {
+      submitAfterAuthRef.current = true;
+      return;
+    }
+
+    ensureThen((accepted) => {
+      void igniteMission(true, {
+        template: launchTemplate ?? guidedLaunchTemplateRef.current ?? undefined,
+        nickname: accepted?.nickname,
+      });
+    });
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    beginLaunch();
+  }
+
+  async function igniteMission(
+    retryAllowed = true,
+    overrides?: { template?: WorkoutTemplate; nickname?: string }
+  ) {
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     let scheduledAt: string | undefined;
     if (scheduleMode === 'rally') {
@@ -290,37 +381,76 @@ export default function CreateMissionPage() {
       scheduledAt = iso;
     }
 
+    const launchTemplate = overrides?.template ?? guidedLaunchTemplateRef.current ?? undefined;
+    const applied = launchTemplate ? applyTemplate(launchTemplate) : null;
+    const hostNickname =
+      (overrides?.nickname ?? nickname).trim() || profile?.nickname?.trim() || '';
+    const missionDuration = applied?.durationMinutes ?? durationMinutes;
+    const missionWorkoutText = applied?.workoutText ?? workoutText;
+
+    if (!hostNickname) {
+      if (!isAuthenticated && scheduleMode === 'now') {
+        if (launchTemplate) {
+          guidedLaunchTemplateRef.current = launchTemplate;
+        }
+        setGuestNameOpen(true);
+        return;
+      }
+      setError('Enter your name or a nickname.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const workout = parseWorkoutText(workoutText);
-      const intensityTier =
-        workoutSource === 'library' && selectedTemplate
+      const workout = parseWorkoutText(missionWorkoutText);
+      const intensityTier = launchTemplate
+        ? launchTemplate.intensityTier
+        : workoutSource === 'library' && selectedTemplate
           ? selectedTemplate.intensityTier
           : workoutSource === 'coach' && selectedCoachWorkout
             ? selectedCoachWorkout.intensityTier
             : CUSTOM_WORKOUT_INTENSITY_TIER;
-      const templateId =
-        workoutSource === 'library' && selectedTemplateId
+      const templateId = launchTemplate
+        ? launchTemplate.id
+        : workoutSource === 'library' && selectedTemplateId
           ? selectedTemplateId
           : workoutSource === 'coach' && selectedCoachWorkout
             ? `coach:${selectedCoachWorkout.id}`
             : undefined;
-      const result = await createRallyPointMission({
-        nickname,
-        durationMinutes,
+
+      const createInput = {
+        nickname: hostNickname,
+        durationMinutes: missionDuration,
         workout,
         templateId,
         intensityTier,
         scheduledAt,
-      });
+      };
+
+      const result = !isAuthenticated
+        ? await createMission({
+            ...createInput,
+            scheduledAt: undefined,
+          })
+        : await createRallyPointMission(createInput);
 
       if (result.error) {
+        if (isAuthenticated && isIntakeRequiredMessage(result.error.message) && retryAllowed) {
+          ensureThen((accepted) => {
+            void igniteMission(false, {
+              template: launchTemplate,
+              nickname: accepted?.nickname ?? overrides?.nickname,
+            });
+          });
+          return;
+        }
         setError(result.error.message);
         return;
       }
 
       if (result.data) {
+        guidedLaunchTemplateRef.current = null;
         navigate(`/mission/${result.data.missionId}`);
       }
     } catch (e) {
@@ -328,6 +458,25 @@ export default function CreateMissionPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  useEffect(() => {
+    if (!submitAfterAuthRef.current || !isAuthenticated || profileLoading) {
+      return;
+    }
+
+    submitAfterAuthRef.current = false;
+    setAuthOpenMode(null);
+
+    const form = document.getElementById('create-mission-form');
+    if (form instanceof HTMLFormElement) {
+      form.requestSubmit();
+    }
+  }, [isAuthenticated, profileLoading]);
+
+  function handleAuthSuccess() {
+    setAuthOpenMode(null);
+    // submitAfterAuthRef stays true until profile finishes loading (effect above).
   }
 
   return (
@@ -370,7 +519,14 @@ export default function CreateMissionPage() {
             <p className="text-sm text-secondary">Loading athlete profile…</p>
           ) : (
             <div className="space-y-6 lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start lg:gap-6 lg:space-y-0">
-              <div className="card space-y-6 p-6">
+              <div
+                className={[
+                  'card space-y-6 p-6',
+                  showGuidedIgnition ? 'pointer-events-none select-none blur-sm' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
                 <WorkoutSourceToggle value={workoutSource} onChange={handleWorkoutSourceChange} />
 
                 {workoutSource === 'custom' ? (
@@ -392,6 +548,13 @@ export default function CreateMissionPage() {
                     classification={telemetry?.classification ?? null}
                     perceivedClassification={profile?.perceivedClassification ?? null}
                     quotas={quotas}
+                    smartRecoveryEnabled={smartRecovery.enabled}
+                    onSmartRecoveryEnabledChange={smartRecovery.setEnabled}
+                    recoveryLocks={smartRecovery.locks}
+                    smartRecoveryActive={smartRecovery.enabled && isAuthenticated}
+                    smartRecoveryLoading={smartRecovery.loading}
+                    smartRecoveryError={smartRecovery.error}
+                    isAuthenticated={isAuthenticated}
                     onDurationChange={handleDurationChange}
                     onCategoryChange={setSelectedCategory}
                     onTemplateSelect={handleTemplateSelect}
@@ -399,6 +562,19 @@ export default function CreateMissionPage() {
                 ) : (
                   <CoachWodPicker
                     selectedWorkoutId={selectedCoachWorkout?.id ?? null}
+                    smartRecoveryEnabled={smartRecovery.enabled}
+                    onSmartRecoveryEnabledChange={smartRecovery.setEnabled}
+                    recoveryLocks={smartRecovery.locks}
+                    smartRecoveryActive={smartRecovery.enabled && isAuthenticated}
+                    smartRecoveryLoading={smartRecovery.loading}
+                    smartRecoveryError={smartRecovery.error}
+                    isAuthenticated={isAuthenticated}
+                    coachWorkouts={smartRecovery.enabled ? smartRecovery.coachWorkouts : undefined}
+                    coachWorkoutsLoading={
+                      smartRecovery.enabled &&
+                      smartRecovery.loading &&
+                      smartRecovery.coachWorkouts === null
+                    }
                     onSelect={handleCoachWorkoutSelect}
                   />
                 )}
@@ -415,6 +591,11 @@ export default function CreateMissionPage() {
                 rallyTime={rallyTime}
                 capReached={capReached}
                 error={error}
+                unsignedHint={
+                  isAuthenticated
+                    ? null
+                    : 'You can train now — save to your account after the mission.'
+                }
                 loading={loading}
                 onNicknameChange={setNickname}
                 onDurationChange={handleSummaryDurationChange}
@@ -448,6 +629,56 @@ export default function CreateMissionPage() {
       <footer className="hidden pb-6 text-center text-xs text-muted lg:block">
         AMRAP With Friends
       </footer>
+
+      {authOpenMode ? (
+        <AuthModal
+          onClose={() => {
+            submitAfterAuthRef.current = false;
+            setAuthOpenMode(null);
+          }}
+          initialPasswordMode={authOpenMode}
+          onAuthenticated={handleAuthSuccess}
+          guestAllowed={false}
+          heading="Save & Launch"
+          subtitle="Create an account to hit the rally point and join the leaderboard."
+        />
+      ) : null}
+      {showGuidedIgnition ? (
+        <GuidedIgnitionOverlay
+          onSelect={(id) => {
+            const tpl = WORKOUT_TEMPLATES.find((t) => t.id === id);
+            if (!tpl) {
+              return;
+            }
+            handleTemplateSelect(tpl);
+            guidedLaunchTemplateRef.current = tpl;
+            markGuidedIgnitionComplete();
+            setShowGuidedIgnition(false);
+            beginLaunch(tpl);
+          }}
+          onSkip={() => {
+            markGuidedIgnitionComplete();
+            setShowGuidedIgnition(false);
+          }}
+        />
+      ) : null}
+      {guestNameOpen ? (
+        <IdentityOverlay
+          acceptLabel="Accept & Launch"
+          dismissible
+          onClose={() => setGuestNameOpen(false)}
+          onAccept={async (input) => {
+            setNickname(input.nickname);
+            setGuestNameOpen(false);
+            void igniteMission(true, {
+              template: guidedLaunchTemplateRef.current ?? undefined,
+              nickname: input.nickname,
+            });
+            return { error: null };
+          }}
+        />
+      ) : null}
+      {identityOpen ? <IdentityOverlay {...overlayProps} /> : null}
     </main>
   );
 }

@@ -1,16 +1,16 @@
 const ANON_ID_KEY = 'amrap_anon_id';
 
 /** Long-lived per-browser id (localStorage, survives across missions/tabs) — distinct from the per-mission tokens in missionIdentity.ts. */
-export function getOrCreateAnonId(): string {
+export function getOrCreateAnonId(): string | null {
   try {
     const existing = localStorage.getItem(ANON_ID_KEY);
-    if (existing) {
+    if (existing && existing !== 'unknown') {
       return existing;
     }
     const created = crypto.randomUUID();
     localStorage.setItem(ANON_ID_KEY, created);
     return created;
   } catch {
-    return 'unknown';
+    return null;
   }
 }

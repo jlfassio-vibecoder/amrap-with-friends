@@ -1,7 +1,7 @@
 import { DEFAULT_SETUP_DURATION_SEC } from '@/lib/amrapTimer/constants';
 import type { LiveMissionPhase } from '@/lib/missionSync/types';
 
-export const PUSH_STALE_MS = 3500;
+export const PUSH_STALE_MS = 16_000;
 
 export interface AuthoritativeSnapshot {
   phase: LiveMissionPhase;
@@ -98,25 +98,13 @@ export function snapshotToDisplay(snapshot: AuthoritativeSnapshot, nowMs: number
   const elapsedSinceSyncMs = nowMs - snapshot.receivedAtMs;
   const isStale = elapsedSinceSyncMs > PUSH_STALE_MS;
 
-  // Featured: after host Start, keep work moving from started_at when pushes
-  // go stale. Do not invent setup/work from scheduled_at while still waiting.
-  if (isStale && snapshot.isFeatured) {
-    if (snapshot.phase === 'work' && snapshot.workStartedAtMs != null) {
-      return wallClockWorkDisplay(snapshot, nowMs, snapshot.workStartedAtMs);
-    }
-
-    return {
-      phase: snapshot.phase,
-      timeLeftSec: snapshot.timeLeftSec,
-      isPaused: false,
-      workDurationSec: snapshot.workDurationSec,
-      workStartedAtMs: snapshot.workStartedAtMs,
-    };
+  // After host pushes go stale, keep unpaused work moving from started_at
+  // (all missions — not only featured). Paused work freezes above.
+  if (isStale && snapshot.phase === 'work' && snapshot.workStartedAtMs != null) {
+    return wallClockWorkDisplay(snapshot, nowMs, snapshot.workStartedAtMs);
   }
 
   if (isStale) {
-    // Non-featured: freeze when host stops pushing (pause-safe; do not
-    // re-derive from started_at which ignores paused wall time).
     return {
       phase: snapshot.phase,
       timeLeftSec: snapshot.timeLeftSec,

@@ -16,6 +16,7 @@
  * Re-run it whenever media is uploaded or replaced, and commit the diff.
  */
 import { writeFile } from 'node:fs/promises';
+import prettier from 'prettier';
 import sharp from 'sharp';
 import { EXERCISE_LIBRARY } from '../src/data/exerciseLibrary';
 import { getExerciseImagePathCandidates } from '../src/lib/media/getExerciseMediaUrl';
@@ -59,7 +60,12 @@ async function main(): Promise<void> {
     ]);
   }
 
-  await writeFile(OUTPUT, renderManifest(entries), 'utf8');
+  const config = (await prettier.resolveConfig(OUTPUT)) ?? {};
+  const formatted = await prettier.format(renderManifest(entries), {
+    ...config,
+    filepath: OUTPUT,
+  });
+  await writeFile(OUTPUT, formatted, 'utf8');
 
   console.log(`Resolved ${entries.length} of ${EXERCISE_LIBRARY.length} exercise images.`);
   if (missing.length > 0) {

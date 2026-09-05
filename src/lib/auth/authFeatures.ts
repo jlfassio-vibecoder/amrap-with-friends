@@ -14,7 +14,17 @@ function parseAuthEnvBoolean(value: string | undefined, defaultValue: boolean): 
   return defaultValue;
 }
 
-/** When false, AuthModal hides magic link and only offers email + password. */
+/** When false, AuthModal hides magic link and only offers email + password. Off by default until custom SMTP exists. */
 export function isMagicLinkAuthEnabled(): boolean {
-  return parseAuthEnvBoolean(import.meta.env.VITE_AUTH_MAGIC_LINK_ENABLED, true);
+  return parseAuthEnvBoolean(import.meta.env.VITE_AUTH_MAGIC_LINK_ENABLED, false);
+}
+
+/** When false, AuthForm hides Forgot password. Off by default until custom SMTP exists. */
+export function isPasswordResetEnabled(): boolean {
+  return parseAuthEnvBoolean(import.meta.env.VITE_AUTH_PASSWORD_RESET_ENABLED, false);
+}
+
+/** When false, AuthForm hides Continue with Google. Off until Google Cloud + Supabase Google provider are configured. */
+export function isGoogleAuthEnabled(): boolean {
+  return parseAuthEnvBoolean(import.meta.env.VITE_AUTH_GOOGLE_ENABLED, false);
 }

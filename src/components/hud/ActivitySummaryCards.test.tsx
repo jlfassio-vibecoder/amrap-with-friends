@@ -103,5 +103,7 @@ describe('ActivityAttributionCard', () => {
     expect(screen.getByTestId('activity-attribution-outside').getAttribute('style')).toContain(
       'width: 60%'
     );
+    expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('40');
+    expect(screen.getByRole('progressbar').getAttribute('aria-valuemax')).toBe('100');
   });
 });
