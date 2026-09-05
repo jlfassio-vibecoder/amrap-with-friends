@@ -7,6 +7,9 @@ import {
   fetchCoachAnonSummary,
   fetchCoachDashboard,
   fetchCoachGuestList,
+  fetchCoachGuestBrowsersSeries,
+  fetchCoachChartNotesForRange,
+  upsertCoachChartNote,
   fetchCoachOnlineNow,
   fetchCoachOnboardingStuckList,
   fetchCoachRecentEvents,
@@ -634,5 +637,198 @@ describe('coach_online_now migration contract', () => {
     expect(sql).toContain("ae.anon_id <> 'unknown'");
     expect(sql).toContain('REVOKE EXECUTE ON FUNCTION public.coach_online_now() FROM PUBLIC, anon');
     expect(sql).toContain('GRANT EXECUTE ON FUNCTION public.coach_online_now() TO authenticated');
+  });
+});
+
+describe('fetchCoachGuestBrowsersSeries', () => {
+  it('wires p_window and parses total plus points', async () => {
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        window: '7d',
+        grain: 'day',
+        total: 53,
+        points: [
+          { bucketStart: '2026-09-01T00:00:00.000Z', count: 4 },
+          { bucketStart: '2026-09-02T00:00:00.000Z', count: 0 },
+          { bucketStart: null, count: 9 },
+        ],
+      },
+      error: null,
+    });
+
+    const result = await fetchCoachGuestBrowsersSeries('7d');
+
+    expect(callRpcMock).toHaveBeenCalledWith('coach_guest_browsers_series', { p_window: '7d' });
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual({
+      window: '7d',
+      grain: 'day',
+      total: 53,
+      points: [
+        { bucketStart: '2026-09-01T00:00:00.000Z', count: 4 },
+        { bucketStart: '2026-09-02T00:00:00.000Z', count: 0 },
+      ],
+    });
+  });
+
+  it('maps invalid_window from the RPC', async () => {
+    callRpcMock.mockResolvedValue({
+      data: { ok: false, reason: 'invalid_window' },
+      error: null,
+    });
+
+    const result = await fetchCoachGuestBrowsersSeries('7d');
+
+    expect(result.data).toBeNull();
+    expect(result.error?.message).toBe('Invalid activity window.');
+  });
+});
+
+describe('coach_guest_browsers_series migration contract', () => {
+  it('indexes guest events and returns continuous window series for coach only', () => {
+    const sql = readFileSync(
+      join(root, 'supabase/migrations/20260905120000_coach_guest_browsers_series.sql'),
+      'utf8'
+    );
+
+    expect(sql).toContain('analytics_events_guest_occurred_anon_idx');
+    expect(sql).toContain('CREATE OR REPLACE FUNCTION public.coach_guest_browsers_series');
+    expect(sql).toContain('is_coach()');
+    expect(sql).toContain('ae.user_id IS NULL');
+    expect(sql).toContain("WHEN '24h' THEN");
+    expect(sql).toContain("WHEN '3d' THEN");
+    expect(sql).toContain("WHEN '7d' THEN");
+    expect(sql).toContain("WHEN '30d' THEN");
+    expect(sql).toContain("WHEN '90d' THEN");
+    expect(sql).toContain("WHEN '365d' THEN");
+    expect(sql).toContain("v_grain := 'hour'");
+    expect(sql).toContain("v_grain := 'day'");
+    expect(sql).toContain('generate_series');
+    expect(sql).toContain("'bucketStart'");
+    expect(sql).toContain("'invalid_window'");
+    expect(sql).toContain(
+      'REVOKE EXECUTE ON FUNCTION public.coach_guest_browsers_series(text) FROM PUBLIC, anon'
+    );
+    expect(sql).toContain(
+      'GRANT EXECUTE ON FUNCTION public.coach_guest_browsers_series(text) TO authenticated'
+    );
+  });
+});
+
+describe('fetchCoachChartNotesForRange', () => {
+  it('wires range params and parses notes', async () => {
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        notes: [
+          {
+            bucketStart: '2026-09-01T00:00:00.000Z',
+            body: 'Launch spike',
+            updatedAt: '2026-09-05T12:00:00.000Z',
+            updatedBy: '11111111-1111-4111-8111-111111111111',
+          },
+          { bucketStart: null, body: 'skip' },
+        ],
+      },
+      error: null,
+    });
+
+    const result = await fetchCoachChartNotesForRange({
+      metric: 'guest_browsers',
+      grain: 'day',
+      from: '2026-09-01T00:00:00.000Z',
+      to: '2026-09-30T00:00:00.000Z',
+    });
+
+    expect(callRpcMock).toHaveBeenCalledWith('coach_chart_notes_for_range', {
+      p_metric: 'guest_browsers',
+      p_grain: 'day',
+      p_from: '2026-09-01T00:00:00.000Z',
+      p_to: '2026-09-30T00:00:00.000Z',
+    });
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual([
+      {
+        bucketStart: '2026-09-01T00:00:00.000Z',
+        body: 'Launch spike',
+        updatedAt: '2026-09-05T12:00:00.000Z',
+        updatedBy: '11111111-1111-4111-8111-111111111111',
+      },
+    ]);
+  });
+});
+
+describe('upsertCoachChartNote', () => {
+  it('returns the saved note on upsert', async () => {
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        deleted: false,
+        note: {
+          bucketStart: '2026-09-01T00:00:00.000Z',
+          body: 'Launch spike',
+          updatedAt: '2026-09-05T12:00:00.000Z',
+          updatedBy: '11111111-1111-4111-8111-111111111111',
+        },
+      },
+      error: null,
+    });
+
+    const result = await upsertCoachChartNote({
+      metric: 'guest_browsers',
+      grain: 'day',
+      bucketStart: '2026-09-01T00:00:00.000Z',
+      body: 'Launch spike',
+    });
+
+    expect(callRpcMock).toHaveBeenCalledWith('coach_chart_note_upsert', {
+      p_metric: 'guest_browsers',
+      p_grain: 'day',
+      p_bucket_start: '2026-09-01T00:00:00.000Z',
+      p_body: 'Launch spike',
+    });
+    expect(result.error).toBeNull();
+    expect(result.data?.deleted).toBe(false);
+    expect(result.data?.note?.body).toBe('Launch spike');
+  });
+
+  it('returns deleted when the body is cleared', async () => {
+    callRpcMock.mockResolvedValue({
+      data: { ok: true, deleted: true },
+      error: null,
+    });
+
+    const result = await upsertCoachChartNote({
+      metric: 'guest_browsers',
+      grain: 'day',
+      bucketStart: '2026-09-01T00:00:00.000Z',
+      body: '',
+    });
+
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual({ deleted: true, note: null });
+  });
+});
+
+describe('coach_chart_notes migration contract', () => {
+  it('stores shared coach notes behind is_coach RPCs', () => {
+    const sql = readFileSync(
+      join(root, 'supabase/migrations/20260905130000_coach_chart_notes.sql'),
+      'utf8'
+    );
+
+    expect(sql).toContain('CREATE TABLE IF NOT EXISTS public.coach_chart_notes');
+    expect(sql).toContain("metric = 'guest_browsers'");
+    expect(sql).toContain("grain IN ('hour', 'day')");
+    expect(sql).toContain('length(body) <= 500');
+    expect(sql).toContain('CREATE OR REPLACE FUNCTION public.coach_chart_notes_for_range');
+    expect(sql).toContain('CREATE OR REPLACE FUNCTION public.coach_chart_note_upsert');
+    expect(sql).toContain('is_coach()');
+    expect(sql).toContain('ON CONFLICT (metric, grain, bucket_start) DO UPDATE');
+    expect(sql).toContain("'deleted', true");
+    expect(sql).toContain(
+      'REVOKE ALL ON TABLE public.coach_chart_notes FROM PUBLIC, anon, authenticated'
+    );
   });
 });
