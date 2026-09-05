@@ -23,9 +23,7 @@ describe('ExerciseInfoTrigger', () => {
 
     expect(screen.getByRole('dialog')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Burpees' })).toBeTruthy();
-    expect(
-      screen.getByText(/Drop into a squat, plant hands, and jump feet back/)
-    ).toBeTruthy();
+    expect(screen.getByText(/Drop into a squat, plant hands, and jump feet back/)).toBeTruthy();
     expect(screen.getByText('Common mistakes')).toBeTruthy();
     expect(screen.getByText('AMRAP tip')).toBeTruthy();
     expect(screen.queryByText('No photos yet')).toBeNull();
@@ -35,15 +33,17 @@ describe('ExerciseInfoTrigger', () => {
     expect(screen.getByText('No video yet')).toBeTruthy();
   });
 
-  it('shows AMRAP tip and hides empty common mistakes for Air Squats', () => {
+  // This used to assert the section was hidden, back when 72 of 73 entries had
+  // no common mistakes. Every entry has them now, and a test enforces it, so the
+  // empty branch is unreachable with real library data.
+  it('shows AMRAP tip and common mistakes for Air Squats', () => {
     render(<ExerciseInfoTrigger name="Air Squats" />);
     fireEvent.click(screen.getByRole('button', { name: 'How to do Air Squats' }));
 
-    expect(screen.queryByText('Common mistakes')).toBeNull();
+    expect(screen.getByText('Common mistakes')).toBeTruthy();
+    expect(screen.getByText(/Cutting the depth once the legs burn/)).toBeTruthy();
     expect(screen.getByText('AMRAP tip')).toBeTruthy();
-    expect(
-      screen.getByText(/Let gravity do the work on the way down/)
-    ).toBeTruthy();
+    expect(screen.getByText(/Let gravity do the work on the way down/)).toBeTruthy();
   });
 
   it('resolves parenthetical movement names for the trigger', () => {

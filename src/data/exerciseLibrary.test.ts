@@ -85,11 +85,10 @@ describe('getExerciseInfo', () => {
     expect(getExerciseInfo('Standard Glute Bridges')?.id).toBe('standard-glute-bridges');
   });
 
-  it('hides empty common mistakes for Localized Trap entries', () => {
-    expect(getExerciseInfo('Bottom Squat Hold')?.commonMistakes).toEqual([]);
-    expect(getExerciseInfo('Hollow Hold')?.commonMistakes).toEqual([]);
-    expect(getExerciseInfo('Reverse Lunges')?.commonMistakes).toEqual([]);
-    expect(getExerciseInfo('Pogo Jumps')?.commonMistakes).toEqual([]);
+  it('carries common mistakes for Localized Trap entries', () => {
+    for (const name of ['Bottom Squat Hold', 'Hollow Hold', 'Reverse Lunges', 'Pogo Jumps']) {
+      expect(getExerciseInfo(name)?.commonMistakes.length, name).toBeGreaterThanOrEqual(2);
+    }
   });
 
   it('matches Engine Room entries by exact name', () => {
@@ -129,9 +128,10 @@ describe('getExerciseInfo', () => {
     );
   });
 
-  it('hides empty common mistakes for Engine Room entries', () => {
-    expect(getExerciseInfo('Sprawls')?.commonMistakes).toEqual([]);
-    expect(getExerciseInfo('Jumping Jacks')?.commonMistakes).toEqual([]);
+  it('carries common mistakes for Engine Room entries', () => {
+    for (const name of ['Sprawls', 'Jumping Jacks']) {
+      expect(getExerciseInfo(name)?.commonMistakes.length, name).toBeGreaterThanOrEqual(2);
+    }
   });
 
   it('matches Midline Tension entries by exact name', () => {
@@ -151,9 +151,10 @@ describe('getExerciseInfo', () => {
     expect(getExerciseInfo('Plank Shoulder Taps')?.id).toBe('plank-shoulder-taps');
   });
 
-  it('hides empty common mistakes for Midline Tension entries', () => {
-    expect(getExerciseInfo('Dead Bugs')?.commonMistakes).toEqual([]);
-    expect(getExerciseInfo('Flutter Kicks')?.commonMistakes).toEqual([]);
+  it('carries common mistakes for Midline Tension entries', () => {
+    for (const name of ['Dead Bugs', 'Flutter Kicks']) {
+      expect(getExerciseInfo(name)?.commonMistakes.length, name).toBeGreaterThanOrEqual(2);
+    }
   });
 
   it('matches remaining dictionary entries by exact name', () => {

@@ -39,6 +39,7 @@ links), `setupAndExecution`, `coachingCue`, `amrapTip`, or anything in
 **Decision taken:** Claude drafts, a human reviews before merge. The review has
 to be real — this is coaching guidance published under the product's name, and a
 wrong cue is worse than a missing one.
+**Status: drafted, awaiting that review.** 156 mistakes across all 73 movements.
 
 ### How the drafts get written
 
@@ -93,14 +94,22 @@ Three tests, added with the content:
 
 ### The review workflow
 
-Drafts land in `exerciseLibrary.ts` one family per commit, so a reviewer sees
-eight to twelve related movements at a time rather than a 72-entry diff. Each
-commit body carries the family's mistakes as a table for reading without
-scrolling the diff.
+**Changed during execution.** The plan called for one commit per family. Three
+existing tests asserted that `commonMistakes` was empty for movements spread
+across several families, so any family-sized commit would have left the suite
+red until the last one landed. Shipped as two green commits instead: the content
+with those stale assertions corrected, then the guardrails.
 
-**Sequencing:** draft the burpee, push-up and squat families first — those cover
-the highest-frequency movements (`air squats` alone appear in 16.7% of workouts,
-per `/stats`), so the review effort lands where the traffic will.
+The diff is still readable by family — entries sit in library order and each
+shows the movement id beside its mistakes.
+
+#### A guardrail worth knowing about
+
+The fourth test compares each mistake against its movement's coaching cue and
+fails when more than 60% of the substantial words overlap. A mistake that
+restates the cue tells the athlete nothing new, and it is the easiest thing to
+write by accident when drafting from the cue in the first place. Verified by
+planting a restatement of the mountain-climbers cue and watching it fail.
 
 ---
 
@@ -172,9 +181,13 @@ without an image until stills are uploaded.
 
 - **Video.** No footage exists. Out of scope until it does.
 - **Widening the workout pages past 20.** Waiting on real GSC data, per Phase 3.
-- **The four movements that fail `hasEnoughToSay`.** They will pass once their
-  mistakes are written; the gate then admits them and the page count rises from
-  69 to 73 on its own.
+- **The four movements that fail `hasEnoughToSay`.** This plan predicted they
+  would pass once their mistakes were written. **That was wrong.** `v-ups`,
+  `superman-raises`, `superman-hold` and `walking-lunges` fail on coaching-cue
+  length, not mistakes — their cues run 19 to 29 characters against a 30
+  character bar ("Fly, do not jerk.", "Smooth forward momentum."). They now have
+  mistakes and still do not publish. Expanding four terse cues is a separate,
+  small content task; the gate is behaving correctly by holding them back.
 
 ---
 
@@ -184,7 +197,7 @@ without an image until stills are uploaded.
    improves all 69 pages at once with no review burden.
 2. Then Part 1, family by family, highest-frequency movements first.
 3. Tighten `hasEnoughToSay` to require two mistakes once every family has
-   landed, and confirm the published count goes 69 → 73.
+   landed. **Done — the count stays at 69**, for the cue-length reason above.
 
 ## Open question
 
