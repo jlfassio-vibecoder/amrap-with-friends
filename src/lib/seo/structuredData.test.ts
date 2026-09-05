@@ -61,6 +61,27 @@ describe('howTo', () => {
       { '@type': 'HowToStep', position: 2, name: 'Cue', text: 'Drop fast, snap up faster.' },
     ]);
   });
+
+  it('omits image entirely when there is none, rather than emitting an empty one', () => {
+    const node = howTo({
+      name: 'Burpees',
+      description: 'd',
+      steps: [],
+      path: '/exercises/burpees',
+    });
+    expect('image' in node).toBe(false);
+  });
+
+  it('carries the image when one resolved', () => {
+    const node = howTo({
+      name: 'Burpees',
+      description: 'd',
+      steps: [],
+      path: '/exercises/burpees',
+      image: 'https://project.supabase.co/storage/v1/object/public/exercise-media/burpees/s.jpeg',
+    });
+    expect(node.image).toContain('/exercise-media/burpees/s.jpeg');
+  });
 });
 
 describe('exercisePlan', () => {
