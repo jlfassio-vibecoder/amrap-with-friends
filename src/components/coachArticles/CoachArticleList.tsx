@@ -23,7 +23,6 @@ export function CoachArticleList({ onSelect, onCreateNew, refreshKey }: CoachArt
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     fetchCoachArticles({
       status: statusFilter || null,
       category: categoryFilter || null,
