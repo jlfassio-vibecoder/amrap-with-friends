@@ -46,16 +46,20 @@ export function clampDescription(text: string): string {
 // ---------------------------------------------------------------- exercises
 
 /**
- * A page ships only when it has something to say. Setup, a coaching cue and an
- * AMRAP-specific tip are the three things that make a movement page worth
- * reading; `commonMistakes` is rendered when present but is not required, since
- * today only one entry in the library has any.
+ * A page ships only when it has something to say: setup, a coaching cue, an
+ * AMRAP-specific tip, at least two common mistakes, and at least one workout
+ * that programmes it.
+ *
+ * The mistakes requirement was added once the library actually had them — it
+ * shipped with 72 of 73 entries empty, and gating on a field nothing populated
+ * would have published nothing.
  */
 export function hasEnoughToSay(exercise: ExerciseInfo): boolean {
   return (
     exercise.setupAndExecution.join(' ').trim().length >= 60 &&
     exercise.coachingCue.trim().length >= 30 &&
     (exercise.amrapTip?.trim().length ?? 0) >= 40 &&
+    exercise.commonMistakes.length >= 2 &&
     workoutsUsingMovement(exercise.name).length > 0
   );
 }
