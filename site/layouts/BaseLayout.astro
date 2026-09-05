@@ -1,7 +1,9 @@
 ---
 import '@/index.css';
+import { backFallbackFor } from '@/lib/seo/backFallback';
 import { resolveSeo, SITE_NAME } from '@/lib/seo/routes';
 import { organization, serializeJsonLd, type JsonLd } from '@/lib/seo/structuredData';
+import BackLink from '../components/BackLink.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 
@@ -10,6 +12,13 @@ interface Props {
   jsonLd?: JsonLd[];
   /** The home page carries its own nav inside the hero's dark ground. */
   hideHeader?: boolean;
+  /** Hide the history back control (e.g. home). Default: show whenever the site header shows. */
+  hideBack?: boolean;
+  /**
+   * Where ← Back goes if there is no same-origin previous page (new tab, direct URL).
+   * Defaults from the pathname when omitted.
+   */
+  backFallback?: string;
   /**
    * Generated pages (a movement, a workout, a collection) are not rows in the
    * route table — there are a hundred of them — so they pass their own title and
@@ -19,7 +28,16 @@ interface Props {
   description?: string;
 }
 
-const { jsonLd = [], hideHeader = false, title, description } = Astro.props;
+const {
+  jsonLd = [],
+  hideHeader = false,
+  hideBack = false,
+  backFallback,
+  title,
+  description,
+} = Astro.props;
+const showBack = !hideHeader && !hideBack;
+const resolvedBackFallback = backFallback ?? backFallbackFor(Astro.url.pathname);
 
 // Title, description, canonical and robots all come from src/lib/seo/routes.ts —
 // the same table the SPA and the edge middleware read, so a page cannot describe
@@ -76,6 +94,15 @@ const graph = serializeJsonLd([organization(), ...jsonLd]);
   </head>
   <body class="home-marketing bg-page text-ink">
     {!hideHeader && <SiteHeader />}
+    {
+      showBack && (
+        <div class="border-b border-border bg-page">
+          <div class="mx-auto w-full max-w-[1240px] px-6 py-3 lg:px-10">
+            <BackLink fallback={resolvedBackFallback} />
+          </div>
+        </div>
+      )
+    }
     <main>
       <slot />
     </main>

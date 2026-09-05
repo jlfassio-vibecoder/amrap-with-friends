@@ -4,7 +4,8 @@
  * Astro owns the static content pages and the public assets; Vite builds the
  * React SPA. The SPA's entry HTML moves to `_app-shell/index.html` because
  * Astro's own `index.html` sits at the root — vercel.json rewrites every app
- * route to the shell, which is how rally links keep the URLs they already have.
+ * route to `/_app-shell` (omit `.html`: `cleanUrls` strips extensions before
+ * rewrites run). That is how rally links keep the URLs they already have.
  *
  * The sitemap and llms.txt are generated here from src/lib/seo/routes.ts rather
  * than committed, so they cannot drift from the routes they describe.

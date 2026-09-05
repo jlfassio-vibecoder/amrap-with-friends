@@ -14,7 +14,7 @@ export const SITE_NAME = 'AMRAP With Friends';
 
 export const DEFAULT_TITLE = 'AMRAP With Friends — Live Group AMRAP Workout Timer';
 export const DEFAULT_DESCRIPTION =
-  'AMRAP With Friends is a live group workout timer for As Many Rounds As Possible sessions. Host or join a session, stay on a synced countdown, and race the leaderboard together.';
+  'Live group AMRAP workout timer. Host or join a mission, sync one countdown across phones, and race the leaderboard together.';
 
 export interface RouteSeo {
   /** Path pattern. `:name` matches exactly one segment. */
@@ -54,21 +54,21 @@ export const CONTENT_ROUTES: RouteSeo[] = [
     path: '/amrap-workouts',
     title: 'AMRAP Workouts — 150 Bodyweight Sessions, 5 to 20 Minutes',
     description:
-      'A library of AMRAP workouts you can run today. Browse by time domain or by training stimulus, see every movement with coaching cues, and run any of them on a shared timer.',
+      'Browse 150 bodyweight AMRAP workouts by time (5–20 min) or training stimulus, with coaching cues and a shared live timer.',
     index: true,
   },
   {
     path: '/exercises',
     title: 'AMRAP Exercise Library — Form and Coaching Cues',
     description:
-      'Every movement in the AMRAP workout library, with setup and execution, the coaching cue that matters under fatigue, and the workouts that programme it.',
+      'Every movement in the AMRAP workout library: setup and execution, the coaching cue that holds under fatigue, and the workouts that use it.',
     index: true,
   },
   {
     path: '/guides',
     title: 'AMRAP Guides — How the Format Actually Works',
     description:
-      'Plain answers to the questions people actually ask about AMRAP training: what it means, how to score it, how to pace it, and how it differs from EMOM and Tabata.',
+      'Plain answers to what people actually ask about AMRAP training: what it means, how to score it, how to pace it, and how it differs from EMOM and Tabata.',
     index: true,
   },
   {
@@ -89,14 +89,14 @@ export const CONTENT_ROUTES: RouteSeo[] = [
     path: '/guides/how-to-score-an-amrap',
     title: 'How to Score an AMRAP — Rounds Plus Reps, Explained',
     description:
-      'An AMRAP score is rounds plus reps, written 7+12. How to count it, what to do about a partial round, the tiebreak rules, and how to record it so it means something later.',
+      'An AMRAP score is rounds plus reps, written 7+12. How to count it, what to do with a partial round, the tiebreak rules, and how to record it usefully.',
     index: true,
   },
   {
     path: '/guides/what-is-a-good-amrap-score',
     title: 'What Is a Good AMRAP Score? — An Honest Answer',
     description:
-      'There is no universal good AMRAP score, and anyone quoting one is guessing. Why the number only means something against the same workout, and how to build your own baseline.',
+      'There is no universal good AMRAP score, and anyone quoting one is guessing. Why it only means something against the same workout, and how to build a baseline.',
     index: true,
   },
   {
@@ -131,19 +131,21 @@ export const CONTENT_ROUTES: RouteSeo[] = [
     path: '/about',
     title: 'About AMRAP With Friends',
     description:
-      'Why AMRAP With Friends exists: every other workout timer is built for one person. This one puts a whole crew on the same clock and the same leaderboard.',
+      'Why AMRAP With Friends exists: most workout timers are built for one person. This one puts a whole crew on the same clock and leaderboard.',
     index: true,
   },
   {
     path: '/privacy',
     title: 'Privacy — AMRAP With Friends',
-    description: 'What AMRAP With Friends stores, why, and how to have it deleted.',
+    description:
+      'How AMRAP With Friends handles accounts, workout data, and cookies — and how to request deletion of what we store.',
     index: true,
   },
   {
     path: '/terms',
     title: 'Terms of Use — AMRAP With Friends',
-    description: 'The terms you agree to when you use AMRAP With Friends.',
+    description:
+      'Terms of use for AMRAP With Friends: accounts, acceptable use, liability limits, and how live missions and rally links work.',
     index: true,
   },
 ];
@@ -194,6 +196,14 @@ export const DYNAMIC_CONTENT_ROUTES: RouteSeo[] = [
   {
     path: '/exercises/:exerciseSlug',
     title: 'Exercise',
+    description: '',
+    index: true,
+  },
+  // Literal `style` before `:duration/:workoutSlug`, or `/amrap-workouts/style/x`
+  // would classify as a workout detail with duration "style".
+  {
+    path: '/amrap-workouts/style/:style',
+    title: 'AMRAP workout style',
     description: '',
     index: true,
   },

@@ -52,6 +52,11 @@ describe('matchRoutePath', () => {
     // invite page must not be resolved as a campaign id.
     expect(resolveSeo('/campaign/join').title).toBe("You've been invited");
   });
+
+  it('matches style collections before the workout-detail pattern', () => {
+    expect(resolveSeo('/amrap-workouts/style/blood-shunt').title).toBe('AMRAP workout style');
+    expect(resolveSeo('/amrap-workouts/5-minute/the-hull-breach').title).toBe('AMRAP workout');
+  });
 });
 
 describe('resolveSeo', () => {
@@ -126,5 +131,12 @@ describe('ROUTE_SEO', () => {
   it('gives each indexable page a distinct title, so no two URLs compete', () => {
     const titles = ROUTE_SEO.filter((r) => r.index && !isRoutePattern(r.path)).map((r) => r.title);
     expect(new Set(titles).size).toBe(titles.length);
+  });
+
+  it('keeps hand-written indexable descriptions in the 50–160 character band Bing expects', () => {
+    for (const route of ROUTE_SEO.filter((r) => r.index && !isRoutePattern(r.path))) {
+      expect(route.description.length, route.path).toBeGreaterThanOrEqual(50);
+      expect(route.description.length, route.path).toBeLessThanOrEqual(160);
+    }
   });
 });

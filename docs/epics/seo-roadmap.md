@@ -488,6 +488,20 @@ The page says plainly what is missing and why, and commits to publishing it when
 the numbers are real. That section is the one to delete first once there is
 volume.
 
+#### Merged alongside Phase 3
+
+Work that landed on the branch in parallel and is now merged in: a shared
+`← Back` control driven by `backFallbackFor` (extended here to cover
+`/guides/*`), a nav rename of `/amrap-workouts` to "The Library", and a fix to
+the `vercel.json` rewrites — under `cleanUrls`, an app route has to point at
+`/_app-shell` rather than `/_app-shell/index.html`. That last one is Vercel
+routing behaviour and cannot be verified from a local build; it needs a check on
+a real deploy.
+
+A test added with that work holds hand-written descriptions to the 50–160
+character band, which is stricter than the 185 clamp on generated ones. Three
+Phase 3 descriptions were over and have been trimmed.
+
 #### What the first GSC impressions say
 
 Five impressions, zero clicks, on `amrap workouts`, `bodyweight amrap` and
