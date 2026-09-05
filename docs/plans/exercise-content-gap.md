@@ -107,6 +107,9 @@ per `/stats`), so the review effort lands where the traffic will.
 ## Part 2 — Images on movement pages
 
 **Decision taken:** resolve public Supabase Storage URLs at build time.
+**Status: built.** `scripts/resolve-exercise-media.ts` writes the committed
+manifest (`src/data/exerciseMediaManifest.ts`). Re-run the script whenever
+media is uploaded or replaced, then commit the diff.
 
 ### The problem with resolving at request time
 
@@ -138,13 +141,30 @@ Derived from the movement name and the photo's `caption` when it has one —
 "Burpees: the sequence from squat to full extension" rather than "Burpees".
 Never empty, since these images carry instructional content.
 
-### Verification
+### Verified
 
-- `merge-build.ts` fails if a manifest entry points at a URL the pages reference
-  but the manifest does not contain.
-- A test asserts every manifest entry has non-empty alt text.
-- Spot-check a rendered page against the live bucket before merge — this
-  sandbox cannot reach Supabase, so the probe has to run somewhere with network.
+Both branches of the render were built and checked against real output, with a
+seeded manifest entry:
+
+- **Entry present, `VITE_SUPABASE_URL` set** — the page emits
+  `<img src="…/storage/v1/object/public/exercise-media/burpees/sequence.jpeg"
+alt="How to do Burpees" width="1024" height="768" loading="eager"
+fetchpriority="high">` and the same URL appears as the `HowTo` node's `image`.
+- **Entry present, no Supabase URL** — no `img` tag, and `image` is absent from
+  the schema rather than empty.
+- **No entry** — no `img` tag. Confirmed on a second page in the same build.
+
+The image is loaded eagerly with `fetchpriority="high"` on purpose: it sits at
+the fold and is the page's likely LCP element, so lazy-loading it would delay
+the metric it defines.
+
+### Still needed
+
+Re-run `npm run seo:resolve-exercise-media` with `VITE_SUPABASE_URL` and network
+access to the bucket after uploading or replacing media, then commit the
+manifest diff. Two library ids still have no `sequence.*` object
+(`alternating-bird-dogs`, `glute-bridge-hold`) — those pages correctly render
+without an image until stills are uploaded.
 
 ---
 

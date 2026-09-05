@@ -91,6 +91,8 @@ export function howTo(input: {
   description: string;
   steps: HowToStep[];
   path: string;
+  /** Omitted rather than emitted empty — an `image: ""` is worse than no image. */
+  image?: string;
 }): JsonLd {
   return {
     '@context': 'https://schema.org',
@@ -98,6 +100,7 @@ export function howTo(input: {
     name: input.name,
     description: input.description,
     url: `${SITE_ORIGIN}${input.path}`,
+    ...(input.image ? { image: input.image } : {}),
     publisher: { '@id': `${SITE_ORIGIN}/#organization` },
     step: input.steps.map((step, i) => ({
       '@type': 'HowToStep',

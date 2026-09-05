@@ -2,6 +2,7 @@
 import type { GetStaticPaths } from 'astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { breadcrumbList, howTo, type HowToStep } from '@/lib/seo/structuredData';
+import { resolveExerciseMedia } from '@/lib/media/exerciseMediaManifest';
 import {
   durationPath,
   exercisePages,
@@ -23,6 +24,11 @@ export const getStaticPaths = (() => {
 
 const { exercise, page } = Astro.props;
 
+// Null when the bucket has no object for this movement, or when the build has no
+// Supabase URL configured. Either way the page renders without an image rather
+// than with a broken one.
+const media = resolveExerciseMedia(exercise.id, import.meta.env.VITE_SUPABASE_URL);
+
 const usedIn = workoutsUsingMovement(exercise.name);
 // Only workouts that have a page of their own can be linked.
 const publishedIds = new Set(featuredWorkouts().map((template) => template.id));
@@ -42,6 +48,7 @@ const jsonLd = [
     description: page.description,
     steps,
     path: exercisePath(exercise),
+    image: media?.src,
   }),
   breadcrumbList([
     { name: 'Home', path: '/' },
@@ -66,6 +73,23 @@ const jsonLd = [
         {usedIn.length === 1 ? 'AMRAP workout' : 'AMRAP workouts'} in the library.
       </p>
     </header>
+
+    {
+      media && (
+        <figure class="space-y-2">
+          <img
+            class="w-full rounded-card border border-border bg-surface"
+            src={media.src}
+            alt={media.alt}
+            width={media.width}
+            height={media.height}
+            loading="eager"
+            fetchpriority="high"
+            decoding="async"
+          />
+        </figure>
+      )
+    }
 
     <section class="space-y-4">
       <h2 class="text-display text-2xl text-ink">How to do it</h2>
