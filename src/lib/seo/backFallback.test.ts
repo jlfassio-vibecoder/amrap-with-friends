@@ -21,10 +21,16 @@ describe('backFallbackFor', () => {
     expect(backFallbackFor('/guides/amrap-pacing')).toBe('/guides');
   });
 
+  it('sends blog posts and category hubs to /blog', () => {
+    expect(backFallbackFor('/blog/why-easy-days-matter')).toBe('/blog');
+    expect(backFallbackFor('/blog/category/programming')).toBe('/blog');
+  });
+
   it('sends hubs to home', () => {
     expect(backFallbackFor('/exercises')).toBe('/');
     expect(backFallbackFor('/amrap-workouts')).toBe('/');
     expect(backFallbackFor('/guides')).toBe('/');
+    expect(backFallbackFor('/blog')).toBe('/');
   });
 
   it('defaults everything else to home', () => {

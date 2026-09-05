@@ -10,6 +10,9 @@ export function backFallbackFor(pathname: string): string {
   }
   if (/^\/amrap-workouts\/(style\/[^/]+|\d+-minute)$/.test(path)) return '/amrap-workouts';
   if (/^\/guides\/[^/]+$/.test(path)) return '/guides';
-  if (path === '/exercises' || path === '/amrap-workouts' || path === '/guides') return '/';
+  if (/^\/blog\/category\/[^/]+$/.test(path)) return '/blog';
+  if (/^\/blog\/[^/]+$/.test(path)) return '/blog';
+  if (path === '/exercises' || path === '/amrap-workouts' || path === '/guides' || path === '/blog')
+    return '/';
   return '/';
 }

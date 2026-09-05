@@ -6,6 +6,7 @@ const STATUS_FILTERS = [
   { id: '', label: 'All statuses' },
   { id: 'draft', label: 'Draft' },
   { id: 'ready', label: 'Ready' },
+  { id: 'published', label: 'Published' },
 ] as const;
 
 interface CoachArticleListProps {
@@ -107,9 +108,11 @@ export function CoachArticleList({ onSelect, onCreateNew, refreshKey }: CoachArt
                   {article.title || '(Untitled)'}
                   <span
                     className={
-                      article.status === 'ready'
+                      article.status === 'published'
                         ? 'ml-2 rounded-card bg-success-tint px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success-text'
-                        : 'ml-2 rounded-card border border-border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary'
+                        : article.status === 'ready'
+                          ? 'ml-2 rounded-card bg-accent-tint px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent'
+                          : 'ml-2 rounded-card border border-border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary'
                     }
                   >
                     {article.status}

@@ -1,13 +1,21 @@
 import { useState, type FormEvent } from 'react';
 import {
+  publishCoachArticle,
   setCoachArticleStatus,
   upsertCoachArticle,
   type CoachArticle,
+  type CoachArticlePhoto,
 } from '@/lib/api/coachArticles';
+import {
+  CoachArticlePhotoEditor,
+  type ArticlePhotoRow,
+} from '@/components/coachArticles/CoachArticlePhotoEditor';
+import { buildArticleExportSnapshotFromArticle } from '@/lib/coach/articles/buildArticleExportSnapshot';
 import { ARTICLE_ARCHETYPES, ARTICLE_CATEGORIES } from '@/lib/coach/articles/taxonomy';
 import { articlePillarPaths } from '@/lib/coach/articles/pillarPaths';
 import { isValidArticleSlug, slugifyArticleTitle } from '@/lib/coach/articles/slugify';
-import { softValidateArticle } from '@/lib/coach/articles/validateArticle';
+import { softValidateArticle, hardValidateArticle } from '@/lib/coach/articles/validateArticle';
+import { uploadCoachArticlePhoto } from '@/lib/media/coachArticleMedia';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { callsignFromEmail } from '@/lib/missionIdentity';
 
@@ -19,6 +27,27 @@ function wordCount(text: string): number {
 
 function defaultAuthorName(email: string | null | undefined): string {
   return callsignFromEmail(email) ?? '';
+}
+
+function photosFromArticle(article: CoachArticle | null | undefined): ArticlePhotoRow[] {
+  return (article?.photos ?? []).map((photo, index) => ({
+    key: `existing-${index}-${photo.path}`,
+    kind: 'existing' as const,
+    path: photo.path,
+    alt: photo.alt,
+    caption: photo.caption ?? '',
+  }));
+}
+
+function toPersistedPhotos(rows: ArticlePhotoRow[]): CoachArticlePhoto[] {
+  return rows
+    .filter((row): row is Extract<ArticlePhotoRow, { kind: 'existing' }> => row.kind === 'existing')
+    .map((row) => {
+      const alt = row.alt.trim();
+      const caption = row.caption.trim();
+      return caption ? { path: row.path, alt, caption } : { path: row.path, alt };
+    })
+    .filter((photo) => photo.path && photo.alt);
 }
 
 interface CoachArticleFormProps {
@@ -59,12 +88,34 @@ export function CoachArticleForm({
   const [relatedPostSlugs, setRelatedPostSlugs] = useState(
     (article?.relatedPostSlugs ?? []).join(', ')
   );
+  const [photoRows, setPhotoRows] = useState<ArticlePhotoRow[]>(() => photosFromArticle(article));
   const [status, setStatus] = useState(article?.status ?? 'draft');
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [publishErrors, setPublishErrors] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  function buildInput() {
+  function draftFieldsForValidation() {
+    return {
+      title: title.trim(),
+      slug: slug.trim().toLowerCase(),
+      category,
+      archetype,
+      answerFirst,
+      description,
+      authorDisplayName: authorDisplayName.trim(),
+      pillarPath,
+      cannibalisationNote,
+      libraryLinks: libraryLinks.map((l) => l.trim()).filter(Boolean),
+      photos: photoRows.map((row) => ({
+        path: row.kind === 'existing' ? row.path : undefined,
+        alt: row.alt,
+        caption: row.caption,
+      })),
+    };
+  }
+
+  function buildInput(photos: CoachArticlePhoto[]) {
     return {
       id: articleId,
       title: title.trim(),
@@ -82,42 +133,119 @@ export function CoachArticleForm({
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean),
+      photos,
     };
   }
 
   async function saveDraft() {
     setError(null);
-    const input = buildInput();
-    if (!input.title) {
+    const baseInput = buildInput(toPersistedPhotos(photoRows));
+    if (!baseInput.title) {
       setError('Title is required.');
       return null;
     }
-    if (!input.slug) {
+    if (!baseInput.slug) {
       setError('Slug is required.');
       return null;
     }
-    if (!isValidArticleSlug(input.slug)) {
+    if (!isValidArticleSlug(baseInput.slug)) {
       setError('Slug must be lowercase kebab-case.');
       return null;
     }
 
-    setSubmitting(true);
-    const result = await upsertCoachArticle(input);
-    setSubmitting(false);
-
-    if (result.error || !result.data) {
-      setError(result.error?.message ?? 'Something went wrong. Please try again.');
+    const hasPhotoWithoutAlt = photoRows.some((row) => !row.alt.trim());
+    if (hasPhotoWithoutAlt) {
+      setError('Add alt text for every photo before saving.');
       return null;
     }
 
-    setArticleId(result.data.id);
-    setStatus(result.data.status);
-    return result.data;
+    setSubmitting(true);
+
+    const firstSave = await upsertCoachArticle(baseInput);
+    if (firstSave.error || !firstSave.data) {
+      setSubmitting(false);
+      setError(firstSave.error?.message ?? 'Something went wrong. Please try again.');
+      return null;
+    }
+
+    let saved = firstSave.data;
+    setArticleId(saved.id);
+    setStatus(saved.status);
+
+    const pending = photoRows.filter(
+      (row): row is Extract<ArticlePhotoRow, { kind: 'pending' }> => row.kind === 'pending'
+    );
+
+    if (pending.length > 0) {
+      if (!user) {
+        setSubmitting(false);
+        setError('Sign in to upload images.');
+        return null;
+      }
+
+      const uploadedByKey = new Map<string, CoachArticlePhoto>();
+      // Copilot suggestion ignored: storage orphan cleanup on mid-upload failure needs a dedicated media lifecycle helper beyond this publish path.
+      for (const row of pending) {
+        const uploadResult = await uploadCoachArticlePhoto(
+          user.id,
+          saved.id,
+          crypto.randomUUID(),
+          row.file
+        );
+        if (uploadResult.error || !uploadResult.path) {
+          setSubmitting(false);
+          setError(uploadResult.error ?? 'Something went wrong. Please try again.');
+          return null;
+        }
+        const alt = row.alt.trim();
+        const caption = row.caption.trim();
+        uploadedByKey.set(
+          row.key,
+          caption ? { path: uploadResult.path, alt, caption } : { path: uploadResult.path, alt }
+        );
+      }
+
+      const mergedPhotos: CoachArticlePhoto[] = [];
+      for (const row of photoRows) {
+        if (row.kind === 'existing') {
+          const alt = row.alt.trim();
+          const caption = row.caption.trim();
+          if (alt) {
+            mergedPhotos.push(caption ? { path: row.path, alt, caption } : { path: row.path, alt });
+          }
+        } else {
+          const uploaded = uploadedByKey.get(row.key);
+          if (uploaded) {
+            mergedPhotos.push(uploaded);
+          }
+        }
+      }
+
+      const withPhotos = await upsertCoachArticle({
+        ...buildInput(mergedPhotos),
+        id: saved.id,
+      });
+
+      if (withPhotos.error || !withPhotos.data) {
+        setSubmitting(false);
+        setError(withPhotos.error?.message ?? 'Something went wrong. Please try again.');
+        return null;
+      }
+
+      saved = withPhotos.data;
+      setPhotoRows(photosFromArticle(saved));
+    } else {
+      setPhotoRows(photosFromArticle(saved));
+    }
+
+    setSubmitting(false);
+    return saved;
   }
 
   async function handleSaveDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setWarnings([]);
+    setPublishErrors([]);
     const saved = await saveDraft();
     if (saved) {
       onSaved(saved);
@@ -126,19 +254,8 @@ export function CoachArticleForm({
 
   async function handleMarkReady() {
     setError(null);
-    const input = buildInput();
-    const softIssues = softValidateArticle({
-      title: input.title,
-      slug: input.slug,
-      category: input.category,
-      archetype: input.archetype,
-      answerFirst: input.answerFirst,
-      description: input.description,
-      authorDisplayName: input.authorDisplayName,
-      pillarPath: input.pillarPath,
-      cannibalisationNote: input.cannibalisationNote,
-      libraryLinks: input.libraryLinks,
-    });
+    setPublishErrors([]);
+    const softIssues = softValidateArticle(draftFieldsForValidation());
     setWarnings(softIssues.map((issue) => issue.message));
 
     const saved = await saveDraft();
@@ -159,14 +276,62 @@ export function CoachArticleForm({
     onStatusChanged?.(result.data);
   }
 
+  async function handlePublish() {
+    setError(null);
+    setWarnings([]);
+    const hardIssues = hardValidateArticle(draftFieldsForValidation());
+    if (hardIssues.length > 0) {
+      setPublishErrors(hardIssues.map((issue) => issue.message));
+      return;
+    }
+    setPublishErrors([]);
+
+    const saved = await saveDraft();
+    if (!saved) {
+      return;
+    }
+
+    setSubmitting(true);
+    const snapshot = buildArticleExportSnapshotFromArticle(saved);
+    const result = await publishCoachArticle(saved.id, snapshot);
+    setSubmitting(false);
+
+    if (result.error || !result.data) {
+      setError(result.error?.message ?? 'Something went wrong. Please try again.');
+      return;
+    }
+
+    setStatus(result.data.status);
+    onStatusChanged?.(result.data);
+  }
+
   async function handleReturnToDraft() {
     if (!articleId) {
       return;
     }
     setError(null);
     setWarnings([]);
+    setPublishErrors([]);
     setSubmitting(true);
     const result = await setCoachArticleStatus(articleId, 'draft');
+    setSubmitting(false);
+    if (result.error || !result.data) {
+      setError(result.error?.message ?? 'Something went wrong. Please try again.');
+      return;
+    }
+    setStatus(result.data.status);
+    onStatusChanged?.(result.data);
+  }
+
+  async function handleReturnToReady() {
+    if (!articleId) {
+      return;
+    }
+    setError(null);
+    setWarnings([]);
+    setPublishErrors([]);
+    setSubmitting(true);
+    const result = await setCoachArticleStatus(articleId, 'ready');
     setSubmitting(false);
     if (result.error || !result.data) {
       setError(result.error?.message ?? 'Something went wrong. Please try again.');
@@ -184,9 +349,11 @@ export function CoachArticleForm({
         </h3>
         <span
           className={
-            status === 'ready'
+            status === 'published'
               ? 'rounded-card bg-success-tint px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success-text'
-              : 'rounded-card border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary'
+              : status === 'ready'
+                ? 'rounded-card bg-accent-tint px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent'
+                : 'rounded-card border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary'
           }
         >
           {status}
@@ -194,6 +361,16 @@ export function CoachArticleForm({
       </div>
 
       {error ? <p className="text-error text-sm">{error}</p> : null}
+      {publishErrors.length > 0 ? (
+        <div className="alert-error space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-wide">Fix before publishing</p>
+          <ul className="list-disc space-y-1 pl-4 text-sm font-normal">
+            {publishErrors.map((message) => (
+              <li key={message}>{message}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       {warnings.length > 0 ? (
         <div className="space-y-1 rounded-card border border-border bg-page p-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-secondary">
@@ -412,20 +589,40 @@ export function CoachArticleForm({
         />
       </label>
 
+      <CoachArticlePhotoEditor photos={photoRows} onChange={setPhotoRows} />
+
       <div className="flex flex-wrap gap-2">
-        <button type="submit" className="btn-primary text-sm" disabled={submitting}>
+        <button
+          type="submit"
+          className="btn-primary text-sm"
+          disabled={submitting || status === 'published'}
+        >
           {submitting ? 'Saving…' : 'Save draft'}
         </button>
-        <button
-          type="button"
-          className="btn-outline text-sm"
-          disabled={submitting}
-          onClick={() => {
-            void handleMarkReady();
-          }}
-        >
-          Mark ready
-        </button>
+        {status !== 'published' ? (
+          <button
+            type="button"
+            className="btn-outline text-sm"
+            disabled={submitting}
+            onClick={() => {
+              void handleMarkReady();
+            }}
+          >
+            Mark ready
+          </button>
+        ) : null}
+        {(status === 'ready' || status === 'published') && articleId ? (
+          <button
+            type="button"
+            className="btn-outline text-sm"
+            disabled={submitting}
+            onClick={() => {
+              void handlePublish();
+            }}
+          >
+            {status === 'published' ? 'Update published' : 'Publish'}
+          </button>
+        ) : null}
         {status === 'ready' && articleId ? (
           <button
             type="button"
@@ -436,6 +633,18 @@ export function CoachArticleForm({
             }}
           >
             Return to draft
+          </button>
+        ) : null}
+        {status === 'published' && articleId ? (
+          <button
+            type="button"
+            className="btn-outline text-sm"
+            disabled={submitting}
+            onClick={() => {
+              void handleReturnToReady();
+            }}
+          >
+            Return to ready
           </button>
         ) : null}
         <button

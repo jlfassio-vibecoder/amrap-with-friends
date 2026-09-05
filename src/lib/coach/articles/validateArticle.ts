@@ -2,6 +2,12 @@ import { isArticleArchetypeId, isArticleCategoryId } from './taxonomy';
 import { isArticlePillarPath } from './pillarPaths';
 import { isValidArticleSlug } from './slugify';
 
+export type ArticlePhotoDraft = {
+  path?: string;
+  alt: string;
+  caption?: string;
+};
+
 export type ArticleDraftFields = {
   title: string;
   slug: string;
@@ -13,10 +19,11 @@ export type ArticleDraftFields = {
   pillarPath: string;
   cannibalisationNote: string;
   libraryLinks: string[];
+  photos?: ArticlePhotoDraft[];
 };
 
 export type ArticleValidationIssue = {
-  field: keyof ArticleDraftFields | 'bodyMarkdown';
+  field: keyof ArticleDraftFields | 'bodyMarkdown' | 'photos';
   message: string;
 };
 
@@ -26,8 +33,8 @@ function wordCount(text: string): number {
   return trimmed.split(/\s+/).length;
 }
 
-/** Soft checks for Mark ready — warnings only; hard gate is title + slug. */
-export function softValidateArticle(fields: ArticleDraftFields): ArticleValidationIssue[] {
+/** Shared quality gates for Mark ready (soft) and Publish (hard). */
+export function articleQualityGates(fields: ArticleDraftFields): ArticleValidationIssue[] {
   const issues: ArticleValidationIssue[] = [];
 
   if (!fields.title.trim()) {
@@ -85,5 +92,23 @@ export function softValidateArticle(fields: ArticleDraftFields): ArticleValidati
     });
   }
 
+  const photos = fields.photos ?? [];
+  if (photos.some((photo) => !photo.alt.trim())) {
+    issues.push({
+      field: 'photos',
+      message: 'Every photo needs alt text.',
+    });
+  }
+
   return issues;
+}
+
+/** Mark ready — show as warnings; still allow ready. */
+export function softValidateArticle(fields: ArticleDraftFields): ArticleValidationIssue[] {
+  return articleQualityGates(fields);
+}
+
+/** Publish — same gates; UI must block when any issue is present. */
+export function hardValidateArticle(fields: ArticleDraftFields): ArticleValidationIssue[] {
+  return articleQualityGates(fields);
 }

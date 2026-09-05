@@ -21,6 +21,7 @@
     "seed:exercise-media": "tsx scripts/seed-exercise-media-folders.ts",
     "seo:indexnow": "tsx scripts/indexnow-ping.ts",
     "seo:resolve-exercise-media": "tsx scripts/resolve-exercise-media.ts",
+    "seo:pull-articles": "tsx scripts/pull-articles.ts",
     "supabase:push": "supabase db push",
     "supabase:deploy:functions": "supabase functions deploy submit-participant-result",
     "supabase:deploy": "supabase db push && supabase functions deploy submit-participant-result",

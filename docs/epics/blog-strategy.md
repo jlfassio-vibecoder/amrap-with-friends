@@ -249,28 +249,40 @@ Content system assesses sitewide rather than per page.
 
 ---
 
-## First twelve posts
+## Authoring
 
-Ordered to front-load the categories that have the least competition and the
-clearest link back to the product.
+The voice specification, the twenty-four article briefs and the twelve-month
+calendar live in [blog authoring](blog-authoring.md). It also covers the byline
+question raised below — the short version being that the persona is a voice, not
+a fictional person, and articles get a real name or the team's name on them.
 
-| #   | Post                                                                          | Category          | Archetype  |
-| --- | ----------------------------------------------------------------------------- | ----------------- | ---------- |
-| 1   | What 150 AMRAP workouts taught us about programming for a time cap            | The data          | Data story |
-| 2   | The 12-minute AMRAP: what to do when you only have a lunch break              | Programming       | Scenario   |
-| 3   | How to run an AMRAP with a friend in another time zone                        | Training together | Scenario   |
-| 4   | Why we refuse to tell you what a good AMRAP score is                          | Pacing & scoring  | Opinion    |
-| 5   | Hotel-room AMRAPs: five workouts for two square metres                        | Programming       | Scenario   |
-| 6   | Air squats are in one in six AMRAP workouts. Here is how to stop wasting them | Movement          | Teardown   |
-| 7   | Building an eight-week campaign around one benchmark                          | Training together | Teardown   |
-| 8   | The first ninety seconds: reading your own pace variance                      | Pacing & scoring  | Teardown   |
-| 9   | AMRAP workouts for two people with one set of equipment                       | Training together | Scenario   |
-| 10  | January: how to restart training without wrecking week one                    | Programming       | Seasonal   |
-| 11  | The case against the live leaderboard                                         | Training together | Opinion    |
-| 12  | Push-up variations ranked by how they fail under fatigue                      | Movement          | Teardown   |
+## The editorial calendar
 
-At two a month that is six months of publishing, by which point there will be
-real GSC data to plan the next twelve from rather than guesses.
+**[blog-authoring.md](blog-authoring.md) is the canonical list.** It carries
+twenty-four articles with a brief each and a twelve-month schedule, and it
+supersedes the twelve that used to sit here — all twelve are still in it, with
+titles tightened for search-result length and the order changed so the seasonal
+posts land before their season rather than during it.
+
+Anything that seeds article drafts — the Article Builder's suggested starters,
+in particular — should read that list, not this section, or the two will drift.
+
+The first twelve, in the order the calendar publishes them:
+
+| #   | Title                                                   | Category          | Archetype  |
+| --- | ------------------------------------------------------- | ----------------- | ---------- |
+| 1   | What 150 AMRAP Workouts Reveal About Programming        | The data          | Data story |
+| 2   | The 12-Minute AMRAP for a Lunch Break                   | Programming       | Scenario   |
+| 3   | How to Work Out With a Friend in Another Time Zone      | Training together | Scenario   |
+| 4   | Why We Won't Tell You What a Good AMRAP Score Is        | Pacing & scoring  | Opinion    |
+| 5   | Hotel Room AMRAPs: 5 Workouts for Two Square Metres     | Programming       | Scenario   |
+| 6   | Air Squats Are in 1 in 6 AMRAPs. Most People Waste Them | Movement          | Teardown   |
+| 7   | Training Through December Without Losing the Habit      | Programming       | Seasonal   |
+| 8   | The Travel AMRAP: Training in an Airport Hotel          | Programming       | Scenario   |
+| 9   | Restarting in January Without Wrecking Week One         | Programming       | Seasonal   |
+| 10  | Build an 8-Week Campaign Around One Benchmark           | Training together | Teardown   |
+| 11  | The First 90 Seconds: Reading Your Own Pace             | Pacing & scoring  | Teardown   |
+| 12  | AMRAP Workouts for Two People and One Mat               | Training together | Scenario   |
 
 ---
 

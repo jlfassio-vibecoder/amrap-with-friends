@@ -3,6 +3,7 @@ import {
   fetchCoachArticle,
   fetchCoachArticles,
   mapCoachArticleError,
+  publishCoachArticle,
   setCoachArticleStatus,
   upsertCoachArticle,
 } from './coachArticles';
@@ -32,9 +33,10 @@ const VALID_ARTICLE = {
   cannibalisationNote: 'Timely opinion, not a guide rewrite.',
   libraryLinks: ['/exercises/push-up', '/amrap-workouts'],
   relatedPostSlugs: [],
-  photos: [],
+  photos: [{ path: 'coach/art/p1.jpg', alt: 'Easy day demo', caption: 'Hold back' }],
   publishedAt: null,
   modifiedAt: null,
+  exportSnapshot: null,
   createdAt: '2026-09-05T10:00:00.000Z',
   updatedAt: '2026-09-05T10:00:00.000Z',
 };
@@ -103,6 +105,9 @@ describe('fetchCoachArticle', () => {
     expect(result.error).toBeNull();
     expect(result.data?.slug).toBe('why-easy-days-matter');
     expect(result.data?.libraryLinks).toEqual(['/exercises/push-up', '/amrap-workouts']);
+    expect(result.data?.photos).toEqual([
+      { path: 'coach/art/p1.jpg', alt: 'Easy day demo', caption: 'Hold back' },
+    ]);
   });
 });
 
@@ -123,6 +128,7 @@ describe('upsertCoachArticle', () => {
       cannibalisationNote: VALID_ARTICLE.cannibalisationNote,
       libraryLinks: VALID_ARTICLE.libraryLinks,
       relatedPostSlugs: [],
+      photos: VALID_ARTICLE.photos,
     });
 
     expect(callRpcMock).toHaveBeenCalledWith('coach_upsert_article', {
@@ -139,6 +145,7 @@ describe('upsertCoachArticle', () => {
       p_cannibalisation_note: VALID_ARTICLE.cannibalisationNote,
       p_library_links: VALID_ARTICLE.libraryLinks,
       p_related_post_slugs: [],
+      p_photos: VALID_ARTICLE.photos,
     });
     expect(result.error).toBeNull();
     expect(result.data?.id).toBe(VALID_ARTICLE.id);
@@ -159,5 +166,60 @@ describe('setCoachArticleStatus', () => {
       p_status: 'ready',
     });
     expect(result.data?.status).toBe('ready');
+  });
+
+  it('demotes to draft', async () => {
+    callRpcMock.mockResolvedValue({
+      data: { ok: true, article: { ...VALID_ARTICLE, status: 'draft' } },
+      error: null,
+    });
+
+    const result = await setCoachArticleStatus(VALID_ARTICLE.id, 'draft');
+
+    expect(callRpcMock).toHaveBeenCalledWith('coach_set_article_status', {
+      p_id: VALID_ARTICLE.id,
+      p_status: 'draft',
+    });
+    expect(result.data?.status).toBe('draft');
+  });
+});
+
+describe('publishCoachArticle', () => {
+  it('sends the export snapshot to coach_publish_article', async () => {
+    const snapshot = {
+      title: VALID_ARTICLE.title,
+      slug: VALID_ARTICLE.slug,
+      description: VALID_ARTICLE.description,
+      answerFirst: VALID_ARTICLE.answerFirst,
+      author: VALID_ARTICLE.authorDisplayName,
+      body: VALID_ARTICLE.bodyMarkdown,
+      publishedAt: '2026-09-05T12:00:00.000Z',
+      modifiedAt: '2026-09-05T12:00:00.000Z',
+      photos: [],
+    };
+
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        article: {
+          ...VALID_ARTICLE,
+          status: 'published',
+          publishedAt: snapshot.publishedAt,
+          modifiedAt: snapshot.modifiedAt,
+          exportSnapshot: snapshot,
+        },
+      },
+      error: null,
+    });
+
+    const result = await publishCoachArticle(VALID_ARTICLE.id, snapshot);
+
+    expect(callRpcMock).toHaveBeenCalledWith('coach_publish_article', {
+      p_id: VALID_ARTICLE.id,
+      p_snapshot: snapshot,
+    });
+    expect(result.error).toBeNull();
+    expect(result.data?.status).toBe('published');
+    expect(result.data?.exportSnapshot).toEqual(snapshot);
   });
 });

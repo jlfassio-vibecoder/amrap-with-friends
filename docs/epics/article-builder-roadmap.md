@@ -2,7 +2,7 @@
 
 **Branch:** `claude/blog-strategy` (strategy); implementation branch TBD  
 **Status:** Draft for discussion  
-**Last updated:** 2026-09-05  
+**Last updated:** 2026-09-05 (Phase 4 shipped)  
 **Depends on:** [blog-strategy.md](blog-strategy.md), [seo-roadmap.md](seo-roadmap.md)  
 **Surfaces:** `/coach` (entry card), `/coach/articles` (builder) — both `noindex`
 
@@ -162,66 +162,33 @@ frontmatter shape the Astro collection will expect, without uploading media yet.
 
 ### Phase 2 — Photos
 
-**Reuse:** Coach media upload patterns (`coach-exercise-media` ownership model
-as a template; prefer a dedicated `blog-media` or `coach-article-media` bucket
-with `{auth.uid()}/…` prefixes and coach-only write policies).
-
-**UI:** Attach 1–N images, require alt, optional caption; reorder; preview.
-
-**Publish path:** Public URLs must be stable for Astro builds (same lesson as
-exercise media: either commit resolved URLs into the exported MD, or a
-manifest). Do **not** rely on browser extension fallbacks on static pages.
+**Status: shipped.** Dedicated `coach-article-media` bucket (public read, owner-folder
+writes); `{path, alt, caption?}` on `coach_articles.photos`; upload + reorder +
+preview in Article Builder; soft alt warnings on Mark ready; frontmatter serialize
+emits public `src` URLs for the export snapshot.
 
 **Done when:** A draft can include images with alt text, and the export format
 references real public URLs.
 
 ### Phase 3 — Quality gates (soft → hard)
 
-Wire strategy gates into “Mark ready” / “Publish”:
-
-| Gate                             | Ready     | Publish |
-| -------------------------------- | --------- | ------- |
-| Title, slug, category, archetype | Soft warn | Hard    |
-| Answer-first 40–60 words         | Soft warn | Hard    |
-| Description 50–160 chars         | Soft warn | Hard    |
-| Cannibalisation + pillar         | Soft warn | Hard    |
-| ≥2 library links                 | Soft warn | Hard    |
-| Every image has alt              | Soft warn | Hard    |
-| Author set                       | Soft warn | Hard    |
-
-Unit-test pure validators in `src/lib/seo/` or `src/lib/coach/articles/` (repo
-convention: logic beside tests, not only in components).
+**Status: shipped.** Shared `articleQualityGates` power soft Mark ready warnings and
+hard Publish blocks; demote via `coach_set_article_status`; Publish uses
+`coach_publish_article` (Phase 4) with hard validation in the UI.
 
 **Done when:** CI tests lock the validators; UI blocks publish on hard failures.
 
 ### Phase 4 — Publish into Astro
 
-This is the load-bearing phase. Strategy wants **content collections**
-(`site/content/blog/*.md`) and offline builds.
+**Status: shipped.** Option A only: Publish stores an immutable `export_snapshot`
+via `coach_publish_article`; `npm run seo:pull-articles` (service role) writes
+`site/content/blog/*.md` (+ OG cards under `public/og/blog/`), prunes orphans,
+and humans commit the diff. Astro builds `/blog`, `/blog/[slug]`, `/blog/rss.xml`,
+and `/blog/category/[id]` only when a category has ≥3 published posts. Sitemap,
+nav, `BlogPosting` JSON-LD, and titled OG cards all read committed file dates —
+never `Date.now()` at build.
 
-**Recommended v1 pipeline:**
-
-1. Coach clicks **Publish** → RPC stamps `publishedAt` / `modifiedAt`, status
-   `published`, stores an immutable **export snapshot** (MD + frontmatter +
-   image URLs).
-2. CI or a `npm run seo:pull-articles` script (coach/service role, network)
-   writes/updates files under `site/content/blog/`.
-3. Normal `build` + `merge-build` + sitemap checks pick them up.
-4. `BlogPosting` JSON-LD uses snapshot dates, never `Date.now()`.
-
-**Alternatives (decide before Phase 4 build):**
-
-| Option                                  | Pros                               | Cons                                             |
-| --------------------------------------- | ---------------------------------- | ------------------------------------------------ |
-| A. Export script → committed MD (above) | Matches strategy; reviewable diffs | Needs a human or bot commit                      |
-| B. Build-time fetch from Supabase       | No commit step                     | Couples Vercel build to DB; weaker offline story |
-| C. Edge-render posts                    | Fast iteration                     | Fights the static/AI-HTML strategy               |
-
-**Default: A.** Same philosophy as `seo:resolve-exercise-media`.
-
-Also in Phase 4: `/blog` index, `/blog/[slug]`, RSS, route table,
-`generate-og-images` title extension, nav link — as specified in blog-strategy
-Technical architecture. Category index pages only when count ≥ 3.
+**Loop:** Publish in Article Builder → `npm run seo:pull-articles` → commit → deploy.
 
 **Done when:** Publishing a post in Article Builder results in a static `/blog/{slug}`
 page in production after the export + deploy path, with correct canonical,
@@ -245,7 +212,20 @@ Not a second product — just coach affordances for the strategy cadence:
 ## Mapping to the first twelve posts
 
 Article Builder does not invent the editorial calendar; it **loads the strategy
-list** as suggested starters (category + archetype pre-filled, empty body):
+list** as suggested starters (category + archetype pre-filled, empty body).
+
+> **The canonical list moved.** [blog-authoring.md](blog-authoring.md) now holds
+> twenty-four articles with briefs and a twelve-month calendar, and it reorders
+> and retitles these twelve — the seasonal posts moved earlier so they are
+> indexed before their season. Seed from that document, not from the snapshot
+> below, or the builder will suggest a calendar nobody is publishing.
+>
+> It also answers open question 1: the author is Justin Fassio, and the
+> drafting rule that replaces the fake-persona concern is that a model must
+> never invent a first-person claim under a real byline — it leaves a marked
+> placeholder for him to fill.
+
+Snapshot of the superseded ordering, kept so the change is visible:
 
 1. What 150 AMRAP workouts taught us… — The data / Data story
 2. The 12-minute AMRAP… — Programming / Scenario
@@ -290,33 +270,36 @@ Phase 1–3 on perfect attribution.
 
 ## Open questions
 
-1. **Publish path A vs B** — confirm committed MD export (recommended) vs
-   build-time Supabase fetch.
-2. **Who is `author`?** — single coach profile vs selectable staff bios (blocks
-   E-E-A-T).
-3. **Body editor** — Markdown textarea v1 vs block editor later.
-4. **Multi-coach drafts** — shared queue or owner-only until published.
-5. **Start Article Builder before `/blog` Astro shell exists?** — Phase 0–3 can
-   ship behind the coach gate; Phase 4 needs the public blog routes.
+1. **Who is `author`?** — **Settled: Justin Fassio.** Certified Master Fitness
+   Trainer and Commander's Total Fitness Program Manager (1998), owner of San
+   Diego Core Fitness, co-founder of gymgo and aiworkoutgenerator.com. The
+   free-text display name shipped is fine for now; the outstanding work is an
+   indexable `/authors/justin-fassio` page with `Person` schema and `sameAs`
+   corroboration, referenced as `founder` from the `Organization` node. See
+   [blog-authoring.md](blog-authoring.md).
+2. **Body editor** — Markdown textarea v1 vs block editor later.
+3. **Multi-coach drafts** — shared queue or owner-only until published.
+
+Publish path A (committed MD via `seo:pull-articles`) is locked; build-time
+Supabase fetch and edge-rendered posts are out of scope.
 
 ---
 
 ## Suggested sequencing
 
 ```
-Phase 0  shell + /coach card
+Phase 0  shell + /coach card                         ✓
    ↓
-Phase 1  drafts + copy + metadata
+Phase 1  drafts + copy + metadata                    ✓
    ↓
-Phase 2  photos + alt
+Phase 2  photos + alt                               ✓
    ↓
-Phase 3  hard quality gates
+Phase 3  hard quality gates                          ✓
    ↓
-Phase 4  Astro /blog + export/publish pipeline   ← public SEO value
+Phase 4  Astro /blog + export/publish pipeline       ✓
    ↓
 Phase 5  refresh queue + first-twelve starters
 ```
 
-Do not open Phase 4 until Phases 1–3 make a post that would already pass the
-strategy checklist on paper. Do not point coaches at a publish button that
-writes thin posts into the sitemap.
+Do not point coaches at a publish button that writes thin posts into the sitemap
+without the hard gates (Phase 3) and the pull → commit → deploy loop (Phase 4).
