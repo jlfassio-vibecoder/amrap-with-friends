@@ -95,6 +95,7 @@ describe('resolveSeo', () => {
       '/hud',
       '/coach',
       '/coach/wods',
+      '/coach/articles',
     ];
     for (const path of noindexed) {
       expect(resolveSeo(path).robots, path).toBe('noindex, follow');

@@ -179,6 +179,7 @@ export const APP_ROUTES: RouteSeo[] = [
   { path: '/hud', title: 'HUD', description: '', index: false },
   { path: '/coach', title: 'Coach', description: '', index: false },
   { path: '/coach/wods', title: 'WOD Builder', description: '', index: false },
+  { path: '/coach/articles', title: 'Article Builder', description: '', index: false },
 ];
 
 /**

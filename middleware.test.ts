@@ -44,7 +44,13 @@ describe('middleware', () => {
   });
 
   it('marks private and ephemeral surfaces noindex without needing a render', async () => {
-    for (const path of ['/rally-point/abc-123', '/mission/abc-123', '/hud', '/coach/wods']) {
+    for (const path of [
+      '/rally-point/abc-123',
+      '/mission/abc-123',
+      '/hud',
+      '/coach/wods',
+      '/coach/articles',
+    ]) {
       const response = await middleware(request(path));
       expect(response.headers.get('x-robots-tag'), path).toBe('noindex, follow');
       expect(response.status, path).not.toBe(404);

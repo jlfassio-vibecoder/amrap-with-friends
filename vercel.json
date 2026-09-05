@@ -62,6 +62,10 @@
     {
       "source": "/coach/wods",
       "destination": "/_app-shell"
+    },
+    {
+      "source": "/coach/articles",
+      "destination": "/_app-shell"
     }
   ]
 }

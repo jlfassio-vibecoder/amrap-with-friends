@@ -21,6 +21,7 @@ const IntakePage = lazy(() => import('./pages/IntakePage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const CoachPage = lazy(() => import('./pages/CoachPage'));
 const CoachWodsPage = lazy(() => import('./pages/CoachWodsPage'));
+const CoachArticlesPage = lazy(() => import('./pages/CoachArticlesPage'));
 const TimerDevPage = lazy(() => import('./pages/dev/TimerDevPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
@@ -113,6 +114,14 @@ function App() {
             element={
               <RequireCoach>
                 <CoachWodsPage />
+              </RequireCoach>
+            }
+          />
+          <Route
+            path="/coach/articles"
+            element={
+              <RequireCoach>
+                <CoachArticlesPage />
               </RequireCoach>
             }
           />
