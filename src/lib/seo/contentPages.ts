@@ -124,8 +124,15 @@ export function workoutsForCategory(category: WorkoutCategory): WorkoutTemplate[
   return WORKOUT_TEMPLATES.filter((template) => template.category === category);
 }
 
-/** How many workout detail pages we publish. Widen it once these prove out. */
+/** How many workout detail pages we publish via round-robin. Widen it once these prove out. */
 export const FEATURED_WORKOUT_LIMIT = 20;
+
+/**
+ * Named workouts that always get a detail page, even when the duration ×
+ * category round-robin would skip them. Keep this short — the spread rule is
+ * still the default.
+ */
+export const PINNED_WORKOUT_IDS: readonly string[] = ['the-trinity'];
 
 function isPublishableWorkout(template: WorkoutTemplate): boolean {
   return (
@@ -139,7 +146,8 @@ function isPublishableWorkout(template: WorkoutTemplate): boolean {
 }
 
 /**
- * Twenty workouts, spread evenly rather than taken off the top.
+ * Twenty workouts, spread evenly rather than taken off the top — plus any
+ * pinned ids that the spread would have skipped.
  *
  * Buckets are duration × category, and we take one from each in turn — so the
  * published set covers every time domain and every training stimulus instead of
@@ -183,6 +191,19 @@ export function featuredWorkouts(limit: number = FEATURED_WORKOUT_LIMIT): Workou
       break;
     }
   }
+
+  const pickedIds = new Set(picked.map((template) => template.id));
+  for (const id of PINNED_WORKOUT_IDS) {
+    if (pickedIds.has(id)) {
+      continue;
+    }
+    const template = WORKOUT_TEMPLATES.find((entry) => entry.id === id);
+    if (template && isPublishableWorkout(template)) {
+      picked.push(template);
+      pickedIds.add(id);
+    }
+  }
+
   return picked;
 }
 
