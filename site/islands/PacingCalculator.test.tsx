@@ -21,11 +21,15 @@ describe('PacingCalculator', () => {
     expect(screen.getByText('Elite Pacing')).toBeTruthy();
   });
 
-  it('drops the first round only at caps of ten minutes and up', () => {
+  it('drops the first round on every cap except the shortest', () => {
     render(<PacingCalculator />);
     // A fast opener followed by three identical rounds: excluded, the spread is zero.
     type('0:30 1:00 1:00 1:00');
     setCap('15');
+    expect(screen.getByText('0.0% variability')).toBeTruthy();
+    // 7 minutes is in the same domain as 10 and behaves the same way, which the
+    // old `>= 10` rule got wrong.
+    setCap('7');
     expect(screen.getByText('0.0% variability')).toBeTruthy();
     setCap('5');
     expect(screen.getByText('57.1% variability')).toBeTruthy();
