@@ -1,7 +1,7 @@
 # Plan: the AMRAP science hub
 
 **Branch:** `claude/amrap-science-hub`
-**Status:** Draft for approval — **the source artifact is not publishable as-is**
+**Status:** Four modules shipped — **the source artifact remains unpublishable as-is**
 **Last updated:** 2026-09-05
 **Source:** `amrap_hift_science_explorer.html`, generated with Gemini
 
@@ -106,7 +106,12 @@ source. Where the honest answer is that the research is thin or contested, say
 so — that is a stronger expertise signal than false confidence, and it is the
 thing generated content never does.
 
-### Sequencing
+### Sequencing — complete
+
+All four published modules and the two decisions below are done. What remains is
+the interactive work, which is deliberately last: charts are worth building only
+once the numbers behind them are sourced, and a static page that a crawler can
+read is the requirement either way.
 
 1. **`/science/energy-systems` first.** It is the best-sourced module (Gastin is
    solid, the crossover is confirmed by a recent systematic review) and it feeds
@@ -133,8 +138,21 @@ thing generated content never does.
    at a single torque — nowhere near enough to support the artifact's rule about
    programming holds. Both are reported as direction and mechanism, with the
    extrapolation labelled as extrapolation.
-5. **`/science/benchmark-telemetry`** and the sex-differences material **last**,
-   and only with citations in hand.
+5. **`/science/benchmark-telemetry` — folded into `/science/energy-systems`.**
+   Every benchmark study worth citing was already cited across the other
+   modules, so a separate page would have been a fifth URL restating four. It is
+   now a table on the energy-systems page listing all five studies with their
+   sample sizes side by side — and the point the table makes is the honest one:
+   add up the participants and the entire physiological evidence base for AMRAP
+   training is well under a hundred people, mostly trained men.
+
+6. **The sex-differences material — dropped, not deferred.** The workout studies
+   run to nine, twelve, fourteen and twenty-two participants, mostly men, with
+   samples too small to analyse women separately. There is no responsible page to
+   write from that, and the artifact's version was the most confident and least
+   sourced thing in it. The `/science` hub says plainly that the page was planned
+   and will not be published, and why. Publishing the restraint is a stronger
+   signal than publishing the page would have been.
 
 ### Trust furniture every page carries
 

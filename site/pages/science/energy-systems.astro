@@ -15,6 +15,7 @@ const refs = referencesFor([
   'tibana2018',
   'kliszczewicz2014',
   'mangine2025',
+  'mateMunoz2017',
   'feito2018',
 ]);
 const n = Object.fromEntries(refs.map((reference, index) => [reference.id, index + 1]));
@@ -199,21 +200,89 @@ const jsonLd = [
     </section>
 
     <section class="space-y-4">
-      <h2 class="text-display text-2xl text-ink">What has been measured in a 20-minute AMRAP</h2>
+      <h2 class="text-display text-2xl text-ink">
+        What has actually been measured on the benchmarks
+      </h2>
       <p class="text-base leading-[1.7] text-secondary">
-        The most-studied long AMRAP is "Cindy" — as many rounds as possible in 20 minutes of 5
-        pull-ups, 10 push-ups and 15 air squats. In a pilot study of nine participants, it produced
-        a mean heart rate of 170.8 ± 13.5 bpm and oxygen consumption of 33.3 ± 5.5 ml/kg/min, which
-        was 63.8 ± 12.3% of the participants' VO₂max, at 9.5 ± 1.5 METs and 13 ± 2.9 kcal/min.<sup
-          >{n.kliszczewicz2014}</sup
-        >
+        Very little of the AMRAP literature is about AMRAPs in the abstract. Nearly all of it is a
+        handful of named benchmark workouts, measured in small groups of trained people. Here is
+        essentially all of it, in one table, so you can see how thin the foundation is.
+      </p>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[38rem] border-collapse text-left text-sm">
+          <thead>
+            <tr class="border-b border-border">
+              <th class="py-3 pr-4 font-semibold text-ink">Workout</th>
+              <th class="py-3 pr-4 font-semibold text-ink">n</th>
+              <th class="py-3 pr-4 font-semibold text-ink">What was measured</th>
+              <th class="py-3 font-semibold text-ink">Source</th>
+            </tr>
+          </thead>
+          <tbody class="text-secondary">
+            <tr class="border-b border-divider">
+              <td class="py-3 pr-4 font-semibold text-ink">
+                "Cindy" — 20 min AMRAP, 5 pull-ups / 10 push-ups / 15 air squats
+              </td>
+              <td class="py-3 pr-4">9</td>
+              <td class="py-3 pr-4">
+                HR 170.8 ± 13.5 bpm · VO₂ 33.3 ± 5.5 ml/kg/min (63.8 ± 12.3% of max) · 9.5 ± 1.5
+                METs · 13 ± 2.9 kcal/min
+              </td>
+              <td class="py-3">Kliszczewicz et al.<sup>{n.kliszczewicz2014}</sup></td>
+            </tr>
+            <tr class="border-b border-divider">
+              <td class="py-3 pr-4 font-semibold text-ink">"Isabel" — ~117 s, 30 snatches</td>
+              <td class="py-3 pr-4">14</td>
+              <td class="py-3 pr-4">
+                Energy split: oxidative 40% · glycolytic 45% · phosphagen 15%, of 245 ± 25 kJ
+              </td>
+              <td class="py-3">Rios et al.<sup>{n.rios2024}</sup></td>
+            </tr>
+            <tr class="border-b border-divider">
+              <td class="py-3 pr-4 font-semibold text-ink"
+                >Short (~4 min) vs long (~17 min) session</td
+              >
+              <td class="py-3 pr-4">9</td>
+              <td class="py-3 pr-4">
+                HR indistinguishable (91 ± 4% vs 90 ± 3% max) · lactate higher in the short one
+                (15.9 ± 2.2 vs 12.6 ± 2.6 mmol/L)
+              </td>
+              <td class="py-3">Tibana et al.<sup>{n.tibana2018}</sup></td>
+            </tr>
+            <tr class="border-b border-divider">
+              <td class="py-3 pr-4 font-semibold text-ink">
+                Cindy vs interval vs weightlifting session
+              </td>
+              <td class="py-3 pr-4">34</td>
+              <td class="py-3 pr-4">
+                Jump performance depressed after Cindy; recovered by the end of the interval session
+              </td>
+              <td class="py-3">Maté-Muñoz et al.<sup>{n.mateMunoz2017}</sup></td>
+            </tr>
+            <tr>
+              <td class="py-3 pr-4 font-semibold text-ink">Same circuit at 5 vs 15 min</td>
+              <td class="py-3 pr-4">22</td>
+              <td class="py-3 pr-4">
+                Different athlete traits predicted performance at each duration
+              </td>
+              <td class="py-3">Mangine et al.<sup>{n.mangine2025}</sup></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-base leading-[1.7] text-secondary">
+        The most instructive single row is Cindy. Heart rate sat in the vigorous range while oxygen
+        uptake sat around two thirds of maximum.<sup>{n.kliszczewicz2014}</sup> A twenty-minute AMRAP
+        is <strong class="font-semibold text-ink">not a maximal aerobic test</strong> — the limit is local
+        muscular fatigue and the transitions between movements, not your ability to deliver oxygen. That
+        is why it feels harder than the oxygen cost suggests, and why a strong runner is not automatically
+        good at it.
       </p>
       <p class="text-base leading-[1.7] text-secondary">
-        The gap between those two numbers is the interesting part. Heart rate sat in the vigorous
-        range while oxygen uptake sat around two thirds of maximum. A twenty-minute AMRAP is not a
-        maximal aerobic test — the limit is local muscular fatigue and the transitions between
-        movements, not your ability to deliver oxygen. The authors call it a pilot study, and with
-        nine participants that is the right word for it.
+        Add up the participants in that table and you get well under a hundred people, most of them
+        trained men, across five studies using different equipment and protocols. That is the entire
+        evidence base for physiological claims about AMRAP training. Treat any confident number you
+        read about it — including the ones above — as indicative rather than established.
       </p>
     </section>
 

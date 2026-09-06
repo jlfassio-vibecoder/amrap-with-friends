@@ -30,10 +30,6 @@ const live = [
   },
 ];
 
-// Named honestly as not yet written. A hub that lists pages which do not exist
-// as though they do is the same overclaim this section is built to avoid.
-const planned = ['What has actually been measured on the benchmark workouts'];
-
 const jsonLd = [
   breadcrumbList([
     { name: 'Home', path: '/' },
@@ -94,14 +90,18 @@ const jsonLd = [
     </section>
 
     <section class="space-y-4">
-      <h2 class="text-display text-2xl text-ink">Being written</h2>
+      <h2 class="text-display text-2xl text-ink">What is not here, and why</h2>
       <p class="text-base leading-[1.7] text-secondary">
-        Each of these needs its sources pulled before it goes up. They are listed so you know what
-        is coming, not because they exist yet.
+        One page was planned and will not be published: sex differences in fatigue during functional
+        fitness training. The workout studies in this area run to nine, twelve, fourteen, twenty-two
+        participants, mostly men, with samples too small to analyse women separately. Writing that
+        page responsibly would mean extrapolating from research that does not exist yet.
       </p>
-      <ul class="space-y-2 text-base leading-[1.7] text-secondary">
-        {planned.map((title) => <li>{title}</li>)}
-      </ul>
+      <p class="text-base leading-[1.7] text-secondary">
+        It is a real question and it deserves an answer. It does not yet have one, and saying so is
+        more useful than filling the gap with confident prose. If the evidence arrives, the page
+        will.
+      </p>
     </section>
 
     <section class="space-y-4">
