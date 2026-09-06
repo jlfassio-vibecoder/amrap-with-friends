@@ -33,6 +33,19 @@ afterEach(() => {
 });
 
 describe('ParticipantsPanel', () => {
+  it('renders a centered Leaderboard heading', () => {
+    render(
+      <ParticipantsPanel
+        leaderboard={[leaderboardEntry(SELF_ID, 'Justin', 1)]}
+        presence={[]}
+        selfParticipantId={SELF_ID}
+        phase="work"
+      />
+    );
+
+    expect(screen.getByRole('heading', { name: 'Leaderboard' })).toBeTruthy();
+  });
+
   it('renders overflow footer when roster exceeds display limit', () => {
     const leaderboard = Array.from({ length: 99 }, (_, index) =>
       leaderboardEntry(

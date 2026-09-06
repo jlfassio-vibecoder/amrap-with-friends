@@ -169,9 +169,9 @@ export function ParticipantsPanel({
       className={`card flex h-full min-h-0 flex-col gap-3 overflow-hidden p-4 ${className ?? ''}`}
       data-walkthrough-id="participants"
     >
-      <div className="flex shrink-0 items-center justify-between gap-3">
-        <h2 className="text-display text-sm text-ink lg:text-base">Participants</h2>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-page px-2.5 py-1 text-xs font-medium text-success-text">
+      <div className="relative flex shrink-0 items-center justify-center">
+        <h2 className="text-display text-sm text-ink lg:text-base">Leaderboard</h2>
+        <span className="absolute right-0 inline-flex items-center gap-1.5 rounded-full border border-border bg-page px-2.5 py-1 text-xs font-medium text-success-text">
           <span className="inline-block h-2 w-2 rounded-full bg-success" aria-hidden />
           {onlineCount} here
         </span>
