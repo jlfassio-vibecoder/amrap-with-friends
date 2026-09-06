@@ -65,6 +65,34 @@ export const CONTENT_ROUTES: RouteSeo[] = [
     index: true,
   },
   {
+    path: '/science',
+    title: 'The Science of AMRAP Training — Sourced Research',
+    description:
+      'What published exercise physiology shows about AMRAP training, with every claim cited and every gap admitted. Written by a certified Master Fitness Trainer.',
+    index: true,
+  },
+  {
+    path: '/science/energy-systems',
+    title: 'AMRAP Energy Systems: What the Research Shows',
+    description:
+      "Both energy systems run from an AMRAP's first second. What the research shows about picking a time cap, and why heart rate cannot tell 4 minutes from 17.",
+    index: true,
+  },
+  {
+    path: '/science/lactate',
+    title: 'Lactate Is Not What Makes an AMRAP Hurt',
+    description:
+      'Lactate is a fuel, not a waste product, and it does not cause the burn or next-day soreness. What the research shows, and where it is still genuinely arguing.',
+    index: true,
+  },
+  {
+    path: '/science/pacing',
+    title: 'AMRAP Pacing: What the Research Supports',
+    description:
+      'Pacing is regulated against a known endpoint, and an even split is a sound default rather than a proven law. What the evidence supports, and what it does not.',
+    index: true,
+  },
+  {
     path: '/guides',
     title: 'AMRAP Guides — How the Format Actually Works',
     description:
