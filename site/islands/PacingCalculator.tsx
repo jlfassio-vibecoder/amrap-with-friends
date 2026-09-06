@@ -3,6 +3,7 @@ import { computePvi } from '@/lib/scoring/computePvi';
 import { shouldExcludeBuyInRound } from '@/lib/scoring/getPacingDurations';
 import { getPviMultiplier } from '@/lib/scoring/getPviMultiplier';
 import { formatSplit, parseRoundSplits } from '@/lib/scoring/parseRoundSplits';
+import { allTimeCaps, defaultCapForDomain } from '@/lib/timeDomains';
 
 /**
  * The one interactive thing on the science pages, and the only honest one: it
@@ -13,11 +14,12 @@ import { formatSplit, parseRoundSplits } from '@/lib/scoring/parseRoundSplits';
  * restated here, so the page can never drift from the product. That they are
  * unvalidated is said on the page, not buried in this component.
  */
-const CAPS = [5, 10, 15, 20] as const;
+/** Every legal cap, read from the range table so the page cannot offer a clock the app will not run. */
+const CAPS = allTimeCaps();
 
 export default function PacingCalculator() {
   const [raw, setRaw] = useState('1:08 1:12 1:19 1:14 1:31');
-  const [cap, setCap] = useState<number>(15);
+  const [cap, setCap] = useState<number>(defaultCapForDomain(15));
 
   const parsed = useMemo(() => parseRoundSplits(raw), [raw]);
   const excludeFirstRound = shouldExcludeBuyInRound(cap);
@@ -63,7 +65,7 @@ export default function PacingCalculator() {
           <span className="block text-xs text-muted">
             {excludeFirstRound
               ? 'First round excluded — it carries the fast start.'
-              : 'Every round counts at this cap.'}
+              : 'Every round counts on a clock this short.'}
           </span>
         </label>
       </div>

@@ -150,6 +150,18 @@ Workout and classification names are content, not chrome, and are untouched:
   their own `.test.ts` beside them. Put new logic there rather than inside a
   component — it is the repo's strongest convention and the reason the suite is
   large and fast.
+- **A time domain is a bucket; a time cap is the clock.** `TimeDomain` stays the
+  literal union `5 | 10 | 15 | 20` and keys the library, the categories, the
+  campaign tracks and the `/amrap-workouts/:duration` hubs. `MissionTimeCap` is
+  what the countdown actually runs, chosen from that domain's range (3–5, 7–10,
+  12–15, 18–25). `src/lib/timeDomains.ts` is the only place those ranges are
+  written down — a literal minute range in a component or a scoring function is
+  how a splits chart ends up disagreeing with a score, or a rank becomes
+  unreachable at a clock the product offers. `getDomainWeight` interpolates
+  through the four canonical anchors rather than bucketing, so no minute is worth
+  choosing for the multiplier alone; the buy-in rule derives its threshold from
+  the table for the same reason. Campaigns stay on the canonical minutes.
+
 - **A campaign's mission roles are derived, never stored.** `campaign_occurrences`
   carries a `template_id` and nothing about what the mission is _for_.
   `planCampaignWorkouts` keeps the benchmark out of the build rotation, so the

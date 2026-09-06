@@ -97,12 +97,22 @@ vi.mock('@/components/home/FeaturedWodCard', () => ({
 vi.mock('@/components/createMission/WorkoutTemplatePicker', () => ({
   WorkoutTemplatePicker: ({
     onTemplateSelect,
+    onDurationChange,
   }: {
     onTemplateSelect: (template: (typeof WORKOUT_TEMPLATES)[number]) => void;
+    onDurationChange: (domain: 5 | 10 | 15 | 20) => void;
   }) => (
-    <button type="button" onClick={() => onTemplateSelect(WORKOUT_TEMPLATES[0]!)}>
-      Pick workout
-    </button>
+    <>
+      <button type="button" onClick={() => onTemplateSelect(WORKOUT_TEMPLATES[0]!)}>
+        Pick workout
+      </button>
+      <button type="button" onClick={() => onDurationChange(20)}>
+        Pick Long domain
+      </button>
+      <button type="button" onClick={() => onDurationChange(10)}>
+        Pick Short domain
+      </button>
+    </>
   ),
 }));
 vi.mock('@/components/createMission/CoachWodPicker', () => ({
@@ -350,5 +360,67 @@ describe('CreateMissionPage Guided Ignition', () => {
     expect(screen.queryByRole('dialog', { name: /Determine Your Baseline/i })).toBeNull();
     expect(createRallyPointMock).not.toHaveBeenCalled();
     expect(createMissionMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('CreateMissionPage time cap', () => {
+  beforeEach(() => {
+    markGuidedIgnitionComplete();
+  });
+
+  function capText(): string {
+    return screen.getByText(/Time cap/i).parentElement?.textContent ?? '';
+  }
+
+  it("defaults the clock to the domain's canonical minute", () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Pick Long domain' }));
+
+    expect(capText()).toContain('20 min');
+    // Secondary by default: the minute chips are not on screen until asked for.
+    expect(screen.queryByRole('group', { name: 'Time cap' })).toBeNull();
+  });
+
+  it('resets the clock when the domain changes, so an out-of-range cap cannot survive', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Pick Long domain' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Change it' }));
+    fireEvent.click(screen.getByRole('button', { name: '25 min' }));
+    expect(capText()).toContain('25 min');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pick Short domain' }));
+
+    // 25 is not a legal Short cap; the clock goes back to the canonical minute
+    // rather than clamping to 10 and leaving the host wondering what happened.
+    expect(capText()).toContain('10 min');
+  });
+
+  it('takes the clock from a selected workout, and lets it be moved inside that domain', () => {
+    renderPage();
+    // The Piston is a 5-minute workout.
+    fireEvent.click(screen.getByRole('button', { name: 'Pick workout' }));
+    expect(capText()).toContain('5 min');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Change it' }));
+    fireEvent.click(screen.getByRole('button', { name: '3 min' }));
+
+    expect(capText()).toContain('3 min');
+    expect(screen.getByText(/no ghost to race at 3 min/)).toBeTruthy();
+  });
+
+  it('creates the mission on the chosen cap, not the canonical minute', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Pick workout' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Change it' }));
+    fireEvent.click(screen.getByRole('button', { name: '4 min' }));
+    fireEvent.change(screen.getByPlaceholderText('Host nickname'), {
+      target: { value: 'Morning Grind' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Launch' }));
+
+    await waitFor(() => {
+      expect(createRallyPointMock).toHaveBeenCalled();
+    });
+    expect(createRallyPointMock.mock.calls[0]![0]).toMatchObject({ durationMinutes: 4 });
   });
 });

@@ -9,8 +9,10 @@
     "@/lib/scoring/getPacingDurations": "../../src/lib/scoring/getPacingDurations.ts",
     "@/lib/scoring/getPviMultiplier": "../../src/lib/scoring/getPviMultiplier.ts",
     "@/lib/scoring/types": "../../src/lib/scoring/types.ts",
+    "@/lib/timeDomains": "../../src/lib/timeDomains.ts",
     "@/lib/api/missionTypes": "../../src/lib/api/missionTypes.ts",
     "@/lib/missionSync/types": "../../src/lib/missionSync/types.ts",
+    "@/data/workoutTemplates": "../../src/data/workoutTemplates.ts",
     "@supabase/supabase-js": "jsr:@supabase/supabase-js@2"
   }
 }

@@ -9,6 +9,7 @@ afterEach(() => {
 const baseProps = {
   nickname: 'Host',
   durationMinutes: 10,
+  selectedDomain: 10 as const,
   workoutSource: 'custom' as const,
   selectedTemplate: null,
   selectedCoachWorkout: null,
@@ -18,6 +19,7 @@ const baseProps = {
   loading: false,
   onNicknameChange: () => undefined,
   onDurationChange: () => undefined,
+  onCapChange: () => undefined,
   onScheduleModeChange: () => undefined,
   onRallyDayChange: () => undefined,
   onRallyTimeChange: () => undefined,

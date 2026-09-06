@@ -1,4 +1,5 @@
 import { computePvi } from '@/lib/scoring/computePvi';
+import { shouldExcludeBuyInRound } from '@/lib/scoring/getPacingDurations';
 import { computeFinalScore } from '@/lib/scoring/computeFinalScore';
 import { getDomainWeight } from '@/lib/scoring/getDomainWeight';
 import { getPviMultiplier } from '@/lib/scoring/getPviMultiplier';
@@ -22,7 +23,7 @@ export function computeScoreBreakdown(
   }
 
   const pvi = computePvi(roundDurationsSec, {
-    excludeFirstRound: durationMinutes >= 10,
+    excludeFirstRound: shouldExcludeBuyInRound(durationMinutes),
   });
   const { multiplier } = getPviMultiplier(pvi);
   const domainWeight = getDomainWeight(durationMinutes);

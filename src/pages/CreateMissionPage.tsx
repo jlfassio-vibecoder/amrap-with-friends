@@ -29,6 +29,7 @@ import {
   type WorkoutCategory,
   type WorkoutTemplate,
 } from '@/data/workoutTemplates';
+import { defaultCapForDomain, domainForCap, type MissionTimeCap } from '@/lib/timeDomains';
 import { createMission, fetchHostActiveMissionCount } from '@/lib/api/missions';
 import { createRallyPointMission } from '@/lib/api/rallyPoint';
 import { SendWorkoutToSquad } from '@/components/mission/SendWorkoutToSquad';
@@ -87,7 +88,10 @@ export default function CreateMissionPage() {
     active: workoutSource === 'library' || workoutSource === 'coach',
   });
   const [nickname, setNickname] = useState('');
-  const [durationMinutes, setDurationMinutes] = useState<number>(5);
+  /** The mission clock — may differ from the domain once the host adjusts the cap. */
+  const [durationMinutes, setDurationMinutes] = useState<MissionTimeCap>(5);
+  /** The library bucket the picker filters by — never the clock. */
+  const [selectedDomain, setSelectedDomain] = useState<TimeDomain>(5);
   const [selectedCategory, setSelectedCategory] = useState<WorkoutCategory>('blood-shunt');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [selectedCoachWorkout, setSelectedCoachWorkout] = useState<PublishedCoachWorkout | null>(
@@ -167,7 +171,8 @@ export default function CreateMissionPage() {
           ? duration
           : meta?.availableForDurations[0];
       if (resolvedDuration !== undefined) {
-        setDurationMinutes(resolvedDuration);
+        setSelectedDomain(resolvedDuration);
+        setDurationMinutes(defaultCapForDomain(resolvedDuration));
         setSelectedTemplateId(null);
       }
       setSelectedCategory(category);
@@ -239,13 +244,14 @@ export default function CreateMissionPage() {
     return { movements, intensityTier, templateId };
   }, [workoutText, workoutSource, selectedTemplate, selectedCoachWorkout, selectedTemplateId]);
 
-  function handleDurationChange(duration: TimeDomain) {
-    setDurationMinutes(duration);
+  function handleDurationChange(domain: TimeDomain) {
+    setSelectedDomain(domain);
+    setDurationMinutes(defaultCapForDomain(domain));
     setSelectedTemplateId(null);
 
     const nextCategory = firstAvailableCategoryForDuration(
       WORKOUT_CATEGORIES,
-      duration,
+      domain,
       WORKOUT_TEMPLATES
     );
     if (nextCategory) {
@@ -254,12 +260,18 @@ export default function CreateMissionPage() {
   }
 
   function handleSummaryDurationChange(duration: number) {
-    handleDurationChange(duration as TimeDomain);
+    // The summary control still offers the four canonical minutes, so anything
+    // it emits is a domain. The guard replaces a cast that would have lied the
+    // moment that control starts offering in-range caps.
+    if (isTimeDomain(duration)) {
+      handleDurationChange(duration);
+    }
   }
 
   function handleTemplateSelect(template: WorkoutTemplate) {
     const applied = applyTemplate(template);
     setDurationMinutes(applied.durationMinutes);
+    setSelectedDomain(domainForCap(applied.durationMinutes) ?? selectedDomain);
     setWorkoutText(applied.workoutText);
     setSelectedTemplateId(template.id);
     if (template.category) {
@@ -542,7 +554,7 @@ export default function CreateMissionPage() {
                   </label>
                 ) : workoutSource === 'library' ? (
                   <WorkoutTemplatePicker
-                    durationMinutes={durationMinutes as TimeDomain}
+                    durationMinutes={selectedDomain}
                     selectedCategory={selectedCategory}
                     selectedTemplateId={selectedTemplateId}
                     classification={telemetry?.classification ?? null}
@@ -583,6 +595,7 @@ export default function CreateMissionPage() {
               <CreateMissionSummaryPanel
                 nickname={nickname}
                 durationMinutes={durationMinutes}
+                selectedDomain={selectedDomain}
                 workoutSource={workoutSource}
                 selectedTemplate={selectedTemplate}
                 selectedCoachWorkout={selectedCoachWorkout}
@@ -599,6 +612,7 @@ export default function CreateMissionPage() {
                 loading={loading}
                 onNicknameChange={setNickname}
                 onDurationChange={handleSummaryDurationChange}
+                onCapChange={setDurationMinutes}
                 onScheduleModeChange={setScheduleMode}
                 onRallyDayChange={setRallyDay}
                 onRallyTimeChange={setRallyTime}

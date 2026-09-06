@@ -1,5 +1,6 @@
 import { evaluateLoadImbalance } from '@/lib/hud/evaluateLoadImbalance';
 import type { HudCoreDomain, HudDomainMinutes } from '@/lib/hud/types';
+import { formatCapRange } from '@/lib/timeDomains';
 
 interface DomainMatrixChartProps {
   domainMinutes30d: HudDomainMinutes;
@@ -18,10 +19,7 @@ const BAR_HEIGHT = 24;
 export function DomainMatrixChart({ domainMinutes30d }: DomainMatrixChartProps) {
   const imbalance = evaluateLoadImbalance(domainMinutes30d);
   const coreTotal =
-    domainMinutes30d[5] +
-    domainMinutes30d[10] +
-    domainMinutes30d[15] +
-    domainMinutes30d[20];
+    domainMinutes30d[5] + domainMinutes30d[10] + domainMinutes30d[15] + domainMinutes30d[20];
 
   const segments = CORE_SEGMENTS.map(({ domain, label }, index) => {
     const minutes = domainMinutes30d[domain];
@@ -31,9 +29,7 @@ export function DomainMatrixChart({ domainMinutes30d }: DomainMatrixChartProps) 
     const x = CORE_SEGMENTS.slice(0, index).reduce((sum, { domain: d }) => {
       const prevMinutes = domainMinutes30d[d];
       const prevWidth =
-        coreTotal > 0
-          ? (prevMinutes / coreTotal) * BAR_WIDTH
-          : BAR_WIDTH / CORE_SEGMENTS.length;
+        coreTotal > 0 ? (prevMinutes / coreTotal) * BAR_WIDTH : BAR_WIDTH / CORE_SEGMENTS.length;
       return sum + prevWidth;
     }, 0);
 
@@ -42,9 +38,7 @@ export function DomainMatrixChart({ domainMinutes30d }: DomainMatrixChartProps) 
 
   return (
     <section className="card space-y-3 p-4" aria-label="30-day domain matrix">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted">
-        30-day domain matrix
-      </p>
+      <p className="text-xs font-medium uppercase tracking-wide text-muted">30-day domain matrix</p>
 
       <svg
         role="img"
@@ -79,7 +73,7 @@ export function DomainMatrixChart({ domainMinutes30d }: DomainMatrixChartProps) 
         {segments.map((segment) => (
           <div key={segment.domain}>
             <p className="font-medium uppercase tracking-wide text-muted">
-              {segment.domain} {segment.label}
+              {segment.label} {formatCapRange(segment.domain)}
             </p>
             <p className="text-display tabular-nums text-ink">{segment.minutes} min</p>
           </div>
@@ -87,20 +81,14 @@ export function DomainMatrixChart({ domainMinutes30d }: DomainMatrixChartProps) 
       </div>
 
       {coreTotal === 0 ? (
-        <p className="text-sm text-secondary">
-          No locked core-domain volume in the last 30 days.
-        </p>
+        <p className="text-sm text-secondary">No locked core-domain volume in the last 30 days.</p>
       ) : null}
 
       {domainMinutes30d.other > 0 ? (
-        <p className="text-sm text-secondary tabular-nums">
-          Other: {domainMinutes30d.other} min
-        </p>
+        <p className="text-sm tabular-nums text-secondary">Other: {domainMinutes30d.other} min</p>
       ) : null}
 
-      {imbalance.imbalanced ? (
-        <p className="text-sm text-error">{imbalance.warning}</p>
-      ) : null}
+      {imbalance.imbalanced ? <p className="text-error text-sm">{imbalance.warning}</p> : null}
     </section>
   );
 }
