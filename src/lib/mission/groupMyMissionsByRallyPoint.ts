@@ -1,4 +1,9 @@
+import type { MissionChainItem } from '@/lib/api/missionChain';
 import type { MyMissionEntry } from '@/lib/api/myMissions';
+
+export type MyMissionChainChild =
+  | { kind: 'started'; position: number; entry: MyMissionEntry }
+  | { kind: 'queued'; position: number; chainItem: MissionChainItem };
 
 export type MyMissionListItem =
   | { kind: 'single'; entry: MyMissionEntry }
@@ -6,29 +11,112 @@ export type MyMissionListItem =
       kind: 'group';
       rallyPointId: string;
       parent: MyMissionEntry;
-      children: MyMissionEntry[];
+      /** Total slots when this is a planned chain; sibling-only groups use children.length + 1. */
+      chainLength: number;
+      children: MyMissionChainChild[];
     };
 
 function displayTimeMs(entry: MyMissionEntry): number {
   return new Date(entry.scheduledAt ?? entry.createdAt).getTime();
 }
 
+function listItemSortTime(item: MyMissionListItem): number {
+  return displayTimeMs(item.kind === 'single' ? item.entry : item.parent);
+}
+
+function markGroupConsumed(
+  group: Extract<MyMissionListItem, { kind: 'group' }>,
+  into: Set<string>
+) {
+  into.add(group.parent.missionId);
+  for (const child of group.children) {
+    if (child.kind === 'started') {
+      into.add(child.entry.missionId);
+    }
+  }
+}
+
+function buildChainGroup(
+  rallyPointId: string,
+  members: MyMissionEntry[],
+  chain: MissionChainItem[]
+): Extract<MyMissionListItem, { kind: 'group' }> | null {
+  if (chain.length < 2) {
+    return null;
+  }
+
+  const byMissionId = new Map(members.map((entry) => [entry.missionId, entry]));
+  const sorted = [...chain].sort((a, b) => a.position - b.position);
+  const first = sorted[0]!;
+  // Prefer the stamped position-0 mission; if the stamp is missing or stale,
+  // fall back to the sole hub row / oldest row so expand still works.
+  const parent =
+    (first.startedMissionId ? byMissionId.get(first.startedMissionId) : undefined) ??
+    (members.length === 1 ? members[0] : undefined) ??
+    [...members].sort((a, b) => displayTimeMs(a) - displayTimeMs(b))[0];
+  if (!parent) {
+    return null;
+  }
+
+  const children: MyMissionChainChild[] = sorted.slice(1).map((item) => {
+    if (item.startedMissionId) {
+      const entry = byMissionId.get(item.startedMissionId);
+      if (entry) {
+        return { kind: 'started', position: item.position, entry };
+      }
+    }
+    return { kind: 'queued', position: item.position, chainItem: item };
+  });
+
+  return {
+    kind: 'group',
+    rallyPointId,
+    parent,
+    chainLength: chain.length,
+    children,
+  };
+}
+
+function buildSiblingGroup(
+  rallyPointId: string,
+  members: MyMissionEntry[]
+): Extract<MyMissionListItem, { kind: 'group' }> {
+  const sortedNewestFirst = [...members].sort((a, b) => displayTimeMs(b) - displayTimeMs(a));
+  const parent = sortedNewestFirst[0]!;
+  const older = [...sortedNewestFirst.slice(1)].sort((a, b) => displayTimeMs(a) - displayTimeMs(b));
+
+  return {
+    kind: 'group',
+    rallyPointId,
+    parent,
+    chainLength: members.length,
+    children: older.map((entry, index) => ({
+      kind: 'started' as const,
+      position: index + 1,
+      entry,
+    })),
+  };
+}
+
 /**
- * Collapse missions that share a rally_point_id into expandable groups.
+ * Collapse hub missions into expandable groups.
  *
- * Parent is the most recent sibling (matches my_missions sort). Children are
- * the rest, oldest → newest. Singles (null id or only one row) stay flat.
- * Overall list order follows each item's display time so a group sits where
- * its newest mission would have appeared.
+ * Planned chains (from get_mission_chain): parent is position 0; children follow
+ * chain order and may be queued slots with no mission row yet.
+ * Daisy-chain siblings without a chain table: newest parent, older children
+ * ascending by time.
  */
-export function groupMyMissionsByRallyPoint(entries: MyMissionEntry[]): MyMissionListItem[] {
+export function groupMyMissionsByRallyPoint(
+  entries: MyMissionEntry[],
+  chainsByRallyPointId: Record<string, MissionChainItem[]> = {}
+): MyMissionListItem[] {
   const buckets = new Map<string, MyMissionEntry[]>();
-  const singles: MyMissionEntry[] = [];
+  const noHub: MyMissionEntry[] = [];
 
   for (const entry of entries) {
     const rallyPointId = entry.rallyPointId;
     if (!rallyPointId) {
-      singles.push(entry);
+      noHub.push(entry);
       continue;
     }
     const bucket = buckets.get(rallyPointId) ?? [];
@@ -38,28 +126,32 @@ export function groupMyMissionsByRallyPoint(entries: MyMissionEntry[]): MyMissio
 
   const items: MyMissionListItem[] = [];
 
-  for (const entry of singles) {
-    items.push({ kind: 'single', entry });
-  }
-
   for (const [rallyPointId, members] of buckets) {
+    const chain = chainsByRallyPointId[rallyPointId] ?? [];
+    const chainGroup = buildChainGroup(rallyPointId, members, chain);
+    if (chainGroup) {
+      items.push(chainGroup);
+      const consumed = new Set<string>();
+      markGroupConsumed(chainGroup, consumed);
+      for (const entry of members) {
+        if (!consumed.has(entry.missionId)) {
+          items.push({ kind: 'single', entry });
+        }
+      }
+      continue;
+    }
+
     if (members.length < 2) {
       items.push({ kind: 'single', entry: members[0]! });
       continue;
     }
 
-    const sortedNewestFirst = [...members].sort((a, b) => displayTimeMs(b) - displayTimeMs(a));
-    const parent = sortedNewestFirst[0]!;
-    const children = [...sortedNewestFirst.slice(1)].sort(
-      (a, b) => displayTimeMs(a) - displayTimeMs(b)
-    );
-
-    items.push({ kind: 'group', rallyPointId, parent, children });
+    items.push(buildSiblingGroup(rallyPointId, members));
   }
 
-  return items.sort((a, b) => {
-    const aTime = displayTimeMs(a.kind === 'single' ? a.entry : a.parent);
-    const bTime = displayTimeMs(b.kind === 'single' ? b.entry : b.parent);
-    return bTime - aTime;
-  });
+  for (const entry of noHub) {
+    items.push({ kind: 'single', entry });
+  }
+
+  return items.sort((a, b) => listItemSortTime(b) - listItemSortTime(a));
 }

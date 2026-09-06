@@ -288,10 +288,13 @@ Add / reorder / remove, with the derived rest shown between rows and recomputed
 on every change. Launch with two or more library missions creates mission 1 via
 `create_rally_point_mission`, then persists the queue with position 0 stamped.
 
-### Phase 4 — Running the chain
+### Phase 4 — Running the chain — **done**
 
 Advance on finish, land in the next rally point with the countdown armed, and
 say what is happening: "Rest — mission 2 of 4 starts when the host is ready."
+Host stays on the scorecard with Continue; joiners soft-nav during finished AAR
+when the active mission advances. Reactive Daisy-chain remains when the queue is
+empty. Mission 1 waiting room shows a one-line plan summary.
 
 ### Non-goals (v1)
 
@@ -307,10 +310,8 @@ say what is happening: "Rest — mission 2 of 4 starts when the host is ready."
 
 1. ~~**Guest hosts**~~ — resolved: accept the sign-in requirement, and say so in
    the builder rather than failing at Launch.
-2. **Does the rest show before Launch?** The builder shows it, but the athletes
-   joining mission 1 do not see the plan. Should the rally point show "4
-   missions, about 52 minutes total"? Recommendation: yes, one line — it is the
-   difference between joining a workout and joining a session.
+2. ~~**Does the rest show before Launch?**~~ — resolved: mission 1 waiting room
+   shows one line (`N missions · about M min`) from `formatChainPlanSummary`.
 3. ~~**`HOST_ACTIVE_MISSION_LIMIT`**~~ — resolved during drafting, see coupling
    point 3. A chain creates one mission at a time, so the limit of 3 is never
    the binding constraint.

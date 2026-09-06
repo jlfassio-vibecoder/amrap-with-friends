@@ -1,4 +1,4 @@
-import { afterEach, describe, it, expect, vi } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@/contexts/ThemeProvider';
@@ -9,6 +9,7 @@ import type { MyMissionEntry } from '@/lib/api/myMissions';
 const fetchMyMissionsMock = vi.fn();
 const deleteIncompleteMissionMock = vi.fn();
 const fetchMyCampaignsMock = vi.fn();
+const getMissionChainMock = vi.fn();
 const authUser = { id: 'user-1' };
 
 vi.mock('@/hooks/useAmrapAuth', () => ({
@@ -37,6 +38,15 @@ vi.mock('@/lib/api/campaigns', async () => {
   };
 });
 
+vi.mock('@/lib/api/missionChain', async () => {
+  const actual =
+    await vi.importActual<typeof import('@/lib/api/missionChain')>('@/lib/api/missionChain');
+  return {
+    ...actual,
+    getMissionChain: (...args: unknown[]) => getMissionChainMock(...args),
+  };
+});
+
 function entry(overrides: Partial<MyMissionEntry> = {}): MyMissionEntry {
   return {
     participantId: '11111111-1111-4111-8111-111111111111',
@@ -51,6 +61,8 @@ function entry(overrides: Partial<MyMissionEntry> = {}): MyMissionEntry {
     workout: [{ name: 'Mountain Climbers', target: 20, unit: 'reps' }],
     templateId: null,
     rallyPointId: null,
+    chainItemCount: 0,
+    chainUnstartedCount: 0,
     state: 'waiting',
     segmentIndex: 0,
     roundCount: 0,
@@ -86,7 +98,12 @@ afterEach(() => {
   fetchMyMissionsMock.mockReset();
   deleteIncompleteMissionMock.mockReset();
   fetchMyCampaignsMock.mockReset();
+  getMissionChainMock.mockReset();
   vi.unstubAllGlobals();
+});
+
+beforeEach(() => {
+  getMissionChainMock.mockResolvedValue({ data: [], error: null });
 });
 
 function renderPage() {
@@ -240,7 +257,74 @@ describe('MyMissionsPage delete', () => {
 });
 
 describe('MyMissionsPage chain groups', () => {
-  it('collapses siblings and expands to reveal the older mission', async () => {
+  it('expands a planned chain to show queued mission cards in order', async () => {
+    fetchMyMissionsMock.mockResolvedValue({
+      data: [
+        entry({
+          templateId: 'the-piston',
+          rallyPointId: 'rp1',
+          chainItemCount: 3,
+          chainUnstartedCount: 2,
+          workout: [{ name: 'Air Squats', target: 10 }],
+        }),
+      ],
+      error: null,
+    });
+    getMissionChainMock.mockResolvedValue({
+      data: [
+        {
+          id: 'c0',
+          position: 0,
+          durationMinutes: 5,
+          workout: [{ name: 'Air Squats', target: 10 }],
+          templateId: 'the-piston',
+          intensityTier: 3,
+          startedMissionId: '22222222-2222-4222-8222-222222222222',
+        },
+        {
+          id: 'c1',
+          position: 1,
+          durationMinutes: 5,
+          workout: [{ name: 'Fast Air Squats', target: 15 }],
+          templateId: 'the-metronome',
+          intensityTier: 3,
+          startedMissionId: null,
+        },
+        {
+          id: 'c2',
+          position: 2,
+          durationMinutes: 10,
+          workout: [{ name: 'Burpees', target: 10 }],
+          templateId: 'whiplash',
+          intensityTier: 3,
+          startedMissionId: null,
+        },
+      ],
+      error: null,
+    });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('The Piston')).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Show chained missions' })).toBeTruthy();
+    });
+    expect(screen.getByText(/1 of 3 in this chain/)).toBeTruthy();
+    expect(screen.queryByText('The Metronome')).toBeNull();
+    expect(screen.queryByText('Whiplash')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show chained missions' }));
+
+    expect(screen.getByText('The Metronome')).toBeTruthy();
+    expect(screen.getByText('Whiplash')).toBeTruthy();
+    expect(screen.getAllByText(/queued/).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByRole('button', { name: 'Hide chained missions' })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hide chained missions' }));
+    expect(screen.queryByText('The Metronome')).toBeNull();
+  });
+
+  it('collapses daisy siblings and expands to reveal the older mission', async () => {
     fetchMyMissionsMock.mockResolvedValue({
       data: [
         entry({
@@ -267,14 +351,15 @@ describe('MyMissionsPage chain groups', () => {
 
     await waitFor(() => {
       expect(screen.getByText('The Piston')).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Show chained missions' })).toBeTruthy();
     });
-    expect(screen.getByRole('button', { name: '1 more mission' })).toBeTruthy();
+    expect(screen.getByText(/1 of 2 in this chain/)).toBeTruthy();
     expect(screen.queryByText('The Metronome')).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: '1 more mission' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Show chained missions' }));
 
     expect(screen.getByText('The Metronome')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Hide linked missions' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Hide chained missions' })).toBeTruthy();
   });
 });
 

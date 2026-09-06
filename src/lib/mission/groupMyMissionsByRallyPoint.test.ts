@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { MissionChainItem } from '@/lib/api/missionChain';
 import type { MyMissionEntry } from '@/lib/api/myMissions';
 import { groupMyMissionsByRallyPoint } from './groupMyMissionsByRallyPoint';
 
@@ -17,6 +18,8 @@ function entry(
     workout: [{ name: 'Burpees', target: 10 }],
     templateId: null,
     rallyPointId: null,
+    chainItemCount: 0,
+    chainUnstartedCount: 0,
     state: 'finished',
     segmentIndex: 0,
     roundCount: 1,
@@ -24,6 +27,19 @@ function entry(
     finalScore: null,
     scoreBreakdown: null,
     coachWorkoutName: null,
+    ...overrides,
+  };
+}
+
+function chainItem(
+  overrides: Partial<MissionChainItem> & Pick<MissionChainItem, 'id' | 'position'>
+): MissionChainItem {
+  return {
+    durationMinutes: 5,
+    workout: [{ name: 'Air Squats', target: 15 }],
+    templateId: null,
+    intensityTier: 3,
+    startedMissionId: null,
     ...overrides,
   };
 }
@@ -43,7 +59,7 @@ describe('groupMyMissionsByRallyPoint', () => {
     ]);
   });
 
-  it('groups siblings with newest as parent and older children ascending', () => {
+  it('groups daisy siblings with newest as parent and older children ascending', () => {
     const oldest = entry({
       missionId: 'm-old',
       createdAt: '2026-09-04T10:00:00.000Z',
@@ -74,9 +90,127 @@ describe('groupMyMissionsByRallyPoint', () => {
         kind: 'group',
         rallyPointId: 'rp1',
         parent: newest,
-        children: [oldest, middle],
+        chainLength: 3,
+        children: [
+          { kind: 'started', position: 1, entry: oldest },
+          { kind: 'started', position: 2, entry: middle },
+        ],
       },
       { kind: 'single', entry: other },
+    ]);
+  });
+
+  it('expands a planned chain under position 0 with queued slots in order', () => {
+    const piston = entry({
+      missionId: 'm1',
+      createdAt: '2026-09-06T10:00:00.000Z',
+      rallyPointId: 'rp-chain',
+      templateId: 'the-piston',
+      chainItemCount: 3,
+      chainUnstartedCount: 2,
+      state: 'waiting',
+    });
+    const chain = [
+      chainItem({
+        id: 'c0',
+        position: 0,
+        templateId: 'the-piston',
+        startedMissionId: 'm1',
+      }),
+      chainItem({
+        id: 'c1',
+        position: 1,
+        templateId: 'the-metronome',
+        workout: [{ name: 'Fast Air Squats', target: 15 }],
+      }),
+      chainItem({
+        id: 'c2',
+        position: 2,
+        templateId: 'whiplash',
+        workout: [{ name: 'Burpees', target: 10 }],
+      }),
+    ];
+
+    const result = groupMyMissionsByRallyPoint([piston], { 'rp-chain': chain });
+
+    expect(result).toEqual([
+      {
+        kind: 'group',
+        rallyPointId: 'rp-chain',
+        parent: piston,
+        chainLength: 3,
+        children: [
+          { kind: 'queued', position: 1, chainItem: chain[1] },
+          { kind: 'queued', position: 2, chainItem: chain[2] },
+        ],
+      },
+    ]);
+  });
+
+  it('still expands when position 0 has no started_mission_id stamp', () => {
+    const piston = entry({
+      missionId: 'm1',
+      createdAt: '2026-09-06T10:00:00.000Z',
+      rallyPointId: 'rp-chain',
+      templateId: 'the-piston',
+      state: 'waiting',
+    });
+    const chain = [
+      chainItem({ id: 'c0', position: 0, templateId: 'the-piston', startedMissionId: null }),
+      chainItem({ id: 'c1', position: 1, templateId: 'the-metronome' }),
+      chainItem({ id: 'c2', position: 2, templateId: 'whiplash' }),
+    ];
+
+    const result = groupMyMissionsByRallyPoint([piston], { 'rp-chain': chain });
+
+    expect(result[0]).toMatchObject({
+      kind: 'group',
+      parent: piston,
+      chainLength: 3,
+      children: [
+        { kind: 'queued', position: 1 },
+        { kind: 'queued', position: 2 },
+      ],
+    });
+  });
+
+  it('mixes started and queued children after a chain advance', () => {
+    const first = entry({
+      missionId: 'm1',
+      createdAt: '2026-09-06T09:00:00.000Z',
+      rallyPointId: 'rp-chain',
+      templateId: 'the-piston',
+    });
+    const second = entry({
+      missionId: 'm2',
+      createdAt: '2026-09-06T10:00:00.000Z',
+      rallyPointId: 'rp-chain',
+      templateId: 'the-metronome',
+    });
+    const chain = [
+      chainItem({ id: 'c0', position: 0, templateId: 'the-piston', startedMissionId: 'm1' }),
+      chainItem({
+        id: 'c1',
+        position: 1,
+        templateId: 'the-metronome',
+        startedMissionId: 'm2',
+      }),
+      chainItem({ id: 'c2', position: 2, templateId: 'whiplash' }),
+    ];
+
+    const result = groupMyMissionsByRallyPoint([second, first], { 'rp-chain': chain });
+
+    expect(result).toEqual([
+      {
+        kind: 'group',
+        rallyPointId: 'rp-chain',
+        parent: first,
+        chainLength: 3,
+        children: [
+          { kind: 'started', position: 1, entry: second },
+          { kind: 'queued', position: 2, chainItem: chain[2] },
+        ],
+      },
     ]);
   });
 });

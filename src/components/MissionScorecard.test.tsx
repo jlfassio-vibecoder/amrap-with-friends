@@ -137,6 +137,28 @@ describe('MissionScorecard', () => {
     expect(screen.queryByRole('button', { name: 'Daisy-chain another mission' })).toBeNull();
   });
 
+  it('shows Continue to the next chained mission and hides Daisy-chain', () => {
+    const nextId = '22222222-2222-4222-8222-222222222222';
+    render(
+      <MemoryRouter>
+        <MissionScorecard
+          {...scorecardProps}
+          saveState="saved"
+          rallyPointHref={RALLY_POINT_HREF}
+          rallyPointId={RALLY_POINT_ID}
+          isHost
+          nextMissionId={nextId}
+          nextUpMissionName="The Metronome"
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByRole('button', { name: 'Daisy-chain another mission' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(navigateMock).toHaveBeenCalledWith(`/mission/${nextId}`);
+    expect(screen.getByText('The Metronome')).toBeTruthy();
+  });
+
   it('announces then navigates when the host daisy-chains', async () => {
     announceNextMissionMock.mockResolvedValue({
       data: { ok: true, nextMissionPendingAt: '2026-09-01T12:00:00Z' },

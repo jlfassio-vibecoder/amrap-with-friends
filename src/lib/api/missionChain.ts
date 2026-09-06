@@ -1,5 +1,12 @@
 import { callRpc } from '@/lib/api/callRpc';
 import type { WorkoutExercise } from '@/lib/api/missionTypes';
+import {
+  getStoredRallyPointMemberId,
+  getStoredRallyPointNickname,
+  persistRallyPointIdentity,
+} from '@/lib/rallyPointIdentity';
+import { persistMissionIdentity } from '@/lib/missionIdentity';
+import { track } from '@/lib/analytics/track';
 
 export type MissionChainApiError = { message: string };
 
@@ -22,12 +29,30 @@ export type MissionChainItem = {
   startedMissionId: string | null;
 };
 
+export type StartNextChainedMissionResult =
+  | {
+      complete: false;
+      missionId: string;
+      hostToken: string;
+      participantId: string;
+      claimToken: string;
+      chainPosition: number;
+      restSeconds: number;
+      restEndsAt: string | null;
+      chainRemaining: number;
+    }
+  | { complete: true };
+
 function readString(value: unknown): string | null {
   if (typeof value !== 'string') {
     return null;
   }
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function readNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
 function mapRpcError(message: string | undefined): string {
@@ -42,6 +67,15 @@ function mapRpcError(message: string | undefined): string {
   }
   if (message.includes('Only the host can set the mission chain')) {
     return 'Only the host can set the mission chain.';
+  }
+  if (message.includes('Only the host can start the next mission')) {
+    return 'Only the host can start the next mission.';
+  }
+  if (message.includes('Current mission is still active')) {
+    return 'Finish the current mission before starting the next one.';
+  }
+  if (message.includes('Host mission limit reached')) {
+    return 'You already have 3 active missions.';
   }
   if (message.includes('Cannot rewrite a chain that has already started')) {
     return 'This chain has already started and cannot be changed.';
@@ -145,4 +179,71 @@ export async function getMissionChain(
   }
 
   return { data: items, error: null };
+}
+
+export async function startNextChainedMission(rallyPointId: string): Promise<{
+  data: StartNextChainedMissionResult | null;
+  error: MissionChainApiError | null;
+}> {
+  const { data, error } = await callRpc('start_next_chained_mission', {
+    p_rally_point_id: rallyPointId,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapRpcError(error.message) } };
+  }
+
+  const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  if (raw.ok === false && raw.reason === 'chain_complete') {
+    return { data: { complete: true }, error: null };
+  }
+
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const missionId = readString(raw.mission_id);
+  const hostToken = readString(raw.host_token);
+  const participantId = readString(raw.participant_id);
+  const claimToken = readString(raw.claim_token);
+  const chainPosition = readNumber(raw.chain_position);
+  const restSeconds = readNumber(raw.rest_seconds) ?? 0;
+  const chainRemaining = readNumber(raw.chain_remaining) ?? 0;
+
+  if (!missionId || !hostToken || !participantId || !claimToken || chainPosition === null) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const nickname = getStoredRallyPointNickname(rallyPointId) ?? 'Athlete';
+  const memberId = getStoredRallyPointMemberId(rallyPointId);
+  persistMissionIdentity(missionId, {
+    nickname,
+    participantId,
+    hostToken,
+    claimToken,
+  });
+  if (memberId) {
+    persistRallyPointIdentity(rallyPointId, {
+      memberId,
+      nickname,
+      missionId,
+    });
+  }
+
+  track('mission_chain_advanced', { chain_position: chainPosition }, { missionId, participantId });
+
+  return {
+    data: {
+      complete: false,
+      missionId,
+      hostToken,
+      participantId,
+      claimToken,
+      chainPosition,
+      restSeconds,
+      restEndsAt: readString(raw.rest_ends_at),
+      chainRemaining,
+    },
+    error: null,
+  };
 }

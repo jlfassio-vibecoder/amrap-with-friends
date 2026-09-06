@@ -82,6 +82,32 @@ describe('useRallyPointForceNav', () => {
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
+  it('joins a live active mission even when the caller enables during finished AAR', async () => {
+    vi.useFakeTimers();
+    renderHook(
+      () =>
+        useRallyPointForceNav({
+          rallyPointId: RALLY_POINT_ID,
+          activeMissionId: MISSION_B,
+          activeMissionState: 'waiting',
+          currentMissionId: MISSION_A,
+          // Waiting-room enables this for joiners while local phase is still finished.
+          enabled: true,
+        }),
+      { wrapper }
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(joinRallyPointMock).toHaveBeenCalled();
+    await act(async () => {
+      vi.advanceTimersByTime(FORCE_NAV_DELAY_MS);
+    });
+    expect(navigateMock).toHaveBeenCalledWith(`/mission/${MISSION_B}`, { replace: true });
+  });
+
   it('joins then navigates after the soft delay', async () => {
     vi.useFakeTimers();
     const { result } = renderHook(

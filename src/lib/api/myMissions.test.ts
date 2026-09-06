@@ -6,6 +6,7 @@ import {
   deleteIncompleteMission,
   displayMyMissionScore,
   fetchMyMissions,
+  formatMyMissionChainLabel,
   formatMyMissionExerciseLine,
   formatMyMissionScoreDisplay,
   formatMyMissionShareText,
@@ -39,6 +40,8 @@ function baseEntry(overrides: Partial<MyMissionEntry> = {}): MyMissionEntry {
     ],
     templateId: null,
     rallyPointId: null,
+    chainItemCount: 0,
+    chainUnstartedCount: 0,
     state: 'waiting',
     segmentIndex: 0,
     roundCount: 0,
@@ -200,6 +203,22 @@ describe('myMissions helpers', () => {
   });
 });
 
+describe('formatMyMissionChainLabel', () => {
+  it('returns null when there is no multi-mission chain', () => {
+    expect(formatMyMissionChainLabel(baseEntry())).toBeNull();
+    expect(formatMyMissionChainLabel(baseEntry({ chainItemCount: 1 }))).toBeNull();
+  });
+
+  it('summarises total missions in the chain', () => {
+    expect(
+      formatMyMissionChainLabel(baseEntry({ chainItemCount: 3, chainUnstartedCount: 2 }))
+    ).toBe('3 missions');
+    expect(
+      formatMyMissionChainLabel(baseEntry({ chainItemCount: 3, chainUnstartedCount: 0 }))
+    ).toBe('3 missions');
+  });
+});
+
 describe('fetchMyMissions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -223,6 +242,8 @@ describe('fetchMyMissions', () => {
             workout: [{ name: 'Burpees', target: 10 }],
             template_id: 'the-piston',
             rally_point_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+            chain_item_count: 3,
+            chain_unstarted_count: 2,
             state: 'waiting',
             segment_index: 0,
             round_count: 0,
@@ -244,6 +265,8 @@ describe('fetchMyMissions', () => {
     expect(result.error).toBeNull();
     expect(result.data?.[0]?.rallyPointId).toBe('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
     expect(result.data?.[0]?.templateId).toBe('the-piston');
+    expect(result.data?.[0]?.chainItemCount).toBe(3);
+    expect(result.data?.[0]?.chainUnstartedCount).toBe(2);
   });
 });
 

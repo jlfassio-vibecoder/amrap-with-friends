@@ -51,7 +51,12 @@ import {
   passRallyPointCommand,
   touchRallyPointPresence,
 } from '@/lib/api/rallyPoint';
-import { getMissionChain } from '@/lib/api/missionChain';
+import { getMissionChain, startNextChainedMission } from '@/lib/api/missionChain';
+import {
+  chainHasUnstartedItems,
+  chainPlanSummaryForMission,
+  chainRestBannerForMission,
+} from '@/lib/mission/chainAdvanceCopy';
 import { nextChainedMissionName } from '@/lib/mission/nextChainedMissionName';
 import { canPassRallyPointCommand } from '@/lib/rallyPoint/canPassRallyPointCommand';
 import { shouldHandleLogRoundHotkey } from '@/lib/mission/logRoundHotkey';
@@ -462,6 +467,11 @@ function LiveMissionView({
   const rallyPointId =
     channel.mission?.rally_point_id ?? getStoredRallyPointIdForMission(missionId) ?? null;
   const [nextUpMissionName, setNextUpMissionName] = useState<string | null>(null);
+  const [nextChainedMissionId, setNextChainedMissionId] = useState<string | null>(null);
+  const [continueMissionName, setContinueMissionName] = useState<string | null>(null);
+  const [chainRestBanner, setChainRestBanner] = useState<string | null>(null);
+  const [chainPlanSummary, setChainPlanSummary] = useState<string | null>(null);
+  const chainAdvanceAttemptedRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (channel.mission?.rally_point_id) {
@@ -470,8 +480,16 @@ function LiveMissionView({
   }, [channel.mission?.rally_point_id, missionId]);
 
   useEffect(() => {
+    setNextChainedMissionId(null);
+    setContinueMissionName(null);
+    chainAdvanceAttemptedRef.current = null;
+  }, [missionId]);
+
+  useEffect(() => {
     if (!rallyPointId || !isAuthenticated) {
       setNextUpMissionName(null);
+      setChainRestBanner(null);
+      setChainPlanSummary(null);
       return;
     }
 
@@ -482,15 +500,85 @@ function LiveMissionView({
       }
       if (result.error || !result.data) {
         setNextUpMissionName(null);
+        setChainRestBanner(null);
+        setChainPlanSummary(null);
         return;
       }
       setNextUpMissionName(nextChainedMissionName(result.data));
+      setChainRestBanner(
+        livePhase === 'waiting' ? chainRestBannerForMission(result.data, missionId) : null
+      );
+      setChainPlanSummary(
+        livePhase === 'waiting' ? chainPlanSummaryForMission(result.data, missionId) : null
+      );
     });
 
     return () => {
       cancelled = true;
     };
-  }, [rallyPointId, isAuthenticated, livePhase]);
+  }, [rallyPointId, isAuthenticated, livePhase, missionId]);
+
+  // Host advances the pre-planned queue once the finished state is confirmed.
+  useEffect(() => {
+    if (
+      !isHost ||
+      live.isPractice ||
+      livePhase !== 'finished' ||
+      !rallyPointId ||
+      !isAuthenticated
+    ) {
+      return;
+    }
+    if (chainAdvanceAttemptedRef.current === missionId) {
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      const chain = await getMissionChain(rallyPointId);
+      if (cancelled) {
+        return;
+      }
+      if (chain.error || !chain.data) {
+        return;
+      }
+      if (!chainHasUnstartedItems(chain.data)) {
+        chainAdvanceAttemptedRef.current = missionId;
+        return;
+      }
+      if (chainAdvanceAttemptedRef.current === missionId) {
+        return;
+      }
+      chainAdvanceAttemptedRef.current = missionId;
+
+      const queuedName = nextChainedMissionName(chain.data);
+      const result = await startNextChainedMission(rallyPointId);
+      if (cancelled) {
+        return;
+      }
+      if (result.error) {
+        chainAdvanceAttemptedRef.current = null;
+        setForceNavError(result.error.message);
+        return;
+      }
+      if (!result.data || result.data.complete) {
+        return;
+      }
+
+      setNextChainedMissionId(result.data.missionId);
+      setContinueMissionName(queuedName);
+      void getMissionChain(rallyPointId).then((refresh) => {
+        if (cancelled || refresh.error || !refresh.data) {
+          return;
+        }
+        setNextUpMissionName(nextChainedMissionName(refresh.data));
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isHost, live.isPractice, livePhase, rallyPointId, isAuthenticated, missionId]);
 
   const rallyPointMemberId = rallyPointId ? getStoredRallyPointMemberId(rallyPointId) : null;
   const rallyPointNickname =
@@ -727,10 +815,20 @@ function LiveMissionView({
     activeMissionId: rallyPointChannel.rallyPoint?.activeMissionId,
     activeMissionState: rallyPointChannel.rallyPoint?.activeMissionState,
     currentMissionId: missionId,
-    // Pull stragglers after AAR, and pull joiners when the host resets to a new rematch.
+    // Pull stragglers after AAR, pull joiners when the host resets to a rematch,
+    // and pull joiners during finished AAR when a chain advance created a new live mission.
+    // Host stays on the scorecard with Continue — do not soft-nav them away.
     enabled:
       Boolean(rallyPointId) &&
-      ((livePhase === 'finished' && !showPartialRepsModal && !showScorecard) ||
+      ((livePhase === 'finished' &&
+        !showPartialRepsModal &&
+        !showScorecard &&
+        !nextChainedMissionId) ||
+        (!isHost &&
+          livePhase === 'finished' &&
+          Boolean(rallyPointChannel.rallyPoint?.activeMissionId) &&
+          rallyPointChannel.rallyPoint?.activeMissionId !== missionId &&
+          isLiveRallyPointMissionState(rallyPointChannel.rallyPoint?.activeMissionState)) ||
         ((livePhase === 'waiting' || livePhase === 'setup' || livePhase === 'work') &&
           Boolean(rallyPointChannel.rallyPoint?.activeMissionId) &&
           rallyPointChannel.rallyPoint?.activeMissionId !== missionId)),
@@ -1092,6 +1190,16 @@ function LiveMissionView({
                     {phaseLabel(live.phase)}
                   </p>
                 )}
+                {chainRestBanner ? (
+                  <p className="text-sm text-secondary" role="status">
+                    {chainRestBanner}
+                  </p>
+                ) : null}
+                {chainPlanSummary ? (
+                  <p className="text-sm text-secondary" role="status">
+                    {chainPlanSummary}
+                  </p>
+                ) : null}
                 {live.phase === 'waiting' && (rallyPointTicking || rallyPointIgnited) ? (
                   <p className="font-mono text-3xl tabular-nums tracking-widest text-accent lg:text-5xl">
                     {formatTMinus(rallyPointRemaining ?? 0)}
@@ -1440,7 +1548,8 @@ function LiveMissionView({
           rallyPointHref={rallyPointHref}
           rallyPointId={rallyPointId}
           isHost={isHost}
-          nextUpMissionName={nextUpMissionName}
+          nextUpMissionName={continueMissionName ?? nextUpMissionName}
+          nextMissionId={nextChainedMissionId}
         />
       ) : null}
 

@@ -22,6 +22,10 @@ export interface MyMissionEntry {
   templateId: string | null;
   /** Shared Next Mission hub; null for guest-only / non-hub missions. */
   rallyPointId: string | null;
+  /** Rows in mission_chain_items for this hub; 0 when none / no hub. */
+  chainItemCount: number;
+  /** Unstarted chain slots still waiting to be created. */
+  chainUnstartedCount: number;
   state: string;
   segmentIndex: number;
   roundCount: number;
@@ -93,6 +97,17 @@ export function formatMyMissionExerciseLine(exercise: WorkoutExercise): string {
     return exercise.name;
   }
   return `${exercise.name} — ${exercise.target}${exercise.unit ? ` ${exercise.unit}` : ''}`;
+}
+
+/** Plain-English chain cue for My Missions parent chrome (null when not a chain). */
+export function formatMyMissionChainLabel(entry: {
+  chainItemCount: number;
+  chainUnstartedCount?: number;
+}): string | null {
+  if (entry.chainItemCount < 2) {
+    return null;
+  }
+  return `${entry.chainItemCount} missions`;
 }
 
 /** Plain-text card summary for Web Share / clipboard (title, movements, meta). */
@@ -194,6 +209,8 @@ function parseMyMissionEntry(raw: unknown): MyMissionEntry | null {
     workout: readWorkout(row.workout),
     templateId: readString(row.template_id),
     rallyPointId: readString(row.rally_point_id),
+    chainItemCount: readNumber(row.chain_item_count) ?? 0,
+    chainUnstartedCount: readNumber(row.chain_unstarted_count) ?? 0,
     state,
     segmentIndex,
     roundCount,

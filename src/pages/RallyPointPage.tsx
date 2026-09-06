@@ -19,6 +19,9 @@ import {
   startNextRallyPointMission,
   touchRallyPointPresence,
 } from '@/lib/api/rallyPoint';
+import { getMissionChain, startNextChainedMission } from '@/lib/api/missionChain';
+import { chainHasUnstartedItems } from '@/lib/mission/chainAdvanceCopy';
+import { nextChainedMissionName } from '@/lib/mission/nextChainedMissionName';
 import {
   clearStoredRallyPointIdentity,
   getStoredRallyPointMemberId,
@@ -66,6 +69,8 @@ export default function RallyPointPage() {
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [chainQueueRemaining, setChainQueueRemaining] = useState(false);
+  const [nextQueuedMissionName, setNextQueuedMissionName] = useState<string | null>(null);
   const rejoinAttemptedRef = useRef(false);
 
   const selectedTemplate =
@@ -203,6 +208,32 @@ export default function RallyPointPage() {
     }
   }, [smartRecovery.enabled, smartRecovery.locks, selectedTemplateId]);
 
+  useEffect(() => {
+    if (!rallyPointId || !isAuthenticated || !isHost) {
+      setChainQueueRemaining(false);
+      setNextQueuedMissionName(null);
+      return;
+    }
+
+    let cancelled = false;
+    void getMissionChain(rallyPointId).then((result) => {
+      if (cancelled) {
+        return;
+      }
+      if (result.error || !result.data) {
+        setChainQueueRemaining(false);
+        setNextQueuedMissionName(null);
+        return;
+      }
+      setChainQueueRemaining(chainHasUnstartedItems(result.data));
+      setNextQueuedMissionName(nextChainedMissionName(result.data));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [rallyPointId, isAuthenticated, isHost, rallyPoint?.activeMissionId]);
+
   async function handlePassCommand(toUserId: string) {
     setActionError(null);
     setBusy(true);
@@ -249,6 +280,33 @@ export default function RallyPointPage() {
         });
         navigate(`/mission/${result.data.missionId}`, { replace: true });
       }
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Could not start the next mission.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleContinueChain() {
+    setActionError(null);
+    setBusy(true);
+    try {
+      const result = await startNextChainedMission(rallyPointId);
+      if (result.error) {
+        setActionError(result.error.message);
+        return;
+      }
+      if (!result.data || result.data.complete) {
+        setChainQueueRemaining(false);
+        setNextQueuedMissionName(null);
+        return;
+      }
+      persistRallyPointIdentity(rallyPointId, {
+        memberId: memberId || getStoredRallyPointMemberId(rallyPointId) || '',
+        nickname,
+        missionId: result.data.missionId,
+      });
+      navigate(`/mission/${result.data.missionId}`, { replace: true });
     } catch (e) {
       setActionError(e instanceof Error ? e.message : 'Could not start the next mission.');
     } finally {
@@ -440,52 +498,73 @@ export default function RallyPointPage() {
         {isHost ? (
           <section className="card space-y-4 p-5">
             <h2 className="text-display text-xl text-ink">Next mission</h2>
-            <form className="space-y-4" onSubmit={(e) => void handleStartNext(e)}>
-              <WorkoutTemplatePicker
-                durationMinutes={selectedDomain}
-                selectedCategory={selectedCategory}
-                selectedTemplateId={selectedTemplateId}
-                smartRecoveryEnabled={smartRecovery.enabled}
-                onSmartRecoveryEnabledChange={smartRecovery.setEnabled}
-                recoveryLocks={smartRecovery.locks}
-                smartRecoveryActive={smartRecovery.enabled && isAuthenticated}
-                smartRecoveryLoading={smartRecovery.loading}
-                smartRecoveryError={smartRecovery.error}
-                isAuthenticated={isAuthenticated}
-                onDurationChange={handleDurationChange}
-                onCategoryChange={(category) => {
-                  setSelectedCategory(category);
-                  setSelectedTemplateId(null);
-                }}
-                onTemplateSelect={handleTemplateSelect}
-              />
-              <TimeCapControl
-                key={selectedDomain}
-                domain={selectedDomain}
-                cap={durationMinutes}
-                onCapChange={setDurationMinutes}
-                templateCap={selectedTemplate?.durationMinutes ?? null}
-                templateName={selectedTemplate?.name ?? null}
-              />
-              {selectedTemplate ? (
-                <p className="text-sm text-secondary">
-                  Selected: <span className="text-ink">{selectedTemplate.name}</span>
-                </p>
-              ) : (
-                <p className="text-sm text-secondary">
-                  Select a workout to start the next mission.
-                </p>
-              )}
-              {displayError ? <p className="text-error text-sm">{displayError}</p> : null}
-              <button
-                type="submit"
-                className="btn-primary w-full"
-                disabled={busy || !selectedTemplate}
-              >
-                {busy ? 'Starting…' : 'Start next mission'}
-              </button>
-            </form>
-            {isAuthenticated ? (
+            {chainQueueRemaining ? (
+              <div className="space-y-3">
+                {nextQueuedMissionName ? (
+                  <p className="text-sm text-secondary">
+                    Next up: <span className="font-semibold text-ink">{nextQueuedMissionName}</span>
+                  </p>
+                ) : (
+                  <p className="text-sm text-secondary">Continue the planned mission chain.</p>
+                )}
+                {displayError ? <p className="text-error text-sm">{displayError}</p> : null}
+                <button
+                  type="button"
+                  className="btn-primary w-full"
+                  disabled={busy}
+                  onClick={() => void handleContinueChain()}
+                >
+                  {busy ? 'Starting…' : 'Continue to next mission'}
+                </button>
+              </div>
+            ) : (
+              <form className="space-y-4" onSubmit={(e) => void handleStartNext(e)}>
+                <WorkoutTemplatePicker
+                  durationMinutes={selectedDomain}
+                  selectedCategory={selectedCategory}
+                  selectedTemplateId={selectedTemplateId}
+                  smartRecoveryEnabled={smartRecovery.enabled}
+                  onSmartRecoveryEnabledChange={smartRecovery.setEnabled}
+                  recoveryLocks={smartRecovery.locks}
+                  smartRecoveryActive={smartRecovery.enabled && isAuthenticated}
+                  smartRecoveryLoading={smartRecovery.loading}
+                  smartRecoveryError={smartRecovery.error}
+                  isAuthenticated={isAuthenticated}
+                  onDurationChange={handleDurationChange}
+                  onCategoryChange={(category) => {
+                    setSelectedCategory(category);
+                    setSelectedTemplateId(null);
+                  }}
+                  onTemplateSelect={handleTemplateSelect}
+                />
+                <TimeCapControl
+                  key={selectedDomain}
+                  domain={selectedDomain}
+                  cap={durationMinutes}
+                  onCapChange={setDurationMinutes}
+                  templateCap={selectedTemplate?.durationMinutes ?? null}
+                  templateName={selectedTemplate?.name ?? null}
+                />
+                {selectedTemplate ? (
+                  <p className="text-sm text-secondary">
+                    Selected: <span className="text-ink">{selectedTemplate.name}</span>
+                  </p>
+                ) : (
+                  <p className="text-sm text-secondary">
+                    Select a workout to start the next mission.
+                  </p>
+                )}
+                {displayError ? <p className="text-error text-sm">{displayError}</p> : null}
+                <button
+                  type="submit"
+                  className="btn-primary w-full"
+                  disabled={busy || !selectedTemplate}
+                >
+                  {busy ? 'Starting…' : 'Start next mission'}
+                </button>
+              </form>
+            )}
+            {!chainQueueRemaining && isAuthenticated ? (
               <SendWorkoutToSquad
                 durationMinutes={durationMinutes}
                 workout={stagedWorkout}

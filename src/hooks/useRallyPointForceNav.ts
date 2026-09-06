@@ -25,6 +25,9 @@ export type RallyPointForceNavState = {
  * Skips finished missions so `/rally-point/:id` stays reachable after AAR, and only
  * starts the countdown after joinRallyPoint succeeds so identity is persisted first.
  * Auto-nav after FORCE_NAV_DELAY_MS; Join now skips the remaining wait.
+ *
+ * Callers may keep `enabled` true during a local `finished` scorecard when the
+ * rally point's active mission is already a different live mission (chain advance).
  */
 export function useRallyPointForceNav(input: {
   rallyPointId: string | null | undefined;

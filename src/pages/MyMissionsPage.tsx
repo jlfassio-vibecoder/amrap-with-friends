@@ -16,10 +16,12 @@ import {
   myMissionWorkoutTitle,
   type MyMissionEntry,
 } from '@/lib/api/myMissions';
+import { getMissionChain, type MissionChainItem } from '@/lib/api/missionChain';
 import type { WorkoutExercise } from '@/lib/api/missionTypes';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useCopyFlash } from '@/hooks/useCopyFlash';
 import { groupMyMissionsByRallyPoint } from '@/lib/mission/groupMyMissionsByRallyPoint';
+import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
 
 function formatMissionWhen(entry: MyMissionEntry): string {
   const when = entry.scheduledAt ?? entry.createdAt;
@@ -31,10 +33,6 @@ function confirmDeleteMessage(entry: MyMissionEntry): string {
     return 'Cancel this Featured WOD for this date and time only? Other scheduled days stay on the calendar.';
   }
   return 'Permanently delete this incomplete mission?';
-}
-
-function moreMissionsLabel(count: number): string {
-  return count === 1 ? '1 more mission' : `${count} more missions`;
 }
 
 function MyMissionMovements({ title, workout }: { title: string; workout: WorkoutExercise[] }) {
@@ -92,6 +90,17 @@ function ShareMyMissionButton({ entry }: { entry: MyMissionEntry }) {
   );
 }
 
+function QueuedMissionCard({ item }: { item: MissionChainItem }) {
+  const title = resolveWorkoutTitle(item.templateId);
+
+  return (
+    <div className="card space-y-2 p-4 text-sm">
+      <MyMissionMovements title={title} workout={item.workout} />
+      <p className="text-center text-secondary">{item.durationMinutes} min · queued</p>
+    </div>
+  );
+}
+
 function MyMissionCard({
   entry,
   deletingMissionId,
@@ -105,7 +114,9 @@ function MyMissionCard({
   onViewBreakdown: (entry: MyMissionEntry) => void;
   expandControl?: {
     expanded: boolean;
-    childCount: number;
+    missionCount: number;
+    /** 1-based position of this card in the chain (parent is always 1). */
+    position: number;
     onToggle: () => void;
   };
 }) {
@@ -117,20 +128,6 @@ function MyMissionCard({
         {formatMyMissionScoreDisplay(entry)} · {entry.state}
         {entry.isFeatured ? ' · Featured' : ''}
       </p>
-      {expandControl ? (
-        <div className="flex justify-center">
-          <button
-            type="button"
-            className="link-accent text-sm"
-            aria-expanded={expandControl.expanded}
-            onClick={expandControl.onToggle}
-          >
-            {expandControl.expanded
-              ? 'Hide linked missions'
-              : moreMissionsLabel(expandControl.childCount)}
-          </button>
-        </div>
-      ) : null}
       <div className="flex flex-wrap items-center gap-3">
         <Link className="btn-teal" to={`/mission/${entry.missionId}`}>
           View mission
@@ -149,6 +146,18 @@ function MyMissionCard({
           triggerClassName="link-accent font-normal disabled:text-muted"
           triggerLabel="Add squad member"
         />
+        {expandControl ? (
+          <button
+            type="button"
+            className="link-accent inline-flex items-center gap-1 font-semibold"
+            aria-expanded={expandControl.expanded}
+            aria-label={expandControl.expanded ? 'Hide chained missions' : 'Show chained missions'}
+            onClick={expandControl.onToggle}
+          >
+            <span aria-hidden="true">{expandControl.expanded ? '▲' : '▼'}</span>
+            {expandControl.position} of {expandControl.missionCount} in this chain
+          </button>
+        ) : null}
         {canDeleteMyMission(entry) ? (
           <button
             type="button"
@@ -167,13 +176,19 @@ function MyMissionCard({
 export default function MyMissionsPage() {
   const { user, isAuthenticated, isAuthLoading } = useAmrapAuth();
   const [entries, setEntries] = useState<MyMissionEntry[]>([]);
+  const [chainsByRallyPointId, setChainsByRallyPointId] = useState<
+    Record<string, MissionChainItem[]>
+  >({});
   const [error, setError] = useState<string | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [breakdownEntry, setBreakdownEntry] = useState<MyMissionEntry | null>(null);
   const [deletingMissionId, setDeletingMissionId] = useState<string | null>(null);
   const [expandedRallyPointIds, setExpandedRallyPointIds] = useState<Set<string>>(() => new Set());
 
-  const listItems = useMemo(() => groupMyMissionsByRallyPoint(entries), [entries]);
+  const listItems = useMemo(
+    () => groupMyMissionsByRallyPoint(entries, chainsByRallyPointId),
+    [entries, chainsByRallyPointId]
+  );
 
   useEffect(() => {
     if (isAuthLoading || !isAuthenticated || !user) {
@@ -188,6 +203,8 @@ export default function MyMissionsPage() {
       }
       if (result.error) {
         setError(result.error.message);
+        setEntries([]);
+        setChainsByRallyPointId({});
       } else {
         setEntries(result.data ?? []);
       }
@@ -198,6 +215,43 @@ export default function MyMissionsPage() {
       cancelled = true;
     };
   }, [isAuthLoading, isAuthenticated, user]);
+
+  useEffect(() => {
+    // Fetch for every hub id — do not gate on chainItemCount (that column needs a
+    // migration). Empty / short chains are ignored when building the list.
+    const rallyPointIds = [
+      ...new Set(
+        entries
+          .map((entry) => entry.rallyPointId)
+          .filter((id): id is string => typeof id === 'string' && id.length > 0)
+      ),
+    ];
+
+    if (rallyPointIds.length === 0) {
+      setChainsByRallyPointId({});
+      return;
+    }
+
+    let cancelled = false;
+
+    void Promise.all(rallyPointIds.map((id) => getMissionChain(id))).then((results) => {
+      if (cancelled) {
+        return;
+      }
+      const next: Record<string, MissionChainItem[]> = {};
+      results.forEach((result, index) => {
+        const id = rallyPointIds[index]!;
+        if (!result?.error && result?.data && result.data.length >= 2) {
+          next[id] = result.data;
+        }
+      });
+      setChainsByRallyPointId(next);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [entries]);
 
   const loading = isAuthLoading || (isAuthenticated && user !== null && !hasLoaded);
 
@@ -300,22 +354,29 @@ export default function MyMissionsPage() {
                   onViewBreakdown={setBreakdownEntry}
                   expandControl={{
                     expanded,
-                    childCount: item.children.length,
+                    missionCount: item.chainLength,
+                    position: 1,
                     onToggle: () => toggleGroup(item.rallyPointId),
                   }}
                 />
                 {expanded ? (
                   <ul className="space-y-2 border-l-2 border-border pl-3">
-                    {item.children.map((child) => (
-                      <li key={child.participantId}>
-                        <MyMissionCard
-                          entry={child}
-                          deletingMissionId={deletingMissionId}
-                          onDelete={(entry) => void handleDelete(entry)}
-                          onViewBreakdown={setBreakdownEntry}
-                        />
-                      </li>
-                    ))}
+                    {item.children.map((child) =>
+                      child.kind === 'started' ? (
+                        <li key={child.entry.participantId}>
+                          <MyMissionCard
+                            entry={child.entry}
+                            deletingMissionId={deletingMissionId}
+                            onDelete={(entry) => void handleDelete(entry)}
+                            onViewBreakdown={setBreakdownEntry}
+                          />
+                        </li>
+                      ) : (
+                        <li key={child.chainItem.id}>
+                          <QueuedMissionCard item={child.chainItem} />
+                        </li>
+                      )
+                    )}
                   </ul>
                 ) : null}
               </li>
