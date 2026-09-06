@@ -542,20 +542,20 @@ export default function CreateMissionPage() {
       }
 
       if (result.data) {
-        if (
-          isAuthenticated &&
-          missionChain.length >= 2 &&
-          'rallyPointId' in result.data &&
-          result.data.rallyPointId
-        ) {
+        const created = result.data;
+        const rallyPointId =
+          'rallyPointId' in created && typeof created.rallyPointId === 'string'
+            ? created.rallyPointId
+            : null;
+        if (isAuthenticated && missionChain.length >= 2 && rallyPointId) {
           const chainResult = await persistMissionChain({
-            rallyPointId: result.data.rallyPointId,
+            rallyPointId,
             items: missionChain.map((item, index) => ({
               durationMinutes: item.durationMinutes,
               workout: item.workout,
               templateId: item.templateId,
               intensityTier: item.intensityTier,
-              startedMissionId: index === 0 ? result.data!.missionId : null,
+              startedMissionId: index === 0 ? created.missionId : null,
             })),
           });
           if (chainResult.error) {
@@ -565,7 +565,7 @@ export default function CreateMissionPage() {
         }
 
         guidedLaunchTemplateRef.current = null;
-        navigate(`/mission/${result.data.missionId}`);
+        navigate(`/mission/${created.missionId}`);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.');
