@@ -98,10 +98,6 @@ export function AuthHeaderActions({ tone = 'default' }: { tone?: HeaderTone }) {
   }
 
   useEffect(() => {
-    closeMenu();
-  }, [location.pathname]);
-
-  useEffect(() => {
     if (!menuOpen) {
       return;
     }
