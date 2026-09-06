@@ -6,6 +6,7 @@ import type {
   HudClassification,
   HudDomainMinutes,
   HudOvertraining,
+  HudWeekPviMission,
   HUDTelemetryPayload,
 } from '@/lib/hud/types';
 
@@ -199,6 +200,55 @@ function readClassification(value: unknown): HudClassification | null {
   return { current, previous, progress };
 }
 
+function readWeekPviMission(value: unknown): HudWeekPviMission | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const row = value as Record<string, unknown>;
+  const missionId = readString(row.missionId);
+  const pvi = readNumber(row.pvi);
+  const durationMinutes = readNonNegativeInt(row.durationMinutes);
+  const lockedAt = readString(row.lockedAt);
+  const templateRaw = row.templateId;
+
+  if (missionId === null || pvi === null || durationMinutes === null || lockedAt === null) {
+    return null;
+  }
+
+  let templateId: string | null;
+  if (templateRaw === null || templateRaw === undefined) {
+    templateId = null;
+  } else {
+    templateId = readString(templateRaw);
+    if (templateId === null) {
+      return null;
+    }
+  }
+
+  return { missionId, pvi, durationMinutes, templateId, lockedAt };
+}
+
+/** Missing or malformed list → [] so an older RPC does not null the payload. */
+function readWeekPviMissions(value: unknown): HudWeekPviMission[] {
+  if (value === null || value === undefined) {
+    return [];
+  }
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const missions: HudWeekPviMission[] = [];
+  for (const item of value) {
+    const parsed = readWeekPviMission(item);
+    if (parsed === null) {
+      return [];
+    }
+    missions.push(parsed);
+  }
+  return missions;
+}
+
 export function parseHudTelemetryPayload(value: unknown): HUDTelemetryPayload | null {
   if (!value || typeof value !== 'object') {
     return null;
@@ -247,6 +297,7 @@ export function parseHudTelemetryPayload(value: unknown): HUDTelemetryPayload | 
   return {
     weekMinutes,
     weekPviAverage,
+    weekPviMissions: readWeekPviMissions(row.weekPviMissions),
     weekEndsAt,
     lastLockedAt,
     attrition,

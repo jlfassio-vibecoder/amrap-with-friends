@@ -1,13 +1,19 @@
 import { useEffect, useState } from 'react';
 import { AppLink } from '@/components/AppLink';
 import { HudInfoDisclosure } from '@/components/hud/HudInfoDisclosure';
-import { describeWeeklyPviGuidance } from '@/lib/scoring/pviGuidance';
+import {
+  describeWeeklyPviGuidance,
+  formatWeekPviWeekday,
+  pickUnevenWeekMission,
+} from '@/lib/scoring/pviGuidance';
 import { formatWeekCountdown } from '@/lib/hud/formatWeekCountdown';
-import { WEEKLY_BASELINE_MINUTES } from '@/lib/hud/types';
+import { WEEKLY_BASELINE_MINUTES, type HudWeekPviMission } from '@/lib/hud/types';
+import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
 
 interface WeeklyBaselineBarProps {
   weekMinutes: number;
   weekPviAverage: number | null;
+  weekPviMissions?: HudWeekPviMission[];
   weekEndsAt: string;
   baselineMinutes?: number;
 }
@@ -15,12 +21,23 @@ interface WeeklyBaselineBarProps {
 export function WeeklyBaselineBar({
   weekMinutes,
   weekPviAverage,
+  weekPviMissions = [],
   weekEndsAt,
   baselineMinutes = WEEKLY_BASELINE_MINUTES,
 }: WeeklyBaselineBarProps) {
   const [nowMs, setNowMs] = useState(() => Date.now());
   const fillPercent = Math.min(100, (weekMinutes / baselineMinutes) * 100);
-  const pvi = describeWeeklyPviGuidance(weekPviAverage);
+  const unevenMission = pickUnevenWeekMission(weekPviMissions);
+  const unevenDisplay =
+    unevenMission === null
+      ? null
+      : {
+          title: resolveWorkoutTitle(unevenMission.templateId),
+          pvi: unevenMission.pvi,
+          durationMinutes: unevenMission.durationMinutes,
+          weekdayLabel: formatWeekPviWeekday(unevenMission.lockedAt),
+        };
+  const pvi = describeWeeklyPviGuidance(weekPviAverage, unevenDisplay);
   const countdown = formatWeekCountdown(weekEndsAt, nowMs);
 
   useEffect(() => {

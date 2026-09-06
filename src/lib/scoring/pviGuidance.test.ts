@@ -1,7 +1,19 @@
 import { describe, it, expect } from 'vitest';
-import { countsBuyInRound, describeWeeklyPviGuidance } from '@/lib/scoring/pviGuidance';
+import {
+  countsBuyInRound,
+  describeWeeklyPviGuidance,
+  pickUnevenWeekMission,
+} from '@/lib/scoring/pviGuidance';
+import type { HudWeekPviMission } from '@/lib/hud/types';
 
 const BANDS = [null, 5, 15, 25, 41.4, 80];
+
+const unevenBloodShunt = {
+  title: 'Blood Shunt',
+  pvi: 68,
+  durationMinutes: 5,
+  weekdayLabel: 'Tuesday',
+};
 
 describe('describeWeeklyPviGuidance', () => {
   it('says the spread is measured inside each mission, not across them', () => {
@@ -20,7 +32,7 @@ describe('describeWeeklyPviGuidance', () => {
     // has no multiplier, and labelling it announces a failure that may belong to
     // one workout out of six.
     for (const pvi of BANDS) {
-      const guidance = describeWeeklyPviGuidance(pvi);
+      const guidance = describeWeeklyPviGuidance(pvi, unevenBloodShunt);
       const text = `${guidance.meaning} ${guidance.cause ?? ''} ${guidance.fix ?? ''}`;
       expect(text).not.toMatch(/elite pacing|power leak|system failure/i);
     }
@@ -43,6 +55,21 @@ describe('describeWeeklyPviGuidance', () => {
     expect(describeWeeklyPviGuidance(41.4).cause).toMatch(/log round|interrupted/i);
   });
 
+  it('names the uneven mission when the average is worth explaining', () => {
+    const guidance = describeWeeklyPviGuidance(41.4, unevenBloodShunt);
+    expect(guidance.cause).toMatch(/Blood Shunt/);
+    expect(guidance.cause).toMatch(/Tuesday/);
+    expect(guidance.cause).toMatch(/68%/);
+    expect(guidance.fix).toMatch(/Blood Shunt/);
+    expect(guidance.fix).toMatch(/Tuesday/);
+  });
+
+  it('falls back to generic copy when the uneven mission is unknown', () => {
+    const guidance = describeWeeklyPviGuidance(41.4, null);
+    expect(guidance.cause).not.toMatch(/Blood Shunt/);
+    expect(guidance.fix).toMatch(/find which one was uneven/i);
+  });
+
   it('tells a well-paced athlete to change nothing', () => {
     const guidance = describeWeeklyPviGuidance(5);
     expect(guidance.cause).toBeNull();
@@ -58,6 +85,39 @@ describe('describeWeeklyPviGuidance', () => {
   it('changes its advice at each band boundary', () => {
     const fixes = [5, 15, 25, 35].map((pvi) => describeWeeklyPviGuidance(pvi).fix);
     expect(new Set(fixes).size).toBe(fixes.length);
+  });
+});
+
+describe('pickUnevenWeekMission', () => {
+  it('returns null when the week has no pacing rows', () => {
+    expect(pickUnevenWeekMission([])).toBeNull();
+  });
+
+  it('picks the mission with the widest spread', () => {
+    const missions: HudWeekPviMission[] = [
+      {
+        missionId: 'a',
+        pvi: 12,
+        durationMinutes: 15,
+        templateId: 'hull-breach',
+        lockedAt: '2026-09-01T12:00:00.000Z',
+      },
+      {
+        missionId: 'b',
+        pvi: 68,
+        durationMinutes: 5,
+        templateId: 'blood-shunt',
+        lockedAt: '2026-09-02T12:00:00.000Z',
+      },
+      {
+        missionId: 'c',
+        pvi: 18,
+        durationMinutes: 10,
+        templateId: null,
+        lockedAt: '2026-09-03T12:00:00.000Z',
+      },
+    ];
+    expect(pickUnevenWeekMission(missions)?.missionId).toBe('b');
   });
 });
 

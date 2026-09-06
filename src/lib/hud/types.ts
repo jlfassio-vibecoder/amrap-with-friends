@@ -48,9 +48,20 @@ export type HudActivity7d = {
   avgIntensity: number | null;
 };
 
+/** One locked mission's pacing spread inside this ISO week. */
+export type HudWeekPviMission = {
+  missionId: string;
+  pvi: number;
+  durationMinutes: number;
+  templateId: string | null;
+  lockedAt: string;
+};
+
 export interface HUDTelemetryPayload {
   weekMinutes: number;
   weekPviAverage: number | null;
+  /** Missions that contributed to `weekPviAverage`, newest lock first. */
+  weekPviMissions: HudWeekPviMission[];
   weekEndsAt: string;
   lastLockedAt: string | null;
   attrition: boolean[];

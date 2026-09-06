@@ -67,6 +67,7 @@ describe('parseHudTelemetryPayload', () => {
     ).toEqual({
       weekMinutes: 75,
       weekPviAverage: 12.8,
+      weekPviMissions: [],
       weekEndsAt: '2026-08-25T07:00:00.000Z',
       lastLockedAt: '2026-08-24T10:00:00.000Z',
       attrition: attrition12,
@@ -75,6 +76,55 @@ describe('parseHudTelemetryPayload', () => {
       activity7d,
       overtraining,
     });
+  });
+
+  it('parses weekPviMissions when present', () => {
+    const weekPviMissions = [
+      {
+        missionId: '11111111-1111-4111-8111-111111111111',
+        pvi: 68.2,
+        durationMinutes: 5,
+        templateId: 'blood-shunt',
+        lockedAt: '2026-08-24T18:00:00.000Z',
+      },
+      {
+        missionId: '22222222-2222-4222-8222-222222222222',
+        pvi: 12.0,
+        durationMinutes: 15,
+        templateId: null,
+        lockedAt: '2026-08-23T18:00:00.000Z',
+      },
+    ];
+    expect(
+      parseHudTelemetryPayload({
+        weekMinutes: 75,
+        weekPviAverage: 40.1,
+        weekPviMissions,
+        weekEndsAt: '2026-08-25T07:00:00.000Z',
+        lastLockedAt: '2026-08-24T18:00:00.000Z',
+        attrition: attrition12,
+        domainMinutes30d,
+        classification,
+        activity7d,
+        overtraining,
+      })?.weekPviMissions
+    ).toEqual(weekPviMissions);
+  });
+
+  it('treats a missing weekPviMissions field as an empty list', () => {
+    expect(
+      parseHudTelemetryPayload({
+        weekMinutes: 75,
+        weekPviAverage: 12.8,
+        weekEndsAt: '2026-08-25T07:00:00.000Z',
+        lastLockedAt: '2026-08-24T10:00:00.000Z',
+        attrition: attrition12,
+        domainMinutes30d,
+        classification,
+        activity7d,
+        overtraining,
+      })?.weekPviMissions
+    ).toEqual([]);
   });
 
   it('allows null weekPviAverage and lastLockedAt', () => {
@@ -104,6 +154,7 @@ describe('parseHudTelemetryPayload', () => {
     ).toEqual({
       weekMinutes: 0,
       weekPviAverage: null,
+      weekPviMissions: [],
       weekEndsAt: '2026-08-25T07:00:00.000Z',
       lastLockedAt: null,
       attrition: Array.from({ length: 12 }, () => false),
