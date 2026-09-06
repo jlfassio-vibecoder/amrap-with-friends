@@ -7,7 +7,14 @@ import {
   isDurationAvailable,
   categoriesForDuration,
   categoryDisplayForDuration,
+  normalizeMissionNameQuery,
 } from './filterWorkoutTemplates';
+
+describe('normalizeMissionNameQuery', () => {
+  it('trims, lower-cases, and collapses whitespace', () => {
+    expect(normalizeMissionNameQuery('  The   Metronome ')).toBe('the metronome');
+  });
+});
 
 describe('filterWorkoutTemplates', () => {
   it('returns 10 Blood Shunt templates at 5 minutes', () => {
@@ -152,6 +159,84 @@ describe('filterWorkoutTemplates', () => {
         category: 'armor-protocol',
       })
     ).toHaveLength(10);
+  });
+
+  it('filters by exact intensity within domain and category', () => {
+    const matches = filterWorkoutTemplates(WORKOUT_TEMPLATES, {
+      durationMinutes: 20,
+      category: 'armor-protocol',
+      intensityTier: 5,
+    });
+    expect(matches.map((template) => template.name).sort()).toEqual([
+      'Iron Will',
+      'The Shield',
+      'The Trench',
+    ]);
+  });
+
+  it('treats null/undefined intensity as Any', () => {
+    const base = filterWorkoutTemplates(WORKOUT_TEMPLATES, {
+      durationMinutes: 20,
+      category: 'armor-protocol',
+    });
+    expect(
+      filterWorkoutTemplates(WORKOUT_TEMPLATES, {
+        durationMinutes: 20,
+        category: 'armor-protocol',
+        intensityTier: null,
+      })
+    ).toHaveLength(base.length);
+    expect(
+      filterWorkoutTemplates(WORKOUT_TEMPLATES, {
+        durationMinutes: 20,
+        category: 'armor-protocol',
+        intensityTier: undefined,
+      })
+    ).toHaveLength(base.length);
+  });
+
+  it('searches mission names across the whole library and ignores domain/category', () => {
+    const matches = filterWorkoutTemplates(WORKOUT_TEMPLATES, {
+      durationMinutes: 20,
+      category: 'aerobic-matrix',
+      nameQuery: '  MeTroNome  ',
+    });
+    expect(matches.map((template) => template.id).sort()).toEqual([
+      'the-metronome',
+      'the-metronome-endurance',
+    ]);
+    expect(matches.every((template) => template.category === 'blood-shunt')).toBe(true);
+  });
+
+  it('applies intensity together with a name search', () => {
+    const matches = filterWorkoutTemplates(WORKOUT_TEMPLATES, {
+      durationMinutes: 5,
+      category: 'blood-shunt',
+      nameQuery: 'the',
+      intensityTier: 5,
+    });
+    expect(matches.map((template) => template.name).sort()).toEqual(['The Shield', 'The Trench']);
+  });
+
+  it('leaves domain and category filtering unchanged for empty or whitespace nameQuery', () => {
+    const baseline = filterWorkoutTemplates(WORKOUT_TEMPLATES, {
+      durationMinutes: 5,
+      category: 'blood-shunt',
+    });
+    expect(
+      filterWorkoutTemplates(WORKOUT_TEMPLATES, {
+        durationMinutes: 5,
+        category: 'blood-shunt',
+        nameQuery: '',
+      })
+    ).toEqual(baseline);
+    expect(
+      filterWorkoutTemplates(WORKOUT_TEMPLATES, {
+        durationMinutes: 5,
+        category: 'blood-shunt',
+        nameQuery: '   ',
+      })
+    ).toEqual(baseline);
   });
 });
 

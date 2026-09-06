@@ -3,6 +3,7 @@ import {
   TIME_DOMAINS,
   WORKOUT_CATEGORIES,
   WORKOUT_TEMPLATES,
+  type IntensityTier,
   type TimeDomain,
   type WorkoutCategory,
   type WorkoutTemplate,
@@ -13,6 +14,7 @@ import {
   isDurationAvailable,
   categoriesForDuration,
   categoryDisplayForDuration,
+  normalizeMissionNameQuery,
 } from '@/lib/workout/filterWorkoutTemplates';
 import { WorkoutTemplateCard } from '@/components/createMission/WorkoutTemplateCard';
 import { SmartRecoveryToggle } from '@/components/createMission/SmartRecoveryToggle';
@@ -20,6 +22,8 @@ import { WorkoutStyleInfoModal } from '@/components/workoutStyle/WorkoutStyleInf
 import type { ClassificationQuotas } from '@/lib/hud/classificationQuotas';
 import type { ClassificationRank, HudClassification } from '@/lib/hud/types';
 import type { TemplateRecoveryLock } from '@/lib/smartRecovery/computeRecoveryLocks';
+
+const INTENSITY_OPTIONS: Array<IntensityTier | null> = [null, 1, 2, 3, 4, 5];
 
 interface WorkoutTemplatePickerProps {
   durationMinutes: TimeDomain;
@@ -59,9 +63,15 @@ export function WorkoutTemplatePicker({
   onTemplateSelect,
 }: WorkoutTemplatePickerProps) {
   const [infoCategory, setInfoCategory] = useState<WorkoutCategory | null>(null);
+  const [intensityTier, setIntensityTier] = useState<IntensityTier | null>(null);
+  const [nameQuery, setNameQuery] = useState('');
+  const searching = normalizeMissionNameQuery(nameQuery).length > 0;
+
   const visibleTemplates = filterWorkoutTemplates(WORKOUT_TEMPLATES, {
     durationMinutes,
     category: selectedCategory,
+    intensityTier,
+    nameQuery,
   });
   const visibleCategories = categoriesForDuration(WORKOUT_CATEGORIES, durationMinutes);
   const selectedCategoryMeta = visibleCategories.find(
@@ -78,6 +88,16 @@ export function WorkoutTemplatePicker({
     onCategoryChange(category);
   }
 
+  function chipClassName(selected: boolean, available: boolean): string {
+    if (selected) {
+      return 'rounded-full bg-accent px-4 py-2 text-sm font-semibold text-on-accent disabled:opacity-60';
+    }
+    if (available) {
+      return 'hover:border-accent/40 rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold text-ink disabled:opacity-60';
+    }
+    return 'rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold text-muted opacity-60';
+  }
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -91,14 +111,8 @@ export function WorkoutTemplatePicker({
               <button
                 key={duration}
                 type="button"
-                disabled={!available}
-                className={
-                  selected
-                    ? 'rounded-full bg-accent px-4 py-2 text-sm font-semibold text-on-accent'
-                    : available
-                      ? 'hover:border-accent/40 rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold text-ink'
-                      : 'rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold text-muted opacity-60'
-                }
+                disabled={!available || searching}
+                className={chipClassName(selected, available)}
                 onClick={() => onDurationChange(duration)}
               >
                 {duration} min
@@ -120,14 +134,8 @@ export function WorkoutTemplatePicker({
               <div key={category.id} className="flex items-center gap-1">
                 <button
                   type="button"
-                  disabled={!available}
-                  className={
-                    selected
-                      ? 'rounded-full bg-accent px-4 py-2 text-sm font-semibold text-on-accent'
-                      : available
-                        ? 'hover:border-accent/40 rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold text-ink'
-                        : 'rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold text-muted opacity-60'
-                  }
+                  disabled={!available || searching}
+                  className={chipClassName(selected, available)}
                   onClick={() => onCategoryChange(category.id)}
                 >
                   {categoryDisplayForDuration(category, durationMinutes).label}
@@ -152,9 +160,31 @@ export function WorkoutTemplatePicker({
             );
           })}
         </div>
-        {selectedCategoryDisplay ? (
+        {selectedCategoryDisplay && !searching ? (
           <p className="text-sm text-secondary">{selectedCategoryDisplay.description}</p>
         ) : null}
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-secondary">Intensity</p>
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Intensity">
+          {INTENSITY_OPTIONS.map((tier) => {
+            const selected = intensityTier === tier;
+            const label = tier === null ? 'Any' : `I${tier}`;
+
+            return (
+              <button
+                key={label}
+                type="button"
+                aria-pressed={selected}
+                className={chipClassName(selected, true)}
+                onClick={() => setIntensityTier(tier)}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <SmartRecoveryToggle
@@ -164,6 +194,27 @@ export function WorkoutTemplatePicker({
         loading={smartRecoveryLoading}
         error={smartRecoveryError}
       />
+
+      <div className="space-y-2">
+        <label className="block space-y-1">
+          <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
+            Search missions
+          </span>
+          <input
+            type="search"
+            className="input-field"
+            value={nameQuery}
+            onChange={(event) => setNameQuery(event.target.value)}
+            placeholder="Mission name"
+            aria-label="Search missions"
+          />
+        </label>
+        {searching ? (
+          <p className="text-xs text-muted">
+            Searching all missions — clear search to use time domain and category.
+          </p>
+        ) : null}
+      </div>
 
       <div className="max-h-[32rem] overflow-y-auto pr-1">
         {visibleTemplates.length > 0 ? (
@@ -184,7 +235,9 @@ export function WorkoutTemplatePicker({
           </div>
         ) : (
           <p className="rounded-card border border-border bg-page p-4 text-sm text-secondary">
-            No workouts available for this time domain and category yet.
+            {searching || intensityTier !== null
+              ? 'No missions match.'
+              : 'No workouts available for this time domain and category yet.'}
           </p>
         )}
       </div>
