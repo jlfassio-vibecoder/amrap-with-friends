@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import PacingCalculator from '../../islands/PacingCalculator';
 import { breadcrumbList, faqPage, referenceArticle } from '@/lib/seo/structuredData';
 import { referencesFor } from '@/lib/seo/scienceReferences';
 import { SITE_AUTHOR } from '@/lib/seo/author';
@@ -301,7 +302,13 @@ const jsonLd = [
       <h2 class="text-display text-2xl text-ink">Measure your own splits</h2>
       <p class="text-base leading-[1.7] text-secondary">
         Whatever the literature settles on, the useful move is the same: log every round so you can
-        see the distribution instead of guessing at it. The practical version of this page is
+        see the distribution instead of guessing at it. Type your round times below and this runs
+        the same functions the app runs — including the band thresholds this page has just told you
+        are unvalidated.
+      </p>
+      <PacingCalculator client:visible />
+      <p class="text-base leading-[1.7] text-secondary">
+        The practical version of this page is
         <a class="link-accent" href="/guides/amrap-pacing">the pacing guide</a>.
       </p>
       <div class="flex flex-wrap gap-3">

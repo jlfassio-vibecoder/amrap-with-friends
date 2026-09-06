@@ -1,0 +1,121 @@
+---
+import { durationProfiles } from '@/lib/seo/libraryStats';
+
+/**
+ * Two measures of different scale, so two panels — never one chart with two
+ * y-axes. Both panels are a single series, so neither needs a legend: the panel
+ * title names what the bars are, and every bar carries its own value.
+ *
+ * Data is computed from the workout library at build time, not typed in.
+ */
+const profiles = durationProfiles();
+
+const PANEL_W = 300;
+const GAP = 40;
+const PLOT_H = 132;
+const TOP = 34; // panel title + value labels
+const BASE = TOP + PLOT_H;
+const HEIGHT = BASE + 30;
+const SLOT = PANEL_W / profiles.length;
+const BAR_W = 46;
+const R = 4;
+
+const panels = [
+  {
+    title: 'Movements in a round',
+    x: 0,
+    token: 'var(--color-chart-2)',
+    value: (p: (typeof profiles)[number]) => p.averageMovements,
+    format: (v: number) => v.toFixed(1),
+  },
+  {
+    title: 'Reps in a round',
+    x: PANEL_W + GAP,
+    token: 'var(--color-chart-2)',
+    value: (p: (typeof profiles)[number]) => p.averageRepsPerRound,
+    format: (v: number) => String(Math.round(v)),
+  },
+];
+
+const WIDTH = PANEL_W * 2 + GAP;
+
+function bar(x: number, y: number, w: number, h: number): string {
+  const r = Math.min(R, h);
+  return `M ${x} ${y + h} V ${y + r} a ${r} ${r} 0 0 1 ${r} ${-r} H ${x + w - r} a ${r} ${r} 0 0 1 ${r} ${r} V ${y + h} Z`;
+}
+
+const summary = profiles
+  .map(
+    (p) =>
+      `${p.durationMinutes} minutes: ${p.averageMovements} movements, ${p.averageRepsPerRound} reps`
+  )
+  .join('; ');
+---
+
+<figure class="my-8 space-y-4">
+  <figcaption class="space-y-1">
+    <p class="text-display text-lg text-ink">A longer cap does not just mean more rounds</p>
+    <p class="text-sm text-secondary">
+      Mean round composition across the {profiles.reduce((n, p) => n + p.workouts, 0)} AMRAP workouts
+      in this library, by time cap.
+    </p>
+  </figcaption>
+
+  <svg
+    viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+    class="h-auto w-full"
+    role="img"
+    aria-label={`Mean movements and reps per round by time cap. ${summary}.`}
+  >
+    {
+      panels.map((panel) => {
+        const max = Math.max(...profiles.map((p) => panel.value(p)));
+        return (
+          <g>
+            <text x={panel.x} y="12" class="fill-ink" style="font-size:13px;font-weight:600">
+              {panel.title}
+            </text>
+            <line
+              x1={panel.x}
+              y1={BASE}
+              x2={panel.x + PANEL_W}
+              y2={BASE}
+              stroke="var(--color-border)"
+              stroke-width="1"
+            />
+            {profiles.map((profile, index) => {
+              const value = panel.value(profile);
+              const h = (value / max) * PLOT_H;
+              const x = panel.x + index * SLOT + (SLOT - BAR_W) / 2;
+              return (
+                <g>
+                  <path d={bar(x, BASE - h, BAR_W, h)} fill={panel.token}>
+                    <title>{`${profile.durationMinutes} min: ${panel.format(value)}`}</title>
+                  </path>
+                  <text
+                    x={x + BAR_W / 2}
+                    y={BASE - h - 8}
+                    text-anchor="middle"
+                    class="fill-ink"
+                    style="font-size:13px;font-weight:600"
+                  >
+                    {panel.format(value)}
+                  </text>
+                  <text
+                    x={x + BAR_W / 2}
+                    y={BASE + 20}
+                    text-anchor="middle"
+                    class="fill-secondary"
+                    style="font-size:12px"
+                  >
+                    {profile.durationMinutes} min
+                  </text>
+                </g>
+              );
+            })}
+          </g>
+        );
+      })
+    }
+  </svg>
+</figure>

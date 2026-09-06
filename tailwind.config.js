@@ -48,6 +48,11 @@ export default {
           plum: 'var(--color-avatar-plum)',
           teal: 'var(--color-avatar-teal)',
         },
+        chart: {
+          1: 'var(--color-chart-1)',
+          2: 'var(--color-chart-2)',
+          3: 'var(--color-chart-3)',
+        },
       },
       fontFamily: {
         display: ['"Bebas Neue"', 'Arial Narrow', 'Arial', 'sans-serif'],

@@ -39,6 +39,17 @@
   --color-avatar-plum: #8b5a6b;
   --color-avatar-teal: #4a8f8f;
 
+  /*
+   * Chart series. Validated with the dataviz palette checks (lightness band,
+   * chroma floor, colour-vision separation, contrast vs the chart surface) —
+   * which is why these are not the avatar hues: avatar teal reads gray at
+   * chart size (OKLCH chroma 0.07) and avatar ochre falls under 3:1 on the
+   * light surface. Light and dark are separate steps, not an automatic flip.
+   */
+  --color-chart-1: #db3834;
+  --color-chart-2: #189694;
+  --color-chart-3: #cc8317;
+
   --shadow-card: 0 2px 0 0 var(--color-border);
 
   /*
@@ -88,6 +99,10 @@
   --color-avatar-slate: #8a8072;
   --color-avatar-plum: #8b5a6b;
   --color-avatar-teal: #4a8f8f;
+
+  --color-chart-1: #d6464f;
+  --color-chart-2: #119391;
+  --color-chart-3: #c68206;
 
   --shadow-card: 0 2px 0 0 var(--color-border);
 }
