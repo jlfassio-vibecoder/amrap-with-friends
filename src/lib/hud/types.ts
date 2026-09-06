@@ -30,8 +30,15 @@ export type HudClassification = {
 
 export type HudOvertraining = {
   acuteLoad7d: number;
+  /** 28-day load divided by the weeks of history the account actually has. */
   chronicWeeklyLoad28d: number;
   consecutiveHighIntensityDays: number;
+  /** Minutes trained in the last 7 days, across missions and logged activity. */
+  acuteMinutes7d: number;
+  /** The athlete's typical week in minutes, on the same observed window. */
+  chronicWeeklyMinutes28d: number;
+  /** Days of history this account could have, capped at 28. */
+  observedDays: number;
 };
 
 /** Rolling 7-day locked-mission rollup for the In-App Activity HUD card. */
@@ -41,9 +48,20 @@ export type HudActivity7d = {
   avgIntensity: number | null;
 };
 
+/** One locked mission's pacing spread inside this ISO week. */
+export type HudWeekPviMission = {
+  missionId: string;
+  pvi: number;
+  durationMinutes: number;
+  templateId: string | null;
+  lockedAt: string;
+};
+
 export interface HUDTelemetryPayload {
   weekMinutes: number;
   weekPviAverage: number | null;
+  /** Missions that contributed to `weekPviAverage`, newest lock first. */
+  weekPviMissions: HudWeekPviMission[];
   weekEndsAt: string;
   lastLockedAt: string | null;
   attrition: boolean[];

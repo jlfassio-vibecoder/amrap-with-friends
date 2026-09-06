@@ -545,6 +545,11 @@ function parseOvertraining(row: Record<string, unknown>): HudOvertraining {
     acuteLoad7d: nonNegativeNum(row, 'acuteLoad7d'),
     chronicWeeklyLoad28d: nonNegativeNum(row, 'chronicWeeklyLoad28d'),
     consecutiveHighIntensityDays: nonNegativeNum(row, 'consecutiveHighIntensityDays'),
+    acuteMinutes7d: nonNegativeNum(row, 'acuteMinutes7d'),
+    chronicWeeklyMinutes28d: nonNegativeNum(row, 'chronicWeeklyMinutes28d'),
+    // 0 would read as "no history at all"; absent means a payload predating the
+    // migration, which should behave as a settled baseline.
+    observedDays: nonNegativeNum(row, 'observedDays') || 28,
   };
 }
 

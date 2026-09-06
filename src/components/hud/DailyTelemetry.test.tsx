@@ -7,10 +7,10 @@ afterEach(() => {
 });
 
 describe('DailyTelemetry', () => {
-  it('shows NEVER and no-lock copy when lastLockedAt is null', () => {
+  it('shows NEVER and says there is no record when lastLockedAt is null', () => {
     render(<DailyTelemetry lastLockedAt={null} />);
 
     expect(screen.getByText('NEVER')).toBeDefined();
-    expect(screen.getByText('NO LOCK ON RECORD')).toBeDefined();
+    expect(screen.getByText('No locked mission on record yet.')).toBeDefined();
   });
 });

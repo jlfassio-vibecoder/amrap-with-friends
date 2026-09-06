@@ -36,7 +36,7 @@ describe('InAppActivitySummaryCard', () => {
       <InAppActivitySummaryCard activity7d={{ missionCount: 2, minutes: 40, avgIntensity: 2.5 }} />
     );
 
-    expect(screen.getByText('In-App Activity — Last 7 Days')).toBeDefined();
+    expect(screen.getByText('In-App Activity — Rolling 7 Days')).toBeDefined();
     expect(screen.getByText('2')).toBeDefined();
     expect(screen.getByText('40')).toBeDefined();
     expect(screen.getByText('2.5')).toBeDefined();
@@ -63,7 +63,7 @@ describe('OutsideActivitySummaryCard', () => {
 
     render(<OutsideActivitySummaryCard entries={entries} />);
 
-    expect(screen.getByText('Outside Activity — Last 7 Days')).toBeDefined();
+    expect(screen.getByText('Outside Activity — Rolling 7 Days')).toBeDefined();
     expect(screen.getByText('1')).toBeDefined();
     expect(screen.getByText('30')).toBeDefined();
     expect(screen.getByText('3.0')).toBeDefined();
@@ -82,7 +82,7 @@ describe('ActivityAttributionCard', () => {
       />
     );
 
-    expect(screen.getByText('Total activity — Last 7 days')).toBeDefined();
+    expect(screen.getByText('Total activity — Rolling 7 days')).toBeDefined();
     expect(screen.getByText(/No activity logged/i)).toBeDefined();
   });
 

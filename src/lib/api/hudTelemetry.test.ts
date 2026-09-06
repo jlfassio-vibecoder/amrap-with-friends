@@ -39,6 +39,9 @@ const overtraining = {
   acuteLoad7d: 60,
   chronicWeeklyLoad28d: 60,
   consecutiveHighIntensityDays: 0,
+  acuteMinutes7d: 30,
+  chronicWeeklyMinutes28d: 30,
+  observedDays: 28,
 };
 
 const activity7d = {
@@ -64,6 +67,7 @@ describe('parseHudTelemetryPayload', () => {
     ).toEqual({
       weekMinutes: 75,
       weekPviAverage: 12.8,
+      weekPviMissions: [],
       weekEndsAt: '2026-08-25T07:00:00.000Z',
       lastLockedAt: '2026-08-24T10:00:00.000Z',
       attrition: attrition12,
@@ -72,6 +76,55 @@ describe('parseHudTelemetryPayload', () => {
       activity7d,
       overtraining,
     });
+  });
+
+  it('parses weekPviMissions when present', () => {
+    const weekPviMissions = [
+      {
+        missionId: '11111111-1111-4111-8111-111111111111',
+        pvi: 68.2,
+        durationMinutes: 5,
+        templateId: 'blood-shunt',
+        lockedAt: '2026-08-24T18:00:00.000Z',
+      },
+      {
+        missionId: '22222222-2222-4222-8222-222222222222',
+        pvi: 12.0,
+        durationMinutes: 15,
+        templateId: null,
+        lockedAt: '2026-08-23T18:00:00.000Z',
+      },
+    ];
+    expect(
+      parseHudTelemetryPayload({
+        weekMinutes: 75,
+        weekPviAverage: 40.1,
+        weekPviMissions,
+        weekEndsAt: '2026-08-25T07:00:00.000Z',
+        lastLockedAt: '2026-08-24T18:00:00.000Z',
+        attrition: attrition12,
+        domainMinutes30d,
+        classification,
+        activity7d,
+        overtraining,
+      })?.weekPviMissions
+    ).toEqual(weekPviMissions);
+  });
+
+  it('treats a missing weekPviMissions field as an empty list', () => {
+    expect(
+      parseHudTelemetryPayload({
+        weekMinutes: 75,
+        weekPviAverage: 12.8,
+        weekEndsAt: '2026-08-25T07:00:00.000Z',
+        lastLockedAt: '2026-08-24T10:00:00.000Z',
+        attrition: attrition12,
+        domainMinutes30d,
+        classification,
+        activity7d,
+        overtraining,
+      })?.weekPviMissions
+    ).toEqual([]);
   });
 
   it('allows null weekPviAverage and lastLockedAt', () => {
@@ -101,13 +154,24 @@ describe('parseHudTelemetryPayload', () => {
     ).toEqual({
       weekMinutes: 0,
       weekPviAverage: null,
+      weekPviMissions: [],
       weekEndsAt: '2026-08-25T07:00:00.000Z',
       lastLockedAt: null,
       attrition: Array.from({ length: 12 }, () => false),
       domainMinutes30d: { 5: 0, 10: 0, 15: 0, 20: 0, other: 0 },
       classification: emptyClassification,
       activity7d: emptyActivity7d,
-      overtraining: { acuteLoad7d: 0, chronicWeeklyLoad28d: 0, consecutiveHighIntensityDays: 0 },
+      // No minutes or window in the payload: a client running ahead of the
+      // migration degrades to the old load-only numbers and a settled baseline
+      // rather than dropping the whole telemetry read.
+      overtraining: {
+        acuteLoad7d: 0,
+        chronicWeeklyLoad28d: 0,
+        consecutiveHighIntensityDays: 0,
+        acuteMinutes7d: 0,
+        chronicWeeklyMinutes28d: 0,
+        observedDays: 28,
+      },
     });
   });
 
