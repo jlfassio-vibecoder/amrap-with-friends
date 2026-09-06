@@ -56,7 +56,7 @@ export default function RallyPointPage() {
   const [nickname, setNickname] = useState(
     () => getStoredRallyPointNickname(rallyPointId) ?? callsignFromEmail(user?.email) ?? 'Athlete'
   );
-  /** The mission clock. Equal to the domain until the Phase 2 cap control exists. */
+  /** The mission clock — may differ from the domain once the host adjusts the cap. */
   const [durationMinutes, setDurationMinutes] = useState<MissionTimeCap>(10);
   /** The library bucket the picker filters by — never the clock. */
   const [selectedDomain, setSelectedDomain] = useState<TimeDomain>(10);
@@ -460,6 +460,7 @@ export default function RallyPointPage() {
                 onTemplateSelect={handleTemplateSelect}
               />
               <TimeCapControl
+                key={selectedDomain}
                 domain={selectedDomain}
                 cap={durationMinutes}
                 onCapChange={setDurationMinutes}

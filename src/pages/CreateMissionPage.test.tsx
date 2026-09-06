@@ -369,7 +369,7 @@ describe('CreateMissionPage time cap', () => {
   });
 
   function capText(): string {
-    return screen.getByText(/^Time cap$/i).parentElement?.textContent ?? '';
+    return screen.getByText(/Time cap/i).parentElement?.textContent ?? '';
   }
 
   it("defaults the clock to the domain's canonical minute", () => {

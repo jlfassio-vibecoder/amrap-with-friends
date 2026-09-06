@@ -88,7 +88,7 @@ export default function CreateMissionPage() {
     active: workoutSource === 'library' || workoutSource === 'coach',
   });
   const [nickname, setNickname] = useState('');
-  /** The mission clock. Equal to the domain until the Phase 2 cap control exists. */
+  /** The mission clock — may differ from the domain once the host adjusts the cap. */
   const [durationMinutes, setDurationMinutes] = useState<MissionTimeCap>(5);
   /** The library bucket the picker filters by — never the clock. */
   const [selectedDomain, setSelectedDomain] = useState<TimeDomain>(5);

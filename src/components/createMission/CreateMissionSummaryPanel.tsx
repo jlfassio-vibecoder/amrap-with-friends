@@ -131,6 +131,7 @@ export function CreateMissionSummaryPanel({
             </SummaryField>
           )}
           <TimeCapControl
+            key={selectedDomain}
             domain={selectedDomain}
             cap={durationMinutes}
             onCapChange={onCapChange}
