@@ -50,6 +50,7 @@ function entry(overrides: Partial<MyMissionEntry> = {}): MyMissionEntry {
     durationMinutes: 5,
     workout: [{ name: 'Mountain Climbers', target: 20, unit: 'reps' }],
     templateId: null,
+    rallyPointId: null,
     state: 'waiting',
     segmentIndex: 0,
     roundCount: 0,
@@ -235,6 +236,45 @@ describe('MyMissionsPage delete', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
     expect(confirmMock).toHaveBeenCalledWith(expect.stringMatching(/this date and time only/i));
+  });
+});
+
+describe('MyMissionsPage chain groups', () => {
+  it('collapses siblings and expands to reveal the older mission', async () => {
+    fetchMyMissionsMock.mockResolvedValue({
+      data: [
+        entry({
+          participantId: 'p-new',
+          missionId: 'm-new',
+          createdAt: '2026-09-06T10:00:00.000Z',
+          rallyPointId: 'rp1',
+          templateId: 'the-piston',
+          workout: [{ name: 'Air Squats', target: 10 }],
+        }),
+        entry({
+          participantId: 'p-old',
+          missionId: 'm-old',
+          createdAt: '2026-09-05T10:00:00.000Z',
+          rallyPointId: 'rp1',
+          templateId: 'the-metronome',
+          workout: [{ name: 'Fast Air Squats', target: 15 }],
+        }),
+      ],
+      error: null,
+    });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('The Piston')).toBeTruthy();
+    });
+    expect(screen.getByRole('button', { name: '1 more mission' })).toBeTruthy();
+    expect(screen.queryByText('The Metronome')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: '1 more mission' }));
+
+    expect(screen.getByText('The Metronome')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Hide linked missions' })).toBeTruthy();
   });
 });
 

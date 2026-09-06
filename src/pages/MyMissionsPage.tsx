@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AppLink } from '@/components/AppLink';
 import { Link } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
@@ -19,6 +19,7 @@ import {
 import type { WorkoutExercise } from '@/lib/api/missionTypes';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useCopyFlash } from '@/hooks/useCopyFlash';
+import { groupMyMissionsByRallyPoint } from '@/lib/mission/groupMyMissionsByRallyPoint';
 
 function formatMissionWhen(entry: MyMissionEntry): string {
   const when = entry.scheduledAt ?? entry.createdAt;
@@ -30,6 +31,10 @@ function confirmDeleteMessage(entry: MyMissionEntry): string {
     return 'Cancel this Featured WOD for this date and time only? Other scheduled days stay on the calendar.';
   }
   return 'Permanently delete this incomplete mission?';
+}
+
+function moreMissionsLabel(count: number): string {
+  return count === 1 ? '1 more mission' : `${count} more missions`;
 }
 
 function MyMissionMovements({ title, workout }: { title: string; workout: WorkoutExercise[] }) {
@@ -87,6 +92,78 @@ function ShareMyMissionButton({ entry }: { entry: MyMissionEntry }) {
   );
 }
 
+function MyMissionCard({
+  entry,
+  deletingMissionId,
+  onDelete,
+  onViewBreakdown,
+  expandControl,
+}: {
+  entry: MyMissionEntry;
+  deletingMissionId: string | null;
+  onDelete: (entry: MyMissionEntry) => void;
+  onViewBreakdown: (entry: MyMissionEntry) => void;
+  expandControl?: {
+    expanded: boolean;
+    childCount: number;
+    onToggle: () => void;
+  };
+}) {
+  return (
+    <div className="card space-y-2 p-4 text-sm">
+      <MyMissionMovements title={myMissionWorkoutTitle(entry)} workout={entry.workout} />
+      <p className="text-center text-secondary">
+        {formatMissionWhen(entry)} · {entry.durationMinutes} min ·{' '}
+        {formatMyMissionScoreDisplay(entry)} · {entry.state}
+        {entry.isFeatured ? ' · Featured' : ''}
+      </p>
+      {expandControl ? (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            className="link-accent text-sm"
+            aria-expanded={expandControl.expanded}
+            onClick={expandControl.onToggle}
+          >
+            {expandControl.expanded
+              ? 'Hide linked missions'
+              : moreMissionsLabel(expandControl.childCount)}
+          </button>
+        </div>
+      ) : null}
+      <div className="flex flex-wrap items-center gap-3">
+        <Link className="link-accent" to={`/mission/${entry.missionId}`}>
+          View mission
+        </Link>
+        {entry.scoreBreakdown ? (
+          <button type="button" className="link-accent" onClick={() => onViewBreakdown(entry)}>
+            View breakdown
+          </button>
+        ) : null}
+        <ShareMyMissionButton entry={entry} />
+        <SendWorkoutToSquad
+          durationMinutes={entry.durationMinutes}
+          workout={entry.workout}
+          templateId={entry.templateId}
+          ready={entry.workout.length > 0}
+          triggerClassName="link-accent font-normal disabled:text-muted"
+          triggerLabel="Add squad member"
+        />
+        {canDeleteMyMission(entry) ? (
+          <button
+            type="button"
+            className="text-error ml-auto"
+            disabled={deletingMissionId === entry.missionId}
+            onClick={() => onDelete(entry)}
+          >
+            {deletingMissionId === entry.missionId ? 'Deleting…' : 'Delete'}
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export default function MyMissionsPage() {
   const { user, isAuthenticated, isAuthLoading } = useAmrapAuth();
   const [entries, setEntries] = useState<MyMissionEntry[]>([]);
@@ -94,6 +171,9 @@ export default function MyMissionsPage() {
   const [hasLoaded, setHasLoaded] = useState(false);
   const [breakdownEntry, setBreakdownEntry] = useState<MyMissionEntry | null>(null);
   const [deletingMissionId, setDeletingMissionId] = useState<string | null>(null);
+  const [expandedRallyPointIds, setExpandedRallyPointIds] = useState<Set<string>>(() => new Set());
+
+  const listItems = useMemo(() => groupMyMissionsByRallyPoint(entries), [entries]);
 
   useEffect(() => {
     if (isAuthLoading || !isAuthenticated || !user) {
@@ -146,6 +226,18 @@ export default function MyMissionsPage() {
     }
   }
 
+  function toggleGroup(rallyPointId: string) {
+    setExpandedRallyPointIds((current) => {
+      const next = new Set(current);
+      if (next.has(rallyPointId)) {
+        next.delete(rallyPointId);
+      } else {
+        next.add(rallyPointId);
+      }
+      return next;
+    });
+  }
+
   return (
     <NarrowPageLayout title="My missions" subtitle="Saved to your account">
       <p className="text-sm text-secondary lg:hidden">Missions you saved to your account.</p>
@@ -182,51 +274,53 @@ export default function MyMissionsPage() {
         </p>
       ) : null}
 
-      {entries.length > 0 && (
+      {listItems.length > 0 && (
         <ul className="space-y-3">
-          {entries.map((entry) => (
-            <li key={entry.participantId} className="card space-y-2 p-4 text-sm">
-              <MyMissionMovements title={myMissionWorkoutTitle(entry)} workout={entry.workout} />
-              <p className="text-center text-secondary">
-                {formatMissionWhen(entry)} · {entry.durationMinutes} min ·{' '}
-                {formatMyMissionScoreDisplay(entry)} · {entry.state}
-                {entry.isFeatured ? ' · Featured' : ''}
-              </p>
-              <div className="flex flex-wrap items-center gap-3">
-                <Link className="link-accent" to={`/mission/${entry.missionId}`}>
-                  View mission
-                </Link>
-                {entry.scoreBreakdown ? (
-                  <button
-                    type="button"
-                    className="link-accent"
-                    onClick={() => setBreakdownEntry(entry)}
-                  >
-                    View breakdown
-                  </button>
-                ) : null}
-                <ShareMyMissionButton entry={entry} />
-                <SendWorkoutToSquad
-                  durationMinutes={entry.durationMinutes}
-                  workout={entry.workout}
-                  templateId={entry.templateId}
-                  ready={entry.workout.length > 0}
-                  triggerClassName="link-accent font-normal disabled:text-muted"
-                  triggerLabel="Add squad member"
+          {listItems.map((item) => {
+            if (item.kind === 'single') {
+              return (
+                <li key={item.entry.participantId}>
+                  <MyMissionCard
+                    entry={item.entry}
+                    deletingMissionId={deletingMissionId}
+                    onDelete={(entry) => void handleDelete(entry)}
+                    onViewBreakdown={setBreakdownEntry}
+                  />
+                </li>
+              );
+            }
+
+            const expanded = expandedRallyPointIds.has(item.rallyPointId);
+            return (
+              <li key={item.rallyPointId} className="space-y-2">
+                <MyMissionCard
+                  entry={item.parent}
+                  deletingMissionId={deletingMissionId}
+                  onDelete={(entry) => void handleDelete(entry)}
+                  onViewBreakdown={setBreakdownEntry}
+                  expandControl={{
+                    expanded,
+                    childCount: item.children.length,
+                    onToggle: () => toggleGroup(item.rallyPointId),
+                  }}
                 />
-                {canDeleteMyMission(entry) ? (
-                  <button
-                    type="button"
-                    className="text-error ml-auto"
-                    disabled={deletingMissionId === entry.missionId}
-                    onClick={() => void handleDelete(entry)}
-                  >
-                    {deletingMissionId === entry.missionId ? 'Deleting…' : 'Delete'}
-                  </button>
+                {expanded ? (
+                  <ul className="space-y-2 border-l-2 border-border pl-3">
+                    {item.children.map((child) => (
+                      <li key={child.participantId}>
+                        <MyMissionCard
+                          entry={child}
+                          deletingMissionId={deletingMissionId}
+                          onDelete={(entry) => void handleDelete(entry)}
+                          onViewBreakdown={setBreakdownEntry}
+                        />
+                      </li>
+                    ))}
+                  </ul>
                 ) : null}
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
 
