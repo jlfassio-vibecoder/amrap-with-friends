@@ -18,12 +18,15 @@ export function useCopyMissionInvite(
   const idTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
+    const linkTimer = linkTimerRef.current;
+    const idTimer = idTimerRef.current;
+
     return () => {
-      if (linkTimerRef.current !== null) {
-        window.clearTimeout(linkTimerRef.current);
+      if (linkTimer !== null) {
+        window.clearTimeout(linkTimer);
       }
-      if (idTimerRef.current !== null) {
-        window.clearTimeout(idTimerRef.current);
+      if (idTimer !== null) {
+        window.clearTimeout(idTimer);
       }
     };
   }, []);
