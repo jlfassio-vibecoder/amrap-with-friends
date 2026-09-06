@@ -1,7 +1,7 @@
 # Plan: mission chains built before the first Start
 
 **Branch:** `feature/mission-chains`
-**Status:** Draft for approval
+**Status:** Approved — Phase 1 shipped
 **Last updated:** 2026-09-06
 **Depends on:** `feature/expanded-time-caps` (chain items carry a cap, not just a domain)
 
@@ -113,6 +113,12 @@ Then, by the completed mission's `intensity_tier`:
 - Tier 4–5: **+60 s**
 - Tier 1–2: **−30 s**
 - Tier 3: unchanged
+
+A Long mission is best left until last, and the table is why: the most rest it
+can buy is six minutes against a lactate clearance measured in tens of minutes.
+`chainAdvisories` says so in the builder. It is an advisory rather than a
+refusal — a host who wants a Long mission mid-chain is making their own call
+about their own session.
 
 Clamped to `[60, 600]`. The upper bound is not arbitrary — it is the hard limit
 `set_rally_point_countdown` already enforces, so every value this function can
@@ -245,10 +251,13 @@ domain. That changes the rest after it. Same recomputation path as reordering.
 
 ## Phased delivery
 
-### Phase 1 — Rest logic
+### Phase 1 — Rest logic — **done**
 
 `chainRest.ts` and its tests. No schema, no UI. The number is the part most
 likely to be argued with, so it lands alone and reviewable.
+
+Also carries `chainAdvisories`, which flags a Long mission that is not last —
+approved as an advisory the builder surfaces, not a rule that refuses the chain.
 
 ### Phase 2 — Schema and RPCs
 
@@ -280,8 +289,8 @@ say what is happening: "Rest — mission 2 of 4 starts when the host is ready."
 
 ## Open questions
 
-1. **Guest hosts** — accept the sign-in requirement, or build a guest path?
-   Recommendation: accept, and say so in the builder.
+1. ~~**Guest hosts**~~ — resolved: accept the sign-in requirement, and say so in
+   the builder rather than failing at Launch.
 2. **Does the rest show before Launch?** The builder shows it, but the athletes
    joining mission 1 do not see the plan. Should the rally point show "4
    missions, about 52 minutes total"? Recommendation: yes, one line — it is the
