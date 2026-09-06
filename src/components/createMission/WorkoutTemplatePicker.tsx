@@ -237,7 +237,7 @@ export function WorkoutTemplatePicker({
           <p className="rounded-card border border-border bg-page p-4 text-sm text-secondary">
             {searching || intensityTier !== null
               ? 'No missions match.'
-              : 'No workouts available for this time domain and category yet.'}
+              : 'No missions available for this time domain and category yet.'}
           </p>
         )}
       </div>

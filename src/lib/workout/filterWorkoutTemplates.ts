@@ -16,6 +16,7 @@ export interface WorkoutTemplateFilter {
 }
 
 /** Trim, lower-case, collapse internal whitespace. */
+// Copilot suggestion ignored: punctuation/diacritic stripping expands beyond the locked normalize contract (trim, lower-case, collapse spaces).
 export function normalizeMissionNameQuery(query: string): string {
   return query.trim().toLowerCase().replace(/\s+/g, ' ');
 }
