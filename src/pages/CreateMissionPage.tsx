@@ -13,13 +13,14 @@ import {
   CreateMissionSummaryPanel,
   type CreateScheduleMode,
 } from '@/components/createMission/CreateMissionSummaryPanel';
+import { MissionChainBuilder } from '@/components/createMission/MissionChainBuilder';
 import {
   WorkoutSourceToggle,
   type WorkoutSource,
 } from '@/components/createMission/WorkoutSourceToggle';
 import { WorkoutTemplatePicker } from '@/components/createMission/WorkoutTemplatePicker';
 import { CoachWodPicker } from '@/components/createMission/CoachWodPicker';
-import { exercisesToWorkoutText } from '@/lib/workout/templateToExercises';
+import { exercisesToWorkoutText, templateToExercises } from '@/lib/workout/templateToExercises';
 import type { PublishedCoachWorkout } from '@/lib/api/coachWod';
 import {
   TIME_DOMAINS,
@@ -32,6 +33,7 @@ import {
 import { defaultCapForDomain, domainForCap, type MissionTimeCap } from '@/lib/timeDomains';
 import { createMission, fetchHostActiveMissionCount } from '@/lib/api/missions';
 import { createRallyPointMission } from '@/lib/api/rallyPoint';
+import { setMissionChain as persistMissionChain } from '@/lib/api/missionChain';
 import { SendWorkoutToSquad } from '@/components/mission/SendWorkoutToSquad';
 import { getSupabaseConfigError } from '@/lib/supabase';
 import { track } from '@/lib/analytics/track';
@@ -54,6 +56,8 @@ import {
   rallyLocalDateTimeToIso,
   type RallyDay,
 } from '@/lib/mission/rallySchedule';
+import { createChainDraftId, type ChainDraftItem } from '@/lib/mission/chainDraft';
+import { MAX_CHAIN_LENGTH } from '@/lib/mission/chainRest';
 
 // Copilot suggestion ignored: keep a local type to avoid coupling CreateMissionPage to IntakePage routing internals.
 type IntakeNavigationState = {
@@ -111,6 +115,7 @@ export default function CreateMissionPage() {
   const guidedLaunchTemplateRef = useRef<WorkoutTemplate | null>(null);
   const [showGuidedIgnition, setShowGuidedIgnition] = useState(() => !hasCompletedGuidedIgnition());
   const [guestNameOpen, setGuestNameOpen] = useState(false);
+  const [missionChain, setMissionChainDraft] = useState<ChainDraftItem[]>([]);
 
   useEffect(() => {
     const state = location.state as IntakeNavigationState | null;
@@ -292,12 +297,70 @@ export default function CreateMissionPage() {
 
   function handleWorkoutSourceChange(source: WorkoutSource) {
     setWorkoutSource(source);
+    if (source !== 'library') {
+      setMissionChainDraft([]);
+    }
     if (source === 'custom') {
       setSelectedTemplateId(null);
     }
     if (source !== 'coach') {
       setSelectedCoachWorkout(null);
     }
+  }
+
+  function handleAddToChain() {
+    if (!isAuthenticated || !selectedTemplate || missionChain.length >= MAX_CHAIN_LENGTH) {
+      return;
+    }
+
+    setMissionChainDraft((current) => [
+      ...current,
+      {
+        id: createChainDraftId(),
+        name: selectedTemplate.name,
+        durationMinutes,
+        intensityTier: selectedTemplate.intensityTier,
+        templateId: selectedTemplate.id,
+        templateCap: selectedTemplate.durationMinutes,
+        workout: templateToExercises(selectedTemplate),
+      },
+    ]);
+    setSelectedTemplateId(null);
+    setError(null);
+  }
+
+  function handleChainMoveUp(index: number) {
+    if (index <= 0) {
+      return;
+    }
+    setMissionChainDraft((current) => {
+      const next = [...current];
+      const [row] = next.splice(index, 1);
+      next.splice(index - 1, 0, row);
+      return next;
+    });
+  }
+
+  function handleChainMoveDown(index: number) {
+    setMissionChainDraft((current) => {
+      if (index >= current.length - 1) {
+        return current;
+      }
+      const next = [...current];
+      const [row] = next.splice(index, 1);
+      next.splice(index + 1, 0, row);
+      return next;
+    });
+  }
+
+  function handleChainRemove(index: number) {
+    setMissionChainDraft((current) => current.filter((_, i) => i !== index));
+  }
+
+  function handleChainCapChange(index: number, cap: MissionTimeCap) {
+    setMissionChainDraft((current) =>
+      current.map((item, i) => (i === index ? { ...item, durationMinutes: cap } : item))
+    );
   }
 
   function handleCoachWorkoutSelect(workout: PublishedCoachWorkout) {
@@ -315,8 +378,14 @@ export default function CreateMissionPage() {
     setError(null);
 
     const launchTemplate = template ?? guidedLaunchTemplateRef.current ?? undefined;
+    const launchingFromChain = missionChain.length >= 1;
 
-    if (workoutSource === 'library' && !selectedTemplate && !launchTemplate) {
+    if (
+      workoutSource === 'library' &&
+      !launchingFromChain &&
+      !selectedTemplate &&
+      !launchTemplate
+    ) {
       setError('Select a workout from the library before creating a mission.');
       return;
     }
@@ -397,7 +466,6 @@ export default function CreateMissionPage() {
     const applied = launchTemplate ? applyTemplate(launchTemplate) : null;
     const hostNickname =
       (overrides?.nickname ?? nickname).trim() || profile?.nickname?.trim() || '';
-    const missionDuration = applied?.durationMinutes ?? durationMinutes;
     const missionWorkoutText = applied?.workoutText ?? workoutText;
 
     if (!hostNickname) {
@@ -415,25 +483,37 @@ export default function CreateMissionPage() {
     setLoading(true);
 
     try {
-      const workout = parseWorkoutText(missionWorkoutText);
-      const intensityTier = launchTemplate
-        ? launchTemplate.intensityTier
-        : workoutSource === 'library' && selectedTemplate
-          ? selectedTemplate.intensityTier
-          : workoutSource === 'coach' && selectedCoachWorkout
-            ? selectedCoachWorkout.intensityTier
-            : CUSTOM_WORKOUT_INTENSITY_TIER;
-      const templateId = launchTemplate
-        ? launchTemplate.id
-        : workoutSource === 'library' && selectedTemplateId
-          ? selectedTemplateId
-          : workoutSource === 'coach' && selectedCoachWorkout
-            ? `coach:${selectedCoachWorkout.id}`
-            : undefined;
+      const useChain = isAuthenticated && missionChain.length >= 1;
+      const firstChainItem = useChain ? missionChain[0] : null;
+
+      const workout = firstChainItem
+        ? firstChainItem.workout
+        : parseWorkoutText(missionWorkoutText);
+      const intensityTier = firstChainItem
+        ? firstChainItem.intensityTier
+        : launchTemplate
+          ? launchTemplate.intensityTier
+          : workoutSource === 'library' && selectedTemplate
+            ? selectedTemplate.intensityTier
+            : workoutSource === 'coach' && selectedCoachWorkout
+              ? selectedCoachWorkout.intensityTier
+              : CUSTOM_WORKOUT_INTENSITY_TIER;
+      const templateId = firstChainItem
+        ? firstChainItem.templateId
+        : launchTemplate
+          ? launchTemplate.id
+          : workoutSource === 'library' && selectedTemplateId
+            ? selectedTemplateId
+            : workoutSource === 'coach' && selectedCoachWorkout
+              ? `coach:${selectedCoachWorkout.id}`
+              : undefined;
+      const resolvedDuration = firstChainItem
+        ? firstChainItem.durationMinutes
+        : (applied?.durationMinutes ?? durationMinutes);
 
       const createInput = {
         nickname: hostNickname,
-        durationMinutes: missionDuration,
+        durationMinutes: resolvedDuration,
         workout,
         templateId,
         intensityTier,
@@ -462,8 +542,41 @@ export default function CreateMissionPage() {
       }
 
       if (result.data) {
+        const created = result.data;
+        let chainSaveError: string | null = null;
+        const rallyPointId =
+          'rallyPointId' in created && typeof created.rallyPointId === 'string'
+            ? created.rallyPointId
+            : null;
+        if (isAuthenticated && missionChain.length >= 2 && rallyPointId) {
+          const chainResult = await persistMissionChain({
+            rallyPointId,
+            items: missionChain.map((item, index) => ({
+              durationMinutes: item.durationMinutes,
+              workout: item.workout,
+              templateId: item.templateId,
+              intensityTier: item.intensityTier,
+              startedMissionId: index === 0 ? created.missionId : null,
+            })),
+          });
+          if (chainResult.error) {
+            // The mission and its hub already exist and are perfectly usable —
+            // they are just not chained. Stranding the host here would leave a
+            // live mission counting against their active limit that they cannot
+            // reach, and cannot repair either, because set_mission_chain refuses
+            // to rewrite a chain whose first item has already started. Carry the
+            // failure to the mission instead of swallowing it.
+            chainSaveError = chainResult.error.message;
+          }
+        }
+
         guidedLaunchTemplateRef.current = null;
-        navigate(`/mission/${result.data.missionId}`);
+        const missionPath = `/mission/${created.missionId}`;
+        if (chainSaveError) {
+          navigate(missionPath, { state: { chainSaveError } });
+        } else {
+          navigate(missionPath);
+        }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.');
@@ -609,6 +722,25 @@ export default function CreateMissionPage() {
                     ? null
                     : 'You can train now — save to your account after the mission.'
                 }
+                chainBuilder={
+                  workoutSource === 'library' ? (
+                    <MissionChainBuilder
+                      items={missionChain}
+                      canAdd={
+                        isAuthenticated &&
+                        selectedTemplate !== null &&
+                        missionChain.length < MAX_CHAIN_LENGTH
+                      }
+                      isAuthenticated={isAuthenticated}
+                      onAdd={handleAddToChain}
+                      onMoveUp={handleChainMoveUp}
+                      onMoveDown={handleChainMoveDown}
+                      onRemove={handleChainRemove}
+                      onCapChange={handleChainCapChange}
+                    />
+                  ) : null
+                }
+                hideSelectedWorkoutPreview={missionChain.length >= 1}
                 loading={loading}
                 onNicknameChange={setNickname}
                 onDurationChange={handleSummaryDurationChange}

@@ -1,4 +1,4 @@
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { AppLink } from '@/components/AppLink';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -40,6 +40,10 @@ import { useRallyPointWalkthrough } from '@/components/walkthrough/useRallyPoint
 import { useGhostPacer } from '@/hooks/useGhostPacer';
 import { useTacticalAudio } from '@/hooks/useTacticalAudio';
 import { useRallyPointForceNav } from '@/hooks/useRallyPointForceNav';
+import {
+  shouldAdvanceMissionChain,
+  shouldPullViewerToActiveMission,
+} from '@/lib/mission/missionChainNavigation';
 import { useRallyPointHostHandoff } from '@/hooks/useRallyPointHostHandoff';
 import { useStaleRallyPointHostClaim } from '@/hooks/useStaleRallyPointHostClaim';
 import { useRallyPointChannel } from '@/lib/realtime/useRallyPointChannel';
@@ -51,6 +55,13 @@ import {
   passRallyPointCommand,
   touchRallyPointPresence,
 } from '@/lib/api/rallyPoint';
+import { getMissionChain, startNextChainedMission } from '@/lib/api/missionChain';
+import {
+  chainHasUnstartedItems,
+  chainPlanSummaryForMission,
+  chainRestBannerForMission,
+} from '@/lib/mission/chainAdvanceCopy';
+import { nextChainedMissionName } from '@/lib/mission/nextChainedMissionName';
 import { canPassRallyPointCommand } from '@/lib/rallyPoint/canPassRallyPointCommand';
 import { shouldHandleLogRoundHotkey } from '@/lib/mission/logRoundHotkey';
 import { shouldShowMissionReset } from '@/lib/mission/shouldShowMissionReset';
@@ -419,6 +430,15 @@ function LiveMissionView({
   const [passBusy, setPassBusy] = useState(false);
   const [passError, setPassError] = useState<string | null>(null);
   const [forceNavError, setForceNavError] = useState<string | null>(null);
+  // Create hands over a chain-save failure here rather than stranding the host
+  // on the form with a live mission they cannot reach.
+  const location = useLocation();
+  const [chainSaveError] = useState<string | null>(() => {
+    const state = location.state;
+    return state && typeof state === 'object' && 'chainSaveError' in state
+      ? ((state as { chainSaveError?: unknown }).chainSaveError as string) || null
+      : null;
+  });
   const [daisyExitError, setDaisyExitError] = useState<string | null>(null);
   const [resetError, setResetError] = useState<string | null>(null);
   const [resetBusy, setResetBusy] = useState(false);
@@ -459,12 +479,57 @@ function LiveMissionView({
 
   const rallyPointId =
     channel.mission?.rally_point_id ?? getStoredRallyPointIdForMission(missionId) ?? null;
+  const [nextUpMissionName, setNextUpMissionName] = useState<string | null>(null);
+  const [nextChainedMissionId, setNextChainedMissionId] = useState<string | null>(null);
+  const [continueMissionName, setContinueMissionName] = useState<string | null>(null);
+  const [chainRestBanner, setChainRestBanner] = useState<string | null>(null);
+  const [chainPlanSummary, setChainPlanSummary] = useState<string | null>(null);
+  const chainAdvanceAttemptedRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (channel.mission?.rally_point_id) {
       setStoredRallyPointIdForMission(missionId, channel.mission.rally_point_id);
     }
   }, [channel.mission?.rally_point_id, missionId]);
+
+  useEffect(() => {
+    setNextChainedMissionId(null);
+    setContinueMissionName(null);
+    chainAdvanceAttemptedRef.current = null;
+  }, [missionId]);
+
+  useEffect(() => {
+    if (!rallyPointId || !isAuthenticated) {
+      setNextUpMissionName(null);
+      setChainRestBanner(null);
+      setChainPlanSummary(null);
+      return;
+    }
+
+    let cancelled = false;
+    void getMissionChain(rallyPointId).then((result) => {
+      if (cancelled) {
+        return;
+      }
+      if (result.error || !result.data) {
+        setNextUpMissionName(null);
+        setChainRestBanner(null);
+        setChainPlanSummary(null);
+        return;
+      }
+      setNextUpMissionName(nextChainedMissionName(result.data));
+      setChainRestBanner(
+        livePhase === 'waiting' ? chainRestBannerForMission(result.data, missionId) : null
+      );
+      setChainPlanSummary(
+        livePhase === 'waiting' ? chainPlanSummaryForMission(result.data, missionId) : null
+      );
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [rallyPointId, isAuthenticated, livePhase, missionId]);
 
   const rallyPointMemberId = rallyPointId ? getStoredRallyPointMemberId(rallyPointId) : null;
   const rallyPointNickname =
@@ -486,6 +551,90 @@ function LiveMissionView({
     enabled: Boolean(rallyPointId) && (livePhase === 'waiting' || livePhase === 'setup'),
     onHostAuthorityChange,
   });
+
+  // Host advances the pre-planned queue once the finished state is confirmed.
+  useEffect(() => {
+    if (
+      !shouldAdvanceMissionChain({
+        isHost,
+        isPractice: live.isPractice,
+        livePhase,
+        rallyPointId,
+        isAuthenticated,
+        currentMissionId: missionId,
+        activeMissionId: rallyPointChannel.rallyPoint?.activeMissionId,
+        attemptedForMissionId: chainAdvanceAttemptedRef.current,
+      })
+    ) {
+      return;
+    }
+    // Narrowing only — shouldAdvanceMissionChain has already rejected a missing
+    // hub id, but the predicate cannot tell the type system that.
+    const hubId = rallyPointId;
+    if (!hubId) {
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      const chain = await getMissionChain(hubId);
+      if (cancelled) {
+        return;
+      }
+      if (chain.error || !chain.data) {
+        return;
+      }
+      if (!chainHasUnstartedItems(chain.data)) {
+        chainAdvanceAttemptedRef.current = missionId;
+        return;
+      }
+      if (chainAdvanceAttemptedRef.current === missionId) {
+        return;
+      }
+      chainAdvanceAttemptedRef.current = missionId;
+
+      const queuedName = nextChainedMissionName(chain.data);
+      const result = await startNextChainedMission(hubId);
+      if (cancelled) {
+        // The mission may well have started. Clearing the stamp lets the effect
+        // re-run and pick the outcome up, rather than leaving the host with no
+        // Continue button and no way to ask for one.
+        chainAdvanceAttemptedRef.current = null;
+        return;
+      }
+      if (result.error) {
+        chainAdvanceAttemptedRef.current = null;
+        setForceNavError(result.error.message);
+        return;
+      }
+      if (!result.data || result.data.complete) {
+        return;
+      }
+
+      setNextChainedMissionId(result.data.missionId);
+      setContinueMissionName(queuedName);
+      void getMissionChain(hubId).then((refresh) => {
+        if (cancelled || refresh.error || !refresh.data) {
+          return;
+        }
+        setNextUpMissionName(nextChainedMissionName(refresh.data));
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isHost,
+    live.isPractice,
+    livePhase,
+    rallyPointId,
+    isAuthenticated,
+    missionId,
+    // The hub row can land after the finished state does, so the advance has
+    // to re-run when it catches up rather than giving up on the first pass.
+    rallyPointChannel.rallyPoint?.activeMissionId,
+  ]);
 
   const waitingOrSetup = livePhase === 'waiting' || livePhase === 'setup';
 
@@ -701,13 +850,17 @@ function LiveMissionView({
     activeMissionId: rallyPointChannel.rallyPoint?.activeMissionId,
     activeMissionState: rallyPointChannel.rallyPoint?.activeMissionState,
     currentMissionId: missionId,
-    // Pull stragglers after AAR, and pull joiners when the host resets to a new rematch.
-    enabled:
-      Boolean(rallyPointId) &&
-      ((livePhase === 'finished' && !showPartialRepsModal && !showScorecard) ||
-        ((livePhase === 'waiting' || livePhase === 'setup' || livePhase === 'work') &&
-          Boolean(rallyPointChannel.rallyPoint?.activeMissionId) &&
-          rallyPointChannel.rallyPoint?.activeMissionId !== missionId)),
+    enabled: shouldPullViewerToActiveMission({
+      rallyPointId,
+      livePhase,
+      isHost,
+      currentMissionId: missionId,
+      activeMissionId: rallyPointChannel.rallyPoint?.activeMissionId,
+      activeMissionState: rallyPointChannel.rallyPoint?.activeMissionState,
+      nextChainedMissionId,
+      showPartialRepsModal,
+      showScorecard,
+    }),
     onError: setForceNavError,
   });
 
@@ -954,6 +1107,11 @@ function LiveMissionView({
           The host restarted this mission. Ask them for a new invite link.
         </p>
         {forceNavError ? <p className="text-error text-sm">{forceNavError}</p> : null}
+        {chainSaveError ? (
+          <p className="text-error text-sm">
+            This mission started, but the rest of the chain could not be saved: {chainSaveError}
+          </p>
+        ) : null}
         <div className="flex flex-wrap gap-4 text-sm">
           <Link className="link-accent" to="/join">
             Join mission
@@ -1066,6 +1224,16 @@ function LiveMissionView({
                     {phaseLabel(live.phase)}
                   </p>
                 )}
+                {chainRestBanner ? (
+                  <p className="text-sm text-secondary" role="status">
+                    {chainRestBanner}
+                  </p>
+                ) : null}
+                {chainPlanSummary ? (
+                  <p className="text-sm text-secondary" role="status">
+                    {chainPlanSummary}
+                  </p>
+                ) : null}
                 {live.phase === 'waiting' && (rallyPointTicking || rallyPointIgnited) ? (
                   <p className="font-mono text-3xl tabular-nums tracking-widest text-accent lg:text-5xl">
                     {formatTMinus(rallyPointRemaining ?? 0)}
@@ -1341,7 +1509,13 @@ function LiveMissionView({
           {forceNavError ? <p className="text-error text-sm">{forceNavError}</p> : null}
           <div className="flex flex-wrap gap-4">
             {rallyPointHref ? (
-              <DaisyChainCta className="link-accent text-sm" onActivate={handleDaisyChainExit} />
+              nextUpMissionName ? (
+                <p className="text-sm text-secondary">
+                  Next up: <span className="font-semibold text-ink">{nextUpMissionName}</span>
+                </p>
+              ) : (
+                <DaisyChainCta className="link-accent text-sm" onActivate={handleDaisyChainExit} />
+              )
             ) : (
               <AppLink className="link-accent" to="/">
                 Back home
@@ -1366,7 +1540,13 @@ function LiveMissionView({
             {daisyExitError ? <span className="text-error text-sm">{daisyExitError}</span> : null}
             {forceNavError ? <span className="text-error text-sm">{forceNavError}</span> : null}
             {rallyPointHref ? (
-              <DaisyChainCta className="link-accent text-sm" onActivate={handleDaisyChainExit} />
+              nextUpMissionName ? (
+                <p className="text-sm text-secondary">
+                  Next up: <span className="font-semibold text-ink">{nextUpMissionName}</span>
+                </p>
+              ) : (
+                <DaisyChainCta className="link-accent text-sm" onActivate={handleDaisyChainExit} />
+              )
             ) : (
               <AppLink className="link-accent" to="/">
                 Back home
@@ -1402,6 +1582,8 @@ function LiveMissionView({
           rallyPointHref={rallyPointHref}
           rallyPointId={rallyPointId}
           isHost={isHost}
+          nextUpMissionName={continueMissionName ?? nextUpMissionName}
+          nextMissionId={nextChainedMissionId}
         />
       ) : null}
 

@@ -11,6 +11,7 @@ import CreateMissionPage from './CreateMissionPage';
 
 const createRallyPointMock = vi.fn();
 const createMissionMock = vi.fn();
+const setMissionChainMock = vi.fn();
 const navigateMock = vi.fn();
 const saveIdentityMock = vi.fn();
 
@@ -39,6 +40,9 @@ const authState = vi.hoisted(() => ({
 
 vi.mock('@/lib/api/rallyPoint', () => ({
   createRallyPointMission: (...args: unknown[]) => createRallyPointMock(...args),
+}));
+vi.mock('@/lib/api/missionChain', () => ({
+  setMissionChain: (...args: unknown[]) => setMissionChainMock(...args),
 }));
 vi.mock('@/lib/api/missions', () => ({
   fetchHostActiveMissionCount: () => Promise.resolve({ data: 0, error: null }),
@@ -148,11 +152,23 @@ afterEach(() => {
 beforeEach(() => {
   createRallyPointMock.mockReset();
   createMissionMock.mockReset();
+  setMissionChainMock.mockReset();
   navigateMock.mockReset();
   saveIdentityMock.mockReset();
   saveIdentityMock.mockResolvedValue({ error: null });
-  createRallyPointMock.mockResolvedValue({ data: { missionId: 'm1' }, error: null });
+  createRallyPointMock.mockResolvedValue({
+    data: {
+      missionId: 'm1',
+      rallyPointId: 'rp1',
+      rallyPointMemberId: 'rpm1',
+      hostToken: 'host',
+      participantId: 'p1',
+      claimToken: 'claim',
+    },
+    error: null,
+  });
   createMissionMock.mockResolvedValue({ data: { missionId: 'm1' }, error: null });
+  setMissionChainMock.mockResolvedValue({ data: { count: 2 }, error: null });
   authState.isAuthenticated = true;
   authState.profile = {
     username: 'ghost',
@@ -183,7 +199,45 @@ describe('CreateMissionPage Launch identity', () => {
     await waitFor(() => {
       expect(createRallyPointMock).toHaveBeenCalled();
     });
+    expect(setMissionChainMock).not.toHaveBeenCalled();
     expect(screen.queryByRole('heading', { name: 'Your name' })).toBeNull();
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith('/mission/m1');
+    });
+  });
+
+  it('persists a stamped chain when launching two or more missions', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Pick workout' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to chain' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pick workout' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to chain' }));
+    fireEvent.change(screen.getByPlaceholderText('Host nickname'), {
+      target: { value: 'Morning Grind' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Launch' }));
+
+    await waitFor(() => {
+      expect(createRallyPointMock).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(setMissionChainMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          rallyPointId: 'rp1',
+          items: expect.arrayContaining([
+            expect.objectContaining({
+              startedMissionId: 'm1',
+            }),
+          ]),
+        })
+      );
+    });
+    const chainArg = setMissionChainMock.mock.calls[0]?.[0] as {
+      items: { startedMissionId: string | null }[];
+    };
+    expect(chainArg.items).toHaveLength(2);
+    expect(chainArg.items[0]?.startedMissionId).toBe('m1');
+    expect(chainArg.items[1]?.startedMissionId).toBeNull();
     await waitFor(() => {
       expect(navigateMock).toHaveBeenCalledWith('/mission/m1');
     });

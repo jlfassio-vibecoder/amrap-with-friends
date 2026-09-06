@@ -20,6 +20,12 @@ export interface MyMissionEntry {
   workout: WorkoutExercise[];
   /** Library or coach template id when the mission was created from one. */
   templateId: string | null;
+  /** Shared Next Mission hub; null for guest-only / non-hub missions. */
+  rallyPointId: string | null;
+  /** Rows in mission_chain_items for this hub; 0 when none / no hub. */
+  chainItemCount: number;
+  /** Unstarted chain slots still waiting to be created. */
+  chainUnstartedCount: number;
   state: string;
   segmentIndex: number;
   roundCount: number;
@@ -191,6 +197,9 @@ function parseMyMissionEntry(raw: unknown): MyMissionEntry | null {
     durationMinutes,
     workout: readWorkout(row.workout),
     templateId: readString(row.template_id),
+    rallyPointId: readString(row.rally_point_id),
+    chainItemCount: readNumber(row.chain_item_count) ?? 0,
+    chainUnstartedCount: readNumber(row.chain_unstarted_count) ?? 0,
     state,
     segmentIndex,
     roundCount,

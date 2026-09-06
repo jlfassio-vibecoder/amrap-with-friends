@@ -5,6 +5,7 @@ import {
   computeMyMissionBaseScore,
   deleteIncompleteMission,
   displayMyMissionScore,
+  fetchMyMissions,
   formatMyMissionExerciseLine,
   formatMyMissionScoreDisplay,
   formatMyMissionShareText,
@@ -37,6 +38,9 @@ function baseEntry(overrides: Partial<MyMissionEntry> = {}): MyMissionEntry {
       { name: 'Air squats', target: 20, unit: 'reps' },
     ],
     templateId: null,
+    rallyPointId: null,
+    chainItemCount: 0,
+    chainUnstartedCount: 0,
     state: 'waiting',
     segmentIndex: 0,
     roundCount: 0,
@@ -195,6 +199,57 @@ describe('myMissions helpers', () => {
         })
       )
     ).toBe(false);
+  });
+});
+
+describe('fetchMyMissions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('parses rally_point_id onto rallyPointId', async () => {
+    rpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        missions: [
+          {
+            participant_id: '11111111-1111-4111-8111-111111111111',
+            nickname: 'Justin',
+            joined_at: '2026-08-22T12:00:00.000Z',
+            role: 'host',
+            mission_id: '22222222-2222-4222-8222-222222222222',
+            created_at: '2026-08-22T12:00:00.000Z',
+            scheduled_at: null,
+            is_featured: false,
+            duration_minutes: 5,
+            workout: [{ name: 'Burpees', target: 10 }],
+            template_id: 'the-piston',
+            rally_point_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+            chain_item_count: 3,
+            chain_unstarted_count: 2,
+            state: 'waiting',
+            segment_index: 0,
+            round_count: 0,
+            partial_reps: 0,
+            final_score: null,
+            score_breakdown: null,
+            coach_workout_name: null,
+          },
+        ],
+      },
+      error: null,
+      count: null,
+      status: 200,
+      statusText: 'OK',
+    } as never);
+
+    const result = await fetchMyMissions();
+
+    expect(result.error).toBeNull();
+    expect(result.data?.[0]?.rallyPointId).toBe('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+    expect(result.data?.[0]?.templateId).toBe('the-piston');
+    expect(result.data?.[0]?.chainItemCount).toBe(3);
+    expect(result.data?.[0]?.chainUnstartedCount).toBe(2);
   });
 });
 
