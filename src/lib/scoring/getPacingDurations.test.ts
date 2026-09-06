@@ -4,6 +4,7 @@ import {
   getPacingDurations,
   shouldExcludeBuyInRound,
 } from './getPacingDurations';
+import { capsForDomain } from '@/lib/timeDomains';
 
 describe('getPacingDurations', () => {
   it('excludes first round when excludeFirstRound is true', () => {
@@ -26,12 +27,26 @@ describe('computeAveragePaceSec', () => {
 });
 
 describe('shouldExcludeBuyInRound', () => {
-  it('returns true for 10+ minute missions', () => {
-    expect(shouldExcludeBuyInRound(10)).toBe(true);
-    expect(shouldExcludeBuyInRound(15)).toBe(true);
+  it('excludes the buy-in on every cap outside Ultra-Short', () => {
+    for (const domain of [10, 15, 20] as const) {
+      for (const cap of capsForDomain(domain)) {
+        expect(shouldExcludeBuyInRound(cap)).toBe(true);
+      }
+    }
   });
 
-  it('returns false for missions under 10 minutes', () => {
-    expect(shouldExcludeBuyInRound(9)).toBe(false);
+  it('counts every round on an Ultra-Short mission', () => {
+    for (const cap of capsForDomain(5)) {
+      expect(shouldExcludeBuyInRound(cap)).toBe(false);
+    }
+  });
+
+  it('is consistent inside the Short domain, which the old >= 10 rule was not', () => {
+    expect(shouldExcludeBuyInRound(7)).toBe(shouldExcludeBuyInRound(10));
+  });
+
+  it('stays continuous across the gaps for non-domain coach WODs', () => {
+    expect(shouldExcludeBuyInRound(6)).toBe(false);
+    expect(shouldExcludeBuyInRound(30)).toBe(true);
   });
 });
