@@ -11,9 +11,18 @@ interface TierOption {
   tier: string;
   label: string;
   hook: string;
-  duration: string;
   workoutName: string;
   cta: string;
+}
+
+/**
+ * The clock comes from the template, not from a string beside it. These three
+ * tiers each launch a specific workout at its own programmed minute, and a
+ * duplicated minute here is a fact that can silently go stale.
+ */
+function durationFor(templateId: string): string {
+  const template = WORKOUT_TEMPLATES.find((entry) => entry.id === templateId);
+  return template ? `${template.durationMinutes} min` : '';
 }
 
 const TIERS: TierOption[] = [
@@ -23,7 +32,6 @@ const TIERS: TierOption[] = [
     // Copilot suggestion ignored: tactical tier names are the required product copy; CTAs stay plain English.
     label: 'CIVILIAN / RECRUIT',
     hook: "I need a baseline. Let's start the clock.",
-    duration: '10 min',
     workoutName: 'First Contact',
     cta: 'Set my baseline',
   },
@@ -33,7 +41,6 @@ const TIERS: TierOption[] = [
     // Copilot suggestion ignored: tactical tier names are the required product copy; CTAs stay plain English.
     label: 'FIELD READY',
     hook: 'I know my way around the work. Give me a target.',
-    duration: '15 min',
     workoutName: 'Steady Altitude',
     cta: 'Give me a target',
   },
@@ -43,7 +50,6 @@ const TIERS: TierOption[] = [
     // Copilot suggestion ignored: tactical tier names are the required product copy; CTAs stay plain English.
     label: 'OPERATOR / SPECIAL OPS',
     hook: 'Put me in the Crucible. No modifications.',
-    duration: '15 min',
     workoutName: 'The Undertow',
     cta: 'Put me in the Crucible',
   },
@@ -86,7 +92,7 @@ export function GuidedIgnitionOverlay({ onSelect, onSkip }: GuidedIgnitionOverla
               <p className="text-sm italic text-secondary">{tier.hook}</p>
               <div className="flex items-center justify-between gap-3">
                 <span className="text-xs text-secondary">
-                  {tier.duration} · {tier.workoutName}
+                  {durationFor(tier.templateId)} · {tier.workoutName}
                 </span>
                 <button
                   type="button"

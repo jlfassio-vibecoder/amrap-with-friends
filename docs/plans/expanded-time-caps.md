@@ -1,7 +1,7 @@
 # Plan: expanded time caps within each domain
 
 **Branch:** `feature/expanded-time-caps`
-**Status:** Phases 1 and 2 shipped — Phase 3 (secondary surfaces) is next
+**Status:** Phases 1–3 shipped — the migration still needs `npm run supabase:push`
 **Last updated:** 2026-09-06
 
 ---
@@ -320,7 +320,7 @@ needs `npm run supabase:push`.
 - When the chosen cap is not the template's minute, say that the ghost lane will
   be empty — one line, near the control.
 
-### Phase 3 — Polish and secondary surfaces
+### Phase 3 — Polish and secondary surfaces — **done**
 
 - My missions / cards show the actual cap ("7 min"), not only the domain.
 - Content/SEO one-line updates on duration hub pages.

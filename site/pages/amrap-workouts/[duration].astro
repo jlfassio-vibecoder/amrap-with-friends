@@ -14,6 +14,7 @@ import {
   workoutsForDuration,
 } from '@/lib/seo/contentPages';
 import { TIME_DOMAINS, type TimeDomain } from '@/data/workoutTemplates';
+import { formatCapRange } from '@/lib/timeDomains';
 
 export const getStaticPaths = (() => {
   const pages = new Map(durationPages().map((page) => [page.path, page]));
@@ -68,6 +69,12 @@ const jsonLd = [
     <section class="space-y-4">
       <h2 class="text-display text-2xl text-ink">How to pace a {minutes} minute AMRAP</h2>
       <p class="text-base leading-[1.7] text-secondary">{PACING[minutes]}</p>
+      <p class="text-base leading-[1.7] text-secondary">
+        These workouts are written for {minutes} minutes and that is the clock they are scored against,
+        but the cap is not fixed at it. When you create one you can set any clock in the {
+          formatCapRange(minutes)
+        } minute range — the same workout, the same time domain, a little more or less of it.
+      </p>
     </section>
 
     <section class="space-y-4">

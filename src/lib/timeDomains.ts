@@ -69,6 +69,18 @@ export function isLegalCap(cap: MissionTimeCap): boolean {
   return domainForCap(cap) !== null;
 }
 
+/**
+ * The domain's range as a reader sees it — "7–10", not "10".
+ *
+ * Anywhere a surface labels a bucket that now holds more than one clock, it
+ * needs this rather than the canonical minute. A chart column headed "10" that
+ * silently counts 7-, 8- and 9-minute missions is a mislabel, not a shorthand.
+ */
+export function formatCapRange(domain: TimeDomain): string {
+  const caps = capsForDomain(domain);
+  return `${caps[0]}\u2013${caps[caps.length - 1]}`;
+}
+
 /** Every legal cap, ascending. Useful for exhaustive tests. */
 export function allTimeCaps(): MissionTimeCap[] {
   return TIME_DOMAINS.flatMap((domain) => capsForDomain(domain));

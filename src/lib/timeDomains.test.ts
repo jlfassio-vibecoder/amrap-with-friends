@@ -5,6 +5,7 @@ import {
   capsForDomain,
   defaultCapForDomain,
   domainForCap,
+  formatCapRange,
   isCapInDomain,
   isLegalCap,
   MAX_TIME_CAP,
@@ -56,6 +57,13 @@ describe('timeDomains', () => {
   it('rejects a fractional cap', () => {
     expect(isCapInDomain(7.5, 10)).toBe(false);
     expect(domainForCap(7.5)).toBeNull();
+  });
+
+  it('formats each domain as the range a reader sees, not the canonical minute', () => {
+    expect(formatCapRange(5)).toBe('3\u20135');
+    expect(formatCapRange(10)).toBe('7\u201310');
+    expect(formatCapRange(15)).toBe('12\u201315');
+    expect(formatCapRange(20)).toBe('18\u201325');
   });
 
   it('lists every legal cap once, ascending', () => {
