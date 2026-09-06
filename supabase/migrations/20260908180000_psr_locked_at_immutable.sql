@@ -22,18 +22,19 @@ LANGUAGE plpgsql
 SET search_path TO 'pg_catalog', 'public'
 AS $$
 BEGIN
-  -- Once stamped, never move — even if a later UPDATE bumps updated_at.
+  -- Unlocked rows must not carry a lock stamp (blocks admin UPDATE of locked_at alone).
+  IF NEW.score_breakdown IS NULL THEN
+    NEW.locked_at := NULL;
+    RETURN NEW;
+  END IF;
+
+  -- Once stamped on a locked row, never move — even if a later UPDATE bumps updated_at.
   IF TG_OP = 'UPDATE' AND OLD.locked_at IS NOT NULL THEN
     NEW.locked_at := OLD.locked_at;
     RETURN NEW;
   END IF;
 
-  IF NEW.score_breakdown IS NOT NULL
-     AND (TG_OP = 'INSERT' OR OLD.score_breakdown IS NULL)
-  THEN
-    NEW.locked_at := coalesce(NEW.locked_at, now());
-  END IF;
-
+  NEW.locked_at := coalesce(NEW.locked_at, now());
   RETURN NEW;
 END;
 $$;
