@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import PacingCalculator from '../../islands/PacingCalculator';
 import { breadcrumbList, faqPage, referenceArticle } from '@/lib/seo/structuredData';
 import { referencesFor } from '@/lib/seo/scienceReferences';
 import { SITE_AUTHOR } from '@/lib/seo/author';
@@ -29,7 +30,7 @@ const faqs = [
   {
     question: 'Why does the first round always feel easy?',
     answer:
-      'Because pacing is regulated against the endpoint you know is coming, not against how you feel right now. Your first round is run with full reserves and no feedback yet, so it is almost always your fastest. That is why round one is normally excluded when measuring how evenly you paced.',
+      'Because pacing is regulated against the endpoint you know is coming, not against how you feel right now. Your first round is run with full reserves and no feedback yet, so it is almost always your fastest. On missions of ten minutes or more we exclude it from the variance calculation for that reason.',
   },
   {
     question: 'Does knowing the clock change how hard you work?',
@@ -167,10 +168,10 @@ const jsonLd = [
         <strong class="font-semibold">(slowest round − fastest round) ÷ average round × 100</strong>
       </p>
       <p class="text-base leading-[1.7] text-secondary">
-        The first round is excluded, for the reason above: everyone's opening round is run with full
-        reserves and no feedback, so including it would mark honest pacing as a collapse.<sup
-          >{n.ulmer1996}</sup
-        >
+        On missions of ten minutes or longer the first round is excluded, for the reason above: an
+        opening round run with full reserves and no feedback would otherwise mark honest pacing as a
+        collapse.<sup>{n.ulmer1996}</sup> On shorter missions every round counts — with only a handful
+        of rounds on the clock, dropping one discards too much of the evidence.
       </p>
       <div class="overflow-x-auto">
         <table class="w-full min-w-[30rem] border-collapse text-left text-sm">
@@ -301,7 +302,13 @@ const jsonLd = [
       <h2 class="text-display text-2xl text-ink">Measure your own splits</h2>
       <p class="text-base leading-[1.7] text-secondary">
         Whatever the literature settles on, the useful move is the same: log every round so you can
-        see the distribution instead of guessing at it. The practical version of this page is
+        see the distribution instead of guessing at it. Type your round times below and this runs
+        the same functions the app runs — including the band thresholds this page has just told you
+        are unvalidated.
+      </p>
+      <PacingCalculator client:visible />
+      <p class="text-base leading-[1.7] text-secondary">
+        The practical version of this page is
         <a class="link-accent" href="/guides/amrap-pacing">the pacing guide</a>.
       </p>
       <div class="flex flex-wrap gap-3">
@@ -311,7 +318,7 @@ const jsonLd = [
         >
         <a
           class="rounded-card border border-border bg-surface px-6 py-3.5 font-semibold text-ink"
-          href="/amrap-workouts/20-minute">20-minute AMRAPs</a
+          href="/science/fatigue">How fatigue shows up in your movement</a
         >
       </div>
     </section>
