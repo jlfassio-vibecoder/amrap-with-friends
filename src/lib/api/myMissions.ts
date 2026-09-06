@@ -99,17 +99,6 @@ export function formatMyMissionExerciseLine(exercise: WorkoutExercise): string {
   return `${exercise.name} — ${exercise.target}${exercise.unit ? ` ${exercise.unit}` : ''}`;
 }
 
-/** Plain-English chain cue for My Missions parent chrome (null when not a chain). */
-export function formatMyMissionChainLabel(entry: {
-  chainItemCount: number;
-  chainUnstartedCount?: number;
-}): string | null {
-  if (entry.chainItemCount < 2) {
-    return null;
-  }
-  return `${entry.chainItemCount} missions`;
-}
-
 /** Plain-text card summary for Web Share / clipboard (title, movements, meta). */
 export function formatMyMissionShareText(entry: MyMissionEntry): string {
   const title = myMissionWorkoutTitle(entry);

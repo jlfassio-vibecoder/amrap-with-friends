@@ -543,6 +543,7 @@ export default function CreateMissionPage() {
 
       if (result.data) {
         const created = result.data;
+        let chainSaveError: string | null = null;
         const rallyPointId =
           'rallyPointId' in created && typeof created.rallyPointId === 'string'
             ? created.rallyPointId
@@ -559,13 +560,23 @@ export default function CreateMissionPage() {
             })),
           });
           if (chainResult.error) {
-            setError(chainResult.error.message);
-            return;
+            // The mission and its hub already exist and are perfectly usable —
+            // they are just not chained. Stranding the host here would leave a
+            // live mission counting against their active limit that they cannot
+            // reach, and cannot repair either, because set_mission_chain refuses
+            // to rewrite a chain whose first item has already started. Carry the
+            // failure to the mission instead of swallowing it.
+            chainSaveError = chainResult.error.message;
           }
         }
 
         guidedLaunchTemplateRef.current = null;
-        navigate(`/mission/${created.missionId}`);
+        const missionPath = `/mission/${created.missionId}`;
+        if (chainSaveError) {
+          navigate(missionPath, { state: { chainSaveError } });
+        } else {
+          navigate(missionPath);
+        }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.');

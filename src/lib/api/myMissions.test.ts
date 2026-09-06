@@ -6,7 +6,6 @@ import {
   deleteIncompleteMission,
   displayMyMissionScore,
   fetchMyMissions,
-  formatMyMissionChainLabel,
   formatMyMissionExerciseLine,
   formatMyMissionScoreDisplay,
   formatMyMissionShareText,
@@ -200,22 +199,6 @@ describe('myMissions helpers', () => {
         })
       )
     ).toBe(false);
-  });
-});
-
-describe('formatMyMissionChainLabel', () => {
-  it('returns null when there is no multi-mission chain', () => {
-    expect(formatMyMissionChainLabel(baseEntry())).toBeNull();
-    expect(formatMyMissionChainLabel(baseEntry({ chainItemCount: 1 }))).toBeNull();
-  });
-
-  it('summarises total missions in the chain', () => {
-    expect(
-      formatMyMissionChainLabel(baseEntry({ chainItemCount: 3, chainUnstartedCount: 2 }))
-    ).toBe('3 missions');
-    expect(
-      formatMyMissionChainLabel(baseEntry({ chainItemCount: 3, chainUnstartedCount: 0 }))
-    ).toBe('3 missions');
   });
 });
 

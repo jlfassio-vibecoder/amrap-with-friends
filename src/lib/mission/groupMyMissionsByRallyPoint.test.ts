@@ -213,4 +213,29 @@ describe('groupMyMissionsByRallyPoint', () => {
       },
     ]);
   });
+
+  it('never renders the same mission as both the parent and a child', () => {
+    // A guest who joined at mission 2 has no row for mission 1, so the
+    // position-0 stamp resolves to nothing. The fallback must not then pick the
+    // mission that is already stamped on position 1.
+    const items = groupMyMissionsByRallyPoint([entry({ missionId: 'm2', rallyPointId: 'hub-1' })], {
+      'hub-1': [
+        chainItem({ id: 'c0', position: 0, startedMissionId: 'm1' }),
+        chainItem({ id: 'c1', position: 1, startedMissionId: 'm2' }),
+      ],
+    });
+
+    const rendered = items.flatMap((item) =>
+      item.kind === 'group'
+        ? [
+            item.parent.missionId,
+            ...item.children.flatMap((child) =>
+              child.kind === 'started' ? [child.entry.missionId] : []
+            ),
+          ]
+        : [item.entry.missionId]
+    );
+
+    expect(new Set(rendered).size).toBe(rendered.length);
+  });
 });

@@ -48,12 +48,23 @@ function buildChainGroup(
   const byMissionId = new Map(members.map((entry) => [entry.missionId, entry]));
   const sorted = [...chain].sort((a, b) => a.position - b.position);
   const first = sorted[0]!;
+  // Missions stamped on a later position are rendered as children. A fallback
+  // that picked one of those would render the same mission twice in one group —
+  // once as the parent, once beneath it — which is what happens to a guest who
+  // joined at mission 2 and so has no row for mission 1.
+  const childMissionIds = new Set(
+    sorted
+      .slice(1)
+      .map((item) => item.startedMissionId)
+      .filter((id): id is string => typeof id === 'string')
+  );
+  const fallbackMembers = members.filter((entry) => !childMissionIds.has(entry.missionId));
   // Prefer the stamped position-0 mission; if the stamp is missing or stale,
   // fall back to the sole hub row / oldest row so expand still works.
   const parent =
     (first.startedMissionId ? byMissionId.get(first.startedMissionId) : undefined) ??
-    (members.length === 1 ? members[0] : undefined) ??
-    [...members].sort((a, b) => displayTimeMs(a) - displayTimeMs(b))[0];
+    (fallbackMembers.length === 1 ? fallbackMembers[0] : undefined) ??
+    [...fallbackMembers].sort((a, b) => displayTimeMs(a) - displayTimeMs(b))[0];
   if (!parent) {
     return null;
   }

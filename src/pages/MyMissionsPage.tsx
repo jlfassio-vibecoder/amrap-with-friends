@@ -217,11 +217,14 @@ export default function MyMissionsPage() {
   }, [isAuthLoading, isAuthenticated, user]);
 
   useEffect(() => {
-    // Fetch for every hub id — do not gate on chainItemCount (that column needs a
-    // migration). Empty / short chains are ignored when building the list.
+    // `my_missions` returns chain_item_count per row (20260908130000), so only
+    // hubs that actually hold a chain need the round trip. Fetching for every hub
+    // id was one RPC per hub on every load, nearly all of them returning nothing
+    // the list would use.
     const rallyPointIds = [
       ...new Set(
         entries
+          .filter((entry) => entry.chainItemCount >= 2)
           .map((entry) => entry.rallyPointId)
           .filter((id): id is string => typeof id === 'string' && id.length > 0)
       ),
