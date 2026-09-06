@@ -93,6 +93,13 @@ export const CONTENT_ROUTES: RouteSeo[] = [
     index: true,
   },
   {
+    path: '/science/fatigue',
+    title: 'Fatigue in an AMRAP: Velocity, Holds and Movement Choice',
+    description:
+      'Your movement slows in an AMRAP, and part of that is a decision rather than failure. What the research shows about velocity loss, holds and picking movements.',
+    index: true,
+  },
+  {
     path: '/guides',
     title: 'AMRAP Guides — How the Format Actually Works',
     description:

@@ -1,0 +1,304 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { breadcrumbList, faqPage, referenceArticle } from '@/lib/seo/structuredData';
+import { referencesFor } from '@/lib/seo/scienceReferences';
+import { SITE_AUTHOR } from '@/lib/seo/author';
+
+const PATH = '/science/fatigue';
+const PUBLISHED = '2026-09-05';
+const CHECKED = '2026-09-05';
+
+const refs = referencesFor([
+  'barbaRuiz2024',
+  'mateMunoz2017',
+  'dech2022',
+  'tibana2018',
+  'kliszczewicz2014',
+  'rios2024',
+]);
+const n = Object.fromEntries(refs.map((reference, index) => [reference.id, index + 1]));
+
+const faqs = [
+  {
+    question: 'Why do I slow down so much in a long AMRAP?',
+    answer:
+      'Partly fatigue and partly choice. When the same work was run as an AMRAP, an EMOM and rounds-for-time, the AMRAP produced the lowest movement velocity — which the researchers read as athletes self-regulating their tempo to sustain a long effort, not simply failing.',
+  },
+  {
+    question: 'Is an AMRAP or an EMOM harder on the nervous system?',
+    answer:
+      'They fatigue differently. AMRAP produced greater velocity loss within and between sets than EMOM in a direct comparison, but rounds-for-time showed the greatest intra-set loss of the three. Built-in rest appears to protect movement quality, which is what an EMOM is for.',
+  },
+  {
+    question: 'Should I put holds late in a long AMRAP?',
+    answer:
+      'Probably not, though the evidence is thinner than confident advice suggests. Lab work shows holding a load against gravity fails sooner than pushing against something immovable at matched intensity. That was one joint at a fixed torque, so treat it as a reason to be careful rather than a rule.',
+  },
+];
+
+const jsonLd = [
+  referenceArticle({
+    title: 'Fatigue in an AMRAP: Velocity, Holds and Movement Choice',
+    description:
+      'What published research shows about neuromuscular fatigue during AMRAP training and what it means for choosing movements.',
+    path: PATH,
+    datePublished: PUBLISHED,
+    dateModified: CHECKED,
+    citations: refs.map((reference) => ({ title: reference.title, url: reference.url })),
+    about: ['Neuromuscular fatigue', 'AMRAP training', 'Isometric exercise', 'Exercise physiology'],
+  }),
+  faqPage(faqs),
+  breadcrumbList([
+    { name: 'Home', path: '/' },
+    { name: 'Science', path: '/science' },
+    { name: 'Fatigue', path: PATH },
+  ]),
+];
+---
+
+<BaseLayout jsonLd={jsonLd}>
+  <article class="mx-auto w-full max-w-[44rem] space-y-12 px-6 py-12 lg:px-10 lg:py-16">
+    <nav aria-label="Breadcrumb" class="text-xs text-muted">
+      <a class="link-accent" href="/science">Science</a> / Fatigue
+    </nav>
+
+    <header class="space-y-5">
+      <p class="eyebrow text-accent">Sourced review</p>
+      <h1 class="text-display text-[clamp(2.25rem,6vw,3.5rem)] leading-[0.95] text-ink">
+        Fatigue in an AMRAP: velocity, holds and movement choice
+      </h1>
+      <p class="border-l-2 border-accent pl-5 text-lg leading-[1.6] text-ink">
+        You move more slowly as an AMRAP goes on. Some of that is fatigue and some of it is a
+        decision — in a direct comparison of the same work run three ways, the AMRAP produced the
+        lowest movement velocity, and the researchers read that as athletes regulating their tempo
+        to survive the duration rather than simply running out of capacity.
+      </p>
+      <p class="text-sm text-muted">
+        By <a class="link-accent" href={SITE_AUTHOR.path} rel="author">{SITE_AUTHOR.name}</a> · Sources
+        last checked <time datetime={CHECKED}>5 September 2026</time>
+      </p>
+    </header>
+
+    <section class="space-y-5">
+      <h2 class="text-display text-2xl text-ink">The format changes how you slow down</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        Twelve trained athletes performed the same work under three formats on separate days: as
+        many rounds as possible, every minute on the minute, and rounds for time. Movement velocity
+        was measured throughout.<sup>{n.barbaRuiz2024}</sup>
+      </p>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[32rem] border-collapse text-left text-sm">
+          <thead>
+            <tr class="border-b border-border">
+              <th class="py-3 pr-4 font-semibold text-ink">Format</th>
+              <th class="py-3 pr-4 font-semibold text-ink">Movement velocity</th>
+              <th class="py-3 font-semibold text-ink">Velocity loss within a set</th>
+            </tr>
+          </thead>
+          <tbody class="text-secondary">
+            <tr class="border-b border-divider">
+              <td class="py-3 pr-4 font-semibold text-ink">AMRAP</td>
+              <td class="py-3 pr-4">Lowest of the three</td>
+              <td class="py-3">Higher than EMOM</td>
+            </tr>
+            <tr class="border-b border-divider">
+              <td class="py-3 pr-4 font-semibold text-ink">EMOM</td>
+              <td class="py-3 pr-4">Higher than AMRAP</td>
+              <td class="py-3">Least of the three</td>
+            </tr>
+            <tr>
+              <td class="py-3 pr-4 font-semibold text-ink">Rounds for time</td>
+              <td class="py-3 pr-4">Highest, especially at light loads</td>
+              <td class="py-3">Greatest of the three</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-base leading-[1.7] text-secondary">
+        Read the two columns together, because separately they mislead. The AMRAP was the slowest
+        format but not the one that decayed hardest within a set — rounds for time was. The authors
+        attribute the AMRAP's lower velocity to its prolonged duration prompting a self-regulated
+        tempo.
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        That is a meaningfully different story from "the clock drives you to failure". In an AMRAP
+        you are choosing a speed you can repeat, which is
+        <a class="link-accent" href="/science/pacing">the pacing decision</a> showing up in the barbell
+        rather than in the round times. Twelve participants, so hold it lightly.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Rest protects movement quality</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        Thirty-four subjects completed three different workout types with jump testing before,
+        during and after: a 20-minute AMRAP of pull-ups, push-ups and air squats; a metabolic piece
+        of skipping intervals with rest built in; and a five-minute weightlifting piece at a light
+        load.<sup>{n.mateMunoz2017}</sup>
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        Jump performance was reduced after the AMRAP and after the weightlifting piece. After the
+        interval piece it had recovered by the end — the rest periods were long enough to restore
+        the immediate energy stores that jumping depends on.
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        The practical reading is not that AMRAPs are bad. It is that <strong
+          class="font-semibold text-ink"
+          >continuous formats leave you measurably more fatigued at the end than interval formats
+          doing comparable work</strong
+        >, which matters if you have planned something demanding immediately afterwards, or if
+        tomorrow is a
+        <a class="link-accent" href="/campaigns">benchmark retest</a>.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Holding is harder than acting</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        There is a real and under-appreciated distinction between two isometric tasks that look
+        identical. <strong class="font-semibold text-ink">Holding</strong> means reacting to an external
+        load — supporting a weight against gravity.
+        <strong class="font-semibold text-ink">Acting</strong> means initiating force against something
+        immovable — pushing or pulling on a fixed resistance.
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        At matched intensity they do not last the same. In a controlled task at 60% of maximal
+        torque, time to failure was significantly shorter for the holding action than for the acting
+        one.<sup>{n.dech2022}</sup>
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        <strong class="font-semibold text-ink">Now the caveats, because they are large.</strong> That
+        was twelve subjects, one joint — the elbow flexors — at a single fixed intensity, in a laboratory.
+        Nobody has tested whether it transfers to a plank hold in minute fourteen of a twenty-minute AMRAP.
+        I am reporting a mechanism that looks relevant, not a finding about AMRAPs.
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        It is worth knowing anyway, because our
+        <a class="link-accent" href="/exercises">movement library</a> is full of holds — plank, hollow,
+        side plank, bottom squat, superman, bear crawl hover. All of them are the holding kind. If the
+        distinction transfers, they will fail sooner under fatigue than their duration suggests.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">What this suggests about picking movements</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        Stated as suggestions, because that is the strength of the evidence.
+      </p>
+      <ul class="space-y-3 text-base leading-[1.7] text-secondary">
+        <li>
+          <strong class="font-semibold text-ink">Put holds early, not late.</strong> A
+          <a class="link-accent" href="/exercises/plank-hold">plank hold</a> that is comfortable in round
+          two may be unholdable in round eight, and a hold you fail out of mid-rep is worse than one you
+          never programmed.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink"
+            >Expect the technical movement to break first.</strong
+          >
+          Velocity falls as the workout runs,<sup>{n.barbaRuiz2024}</sup> and the movements that need
+          precision have the least room to lose.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">
+            If you want to preserve quality, build in the rest.
+          </strong>
+          That is what the interval format did in the jump study.<sup>{n.mateMunoz2017}</sup> An AMRAP
+          is the wrong tool for a session about movement quality — use it for the thing it is good at.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">Do not stack a hard AMRAP before a test.</strong>
+          Jump performance was still down at the end of one.<sup>{n.mateMunoz2017}</sup> That is the measurable
+          case for an
+          <a class="link-accent" href="/campaigns">easy day before a retest</a>.
+        </li>
+      </ul>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">What the research does not show</h2>
+      <ul class="space-y-3 text-base leading-[1.7] text-secondary">
+        <li>
+          <strong class="font-semibold text-ink">A specific velocity-loss figure for AMRAPs.</strong
+          >
+          The comparison above reports directions and rankings, not a percentage you should expect. If
+          you have seen a precise number quoted for AMRAP velocity decay, ask which study it came from.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">
+            That the holding-versus-acting difference applies to bodyweight holds in a workout.
+          </strong>
+          It has been shown in a lab, on one joint.<sup>{n.dech2022}</sup> Everything past that is extrapolation,
+          including mine.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">Anything about long-term adaptation.</strong> These are
+          acute studies — what happens during and immediately after one workout. Whether repeated AMRAP
+          exposure changes fatigue resistance is a different question and these do not answer it.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">Much about women.</strong> Twelve participants with two
+          women;<sup>{n.barbaRuiz2024}</sup> thirty-four subjects described as men.<sup
+            >{n.mateMunoz2017}</sup
+          > Sex differences in fatigability are a real research area and this literature is not where
+          you will find them.
+        </li>
+      </ul>
+    </section>
+
+    <section class="space-y-8">
+      <h2 class="text-display text-2xl text-ink">Related questions</h2>
+      {
+        faqs.map((faq) => (
+          <div class="space-y-3">
+            <h3 class="text-base font-semibold text-ink">{faq.question}</h3>
+            <p class="text-base leading-[1.7] text-secondary">{faq.answer}</p>
+          </div>
+        ))
+      }
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Programme around it</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        Every workout in the library lists its movements up front, so you can see where the holds
+        and the technical work fall before you start the clock rather than discovering it in round
+        eight.
+      </p>
+      <div class="flex flex-wrap gap-3">
+        <a
+          class="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
+          href="/amrap-workouts">Browse AMRAP workouts</a
+        >
+        <a
+          class="rounded-card border border-border bg-surface px-6 py-3.5 font-semibold text-ink"
+          href="/science/pacing">How pacing shows up in the numbers</a
+        >
+      </div>
+    </section>
+
+    <section class="space-y-4 border-t border-border pt-8">
+      <h2 class="text-display text-2xl text-ink">References</h2>
+      <ol class="space-y-4 text-sm leading-[1.6] text-secondary">
+        {
+          refs.map((reference) => (
+            <li id={`ref-${reference.id}`}>
+              {reference.authors} ({reference.year}). {reference.title}. <em>{reference.source}</em>
+              .{' '}
+              <a class="link-accent" href={reference.url} rel="noopener" target="_blank">
+                {reference.url.replace(/^https?:\/\//, '')}
+              </a>
+              <span class="mt-1 block text-muted">{reference.note}</span>
+            </li>
+          ))
+        }
+      </ol>
+      <p class="text-sm leading-[1.6] text-muted">
+        This page is a practitioner's synthesis of published research, not original research and not
+        peer reviewed. Every claim above is sourced; where a study is small, a mechanism is
+        extrapolated, or the evidence does not reach as far as the advice, it says so. It is not
+        medical advice — see <a class="link-accent" href="/terms">our terms</a>.
+      </p>
+    </section>
+  </article>
+</BaseLayout>

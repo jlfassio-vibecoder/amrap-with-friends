@@ -126,7 +126,13 @@ thing generated content never does.
    acidosis is still contested — the 2004 Robergs review and the 2008
    Point:Counterpoint are both cited. Overclaiming here is the standard failure
    mode of "lactic acid myth" articles, and avoiding it is the differentiator.
-4. **`/science/fatigue`** once HIMA/PIMA sources are pulled.
+4. **`/science/fatigue` — shipped.** ~9,100 characters, six cited sources. The
+   artifact's two headline numbers here did not survive: its "~14% velocity
+   loss" has no source in the literature I could find, and its HIMA/PIMA "55% vs
+   82% force retention" traces to a twelve-subject lab task on the elbow flexors
+   at a single torque — nowhere near enough to support the artifact's rule about
+   programming holds. Both are reported as direction and mechanism, with the
+   extrapolation labelled as extrapolation.
 5. **`/science/benchmark-telemetry`** and the sex-differences material **last**,
    and only with citations in hand.
 
