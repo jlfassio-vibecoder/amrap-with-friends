@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AppLink } from '@/components/AppLink';
 import { HudInfoDisclosure } from '@/components/hud/HudInfoDisclosure';
-import { describePviGuidance } from '@/lib/scoring/pviGuidance';
+import { describeWeeklyPviGuidance } from '@/lib/scoring/pviGuidance';
 import { formatWeekCountdown } from '@/lib/hud/formatWeekCountdown';
 import { WEEKLY_BASELINE_MINUTES } from '@/lib/hud/types';
 
@@ -20,7 +20,7 @@ export function WeeklyBaselineBar({
 }: WeeklyBaselineBarProps) {
   const [nowMs, setNowMs] = useState(() => Date.now());
   const fillPercent = Math.min(100, (weekMinutes / baselineMinutes) * 100);
-  const pvi = describePviGuidance(weekPviAverage);
+  const pvi = describeWeeklyPviGuidance(weekPviAverage);
   const countdown = formatWeekCountdown(weekEndsAt, nowMs);
 
   useEffect(() => {
@@ -82,16 +82,21 @@ export function WeeklyBaselineBar({
                 Lower is more even.
               </p>
               <p>
-                Under 10% is <span className="font-semibold text-ink">Elite Pacing</span>, 10–20%{' '}
-                <span className="font-semibold text-ink">Standard</span>, 20–30%{' '}
-                <span className="font-semibold text-ink">Power Leak</span>, over 30%{' '}
-                <span className="font-semibold text-ink">System Failure</span>. The band adjusts
-                each mission&apos;s score, so even pacing is worth points.
+                Rounds are never compared between missions. A two-minute round in a 20-minute AMRAP
+                is measured only against the other rounds of that same mission, and only the
+                resulting percentages are averaged here.
+              </p>
+              <p>
+                Each mission carries its own band — Elite Pacing, Standard, Power Leak, System
+                Failure — which adjusts that mission&apos;s score. Those bands belong to a single
+                mission, so this weekly average deliberately does not wear one: it would announce a
+                failure that might belong to one workout out of six, without saying which.
               </p>
               <p>
                 Except on the shortest missions — five minutes and under — the first round is left
                 out, because everyone&apos;s opening round is fast and counting it would mark honest
-                pacing as a collapse.
+                pacing as a collapse. Short missions therefore read a little higher here, and they
+                have fewer rounds, so one slow round moves them further.
               </p>
               <p>
                 Those four cut-offs are our own coaching judgement, not a published standard. No
@@ -106,9 +111,7 @@ export function WeeklyBaselineBar({
           <p className="text-display text-lg tabular-nums text-ink">
             {weekPviAverage === null ? 'N/A' : `${weekPviAverage}%`}
           </p>
-          <p className="text-xs font-semibold uppercase tracking-wide text-accent">
-            {pvi.classification}
-          </p>
+          <p className="text-xs text-secondary">average of this week&apos;s missions</p>
         </div>
         <div className="text-right">
           <p className="text-xs font-medium uppercase tracking-wide text-muted">Resets in</p>
