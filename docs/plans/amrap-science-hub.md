@@ -111,10 +111,15 @@ thing generated content never does.
 1. **`/science/energy-systems` first.** It is the best-sourced module (Gastin is
    solid, the crossover is confirmed by a recent systematic review) and it feeds
    the highest-volume query the site has: _how long should an AMRAP be_.
-2. **`/science/pacing` second.** It gives our own Pace Variance Index a
-   published-research backbone, which turns an in-house metric into a defensible
-   one. Cite the deception literature accurately — the real finding (10% shifts
-   pacing, ≤5% does not) is more interesting than the invented one.
+2. **`/science/pacing` — shipped.** ~10,700 characters, eight cited sources.
+   It does less for the Pace Variance Index than this plan assumed, and that is
+   the correct outcome: a 2025 network meta-analysis found **no universally
+   superior pacing strategy**, so the page states that the four PVI band
+   thresholds are coaching judgement rather than research, that no published work
+   validates them, and that we will publish our own analysis when there is enough
+   data — including if it shows the thresholds are wrong. Publishing an in-house
+   metric with its limits attached is more defensible than dressing it in
+   borrowed authority.
 3. **`/science/lactate` — shipped.** ~9,700 characters, seven cited sources.
    Note what it does _not_ do: it corrects the "lactic acid burns you" myth,
    which is settled, while stating plainly that the biochemistry of exercise

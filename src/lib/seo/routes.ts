@@ -86,6 +86,13 @@ export const CONTENT_ROUTES: RouteSeo[] = [
     index: true,
   },
   {
+    path: '/science/pacing',
+    title: 'AMRAP Pacing: What the Research Supports',
+    description:
+      'Pacing is regulated against a known endpoint, and an even split is a sound default rather than a proven law. What the evidence supports, and what it does not.',
+    index: true,
+  },
+  {
     path: '/guides',
     title: 'AMRAP Guides — How the Format Actually Works',
     description:
