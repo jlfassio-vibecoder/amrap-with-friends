@@ -13,7 +13,7 @@ const OCCURRENCE_LABEL: Record<string, string> = {
   planned: 'Planned',
   generated: 'Mission open',
   done: 'Done',
-  skipped: 'Skipped',
+  skipped: 'Missed',
 };
 
 const WORKOUT_NAMES = new Map(WORKOUT_TEMPLATES.map((template) => [template.id, template.name]));
@@ -21,6 +21,15 @@ const WORKOUT_NAMES = new Map(WORKOUT_TEMPLATES.map((template) => [template.id, 
 interface CampaignScheduleSectionProps {
   occurrences: CampaignOccurrenceEntry[];
   roleBySequence: Map<number, CampaignOccurrenceRole>;
+  /** Occurrence ids the viewer still owes (any position in the makeup queue). */
+  owedOccurrenceIds: Set<string>;
+  /** Only the queue head may be skipped (matches RPC). */
+  owedHeadOccurrenceId: string | null;
+  makeupBusy: boolean;
+  /** When true, the head owed row already has an open makeup mission. */
+  headHasOpenMakeup?: boolean;
+  onMakeUp: (occurrenceId: string) => void;
+  onSkip: (occurrenceId: string) => void;
   /** Which missions the viewer is allowed to move. */
   canMove: (occurrence: CampaignOccurrenceEntry) => boolean;
   /** Resolves to an error message, or null when the move went through. */
@@ -30,6 +39,12 @@ interface CampaignScheduleSectionProps {
 export function CampaignScheduleSection({
   occurrences,
   roleBySequence,
+  owedOccurrenceIds,
+  owedHeadOccurrenceId,
+  makeupBusy,
+  headHasOpenMakeup = false,
+  onMakeUp,
+  onSkip,
   canMove,
   onMove,
 }: CampaignScheduleSectionProps) {
@@ -69,6 +84,8 @@ export function CampaignScheduleSection({
           <ul className="divide-y divide-divider rounded-card border border-border bg-surface">
             {week.occurrences.map((occurrence) => {
               const editing = editingId === occurrence.occurrenceId;
+              const isOwed = owedOccurrenceIds.has(occurrence.occurrenceId);
+              const isHead = owedHeadOccurrenceId === occurrence.occurrenceId;
               return (
                 <li key={occurrence.occurrenceId} className="space-y-2 px-4 py-3">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -79,7 +96,7 @@ export function CampaignScheduleSection({
                         role={roleBySequence.get(occurrence.sequence) ?? 'build'}
                       />
                     </span>
-                    <span className="flex items-baseline gap-3 text-sm text-secondary">
+                    <span className="flex flex-wrap items-baseline gap-3 text-sm text-secondary">
                       {occurrence.templateId ? (
                         <span>{WORKOUT_NAMES.get(occurrence.templateId) ?? 'Workout'}</span>
                       ) : null}
@@ -93,6 +110,27 @@ export function CampaignScheduleSection({
                           {OCCURRENCE_LABEL[occurrence.status] ?? occurrence.status}
                         </span>
                       )}
+                      {isOwed ? (
+                        <button
+                          type="button"
+                          className="text-xs font-semibold text-accent"
+                          disabled={makeupBusy || !isHead}
+                          title={isHead ? undefined : 'Make up the oldest mission you owe first.'}
+                          onClick={() => onMakeUp(occurrence.occurrenceId)}
+                        >
+                          {isHead && headHasOpenMakeup ? 'Continue makeup' : 'Make this up'}
+                        </button>
+                      ) : null}
+                      {isHead ? (
+                        <button
+                          type="button"
+                          className="text-xs font-semibold text-secondary"
+                          disabled={makeupBusy}
+                          onClick={() => onSkip(occurrence.occurrenceId)}
+                        >
+                          Skip
+                        </button>
+                      ) : null}
                       {canMove(occurrence) && !editing ? (
                         <button
                           type="button"

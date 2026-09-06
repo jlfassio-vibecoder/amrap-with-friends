@@ -2,10 +2,12 @@
  * What an athlete owes on a campaign, derived from the schedule alone.
  *
  * An occurrence is owed when it is done or skipped, falls on or after the day
- * the athlete joined, they have no scored result for it, and they have no
- * campaign_makeups row for it. The next one they may settle is the lowest
- * sequence among those — blocking is not a flag, only the head of this list
- * gets “Make this up”.
+ * the athlete joined, they have no scored result for it, and they have not
+ * forfeited it. A campaign_makeups row alone does not clear debt — starting a
+ * makeup and leaving it in waiting still owes; only a usable score (live or
+ * makeup) or an explicit Skip settles it. The next one they may settle (or
+ * skip) is the lowest sequence among those — only the head of this list gets
+ * “Make this up” / “Skip”.
  */
 
 export type MakeupQueueOccurrence = {
@@ -16,6 +18,10 @@ export type MakeupQueueOccurrence = {
 };
 
 export type MakeupQueueMakeup = {
+  occurrenceId: string;
+};
+
+export type MakeupQueueForfeit = {
   occurrenceId: string;
 };
 
@@ -31,7 +37,13 @@ export type MakeupQueueInput = {
   viewerJoinedLocalDate: string;
   viewerUserId: string;
   scores: MakeupQueueScore[];
+  /**
+   * Viewer's makeup rows. Kept for callers that need resume hints; an
+   * unscored makeup does not remove the occurrence from the owe queue.
+   */
   makeups: MakeupQueueMakeup[];
+  /** Viewer's forfeited occurrence ids (explicit Skip). */
+  forfeits?: MakeupQueueForfeit[];
 };
 
 function hasUsableScore(finalScore: number | null | undefined): boolean {
@@ -42,7 +54,7 @@ function hasUsableScore(finalScore: number | null | undefined): boolean {
  * Owed occurrences oldest-first. Empty when the athlete is caught up.
  */
 export function campaignMakeupQueue(input: MakeupQueueInput): MakeupQueueOccurrence[] {
-  const makeupIds = new Set(input.makeups.map((row) => row.occurrenceId));
+  const forfeitIds = new Set((input.forfeits ?? []).map((row) => row.occurrenceId));
   const scoredIds = new Set(
     input.scores
       .filter((row) => row.userId === input.viewerUserId && hasUsableScore(row.finalScore))
@@ -60,7 +72,7 @@ export function campaignMakeupQueue(input: MakeupQueueInput): MakeupQueueOccurre
       if (scoredIds.has(occurrence.occurrenceId)) {
         return false;
       }
-      if (makeupIds.has(occurrence.occurrenceId)) {
+      if (forfeitIds.has(occurrence.occurrenceId)) {
         return false;
       }
       return true;

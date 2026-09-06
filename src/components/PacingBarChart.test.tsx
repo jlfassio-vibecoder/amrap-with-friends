@@ -37,7 +37,12 @@ describe('PacingBarChart', () => {
     );
 
     // 62, 65 and 71 all count: there are too few rounds on the clock to discard one.
-    expect(container.textContent).toContain('Avg 1:06');
+    const dashed = [...container.querySelectorAll('line')].find(
+      (line) => line.getAttribute('stroke-dasharray') === '4 4'
+    );
+    expect(dashed).toBeDefined();
+    expect(screen.getByText('1:06')).toBeDefined();
+    expect(screen.queryByText(/^Avg \d/)).toBeNull();
     expect(screen.queryByText('Buy-in')).toBeNull();
   });
 });

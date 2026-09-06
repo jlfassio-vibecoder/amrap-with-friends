@@ -132,7 +132,7 @@ function MyMissionCard({
         </div>
       ) : null}
       <div className="flex flex-wrap items-center gap-3">
-        <Link className="link-accent" to={`/mission/${entry.missionId}`}>
+        <Link className="btn-teal" to={`/mission/${entry.missionId}`}>
           View mission
         </Link>
         {entry.scoreBreakdown ? (

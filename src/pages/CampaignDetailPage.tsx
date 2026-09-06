@@ -15,6 +15,7 @@ import {
   leaveCampaign,
   rescheduleCampaignOccurrence,
   startCampaignMakeup,
+  skipCampaignMakeup,
   updateCampaign,
   type CampaignDetail,
   type CampaignStandingRow,
@@ -235,6 +236,25 @@ export default function CampaignDetailPage() {
     navigate(`/mission/${result.data.missionId}`);
   }
 
+  async function handleSkipMakeup(occurrenceId: string) {
+    if (
+      !window.confirm(
+        'Skip this mission? You will not make it up. It still counts in campaign standings, and missing it lowers your attendance. You cannot undo this.'
+      )
+    ) {
+      return;
+    }
+    setMakeupBusy(true);
+    setMakeupError(null);
+    const result = await skipCampaignMakeup(occurrenceId);
+    setMakeupBusy(false);
+    if (result.error) {
+      setMakeupError(result.error.message);
+      return;
+    }
+    setReloadKey((key) => key + 1);
+  }
+
   const progress = campaignProgress(
     detail.occurrences.filter((occurrence) => occurrence.status === 'done').length,
     detail.occurrences.length
@@ -292,9 +312,16 @@ export default function CampaignDetailPage() {
           viewerUserId: user.id,
           scores: standingsScores,
           makeups: detail.makeups,
+          forfeits: detail.forfeits
+            .filter((row) => row.userId === user.id)
+            .map((row) => ({ occurrenceId: row.occurrenceId })),
         })
       : [];
   const owedHead = owedQueue[0] ?? null;
+  const owedOccurrenceIds = new Set(owedQueue.map((row) => row.occurrenceId));
+  const headHasOpenMakeup = Boolean(
+    owedHead && detail.makeups.some((row) => row.occurrenceId === owedHead.occurrenceId)
+  );
   const headRole = owedHead
     ? roleBySequence.get(
         detail.occurrences.find((row) => row.occurrenceId === owedHead.occurrenceId)?.sequence ?? -1
@@ -373,14 +400,24 @@ export default function CampaignDetailPage() {
             {headRole && campaignRoleLabel(headRole) ? ` · ${campaignRoleLabel(headRole)}` : null}
           </p>
           {makeupError ? <p className="text-error text-sm">{makeupError}</p> : null}
-          <button
-            type="button"
-            className="btn-primary"
-            disabled={makeupBusy}
-            onClick={() => void handleMakeUp(owedHead.occurrenceId)}
-          >
-            {makeupBusy ? 'Opening…' : 'Make this up'}
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={makeupBusy}
+              onClick={() => void handleMakeUp(owedHead.occurrenceId)}
+            >
+              {makeupBusy ? 'Opening…' : headHasOpenMakeup ? 'Continue makeup' : 'Make this up'}
+            </button>
+            <button
+              type="button"
+              className="btn-outline"
+              disabled={makeupBusy}
+              onClick={() => void handleSkipMakeup(owedHead.occurrenceId)}
+            >
+              Skip
+            </button>
+          </div>
         </section>
       ) : null}
 
@@ -633,6 +670,12 @@ export default function CampaignDetailPage() {
       <CampaignScheduleSection
         occurrences={detail.occurrences}
         roleBySequence={roleBySequence}
+        owedOccurrenceIds={owedOccurrenceIds}
+        owedHeadOccurrenceId={owedHead?.occurrenceId ?? null}
+        makeupBusy={makeupBusy}
+        headHasOpenMakeup={headHasOpenMakeup}
+        onMakeUp={(occurrenceId) => void handleMakeUp(occurrenceId)}
+        onSkip={(occurrenceId) => void handleSkipMakeup(occurrenceId)}
         canMove={(occurrence) =>
           canRescheduleOccurrence(lifecycle, {
             status: occurrence.status,

@@ -103,25 +103,15 @@ export function PacingBarChart({ roundSplits, durationMinutes, pvi }: PacingBarC
         />
 
         {redlineY !== null ? (
-          <>
-            <line
-              x1={PADDING.left}
-              y1={redlineY}
-              x2={PADDING.left + plotWidth}
-              y2={redlineY}
-              className="stroke-error"
-              strokeWidth="1.5"
-              strokeDasharray="4 4"
-            />
-            <text
-              x={PADDING.left + plotWidth}
-              y={redlineY - 4}
-              textAnchor="end"
-              className="fill-error text-[10px]"
-            >
-              Avg {formatSplitDuration(Math.round(averagePaceSec!))}
-            </text>
-          </>
+          <line
+            x1={PADDING.left}
+            y1={redlineY}
+            x2={PADDING.left + plotWidth}
+            y2={redlineY}
+            className="stroke-error"
+            strokeWidth="1.5"
+            strokeDasharray="4 4"
+          />
         ) : null}
 
         {roundSplits.map((durationSec, index) => {

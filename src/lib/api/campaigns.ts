@@ -62,6 +62,11 @@ export interface CampaignMakeupEntry {
   missionId: string;
 }
 
+export interface CampaignForfeitEntry {
+  occurrenceId: string;
+  userId: string;
+}
+
 export interface CampaignDetail {
   campaignId: string;
   name: string;
@@ -77,6 +82,8 @@ export interface CampaignDetail {
   members: CampaignMemberEntry[];
   /** Viewer's makeup rows for this campaign — feeds the owed queue. */
   makeups: CampaignMakeupEntry[];
+  /** All members' forfeits (explicit Skip) — queue filters to the viewer. */
+  forfeits: CampaignForfeitEntry[];
 }
 
 export interface CreateCampaignInput {
@@ -106,6 +113,8 @@ const ERROR_COPY: Record<string, string> = {
   'Campaign has other athletes':
     'Other athletes have joined, so it cannot be deleted. End it instead — their finished missions stay on their record.',
   'Not next to make up': 'Make up the oldest mission you owe first.',
+  'Already making this up': 'You already started making this mission up.',
+  'Mission skipped': 'You already skipped this mission.',
   'Host mission limit reached':
     'You already have three missions open. Finish one before starting a makeup.',
   'Name the campaign in 80 characters or fewer': 'Name the campaign in 80 characters or fewer.',
@@ -225,6 +234,16 @@ function parseMakeup(raw: unknown): CampaignMakeupEntry | null {
   return { occurrenceId, missionId };
 }
 
+function parseForfeit(raw: unknown): CampaignForfeitEntry | null {
+  const row = readRecord(raw);
+  const occurrenceId = readString(row.occurrence_id);
+  const userId = readString(row.user_id);
+  if (!occurrenceId || !userId) {
+    return null;
+  }
+  return { occurrenceId, userId };
+}
+
 /**
  * The client builds the calendar (see `@/lib/campaign`) and sends it whole.
  * The workout library lives here, not in Postgres, so each occurrence carries
@@ -320,6 +339,7 @@ export async function fetchCampaignDetail(
   const occurrences = Array.isArray(root.occurrences) ? root.occurrences : [];
   const members = Array.isArray(root.members) ? root.members : [];
   const makeups = Array.isArray(root.makeups) ? root.makeups : [];
+  const forfeits = Array.isArray(root.forfeits) ? root.forfeits : [];
 
   return {
     data: {
@@ -342,6 +362,9 @@ export async function fetchCampaignDetail(
       makeups: makeups
         .map(parseMakeup)
         .filter((entry): entry is CampaignMakeupEntry => entry !== null),
+      forfeits: forfeits
+        .map(parseForfeit)
+        .filter((entry): entry is CampaignForfeitEntry => entry !== null),
     },
     error: null,
   };
@@ -614,6 +637,22 @@ export async function startCampaignMakeup(
   }
 
   return { data: { missionId }, error: null };
+}
+
+/**
+ * Permanently forfeits makeup for the oldest owed occurrence. Standings still
+ * count the miss against attendance; the athlete cannot undo this.
+ */
+export async function skipCampaignMakeup(
+  occurrenceId: string
+): Promise<{ error: CampaignApiError | null }> {
+  const { error } = await callRpc('skip_campaign_makeup', {
+    p_occurrence_id: occurrenceId,
+  });
+  if (error) {
+    return { error: { message: mapError(error.message) } };
+  }
+  return { error: null };
 }
 
 export type { CampaignStandingRow, CampaignStandingsMember, CampaignStandingsScore };
