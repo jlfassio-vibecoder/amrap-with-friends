@@ -2,6 +2,12 @@ export interface OvertrainingInput {
   acuteLoad7d: number;
   chronicWeeklyLoad28d: number;
   consecutiveHighIntensityDays: number;
+  /** Minutes trained in the last 7 days. */
+  acuteMinutes7d?: number;
+  /** The athlete's typical week in minutes, over the observed window. */
+  chronicWeeklyMinutes28d?: number;
+  /** Days of history the account could have, capped at 28. */
+  observedDays?: number;
 }
 
 export type OvertrainingRiskLevel = 'normal' | 'building' | 'elevated' | 'high';
@@ -23,7 +29,14 @@ export interface OvertrainingResult {
   acwr: number | null;
   riskLevel: OvertrainingRiskLevel;
   guidance: OvertrainingGuidance[];
+  /** True while the baseline is still forming — the first four weeks. */
+  isLearningBaseline: boolean;
+  /** Days of history behind the numbers, out of the 28 the window wants. */
+  observedDays: number;
 }
+
+/** The window the chronic baseline is measured over. */
+export const BASELINE_WINDOW_DAYS = 28;
 
 const ACWR_ELEVATED_THRESHOLD = 1.5;
 const ACWR_HIGH_THRESHOLD = 2.0;
@@ -66,19 +79,27 @@ function buildingGuidance(): OvertrainingGuidance {
   };
 }
 
-function elevatedGuidance(acwr: number): OvertrainingGuidance {
+function elevatedGuidance(acwr: number, isLearningBaseline: boolean): OvertrainingGuidance {
   return {
     headline: 'You are adding load faster than your body has adapted to.',
-    because: `Your acute-to-chronic load ratio is ${acwr.toFixed(2)}. Past 1.5 means the last 7 days carried more than 60% of the load of the three weeks before them combined.`,
+    because: `This week came in at ${acwr.toFixed(1)}× your typical week, counting intensity as well as minutes.${
+      isLearningBaseline
+        ? ''
+        : ' Past 1.5× means the last 7 days carried more than 60% of the load of the three weeks before them combined.'
+    }`,
     doThis:
       'Make your next mission Active Recovery or Foundational (intensity 1–2), any duration. Keep the frequency, drop the effort — that lets your baseline catch up instead of stalling it.',
   };
 }
 
-function highGuidance(acwr: number): OvertrainingGuidance {
+function highGuidance(acwr: number, isLearningBaseline: boolean): OvertrainingGuidance {
   return {
     headline: 'You jumped your training load hard this week.',
-    because: `Your acute-to-chronic load ratio is ${acwr.toFixed(2)}. Past 2.0 means the last 7 days carried more load than the entire three weeks before them.`,
+    because: `This week came in at ${acwr.toFixed(1)}× your typical week, counting intensity as well as minutes.${
+      isLearningBaseline
+        ? ''
+        : ' Past 2× means the last 7 days carried more load than the entire three weeks before them.'
+    }`,
     doThis:
       'Make your next two missions Active Recovery (intensity 1), any duration. Do not stop training — a week off lowers the baseline that triggered this and makes the next jump sharper. Move easy and let the ratio settle.',
   };
@@ -94,7 +115,22 @@ function consecutiveDaysGuidance(days: number): OvertrainingGuidance {
   };
 }
 
+function learningGuidance(observedDays: number): OvertrainingGuidance {
+  const weeks = Math.max(1, Math.round(observedDays / 7));
+  return {
+    headline: `Still learning what a normal week looks like for you.`,
+    because: `These numbers are built from ${observedDays} day${observedDays === 1 ? '' : 's'} of history, not the full four weeks. Until about ${BASELINE_WINDOW_DAYS} days in, one hard week moves your average enough that the comparison swings on its own.`,
+    doThis: `Train the way you intend to keep training. ${weeks === 1 ? 'Another three weeks' : `Another ${5 - weeks} week${5 - weeks === 1 ? '' : 's'}`} of that and this starts telling you something you can act on.`,
+  };
+}
+
 export function evaluateOvertrainingRisk(input: OvertrainingInput): OvertrainingResult {
+  // A zero or missing value means the payload predates the observed-window
+  // migration, not that the athlete has no history — defaulting the other way
+  // would mark every existing account as still learning.
+  const observedDays =
+    input.observedDays && input.observedDays > 0 ? input.observedDays : BASELINE_WINDOW_DAYS;
+  const isLearningBaseline = observedDays < BASELINE_WINDOW_DAYS;
   // chronicWeeklyLoad28d is a 4-week average that already includes the
   // trailing 7 days, so on its own it can't tell a real baseline apart
   // from "all of this athlete's history is this week." Require some load
@@ -123,10 +159,10 @@ export function evaluateOvertrainingRisk(input: OvertrainingInput): Overtraining
       guidance.push(buildingGuidance());
     } else if (acwr > ACWR_HIGH_THRESHOLD) {
       acwrRisk = 'high';
-      guidance.push(highGuidance(acwr));
+      guidance.push(highGuidance(acwr, isLearningBaseline));
     } else {
       acwrRisk = 'elevated';
-      guidance.push(elevatedGuidance(acwr));
+      guidance.push(elevatedGuidance(acwr, isLearningBaseline));
     }
   }
 
@@ -137,10 +173,23 @@ export function evaluateOvertrainingRisk(input: OvertrainingInput): Overtraining
 
   let riskLevel: OvertrainingRiskLevel = acwrRisk;
   // Consecutive hard days stand on their own — they are a recovery signal, not a
-  // volume one, so they escalate a quiet week but never soften a loud one.
+  // volume one, so they escalate a quiet week but never soften a loud one. It
+  // needs no baseline, so it is the one signal that survives the ramp window
+  // intact.
   if (restDayTriggered && (riskLevel === 'normal' || riskLevel === 'building')) {
     riskLevel = 'elevated';
   }
 
-  return { acwr, riskLevel, guidance };
+  // The first four weeks. A ratio measured over nine days swings on a single
+  // session, so it is never allowed to reach 'high' — under-warning here is the
+  // safe direction, because the cost of a missed warning is one hard week and
+  // the cost of a false one is an athlete who stops trusting the card.
+  if (isLearningBaseline) {
+    if (riskLevel === 'high') {
+      riskLevel = 'elevated';
+    }
+    guidance.push(learningGuidance(observedDays));
+  }
+
+  return { acwr, riskLevel, guidance, isLearningBaseline, observedDays };
 }

@@ -39,6 +39,9 @@ const overtraining = {
   acuteLoad7d: 60,
   chronicWeeklyLoad28d: 60,
   consecutiveHighIntensityDays: 0,
+  acuteMinutes7d: 30,
+  chronicWeeklyMinutes28d: 30,
+  observedDays: 28,
 };
 
 const activity7d = {
@@ -107,7 +110,17 @@ describe('parseHudTelemetryPayload', () => {
       domainMinutes30d: { 5: 0, 10: 0, 15: 0, 20: 0, other: 0 },
       classification: emptyClassification,
       activity7d: emptyActivity7d,
-      overtraining: { acuteLoad7d: 0, chronicWeeklyLoad28d: 0, consecutiveHighIntensityDays: 0 },
+      // No minutes or window in the payload: a client running ahead of the
+      // migration degrades to the old load-only numbers and a settled baseline
+      // rather than dropping the whole telemetry read.
+      overtraining: {
+        acuteLoad7d: 0,
+        chronicWeeklyLoad28d: 0,
+        consecutiveHighIntensityDays: 0,
+        acuteMinutes7d: 0,
+        chronicWeeklyMinutes28d: 0,
+        observedDays: 28,
+      },
     });
   });
 

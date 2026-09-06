@@ -139,7 +139,16 @@ function readOvertraining(value: unknown): HudOvertraining | null {
     return null;
   }
 
-  return { acuteLoad7d, chronicWeeklyLoad28d, consecutiveHighIntensityDays };
+  // Tolerated as missing so a client running ahead of the migration degrades to
+  // the old load-only card rather than dropping the whole telemetry payload.
+  return {
+    acuteLoad7d,
+    chronicWeeklyLoad28d,
+    consecutiveHighIntensityDays,
+    acuteMinutes7d: readNonNegativeNumber(row.acuteMinutes7d) ?? 0,
+    chronicWeeklyMinutes28d: readNonNegativeNumber(row.chronicWeeklyMinutes28d) ?? 0,
+    observedDays: readNonNegativeInt(row.observedDays) ?? 28,
+  };
 }
 
 function readActivity7d(value: unknown): HudActivity7d | null {
