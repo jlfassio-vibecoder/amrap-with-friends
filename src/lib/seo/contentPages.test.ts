@@ -3,6 +3,7 @@ import { EXERCISE_LIBRARY } from '@/data/exerciseLibrary';
 import { WORKOUT_TEMPLATES, TIME_DOMAINS, WORKOUT_CATEGORIES } from '@/data/workoutTemplates';
 import {
   FEATURED_WORKOUT_LIMIT,
+  PINNED_WORKOUT_IDS,
   exercisePages,
   featuredWorkouts,
   generatedContentPages,
@@ -64,8 +65,15 @@ describe('workoutsUsingMovement', () => {
 describe('featuredWorkouts', () => {
   const featured = featuredWorkouts();
 
-  it('publishes exactly the limit', () => {
-    expect(featured).toHaveLength(FEATURED_WORKOUT_LIMIT);
+  it('publishes at least the round-robin limit', () => {
+    expect(featured.length).toBeGreaterThanOrEqual(FEATURED_WORKOUT_LIMIT);
+  });
+
+  it('always includes every pinned workout', () => {
+    const ids = new Set(featured.map((template) => template.id));
+    for (const id of PINNED_WORKOUT_IDS) {
+      expect(ids.has(id), id).toBe(true);
+    }
   });
 
   it('covers every time domain rather than stacking one', () => {
