@@ -28,6 +28,10 @@ describe('PacingBarChart', () => {
       <PacingBarChart roundSplits={[62, 65, 71]} durationMinutes={9} pvi={6.2} />
     );
 
-    expect(container.textContent).toContain('Avg 1:06');
+    const dashed = [...container.querySelectorAll('line')].find(
+      (line) => line.getAttribute('stroke-dasharray') === '4 4'
+    );
+    expect(dashed).toBeDefined();
+    expect(screen.queryByText(/^Avg \d/)).toBeNull();
   });
 });
