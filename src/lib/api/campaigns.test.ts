@@ -10,6 +10,7 @@ import {
   joinCampaign,
   leaveCampaign,
   startCampaignMakeup,
+  skipCampaignMakeup,
 } from './campaigns';
 import type { PlannedCampaignOccurrence } from '@/lib/campaign';
 
@@ -285,6 +286,22 @@ describe('fetchCampaignDetail', () => {
     expect(result.data?.occurrences[0].occurrenceId).toBe('o1');
     expect(result.data?.members[0].nickname).toBe('Maya');
     expect(result.data?.makeups).toEqual([]);
+    expect(result.data?.forfeits).toEqual([]);
+  });
+
+  it('parses forfeits from campaign_detail', async () => {
+    rpcMock.mockResolvedValue({
+      data: {
+        campaign: { campaign_id: 'c1', name: 'C' },
+        occurrences: [],
+        members: [],
+        makeups: [],
+        forfeits: [{ occurrence_id: 'o1', user_id: 'u1' }],
+      },
+      error: null,
+    } as never);
+    const result = await fetchCampaignDetail('c1');
+    expect(result.data?.forfeits).toEqual([{ occurrenceId: 'o1', userId: 'u1' }]);
   });
 
   it('trims the Postgres time to HH:MM for display', async () => {
@@ -550,6 +567,36 @@ describe('startCampaignMakeup', () => {
       error: { message: 'Not next to make up' },
     } as never);
     expect((await startCampaignMakeup('o2')).error?.message).toBe(
+      'Make up the oldest mission you owe first.'
+    );
+  });
+
+  it('maps Mission skipped when a forfeit already exists', async () => {
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: { message: 'Mission skipped' },
+    } as never);
+    expect((await startCampaignMakeup('o1')).error?.message).toBe(
+      'You already skipped this mission.'
+    );
+  });
+});
+
+describe('skipCampaignMakeup', () => {
+  it('calls skip_campaign_makeup', async () => {
+    rpcMock.mockResolvedValue({ data: { ok: true }, error: null } as never);
+    expect((await skipCampaignMakeup('o1')).error).toBeNull();
+    expect(rpcMock).toHaveBeenCalledWith('skip_campaign_makeup', {
+      p_occurrence_id: 'o1',
+    });
+  });
+
+  it('maps Not next to make up', async () => {
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: { message: 'Not next to make up' },
+    } as never);
+    expect((await skipCampaignMakeup('o2')).error?.message).toBe(
       'Make up the oldest mission you owe first.'
     );
   });

@@ -12,6 +12,7 @@ const deleteMock = vi.fn();
 const updateMock = vi.fn();
 const rescheduleMock = vi.fn();
 const startMakeupMock = vi.fn();
+const skipMakeupMock = vi.fn();
 const navigateMock = vi.fn();
 
 vi.mock('@/lib/api/campaigns', () => ({
@@ -23,6 +24,7 @@ vi.mock('@/lib/api/campaigns', () => ({
   updateCampaign: (...args: unknown[]) => updateMock(...args),
   rescheduleCampaignOccurrence: (...args: unknown[]) => rescheduleMock(...args),
   startCampaignMakeup: (...args: unknown[]) => startMakeupMock(...args),
+  skipCampaignMakeup: (...args: unknown[]) => skipMakeupMock(...args),
 }));
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
@@ -72,6 +74,7 @@ function detail(overrides = {}) {
     viewerRole: 'host',
     inviteCode: 'ABC123',
     makeups: [],
+    forfeits: [],
     occurrences: [
       occurrence(1, 1, { status: 'done' }),
       occurrence(2, 1),
@@ -108,6 +111,7 @@ beforeEach(() => {
   updateMock.mockReset();
   rescheduleMock.mockReset();
   startMakeupMock.mockReset();
+  skipMakeupMock.mockReset();
   navigateMock.mockReset();
   fetchDetailMock.mockResolvedValue({ data: detail(), error: null });
   fetchStandingsMock.mockResolvedValue({
@@ -120,6 +124,7 @@ beforeEach(() => {
   updateMock.mockResolvedValue({ error: null });
   rescheduleMock.mockResolvedValue({ error: null });
   startMakeupMock.mockResolvedValue({ data: { missionId: 'makeup-sess' }, error: null });
+  skipMakeupMock.mockResolvedValue({ error: null });
   Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
 });
 
@@ -771,7 +776,9 @@ describe('CampaignDetailPage', () => {
 
       await waitFor(() => expect(screen.getByText('You owe 2 missions')).toBeTruthy());
       expect(screen.getByText(/Next up: Mon 5 Oct/)).toBeTruthy();
-      expect(screen.getByRole('button', { name: 'Make this up' })).toBeTruthy();
+      expect(screen.getAllByRole('button', { name: 'Make this up' }).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole('button', { name: 'Skip' }).length).toBeGreaterThan(0);
+      expect(screen.getByText('Missed')).toBeTruthy();
     });
 
     it('navigates to the makeup mission when Make this up succeeds', async () => {
@@ -793,14 +800,65 @@ describe('CampaignDetailPage', () => {
 
       renderPage();
       await waitFor(() =>
-        expect(screen.getByRole('button', { name: 'Make this up' })).toBeTruthy()
+        expect(screen.getAllByRole('button', { name: 'Make this up' }).length).toBeGreaterThan(0)
       );
-      fireEvent.click(screen.getByRole('button', { name: 'Make this up' }));
+      fireEvent.click(screen.getAllByRole('button', { name: 'Make this up' })[0]!);
 
       await waitFor(() => {
         expect(startMakeupMock).toHaveBeenCalledWith('o1');
         expect(navigateMock).toHaveBeenCalledWith('/mission/makeup-sess');
       });
+    });
+
+    it('skips makeup after confirm and reloads', async () => {
+      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+      fetchDetailMock.mockResolvedValue({
+        data: detail({
+          members: [
+            {
+              userId: 'user-1',
+              role: 'host',
+              nickname: 'Maya',
+              joinedAt: '2026-09-01T00:00:00Z',
+            },
+          ],
+          occurrences: [occurrence(1, 1, { status: 'skipped', localDate: '2026-10-05' })],
+        }),
+        error: null,
+      });
+
+      renderPage();
+      await waitFor(() => expect(screen.getByText('You owe 1 mission')).toBeTruthy());
+      fireEvent.click(screen.getAllByRole('button', { name: 'Skip' })[0]!);
+
+      await waitFor(() => {
+        expect(confirmSpy).toHaveBeenCalled();
+        expect(skipMakeupMock).toHaveBeenCalledWith('o1');
+        expect(fetchDetailMock).toHaveBeenCalledTimes(2);
+      });
+      confirmSpy.mockRestore();
+    });
+
+    it('shows Continue makeup when an unscored makeup is already open', async () => {
+      fetchDetailMock.mockResolvedValue({
+        data: detail({
+          members: [
+            {
+              userId: 'user-1',
+              role: 'host',
+              nickname: 'Maya',
+              joinedAt: '2026-09-01T00:00:00Z',
+            },
+          ],
+          makeups: [{ occurrenceId: 'o1', missionId: 'makeup-waiting' }],
+          occurrences: [occurrence(1, 1, { status: 'skipped', localDate: '2026-10-05' })],
+        }),
+        error: null,
+      });
+
+      renderPage();
+      await waitFor(() => expect(screen.getByText('You owe 1 mission')).toBeTruthy());
+      expect(screen.getAllByRole('button', { name: 'Continue makeup' }).length).toBeGreaterThan(0);
     });
 
     it('hides the owe card when the campaign is closed', async () => {
@@ -824,6 +882,31 @@ describe('CampaignDetailPage', () => {
       await waitFor(() => expect(screen.getByText('Ended early')).toBeTruthy());
       expect(screen.queryByText(/You owe/)).toBeNull();
       expect(screen.queryByRole('button', { name: 'Make this up' })).toBeNull();
+    });
+
+    it('drops a forfeited occurrence from the owe queue', async () => {
+      fetchDetailMock.mockResolvedValue({
+        data: detail({
+          members: [
+            {
+              userId: 'user-1',
+              role: 'host',
+              nickname: 'Maya',
+              joinedAt: '2026-09-01T00:00:00Z',
+            },
+          ],
+          forfeits: [{ occurrenceId: 'o1', userId: 'user-1' }],
+          occurrences: [
+            occurrence(1, 1, { status: 'skipped', localDate: '2026-10-05' }),
+            occurrence(2, 1, { status: 'done', localDate: '2026-10-07' }),
+          ],
+        }),
+        error: null,
+      });
+
+      renderPage();
+      await waitFor(() => expect(screen.getByText('You owe 1 mission')).toBeTruthy());
+      expect(screen.getByText(/Next up: Wed 7 Oct/)).toBeTruthy();
     });
   });
 });

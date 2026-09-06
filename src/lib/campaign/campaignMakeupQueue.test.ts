@@ -77,10 +77,29 @@ describe('campaignMakeupQueue', () => {
     expect(owed.map((row) => row.occurrenceId)).toEqual(['o2', 'o4']);
   });
 
-  it('clears debt when a makeup row already exists', () => {
+  it('keeps debt when a makeup was started but not scored yet', () => {
     const owed = campaignMakeupQueue(
       input({
         makeups: [{ occurrenceId: 'o1' }],
+      })
+    );
+    expect(owed.map((row) => row.occurrenceId)).toEqual(['o1', 'o2', 'o4']);
+  });
+
+  it('clears debt when a makeup score exists even if the makeup row is listed', () => {
+    const owed = campaignMakeupQueue(
+      input({
+        makeups: [{ occurrenceId: 'o1' }],
+        scores: [{ occurrenceId: 'o1', userId: 'u1', finalScore: 42 }],
+      })
+    );
+    expect(owed.map((row) => row.occurrenceId)).toEqual(['o2', 'o4']);
+  });
+
+  it('clears debt when the athlete forfeited the occurrence', () => {
+    const owed = campaignMakeupQueue(
+      input({
+        forfeits: [{ occurrenceId: 'o1' }],
       })
     );
     expect(owed.map((row) => row.occurrenceId)).toEqual(['o2', 'o4']);
@@ -100,7 +119,14 @@ describe('campaignMakeupQueue', () => {
     ).toEqual([]);
     expect(
       campaignMakeupQueueHead(
-        input({ makeups: [{ occurrenceId: 'o1' }, { occurrenceId: 'o2' }, { occurrenceId: 'o4' }] })
+        input({
+          scores: [
+            { occurrenceId: 'o1', userId: 'u1', finalScore: 10 },
+            { occurrenceId: 'o2', userId: 'u1', finalScore: 10 },
+            { occurrenceId: 'o4', userId: 'u1', finalScore: 10 },
+          ],
+          makeups: [{ occurrenceId: 'o1' }, { occurrenceId: 'o2' }, { occurrenceId: 'o4' }],
+        })
       )
     ).toBeNull();
   });
