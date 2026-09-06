@@ -286,6 +286,19 @@ describe('the first four weeks', () => {
     expect(learning.doThis).toMatch(/train the way you intend/i);
   });
 
+  it('counts remaining baseline time from days left, not rounded weeks observed', () => {
+    // 22 days used to round to "3 weeks observed → another 2 weeks" while only
+    // ~6 days remain before the window is full.
+    const result = evaluateOvertrainingRisk({
+      ...settled,
+      consecutiveHighIntensityDays: 0,
+      observedDays: 22,
+    });
+    const learning = result.guidance.at(-1)!;
+    expect(learning.doThis).toMatch(/another 6 days/i);
+    expect(learning.doThis).not.toMatch(/another \d+ weeks/i);
+  });
+
   it('still flags consecutive hard days, which need no baseline', () => {
     const result = evaluateOvertrainingRisk({
       acuteLoad7d: SETTLED,

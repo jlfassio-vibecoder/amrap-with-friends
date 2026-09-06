@@ -116,11 +116,18 @@ function consecutiveDaysGuidance(days: number): OvertrainingGuidance {
 }
 
 function learningGuidance(observedDays: number): OvertrainingGuidance {
-  const weeks = Math.max(1, Math.round(observedDays / 7));
+  const remainingDays = Math.max(1, BASELINE_WINDOW_DAYS - observedDays);
+  let remainingCopy: string;
+  if (remainingDays < 7) {
+    remainingCopy = `Another ${remainingDays} day${remainingDays === 1 ? '' : 's'}`;
+  } else {
+    const remainingWeeks = Math.ceil(remainingDays / 7);
+    remainingCopy = `Another ${remainingWeeks} week${remainingWeeks === 1 ? '' : 's'}`;
+  }
   return {
     headline: `Still learning what a normal week looks like for you.`,
     because: `These numbers are built from ${observedDays} day${observedDays === 1 ? '' : 's'} of history, not the full four weeks. Until about ${BASELINE_WINDOW_DAYS} days in, one hard week moves your average enough that the comparison swings on its own.`,
-    doThis: `Train the way you intend to keep training. ${weeks === 1 ? 'Another three weeks' : `Another ${5 - weeks} week${5 - weeks === 1 ? '' : 's'}`} of that and this starts telling you something you can act on.`,
+    doThis: `Train the way you intend to keep training. ${remainingCopy} of that and this starts telling you something you can act on.`,
   };
 }
 

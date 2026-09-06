@@ -45,7 +45,7 @@ export function DailyTelemetry({ lastLockedAt }: DailyTelemetryProps) {
   return (
     <section className="card space-y-3 p-4" aria-label="Daily telemetry">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-2">
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <p className="text-xs font-medium uppercase tracking-wide text-muted">
             Time since last mission
           </p>

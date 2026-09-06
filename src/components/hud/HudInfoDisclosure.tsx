@@ -32,7 +32,7 @@ export function HudInfoDisclosure({ label, children }: HudInfoDisclosureProps) {
       {open ? (
         <div
           id={panelId}
-          className="col-span-full space-y-2 rounded-card border border-border bg-surface p-3 text-xs leading-relaxed text-secondary"
+          className="mt-2 w-full basis-full space-y-2 rounded-card border border-border bg-surface p-3 text-xs leading-relaxed text-secondary"
         >
           {children}
         </div>

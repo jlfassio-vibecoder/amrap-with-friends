@@ -85,7 +85,7 @@ export function WeeklyBaselineBar({
 
       <div className="flex flex-wrap items-baseline justify-between gap-3 border-t border-divider pt-3">
         <div className="space-y-1">
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             <p className="text-xs font-medium uppercase tracking-wide text-muted">
               Week pacing spread
             </p>
