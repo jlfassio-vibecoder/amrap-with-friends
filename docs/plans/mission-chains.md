@@ -1,7 +1,7 @@
 # Plan: mission chains built before the first Start
 
 **Branch:** `feature/mission-chains`
-**Status:** Approved — Phase 1 shipped
+**Status:** Approved — Phases 1 and 2 shipped
 **Last updated:** 2026-09-06
 **Depends on:** `feature/expanded-time-caps` (chain items carry a cap, not just a domain)
 
@@ -259,13 +259,28 @@ likely to be argued with, so it lands alone and reviewable.
 Also carries `chainAdvisories`, which flags a Long mission that is not last —
 approved as an advisory the builder surfaces, not a rule that refuses the chain.
 
-### Phase 2 — Schema and RPCs
+### Phase 2 — Schema and RPCs — **done**
 
-`mission_chain_items`, `set_mission_chain`, `start_next_chained_mission`. Arming
-the countdown at creation is the whole trick; verify it against the existing
-`isPlausibleRallyPointCountdownEndsAt` guard, which deliberately rejects a
-far-future `ends_at` — a 360-second rest is well inside its window, but the test
-should say so rather than assume it.
+`mission_chain_items`, `set_mission_chain`, `get_mission_chain` (added — the
+table is revoked, so the builder needs a way in) and `start_next_chained_mission`.
+
+`start_next_chained_mission` **wraps** `start_next_rally_point_mission` rather
+than reimplementing it, so the host check, the active-mission limit and the
+participant seeding stay in one place. The nested call runs in the same
+transaction and sees the same `auth.uid()`.
+
+The rest table now exists twice — `chainRest.ts` for the builder's preview, and
+`chain_rest_seconds` in SQL because that is what arms the countdown inside the
+transaction. That is the duplication this codebase has already paid for once, so
+`chainRest.contract.test.ts` parses the numbers out of the migration and runs
+both implementations over every cap and tier the product can produce. Editing
+either side alone fails CI with the exact input that diverged; verified in both
+directions. It also pins `MAX_CHAIN_LENGTH` against the table's `CHECK` and the
+RPC's own guard.
+
+The armed rest is asserted against `isPlausibleRallyPointCountdownEndsAt` for
+every legal rest, so a chained countdown cannot be silently discarded as a stray
+far-future value.
 
 ### Phase 3 — The builder in Create
 
