@@ -1,3 +1,6 @@
+import { useState } from 'react';
+import { SmartRecoveryInfoModal } from '@/components/createMission/SmartRecoveryInfoModal';
+
 interface SmartRecoveryToggleProps {
   enabled: boolean;
   onChange: (enabled: boolean) => void;
@@ -6,9 +9,6 @@ interface SmartRecoveryToggleProps {
   error?: string | null;
 }
 
-const RULES_TOOLTIP =
-  'Locks recently completed workouts (6 days), high-intensity missions (72 hours), and overlapping movement patterns (48 hours).';
-
 export function SmartRecoveryToggle({
   enabled,
   onChange,
@@ -16,6 +16,8 @@ export function SmartRecoveryToggle({
   loading = false,
   error = null,
 }: SmartRecoveryToggleProps) {
+  const [infoOpen, setInfoOpen] = useState(false);
+
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-3">
@@ -46,7 +48,7 @@ export function SmartRecoveryToggle({
           type="button"
           className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[10px] font-bold leading-none text-on-accent"
           aria-label="How Smart Recovery works"
-          title={RULES_TOOLTIP}
+          onClick={() => setInfoOpen(true)}
         >
           ?
         </button>
@@ -56,6 +58,7 @@ export function SmartRecoveryToggle({
         <p className="text-xs text-secondary">Sign in to enable Smart Recovery</p>
       ) : null}
       {error ? <p className="text-error text-xs">{error}</p> : null}
+      {infoOpen ? <SmartRecoveryInfoModal onClose={() => setInfoOpen(false)} /> : null}
     </div>
   );
 }
