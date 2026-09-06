@@ -1,0 +1,308 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { breadcrumbList, faqPage, referenceArticle } from '@/lib/seo/structuredData';
+import { referencesFor } from '@/lib/seo/scienceReferences';
+import { SITE_AUTHOR } from '@/lib/seo/author';
+
+const PATH = '/science/lactate';
+const PUBLISHED = '2026-09-05';
+const CHECKED = '2026-09-05';
+
+const refs = referencesFor([
+  'brooks2018',
+  'robergs2004',
+  'pointCounterpoint2008',
+  'schwane1983',
+  'tibana2018',
+  'rios2024',
+  'kliszczewicz2014',
+]);
+const n = Object.fromEntries(refs.map((reference, index) => [reference.id, index + 1]));
+
+const faqs = [
+  {
+    question: 'Does lactic acid cause muscle burn?',
+    answer:
+      'No. Lactate is a fuel your body produces continuously, including at rest and in the presence of plenty of oxygen. The burning sensation during hard work is associated with acidity and other metabolic byproducts, and the exact biochemistry is still argued over — but lactate is not the culprit.',
+  },
+  {
+    question: 'Does lactic acid cause soreness two days later?',
+    answer:
+      'No, and this has been settled since 1983. In one experiment, level running raised blood lactate but produced no soreness, while downhill running produced significant soreness without raising lactate at all. Delayed soreness comes from mechanical damage and inflammation, not lactate.',
+  },
+  {
+    question: 'Should you try to flush lactate out after a workout?',
+    answer:
+      'There is nothing to flush. Lactate clears on its own within roughly an hour, and while it is present your body is using it as fuel. A cool-down is worth doing for other reasons; removing a harmful substance is not one of them.',
+  },
+];
+
+const jsonLd = [
+  referenceArticle({
+    title: 'Lactate Is Not What Makes an AMRAP Hurt',
+    description:
+      'What published research shows about lactate in high-intensity training, and where the biochemistry is still contested.',
+    path: PATH,
+    datePublished: PUBLISHED,
+    dateModified: CHECKED,
+    citations: refs.map((reference) => ({ title: reference.title, url: reference.url })),
+    about: ['Lactate', 'Lactate shuttle', 'Metabolic acidosis', 'Exercise physiology'],
+  }),
+  faqPage(faqs),
+  breadcrumbList([
+    { name: 'Home', path: '/' },
+    { name: 'Science', path: '/science' },
+    { name: 'Lactate', path: PATH },
+  ]),
+];
+---
+
+<BaseLayout jsonLd={jsonLd}>
+  <article class="mx-auto w-full max-w-[44rem] space-y-12 px-6 py-12 lg:px-10 lg:py-16">
+    <nav aria-label="Breadcrumb" class="text-xs text-muted">
+      <a class="link-accent" href="/science">Science</a> / Lactate
+    </nav>
+
+    <header class="space-y-5">
+      <p class="eyebrow text-accent">Sourced review</p>
+      <h1 class="text-display text-[clamp(2.25rem,6vw,3.5rem)] leading-[0.95] text-ink">
+        Lactate is not what makes an AMRAP hurt
+      </h1>
+      <p class="border-l-2 border-accent pl-5 text-lg leading-[1.6] text-ink">
+        Lactate is a fuel, not a waste product. Your body makes it continuously, including at rest
+        and with plenty of oxygen available, and then burns it. It does not cause the burn during a
+        workout and it definitely does not cause the soreness two days later — that was ruled out in
+        1983 and the idea has outlived its evidence by four decades.
+      </p>
+      <p class="text-sm text-muted">
+        By <a class="link-accent" href={SITE_AUTHOR.path} rel="author">{SITE_AUTHOR.name}</a> · Sources
+        last checked <time datetime={CHECKED}>5 September 2026</time>
+      </p>
+    </header>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Lactate is fuel</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        The single most useful correction: lactate forms continuously under aerobic conditions, not
+        only when you run out of oxygen. It is shuttled between the cells that produce it and the
+        cells that consume it, where it serves as a major energy source, as the main precursor for
+        making new glucose, and as a signalling molecule.<sup>{n.brooks2018}</sup>
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        So when your blood lactate is high at the end of a hard AMRAP, that is not a measure of
+        damage or of a system failing. It is a measure of how much fuel is in transit. Your muscles,
+        heart and brain are consuming it while it is there.
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        The old story — anaerobic effort produces lactic acid, lactic acid is waste, waste makes you
+        hurt — is tidy, memorable, and wrong in every clause. It has survived because it explains a
+        real sensation, and because nothing equally memorable replaced it.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">
+        So what does cause the burn? Here the science is still arguing
+      </h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        This is where most articles on this subject overstate their case, so it is worth being
+        careful. The burning sensation in hard work is associated with acidity — a fall in muscle pH
+        — plus other metabolic byproducts and the nerve endings that respond to them. What is
+        genuinely contested is the biochemistry of where those hydrogen ions come from.
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        An influential 2004 review argued there is no biochemical support for lactate production
+        causing acidosis, and that lactate production actually consumes a hydrogen ion, with the
+        protons coming from elsewhere — principally ATP hydrolysis.<sup>{n.robergs2004}</sup> That review
+        has been cited thousands of times.
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        It has also been argued with. In 2008 the <em>Journal of Applied Physiology</em> ran a formal
+        Point:Counterpoint on whether lactic acid is or is not the only physicochemical contributor to
+        exercise acidosis, and specialists took opposing positions on the accounting.<sup
+          >{n.pointCounterpoint2008}</sup
+        >
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        What survives both sides of that argument, and is not in dispute: <strong
+          class="font-semibold text-ink"
+          >the simple "lactic acid builds up and burns you" model is not how it works.</strong
+        > Anyone telling you the exact mechanism with total confidence is ahead of the literature.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">It is not why you are sore on Thursday</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        This part is not contested at all. In 1983 researchers ran the obvious experiment: the same
+        subjects ran on the level, which raises blood lactate, and downhill, which does not. Level
+        running raised lactate and produced no significant soreness. Downhill running never raised
+        lactate and produced significant delayed-onset soreness.<sup>{n.schwane1983}</sup>
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        The two dissociate completely. Delayed-onset soreness follows mechanical stress — especially
+        eccentric loading, the lowering half of a movement — and the inflammatory response to it.
+        Lactate has cleared long before the soreness arrives.
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        Which means the practical advice built on the myth is aimed at the wrong target. There is
+        nothing to "flush out". If a cool-down helps you, it is not because it is removing lactate.
+      </p>
+    </section>
+
+    <section class="space-y-5">
+      <h2 class="text-display text-2xl text-ink">What lactate does tell you about an AMRAP</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        Discarding the myth does not make the measurement useless. Lactate is a reasonable marker of
+        which metabolic route a workout took, and in AMRAP training it separates time domains that
+        heart rate cannot.
+      </p>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[32rem] border-collapse text-left text-sm">
+          <thead>
+            <tr class="border-b border-border">
+              <th class="py-3 pr-4 font-semibold text-ink">Workout</th>
+              <th class="py-3 pr-4 font-semibold text-ink">Blood lactate</th>
+              <th class="py-3 font-semibold text-ink">Source</th>
+            </tr>
+          </thead>
+          <tbody class="text-secondary">
+            <tr class="border-b border-divider">
+              <td class="py-3 pr-4">Short CrossFit session (~4 min)</td>
+              <td class="py-3 pr-4">15.9 ± 2.2 mmol/L</td>
+              <td class="py-3">Tibana et al.<sup>{n.tibana2018}</sup></td>
+            </tr>
+            <tr class="border-b border-divider">
+              <td class="py-3 pr-4">Long CrossFit session (~17 min)</td>
+              <td class="py-3 pr-4">12.6 ± 2.6 mmol/L</td>
+              <td class="py-3">Tibana et al.<sup>{n.tibana2018}</sup></td>
+            </tr>
+            <tr>
+              <td class="py-3 pr-4">"Isabel" (~117 s), glycolytic share of energy</td>
+              <td class="py-3 pr-4">45% of total</td>
+              <td class="py-3">Rios et al.<sup>{n.rios2024}</sup></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-base leading-[1.7] text-secondary">
+        The pattern is the one you would predict once you stop treating lactate as damage: the
+        shorter, denser effort routes more energy through glycolysis and leaves more lactate in
+        circulation. Heart rate in those same two sessions was statistically indistinguishable.<sup
+          >{n.tibana2018}</sup
+        > Same apparent effort, different metabolic route — which is covered in full on
+        <a class="link-accent" href="/science/energy-systems">energy systems and the time cap</a>.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">What this changes about training</h2>
+      <ul class="space-y-3 text-base leading-[1.7] text-secondary">
+        <li>
+          <strong class="font-semibold text-ink">Stop treating the burn as a warning light.</strong>
+          It is information about intensity, not a signal that something harmful is accumulating. In a
+          <a class="link-accent" href="/amrap-workouts/5-minute">5-minute AMRAP</a> you should expect
+          it and work through it; in a
+          <a class="link-accent" href="/amrap-workouts/20-minute">20-minute one</a> its early arrival
+          means you went out too fast.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">Do not program a "lactate flush".</strong> There is no
+          substance to remove, and the session you spend on it is a session.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">Expect soreness from the eccentric work</strong>,
+          not from the hardest-breathing workout. The two are not the same day.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">Judge pacing on round times.</strong> They are free,
+          they need no blood sample, and they respond to the thing you can actually change. See
+          <a class="link-accent" href="/guides/amrap-pacing">pace variance</a>.
+        </li>
+      </ul>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">What the research does not show</h2>
+      <ul class="space-y-3 text-base leading-[1.7] text-secondary">
+        <li>
+          <strong class="font-semibold text-ink">A settled account of exercise acidosis.</strong> The
+          direction of travel is clear; the accounting is not.<sup>{n.pointCounterpoint2008}</sup> Any
+          page giving you a clean mechanism is choosing a side and not telling you there is one.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">A target lactate value for an AMRAP.</strong> The numbers
+          above come from studies of nine and fourteen participants.<sup>{n.tibana2018}</sup><sup
+            >{n.rios2024}</sup
+          > They show a direction, not a benchmark to train toward.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">
+            That any particular AMRAP dose improves lactate handling by a specific amount.
+          </strong>
+          Trained athletes clear lactate better than untrained ones, but the claim that a given time domain
+          produces a given transporter adaptation is not something the AMRAP literature supports yet.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">Much about women.</strong> The workout studies here are
+          on trained men, or on samples too small to separate.<sup>{n.kliszczewicz2014}</sup>
+        </li>
+      </ul>
+    </section>
+
+    <section class="space-y-8">
+      <h2 class="text-display text-2xl text-ink">Related questions</h2>
+      {
+        faqs.map((faq) => (
+          <div class="space-y-3">
+            <h3 class="text-base font-semibold text-ink">{faq.question}</h3>
+            <p class="text-base leading-[1.7] text-secondary">{faq.answer}</p>
+          </div>
+        ))
+      }
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Go and feel it for yourself</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        The difference between a five-minute and a twenty-minute AMRAP is not how hard your heart
+        works. It is which route the energy takes to get there, and you can feel that difference in
+        the same week.
+      </p>
+      <div class="flex flex-wrap gap-3">
+        <a
+          class="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
+          href="/amrap-workouts">Browse AMRAP workouts</a
+        >
+        <a
+          class="rounded-card border border-border bg-surface px-6 py-3.5 font-semibold text-ink"
+          href="/science/energy-systems">Energy systems and the time cap</a
+        >
+      </div>
+    </section>
+
+    <section class="space-y-4 border-t border-border pt-8">
+      <h2 class="text-display text-2xl text-ink">References</h2>
+      <ol class="space-y-4 text-sm leading-[1.6] text-secondary">
+        {
+          refs.map((reference) => (
+            <li id={`ref-${reference.id}`}>
+              {reference.authors} ({reference.year}). {reference.title}. <em>{reference.source}</em>
+              .{' '}
+              <a class="link-accent" href={reference.url} rel="noopener" target="_blank">
+                {reference.url.replace(/^https?:\/\//, '')}
+              </a>
+              <span class="mt-1 block text-muted">{reference.note}</span>
+            </li>
+          ))
+        }
+      </ol>
+      <p class="text-sm leading-[1.6] text-muted">
+        This page is a practitioner's synthesis of published research, not original research and not
+        peer reviewed. Every claim above is sourced; where the evidence is thin, a study is small,
+        or specialists disagree, it says so. It is not medical advice — see
+        <a class="link-accent" href="/terms">our terms</a>.
+      </p>
+    </section>
+  </article>
+</BaseLayout>

@@ -115,8 +115,12 @@ thing generated content never does.
    published-research backbone, which turns an in-house metric into a defensible
    one. Cite the deception literature accurately — the real finding (10% shifts
    pacing, ≤5% does not) is more interesting than the invented one.
-3. **`/science/lactate` third.** Well-established, easy to source, and corrects
-   a misconception readers actively search for.
+3. **`/science/lactate` — shipped.** ~9,700 characters, seven cited sources.
+   Note what it does _not_ do: it corrects the "lactic acid burns you" myth,
+   which is settled, while stating plainly that the biochemistry of exercise
+   acidosis is still contested — the 2004 Robergs review and the 2008
+   Point:Counterpoint are both cited. Overclaiming here is the standard failure
+   mode of "lactic acid myth" articles, and avoiding it is the differentiator.
 4. **`/science/fatigue`** once HIMA/PIMA sources are pulled.
 5. **`/science/benchmark-telemetry`** and the sex-differences material **last**,
    and only with citations in hand.

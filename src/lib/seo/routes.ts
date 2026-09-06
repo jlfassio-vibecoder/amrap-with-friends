@@ -79,6 +79,13 @@ export const CONTENT_ROUTES: RouteSeo[] = [
     index: true,
   },
   {
+    path: '/science/lactate',
+    title: 'Lactate Is Not What Makes an AMRAP Hurt',
+    description:
+      'Lactate is a fuel, not a waste product, and it does not cause the burn or next-day soreness. What the research shows, and where it is still genuinely arguing.',
+    index: true,
+  },
+  {
     path: '/guides',
     title: 'AMRAP Guides — How the Format Actually Works',
     description:
