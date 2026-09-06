@@ -41,6 +41,7 @@ import {
   type WorkoutCategory,
   type WorkoutTemplate,
 } from '@/data/workoutTemplates';
+import { defaultCapForDomain, domainForCap, type MissionTimeCap } from '@/lib/timeDomains';
 
 const HEARTBEAT_MS = 15_000;
 
@@ -54,7 +55,10 @@ export default function RallyPointPage() {
   const [nickname, setNickname] = useState(
     () => getStoredRallyPointNickname(rallyPointId) ?? callsignFromEmail(user?.email) ?? 'Athlete'
   );
-  const [durationMinutes, setDurationMinutes] = useState<TimeDomain>(10);
+  /** The mission clock. Equal to the domain until the Phase 2 cap control exists. */
+  const [durationMinutes, setDurationMinutes] = useState<MissionTimeCap>(10);
+  /** The library bucket the picker filters by — never the clock. */
+  const [selectedDomain, setSelectedDomain] = useState<TimeDomain>(10);
   const [selectedCategory, setSelectedCategory] = useState<WorkoutCategory>('blood-shunt');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [workoutText, setWorkoutText] = useState('10 Burpees\n15 Air Squats');
@@ -251,11 +255,12 @@ export default function RallyPointPage() {
     }
   }
 
-  function handleDurationChange(duration: TimeDomain) {
-    setDurationMinutes(duration);
+  function handleDurationChange(domain: TimeDomain) {
+    setSelectedDomain(domain);
+    setDurationMinutes(defaultCapForDomain(domain));
     const nextCategory = firstAvailableCategoryForDuration(
       WORKOUT_CATEGORIES,
-      duration,
+      domain,
       WORKOUT_TEMPLATES
     );
     if (nextCategory) {
@@ -266,7 +271,8 @@ export default function RallyPointPage() {
 
   function handleTemplateSelect(template: WorkoutTemplate) {
     const applied = applyTemplate(template);
-    setDurationMinutes(applied.durationMinutes as TimeDomain);
+    setDurationMinutes(applied.durationMinutes);
+    setSelectedDomain(domainForCap(applied.durationMinutes) ?? selectedDomain);
     setWorkoutText(applied.workoutText);
     setSelectedTemplateId(template.id);
     if (template.category) {
@@ -435,7 +441,7 @@ export default function RallyPointPage() {
             <h2 className="text-display text-xl text-ink">Next mission</h2>
             <form className="space-y-4" onSubmit={(e) => void handleStartNext(e)}>
               <WorkoutTemplatePicker
-                durationMinutes={durationMinutes}
+                durationMinutes={selectedDomain}
                 selectedCategory={selectedCategory}
                 selectedTemplateId={selectedTemplateId}
                 smartRecoveryEnabled={smartRecovery.enabled}
