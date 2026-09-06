@@ -179,6 +179,36 @@ export const SCIENCE_REFERENCES: Record<string, ScienceReference> = {
     url: 'https://doi.org/10.3390/app11178062',
     note: 'Ten recreationally active subjects, 60-minute trials with manipulated time feedback.',
   },
+  barbaRuiz2024: {
+    id: 'barbaRuiz2024',
+    authors:
+      'Barba-Ruíz M, Hermosilla-Perona F, Heredia-Elvar JR, Gómez-González N, Da Silva-Grigoletto ME, Muriarte-Solana D',
+    year: 2024,
+    title:
+      'Muscular performance analysis in "cross" modalities: comparison between "AMRAP," "EMOM" and "RFT" configurations',
+    source: 'Frontiers in Physiology, 15, 1358191',
+    url: 'https://doi.org/10.3389/fphys.2024.1358191',
+    note: 'Twelve athletes (10 men, 2 women) performing the same work under three formats. Small, and the only direct format comparison of its kind.',
+  },
+  mateMunoz2017: {
+    id: 'mateMunoz2017',
+    authors: 'Maté-Muñoz JL, et al.',
+    year: 2017,
+    title: 'Muscular fatigue in response to different modalities of CrossFit sessions',
+    source: 'PLOS ONE, 12(7), e0181855',
+    url: 'https://doi.org/10.1371/journal.pone.0181855',
+    note: '34 subjects, three workout types including a 20-minute AMRAP. Jump testing before, during and after.',
+  },
+  dech2022: {
+    id: 'dech2022',
+    authors: 'Dech S, Bittmann FN, Schaefer LV',
+    year: 2022,
+    title:
+      'Muscle oxygenation and time to task failure of submaximal holding and pulling isometric muscle actions and influence of intermittent voluntary muscle twitches',
+    source: 'BMC Sports Science, Medicine and Rehabilitation, 14',
+    url: 'https://doi.org/10.1186/s13102-022-00447-9',
+    note: 'Twelve subjects, elbow flexors only, 60% of maximal torque. A tightly controlled lab task, not a workout.',
+  },
   feito2018: {
     id: 'feito2018',
     authors: 'Feito Y, Heinrich KM, Butcher SJ, Poston WSC',

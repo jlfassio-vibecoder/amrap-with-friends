@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { GuidedIgnitionOverlay } from './GuidedIgnitionOverlay';
+import { WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
 
 afterEach(() => {
   cleanup();
@@ -13,6 +14,20 @@ describe('GuidedIgnitionOverlay', () => {
     expect(screen.getByText(/TIER 1/)).toBeTruthy();
     expect(screen.getByText(/TIER 2/)).toBeTruthy();
     expect(screen.getByText(/TIER 3/)).toBeTruthy();
+  });
+
+  it("takes each tier's clock from its template rather than a string beside it", () => {
+    render(<GuidedIgnitionOverlay onSelect={vi.fn()} onSkip={vi.fn()} />);
+
+    for (const [templateId, workoutName] of [
+      ['first-contact', 'First Contact'],
+      ['steady-altitude', 'Steady Altitude'],
+      ['the-undertow', 'The Undertow'],
+    ] as const) {
+      const template = WORKOUT_TEMPLATES.find((entry) => entry.id === templateId);
+      expect(template).toBeDefined();
+      expect(screen.getByText(`${template!.durationMinutes} min · ${workoutName}`)).toBeDefined();
+    }
   });
 
   it('calls onSelect with first-contact when Tier 1 CTA is clicked', () => {

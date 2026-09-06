@@ -40,7 +40,7 @@ describe('evaluateLoadImbalance', () => {
       imbalanced: true,
       dominant: 5,
       share: 61,
-      warning: 'System Warning: Imbalanced Load. 20-Minute Marathon required.',
+      warning: 'System Warning: Imbalanced Load. 18–25-Minute Marathon required.',
     });
   });
 
@@ -49,7 +49,7 @@ describe('evaluateLoadImbalance', () => {
       imbalanced: true,
       dominant: 5,
       share: 80,
-      warning: 'System Warning: Imbalanced Load. 20-Minute Marathon required.',
+      warning: 'System Warning: Imbalanced Load. 18–25-Minute Marathon required.',
     });
   });
 
@@ -59,7 +59,7 @@ describe('evaluateLoadImbalance', () => {
       dominant: 20,
       share: 80,
       warning:
-        'System Warning: Imbalanced Load. You never touch the redline. 5-Minute Sprint required.',
+        'System Warning: Imbalanced Load. You never touch the redline. 3–5-Minute Sprint required.',
     });
   });
 
@@ -68,8 +68,7 @@ describe('evaluateLoadImbalance', () => {
       imbalanced: true,
       dominant: 10,
       share: 80,
-      warning:
-        'System Warning: Imbalanced Load. Extend the domain. 15-Minute Grind required.',
+      warning: 'System Warning: Imbalanced Load. Extend the domain. 12–15-Minute Grind required.',
     });
   });
 
@@ -88,7 +87,7 @@ describe('evaluateLoadImbalance', () => {
       imbalanced: true,
       dominant: 5,
       share: 80,
-      warning: 'System Warning: Imbalanced Load. 20-Minute Marathon required.',
+      warning: 'System Warning: Imbalanced Load. 18–25-Minute Marathon required.',
     });
   });
 });
