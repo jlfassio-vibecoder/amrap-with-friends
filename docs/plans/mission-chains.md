@@ -1,7 +1,7 @@
 # Plan: mission chains built before the first Start
 
 **Branch:** `feature/mission-chains`
-**Status:** Approved — Phases 1 and 2 shipped
+**Status:** Approved — Phases 1–3 shipped
 **Last updated:** 2026-09-06
 **Depends on:** `feature/expanded-time-caps` (chain items carry a cap, not just a domain)
 
@@ -282,10 +282,11 @@ The armed rest is asserted against `isPlausibleRallyPointCountdownEndsAt` for
 every legal rest, so a chained countdown cannot be silently discarded as a stray
 far-future value.
 
-### Phase 3 — The builder in Create
+### Phase 3 — The builder in Create — **done**
 
 Add / reorder / remove, with the derived rest shown between rows and recomputed
-on every change.
+on every change. Launch with two or more library missions creates mission 1 via
+`create_rally_point_mission`, then persists the queue with position 0 stamped.
 
 ### Phase 4 — Running the chain
 

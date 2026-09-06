@@ -32,6 +32,10 @@ interface CreateMissionSummaryPanelProps {
   errorAction?: { to: string; label: string } | null;
   /** Soft copy when the visitor is signed out. */
   unsignedHint?: string | null;
+  /** Mission chain builder slot (library Create only). */
+  chainBuilder?: ReactNode;
+  /** When true, hide the single-template preview — the chain list owns that job. */
+  hideSelectedWorkoutPreview?: boolean;
   loading: boolean;
   onNicknameChange: (value: string) => void;
   /** Changes the time domain, and with it the canonical clock. */
@@ -73,6 +77,8 @@ export function CreateMissionSummaryPanel({
   error,
   errorAction = null,
   unsignedHint = null,
+  chainBuilder = null,
+  hideSelectedWorkoutPreview = false,
   loading,
   onNicknameChange,
   onDurationChange,
@@ -87,6 +93,8 @@ export function CreateMissionSummaryPanel({
   // default, not a cage.
   const durationLockedByCoachWorkout = workoutSource === 'coach' && selectedCoachWorkout !== null;
   const templateSelected = workoutSource === 'library' && selectedTemplate !== null;
+  const showSingleTemplatePreview =
+    workoutSource === 'library' && selectedTemplate !== null && !hideSelectedWorkoutPreview;
   const submitDisabled = loading || capReached;
   const submitLabel = loading
     ? 'Creating…'
@@ -107,13 +115,15 @@ export function CreateMissionSummaryPanel({
         />
       </SummaryField>
 
+      {chainBuilder}
+
       {durationLockedByCoachWorkout ? (
         <SummaryField label="Duration">
           <p className="text-sm font-semibold text-accent">
             {durationMinutes} min — set by selected workout
           </p>
         </SummaryField>
-      ) : (
+      ) : hideSelectedWorkoutPreview ? null : (
         <div className="space-y-3">
           {templateSelected ? null : (
             <SummaryField label="Time domain">
@@ -141,7 +151,7 @@ export function CreateMissionSummaryPanel({
         </div>
       )}
 
-      {workoutSource === 'library' && selectedTemplate ? (
+      {showSingleTemplatePreview ? (
         <div className="space-y-2">
           <p className="text-sm font-semibold">Selected workout</p>
           <div className="space-y-2 rounded-card border border-border bg-page p-4">

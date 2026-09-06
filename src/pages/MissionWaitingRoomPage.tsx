@@ -51,6 +51,8 @@ import {
   passRallyPointCommand,
   touchRallyPointPresence,
 } from '@/lib/api/rallyPoint';
+import { getMissionChain } from '@/lib/api/missionChain';
+import { nextChainedMissionName } from '@/lib/mission/nextChainedMissionName';
 import { canPassRallyPointCommand } from '@/lib/rallyPoint/canPassRallyPointCommand';
 import { shouldHandleLogRoundHotkey } from '@/lib/mission/logRoundHotkey';
 import { shouldShowMissionReset } from '@/lib/mission/shouldShowMissionReset';
@@ -459,12 +461,36 @@ function LiveMissionView({
 
   const rallyPointId =
     channel.mission?.rally_point_id ?? getStoredRallyPointIdForMission(missionId) ?? null;
+  const [nextUpMissionName, setNextUpMissionName] = useState<string | null>(null);
 
   useEffect(() => {
     if (channel.mission?.rally_point_id) {
       setStoredRallyPointIdForMission(missionId, channel.mission.rally_point_id);
     }
   }, [channel.mission?.rally_point_id, missionId]);
+
+  useEffect(() => {
+    if (!rallyPointId || !isAuthenticated) {
+      setNextUpMissionName(null);
+      return;
+    }
+
+    let cancelled = false;
+    void getMissionChain(rallyPointId).then((result) => {
+      if (cancelled) {
+        return;
+      }
+      if (result.error || !result.data) {
+        setNextUpMissionName(null);
+        return;
+      }
+      setNextUpMissionName(nextChainedMissionName(result.data));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [rallyPointId, isAuthenticated, livePhase]);
 
   const rallyPointMemberId = rallyPointId ? getStoredRallyPointMemberId(rallyPointId) : null;
   const rallyPointNickname =
@@ -1341,7 +1367,13 @@ function LiveMissionView({
           {forceNavError ? <p className="text-error text-sm">{forceNavError}</p> : null}
           <div className="flex flex-wrap gap-4">
             {rallyPointHref ? (
-              <DaisyChainCta className="link-accent text-sm" onActivate={handleDaisyChainExit} />
+              nextUpMissionName ? (
+                <p className="text-sm text-secondary">
+                  Next up: <span className="font-semibold text-ink">{nextUpMissionName}</span>
+                </p>
+              ) : (
+                <DaisyChainCta className="link-accent text-sm" onActivate={handleDaisyChainExit} />
+              )
             ) : (
               <AppLink className="link-accent" to="/">
                 Back home
@@ -1366,7 +1398,13 @@ function LiveMissionView({
             {daisyExitError ? <span className="text-error text-sm">{daisyExitError}</span> : null}
             {forceNavError ? <span className="text-error text-sm">{forceNavError}</span> : null}
             {rallyPointHref ? (
-              <DaisyChainCta className="link-accent text-sm" onActivate={handleDaisyChainExit} />
+              nextUpMissionName ? (
+                <p className="text-sm text-secondary">
+                  Next up: <span className="font-semibold text-ink">{nextUpMissionName}</span>
+                </p>
+              ) : (
+                <DaisyChainCta className="link-accent text-sm" onActivate={handleDaisyChainExit} />
+              )
             ) : (
               <AppLink className="link-accent" to="/">
                 Back home
@@ -1402,6 +1440,7 @@ function LiveMissionView({
           rallyPointHref={rallyPointHref}
           rallyPointId={rallyPointId}
           isHost={isHost}
+          nextUpMissionName={nextUpMissionName}
         />
       ) : null}
 

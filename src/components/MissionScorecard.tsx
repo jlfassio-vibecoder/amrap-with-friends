@@ -21,6 +21,8 @@ interface MissionScorecardProps {
   rallyPointHref?: string | null;
   rallyPointId?: string | null;
   isHost?: boolean;
+  /** Pre-planned chain: hide Daisy-chain CTA and show the next queued name. */
+  nextUpMissionName?: string | null;
 }
 
 function saveButtonLabel(saveState: MissionScorecardSaveState): string {
@@ -47,6 +49,7 @@ export function MissionScorecard({
   rallyPointHref = null,
   rallyPointId = null,
   isHost = false,
+  nextUpMissionName = null,
 }: MissionScorecardProps) {
   const navigate = useNavigate();
   const titleId = 'mission-scorecard-title';
@@ -141,7 +144,13 @@ export function MissionScorecard({
 
         {rallyPointHref ? (
           <div className="space-y-2">
-            <DaisyChainCta onActivate={handleDaisyChain} />
+            {nextUpMissionName ? (
+              <p className="text-center text-sm text-secondary">
+                Next up: <span className="font-semibold text-ink">{nextUpMissionName}</span>
+              </p>
+            ) : (
+              <DaisyChainCta onActivate={handleDaisyChain} />
+            )}
             {daisyError ? <p className="text-error text-sm">{daisyError}</p> : null}
             <button type="button" className="btn-neutral w-full text-sm" onClick={onClose}>
               Close
