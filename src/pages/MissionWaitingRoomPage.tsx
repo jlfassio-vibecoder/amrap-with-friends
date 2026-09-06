@@ -64,6 +64,12 @@ import {
 import { nextChainedMissionName } from '@/lib/mission/nextChainedMissionName';
 import { canPassRallyPointCommand } from '@/lib/rallyPoint/canPassRallyPointCommand';
 import { shouldHandleLogRoundHotkey } from '@/lib/mission/logRoundHotkey';
+import {
+  hideMobileLiveChrome,
+  formatMobileLiveScoreLabel,
+  shouldDenseMobileLiveWorkout,
+  shouldOmitMobileLiveHowTo,
+} from '@/lib/mission/mobileLiveLayout';
 import { shouldShowMissionReset } from '@/lib/mission/shouldShowMissionReset';
 import { shouldSubscribeRallyPointOnMission } from '@/lib/rallyPoint/shouldSubscribeRallyPointOnMission';
 import { shouldUseMissionRealtimeTables } from '@/lib/realtime/shouldUseMissionRealtimeTables';
@@ -687,6 +693,15 @@ function LiveMissionView({
   const claim = useParticipantClaim(missionId);
   const selfLeaderboardEntry = live.leaderboard.find((entry) => entry.isSelf) ?? null;
   const selfBaseScore = selfLeaderboardEntry?.baseScore ?? 0;
+  const selfLiveScore =
+    live.phase === 'finished' ? (selfLeaderboardEntry?.finalScore ?? selfBaseScore) : selfBaseScore;
+  const selfScoreLabel = formatMobileLiveScoreLabel(
+    selfLiveScore,
+    live.repsPerRound,
+    live.myRoundCount
+  );
+  const selfRankIndex = live.leaderboard.findIndex((entry) => entry.isSelf);
+  const selfRank = selfRankIndex >= 0 ? selfRankIndex + 1 : null;
 
   const rallyPointCountdownEndsAt = effectiveRallyPointCountdownEndsAt(
     live.rallyPointCountdownEndsAt,
@@ -802,6 +817,9 @@ function LiveMissionView({
     phase: livePhase,
   });
   const showLogRound = livePhase === 'work' && !live.isPaused;
+  const compactMobileLive = hideMobileLiveChrome(live.phase);
+  const omitMobileLiveHowTo = shouldOmitMobileLiveHowTo(live.phase);
+  const denseMobileLiveWorkout = shouldDenseMobileLiveWorkout(live.phase, live.workout.length);
 
   function handleLogRound() {
     playRoundLogged();
@@ -1098,11 +1116,14 @@ function LiveMissionView({
     : isHost
       ? 'You are the host.'
       : 'Waiting on host for mission control.';
+  // Waiting room stays "Rally point"; once the clock is running this screen is the mission.
+  const headerTitle = live.phase === 'waiting' && !live.isPractice ? 'Rally point' : 'Mission';
+  const headerSubtitle = live.phase === 'waiting' || live.isPractice ? hostStatusText : undefined;
 
   if (hostRestartedDeadEnd) {
     return (
       <main className="mx-auto max-w-lg space-y-4 p-6">
-        <AppHeader title="Rally point" />
+        <AppHeader title={headerTitle} />
         <p className="text-error">
           The host restarted this mission. Ask them for a new invite link.
         </p>
@@ -1126,7 +1147,9 @@ function LiveMissionView({
 
   return (
     <main
-      className="mx-auto max-w-lg space-y-6 bg-page px-6 pb-6 pt-0 lg:flex lg:h-dvh lg:max-w-none lg:flex-col lg:space-y-0 lg:overflow-hidden lg:p-0"
+      className={`mx-auto space-y-6 bg-page pt-0 lg:flex lg:h-dvh lg:max-w-none lg:flex-col lg:space-y-0 lg:overflow-hidden lg:p-0 ${
+        compactMobileLive ? 'max-w-lg px-0 pb-6 max-lg:max-w-none' : 'max-w-lg px-6 pb-6'
+      }`}
       onPointerDown={() => {
         if (audioUnlockedRef.current) {
           return;
@@ -1144,9 +1167,13 @@ function LiveMissionView({
           undefined
         }
       >
-        <AppHeader title="Rally point" subtitle={hostStatusText} desktopTitleAsPageHeading />
+        <AppHeader title={headerTitle} subtitle={headerSubtitle} desktopTitleAsPageHeading />
 
-        <div className="space-y-6 px-6 pb-6 pt-0 lg:mx-auto lg:w-full lg:max-w-7xl lg:shrink-0 lg:space-y-4 lg:px-8 lg:pb-0 lg:pt-6">
+        <div
+          className={`space-y-6 pb-6 pt-0 lg:mx-auto lg:w-full lg:max-w-7xl lg:shrink-0 lg:space-y-4 lg:px-8 lg:pb-0 lg:pt-6 ${
+            compactMobileLive ? 'px-3' : 'px-6'
+          }`}
+        >
           {forceNav.pendingMissionId ? (
             <div
               className="border-accent/40 flex flex-wrap items-center justify-between gap-3 border bg-surface px-4 py-3"
@@ -1210,9 +1237,21 @@ function LiveMissionView({
           )}
         </div>
 
-        <div className="space-y-6 px-6 lg:mx-auto lg:grid lg:min-h-0 lg:w-full lg:max-w-7xl lg:flex-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:items-stretch lg:gap-6 lg:space-y-0 lg:overflow-hidden lg:px-8 lg:py-6">
-          <div className="space-y-6 lg:flex lg:min-h-0 lg:flex-col lg:gap-4 lg:space-y-0 lg:overflow-hidden">
-            <div className="space-y-4 lg:flex lg:min-h-0 lg:shrink lg:flex-col lg:gap-3 lg:space-y-0 lg:overflow-y-auto lg:rounded-card lg:border lg:border-border lg:bg-surface lg:p-4 lg:shadow-card">
+        <div
+          className={`lg:mx-auto lg:grid lg:min-h-0 lg:w-full lg:max-w-7xl lg:flex-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:items-stretch lg:gap-6 lg:space-y-0 lg:overflow-hidden lg:px-8 lg:py-6 ${
+            compactMobileLive ? 'space-y-3 px-3' : 'space-y-6 px-6'
+          }`}
+        >
+          <div
+            className={`lg:flex lg:min-h-0 lg:flex-col lg:gap-4 lg:space-y-0 lg:overflow-hidden ${
+              compactMobileLive ? 'space-y-3' : 'space-y-6'
+            }`}
+          >
+            <div
+              className={`lg:flex lg:min-h-0 lg:shrink lg:flex-col lg:gap-3 lg:space-y-0 lg:overflow-y-auto lg:rounded-card lg:border lg:border-border lg:bg-surface lg:p-4 lg:shadow-card ${
+                compactMobileLive ? 'space-y-3' : 'space-y-4'
+              }`}
+            >
               <section
                 className="card space-y-1.5 p-3 text-center lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none"
                 data-walkthrough-id="status"
@@ -1239,7 +1278,11 @@ function LiveMissionView({
                     {formatTMinus(rallyPointRemaining ?? 0)}
                   </p>
                 ) : live.phase !== 'waiting' ? (
-                  <p className="text-display text-5xl tabular-nums text-accent lg:text-7xl xl:text-8xl">
+                  <p
+                    className={`text-display tabular-nums text-accent lg:text-7xl xl:text-8xl ${
+                      compactMobileLive ? 'text-7xl' : 'text-5xl'
+                    }`}
+                  >
                     {formatTime(live.timeLeftSec)}
                   </p>
                 ) : null}
@@ -1259,9 +1302,39 @@ function LiveMissionView({
                   </div>
                 ) : null}
                 {live.phase === 'work' || live.phase === 'finished' ? (
-                  <p className="text-sm text-secondary">Elapsed: {formatTime(live.elapsedSec)}</p>
+                  <>
+                    <div
+                      className={`flex items-center justify-center gap-3 text-secondary lg:hidden ${
+                        compactMobileLive ? 'text-base' : 'text-sm'
+                      }`}
+                    >
+                      {selfRank !== null ? (
+                        <span
+                          className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold tabular-nums ${
+                            selfRank === 1
+                              ? 'border-accent/40 bg-accent-tint text-accent'
+                              : 'border-border bg-page text-ink'
+                          }`}
+                          aria-label={`Rank ${selfRank}`}
+                        >
+                          #{selfRank}
+                        </span>
+                      ) : null}
+                      <p aria-label={selfScoreLabel}>
+                        <span className="font-semibold tabular-nums text-ink">
+                          {selfScoreLabel}
+                        </span>
+                      </p>
+                      <p>
+                        Elapsed: <span className="tabular-nums">{formatTime(live.elapsedSec)}</span>
+                      </p>
+                    </div>
+                    <p className="hidden text-sm text-secondary lg:block">
+                      Elapsed: {formatTime(live.elapsedSec)}
+                    </p>
+                  </>
                 ) : null}
-                <p className="text-xs text-muted">
+                <p className={`text-xs text-muted ${compactMobileLive ? 'max-lg:hidden' : ''}`}>
                   Realtime:{' '}
                   {live.isRealtimeConnected ? (
                     <span className="font-semibold text-success-text [text-shadow:0_0_8px_rgb(90_158_82_/_0.95),0_0_18px_rgb(90_158_82_/_0.55)]">
@@ -1335,13 +1408,17 @@ function LiveMissionView({
               ) : null}
 
               <section
-                className="flex flex-wrap gap-2 lg:justify-center"
+                className={`flex flex-wrap gap-2 lg:justify-center ${
+                  showLogRound ? 'max-lg:flex-col max-lg:items-stretch' : ''
+                }`}
                 {...(waitingStartPracticeActions ? {} : { 'data-walkthrough-id': 'actions' })}
               >
                 {showReset && (
                   <button
                     type="button"
-                    className="btn-outline px-3 py-1.5 text-sm lg:px-6 lg:py-3 lg:text-base"
+                    className={`btn-outline px-3 py-1.5 text-sm lg:px-6 lg:py-3 lg:text-base ${
+                      showLogRound ? 'max-lg:w-full max-lg:py-3 max-lg:text-base' : ''
+                    }`}
                     disabled={resetBusy}
                     onClick={() => {
                       handleAudioUnlock();
@@ -1354,7 +1431,7 @@ function LiveMissionView({
                 {showLogRound && (
                   <button
                     type="button"
-                    className="btn-success px-3 py-1.5 text-sm lg:px-6 lg:py-3 lg:text-base"
+                    className="btn-success px-3 py-1.5 text-sm max-lg:w-full max-lg:py-5 max-lg:text-xl lg:px-6 lg:py-3 lg:text-base"
                     onClick={handleLogRound}
                   >
                     Log round
@@ -1402,11 +1479,28 @@ function LiveMissionView({
             </div>
 
             {live.workout.length > 0 && (
-              <section className="card shrink-0 space-y-2 p-4" data-walkthrough-id="workout">
-                <h2 className="text-display text-center text-xl text-ink lg:text-3xl">
+              <section
+                className={`card shrink-0 space-y-2 p-4 ${
+                  denseMobileLiveWorkout ? 'max-lg:space-y-1 max-lg:p-3' : ''
+                }`}
+                data-walkthrough-id="workout"
+              >
+                <h2
+                  className={`text-display text-center text-ink lg:text-3xl ${
+                    denseMobileLiveWorkout ? 'text-xl' : compactMobileLive ? 'text-2xl' : 'text-xl'
+                  }`}
+                >
                   {resolveWorkoutTitle(live.templateId)}
                 </h2>
-                <ul className="space-y-1 text-sm lg:space-y-4">
+                <ul
+                  className={`space-y-1 lg:space-y-4 ${
+                    denseMobileLiveWorkout
+                      ? 'text-base max-lg:space-y-0.5'
+                      : compactMobileLive
+                        ? 'text-base'
+                        : 'text-sm'
+                  }`}
+                >
                   {live.workout.map((exercise, index) => (
                     <li
                       key={`${exercise.name}-${index}`}
@@ -1418,7 +1512,13 @@ function LiveMissionView({
                       <span className="min-w-0 flex-1 lg:text-2xl lg:leading-snug xl:text-3xl">
                         {formatExerciseLabel(exercise)}
                       </span>
-                      <ExerciseInfoTrigger name={exercise.name} size="lg" />
+                      {omitMobileLiveHowTo ? (
+                        <span className="hidden lg:inline-flex">
+                          <ExerciseInfoTrigger name={exercise.name} size="lg" />
+                        </span>
+                      ) : (
+                        <ExerciseInfoTrigger name={exercise.name} size="lg" />
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -1432,7 +1532,9 @@ function LiveMissionView({
               presence={live.presence}
               selfParticipantId={live.participantId}
               phase={live.phase}
-              className="lg:min-h-0 lg:flex-1 lg:overflow-hidden"
+              className={`lg:min-h-0 lg:flex-1 lg:overflow-hidden ${
+                compactMobileLive ? 'max-lg:hidden' : ''
+              }`}
             />
 
             <MissionChat
@@ -1443,11 +1545,14 @@ function LiveMissionView({
               messages={channel.messages}
               expanded={chatExpanded}
               onExpandedChange={setChatExpanded}
-              className={
+              className={[
                 chatExpanded
                   ? 'lg:min-h-0 lg:flex-1 lg:overflow-hidden'
-                  : 'shrink-0 overflow-hidden'
-              }
+                  : 'shrink-0 overflow-hidden',
+                compactMobileLive ? 'max-lg:hidden' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
             />
 
             {showRallyPointPass && rallyPointChannel.rallyPoint ? (
@@ -1498,7 +1603,11 @@ function LiveMissionView({
           </div>
         </div>
 
-        <section className="space-y-2 px-6 pb-6 text-sm text-secondary lg:hidden">
+        <section
+          className={`space-y-2 pb-6 text-sm text-secondary lg:hidden ${
+            compactMobileLive ? 'px-3 max-lg:hidden' : 'px-6'
+          }`}
+        >
           <p>
             <span className="font-semibold text-ink">Mission ID:</span> {live.missionId}
           </p>
