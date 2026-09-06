@@ -24,7 +24,7 @@ export function ActivityAttributionCard({
     <section className="card space-y-3 p-4" aria-label="Total activity attribution">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <p className="text-xs font-medium uppercase tracking-wide text-secondary">
-          Total activity — Last 7 days
+          Total activity — Rolling 7 days
         </p>
         <p className="text-sm tabular-nums text-ink">
           {attribution.totalMissions} missions · {attribution.totalMinutes} min

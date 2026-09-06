@@ -7,6 +7,7 @@ interface OvertrainingWarningCardProps {
 }
 
 const RISK_LABEL = {
+  building: 'Building Base',
   elevated: 'Elevated Risk',
   high: 'High Risk',
 } as const;
@@ -20,10 +21,16 @@ export function OvertrainingWarningCard({ overtraining }: OvertrainingWarningCar
     return null;
   }
 
+  // Building a base is not a warning and must not be dressed as one — an
+  // athlete below their own weekly target reading a red card is exactly the
+  // contradiction this state exists to remove.
+  const isWarning = result.riskLevel === 'high' || result.riskLevel === 'elevated';
   const toneClass =
     result.riskLevel === 'high'
       ? 'border-accent bg-accent-tint'
-      : 'border-border bg-accent-tint/60';
+      : result.riskLevel === 'elevated'
+        ? 'border-border bg-accent-tint/60'
+        : 'border-border bg-surface';
 
   return (
     <section
@@ -34,7 +41,7 @@ export function OvertrainingWarningCard({ overtraining }: OvertrainingWarningCar
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-1.5">
           <p className="text-xs font-medium uppercase tracking-wide text-secondary">
-            Overtraining Signal
+            {isWarning ? 'Overtraining Signal' : 'Training Load'}
           </p>
           <button
             type="button"
@@ -47,7 +54,11 @@ export function OvertrainingWarningCard({ overtraining }: OvertrainingWarningCar
             i
           </button>
         </div>
-        <span className="text-xs font-semibold uppercase tracking-wide text-accent">
+        <span
+          className={`text-xs font-semibold uppercase tracking-wide ${
+            isWarning ? 'text-accent' : 'text-secondary'
+          }`}
+        >
           {RISK_LABEL[result.riskLevel]}
         </span>
       </div>
@@ -69,8 +80,15 @@ export function OvertrainingWarningCard({ overtraining }: OvertrainingWarningCar
           <p>
             <span className="font-semibold text-ink">ACWR</span> is Acute ÷ Chronic. Above 1.5 means
             training is ramping up faster than the body is used to; above 2.0 is a bigger jump.
-            It&apos;s a rate-of-change warning, not proof of an injury — it flags a good moment to
-            hold volume steady or add a rest day before pushing further.
+            It&apos;s a rate-of-change signal, not proof of an injury — and the answer is always a
+            lighter mission rather than a day off, because stopping lowers the baseline that
+            triggered it.
+          </p>
+          <p>
+            While your typical week is still light the ratio is reported but not treated as a risk.
+            A ratio measured against a near-empty baseline says nothing about how hard you are
+            actually training, so below that point this card reads as{' '}
+            <span className="font-semibold text-ink">Building Base</span> instead.
           </p>
           <p>
             Consecutive high-intensity days count hard efforts in a row (5+ is flagged) as a
@@ -79,10 +97,15 @@ export function OvertrainingWarningCard({ overtraining }: OvertrainingWarningCar
         </div>
       ) : null}
 
-      <ul className="space-y-1">
-        {result.warnings.map((warning) => (
-          <li key={warning} className="text-sm text-ink">
-            {warning}
+      <ul className="space-y-3">
+        {result.guidance.map((item) => (
+          <li key={item.headline} className="space-y-1">
+            <p className="text-sm font-semibold text-ink">{item.headline}</p>
+            <p className="text-sm text-secondary">{item.because}</p>
+            <p className="text-sm text-ink">
+              <span className="font-semibold">Do this: </span>
+              {item.doThis}
+            </p>
           </li>
         ))}
       </ul>

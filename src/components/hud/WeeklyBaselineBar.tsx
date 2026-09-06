@@ -34,7 +34,9 @@ export function WeeklyBaselineBar({
   return (
     <section className="card space-y-4 p-4" aria-label="Weekly baseline">
       <div className="flex items-baseline justify-between gap-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted">Weekly baseline</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-muted">
+          Weekly baseline · since Monday
+        </p>
         <p className="text-display text-2xl tabular-nums text-ink">
           {weekMinutes} / {baselineMinutes} Min
         </p>

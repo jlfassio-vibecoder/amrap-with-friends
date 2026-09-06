@@ -8,7 +8,7 @@ interface InAppActivitySummaryCardProps {
 export function InAppActivitySummaryCard({ activity7d }: InAppActivitySummaryCardProps) {
   return (
     <ActivityWindowSummaryCard
-      title="In-App Activity — Last 7 Days"
+      title="In-App Activity — Rolling 7 Days"
       ariaLabel="In-app activity summary"
       missionCount={activity7d.missionCount}
       totalMinutes={activity7d.minutes}
