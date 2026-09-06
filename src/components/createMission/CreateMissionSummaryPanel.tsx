@@ -1,18 +1,22 @@
 import type { FormEvent, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import type { WorkoutTemplate } from '@/data/workoutTemplates';
+import type { TimeDomain, WorkoutTemplate } from '@/data/workoutTemplates';
 import { formatTemplateMovementLine } from '@/lib/workout/templateToExercises';
 import type { RallyDay } from '@/lib/mission/rallySchedule';
 import { HOST_ACTIVE_MISSION_LIMIT } from '@/lib/mission/rallySchedule';
 import { RallyScheduleFields } from '@/components/mission/RallyScheduleFields';
-
-const DURATION_OPTIONS = [5, 10, 15, 20] as const;
+import { TimeCapControl } from '@/components/createMission/TimeCapControl';
+import { TIME_DOMAINS } from '@/data/workoutTemplates';
+import type { MissionTimeCap } from '@/lib/timeDomains';
 
 export type CreateScheduleMode = 'now' | 'rally';
 
 interface CreateMissionSummaryPanelProps {
   nickname: string;
-  durationMinutes: number;
+  /** The mission clock. */
+  durationMinutes: MissionTimeCap;
+  /** The library bucket the clock belongs to. */
+  selectedDomain: TimeDomain;
   workoutSource: 'custom' | 'library' | 'coach';
   selectedTemplate: WorkoutTemplate | null;
   selectedCoachWorkout: {
@@ -30,7 +34,10 @@ interface CreateMissionSummaryPanelProps {
   unsignedHint?: string | null;
   loading: boolean;
   onNicknameChange: (value: string) => void;
+  /** Changes the time domain, and with it the canonical clock. */
   onDurationChange: (value: number) => void;
+  /** Moves the clock inside the current domain. */
+  onCapChange: (value: MissionTimeCap) => void;
   onScheduleModeChange: (value: CreateScheduleMode) => void;
   onRallyDayChange: (value: RallyDay) => void;
   onRallyTimeChange: (value: string) => void;
@@ -55,6 +62,7 @@ function chipClass(selected: boolean): string {
 export function CreateMissionSummaryPanel({
   nickname,
   durationMinutes,
+  selectedDomain,
   workoutSource,
   selectedTemplate,
   selectedCoachWorkout,
@@ -68,14 +76,17 @@ export function CreateMissionSummaryPanel({
   loading,
   onNicknameChange,
   onDurationChange,
+  onCapChange,
   onScheduleModeChange,
   onRallyDayChange,
   onRallyTimeChange,
   onSubmit,
 }: CreateMissionSummaryPanelProps) {
-  const durationLockedByTemplate =
-    (workoutSource === 'library' && selectedTemplate !== null) ||
-    (workoutSource === 'coach' && selectedCoachWorkout !== null);
+  // A coach WOD carries its own clock and may sit outside every domain range,
+  // so it stays locked. A library workout no longer does: its minute is the
+  // default, not a cage.
+  const durationLockedByCoachWorkout = workoutSource === 'coach' && selectedCoachWorkout !== null;
+  const templateSelected = workoutSource === 'library' && selectedTemplate !== null;
   const submitDisabled = loading || capReached;
   const submitLabel = loading
     ? 'Creating…'
@@ -96,25 +107,38 @@ export function CreateMissionSummaryPanel({
         />
       </SummaryField>
 
-      <SummaryField label="Duration">
-        {durationLockedByTemplate ? (
+      {durationLockedByCoachWorkout ? (
+        <SummaryField label="Duration">
           <p className="text-sm font-semibold text-accent">
             {durationMinutes} min — set by selected workout
           </p>
-        ) : (
-          <select
-            className="input-field"
-            value={durationMinutes}
-            onChange={(event) => onDurationChange(Number(event.target.value))}
-          >
-            {DURATION_OPTIONS.map((minutes) => (
-              <option key={minutes} value={minutes}>
-                {minutes}
-              </option>
-            ))}
-          </select>
-        )}
-      </SummaryField>
+        </SummaryField>
+      ) : (
+        <div className="space-y-3">
+          {templateSelected ? null : (
+            <SummaryField label="Time domain">
+              <select
+                className="input-field"
+                value={selectedDomain}
+                onChange={(event) => onDurationChange(Number(event.target.value))}
+              >
+                {TIME_DOMAINS.map((minutes) => (
+                  <option key={minutes} value={minutes}>
+                    {minutes} min
+                  </option>
+                ))}
+              </select>
+            </SummaryField>
+          )}
+          <TimeCapControl
+            domain={selectedDomain}
+            cap={durationMinutes}
+            onCapChange={onCapChange}
+            templateCap={templateSelected ? (selectedTemplate?.durationMinutes ?? null) : null}
+            templateName={templateSelected ? (selectedTemplate?.name ?? null) : null}
+          />
+        </div>
+      )}
 
       {workoutSource === 'library' && selectedTemplate ? (
         <div className="space-y-2">

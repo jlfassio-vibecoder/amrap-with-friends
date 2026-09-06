@@ -595,6 +595,7 @@ export default function CreateMissionPage() {
               <CreateMissionSummaryPanel
                 nickname={nickname}
                 durationMinutes={durationMinutes}
+                selectedDomain={selectedDomain}
                 workoutSource={workoutSource}
                 selectedTemplate={selectedTemplate}
                 selectedCoachWorkout={selectedCoachWorkout}
@@ -611,6 +612,7 @@ export default function CreateMissionPage() {
                 loading={loading}
                 onNicknameChange={setNickname}
                 onDurationChange={handleSummaryDurationChange}
+                onCapChange={setDurationMinutes}
                 onScheduleModeChange={setScheduleMode}
                 onRallyDayChange={setRallyDay}
                 onRallyTimeChange={setRallyTime}

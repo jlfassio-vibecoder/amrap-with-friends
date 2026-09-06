@@ -42,6 +42,7 @@ import {
   type WorkoutTemplate,
 } from '@/data/workoutTemplates';
 import { defaultCapForDomain, domainForCap, type MissionTimeCap } from '@/lib/timeDomains';
+import { TimeCapControl } from '@/components/createMission/TimeCapControl';
 
 const HEARTBEAT_MS = 15_000;
 
@@ -457,6 +458,13 @@ export default function RallyPointPage() {
                   setSelectedTemplateId(null);
                 }}
                 onTemplateSelect={handleTemplateSelect}
+              />
+              <TimeCapControl
+                domain={selectedDomain}
+                cap={durationMinutes}
+                onCapChange={setDurationMinutes}
+                templateCap={selectedTemplate?.durationMinutes ?? null}
+                templateName={selectedTemplate?.name ?? null}
               />
               {selectedTemplate ? (
                 <p className="text-sm text-secondary">

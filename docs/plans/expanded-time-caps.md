@@ -1,7 +1,7 @@
 # Plan: expanded time caps within each domain
 
 **Branch:** `feature/expanded-time-caps`
-**Status:** Phase 1 shipped — Phase 2 (the selector UI) is next
+**Status:** Phases 1 and 2 shipped — Phase 3 (secondary surfaces) is next
 **Last updated:** 2026-09-06
 
 ---
@@ -307,7 +307,7 @@ needs `npm run supabase:push`.
    `site/pages/guides/amrap-pacing.astro` to state the new rule, and point the
    PVI calculator's cap selector at the range table.
 
-### Phase 2 — Create mission + Rally Point UI
+### Phase 2 — Create mission + Rally Point UI — **done**
 
 - Domain chips unchanged in appearance and meaning. The cap control is a
   secondary, collapsed row beneath them that reads the canonical minute until
