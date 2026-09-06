@@ -196,7 +196,7 @@ New RPCs:
   queue in one transaction. Host only. Simpler than per-row edits and matches
   how the builder works (edit locally, save once).
 - `start_next_chained_mission(p_rally_point_id)` — takes the lowest unstarted
-  position, creates the mission the way `start_next_rally_point_session` already
+  position, creates the mission the way `start_next_rally_point_mission` already
   does, and arms `rally_point_countdown_ends_at` to `now() + rest` in the same
   transaction. Wraps rather than replaces the existing RPC.
 
@@ -206,7 +206,7 @@ New RPCs:
 
 ### 1. Chains need a signed-in host
 
-`start_next_rally_point_session` resolves `auth.uid()` and rally points are
+`start_next_rally_point_mission` resolves `auth.uid()` and rally points are
 owned by a user. Guests can create a single mission today; they will not be able
 to build a chain. That is a real narrowing of the create flow for the least
 committed visitor, and it should be a deliberate choice rather than something

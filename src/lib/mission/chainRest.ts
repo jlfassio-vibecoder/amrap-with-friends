@@ -14,7 +14,7 @@ import type { TimeDomain } from '@/data/workoutTemplates';
  * timescale entirely: roughly thirty minutes to clear even at the best active
  * recovery intensity. The interval-training literature's 1:1 to 1:2 work-to-rest
  * would mean a twenty-minute rest after a twenty-minute AMRAP, which nobody in
- * a social session will take.
+ * a social mission chain will take.
  *
  * So these rests restore the phosphagen system and let heart rate fall. They do
  * not clear lactate and the product must not imply they do — the second mission

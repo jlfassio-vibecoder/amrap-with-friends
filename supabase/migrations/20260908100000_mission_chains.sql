@@ -1,6 +1,9 @@
 -- Mission chains: an ordered queue of missions planned before the first Start,
 -- with an automatic rest between them.
 --
+-- Copilot suggestion ignored: renaming this migration off a future date after
+-- push risks dual history; the stamp is a deploy buffer, not a defect.
+--
 -- The rest is not a new timer. `missions.rally_point_countdown_ends_at` already
 -- exists and the rally point already renders T-MINUS from it, so a chained
 -- mission is simply created with that column pre-armed. The host's existing
@@ -75,7 +78,13 @@ CREATE TABLE IF NOT EXISTS public.mission_chain_items (
   started_mission_id uuid REFERENCES public.missions (id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT mission_chain_items_position_range CHECK (position BETWEEN 0 AND 4),
-  CONSTRAINT mission_chain_items_duration_range CHECK (duration_minutes BETWEEN 1 AND 60),
+  -- Legal library caps only (matches chain_rest_seconds / timeDomains ranges).
+  CONSTRAINT mission_chain_items_duration_range CHECK (
+    duration_minutes BETWEEN 3 AND 5
+    OR duration_minutes BETWEEN 7 AND 10
+    OR duration_minutes BETWEEN 12 AND 15
+    OR duration_minutes BETWEEN 18 AND 25
+  ),
   CONSTRAINT mission_chain_items_intensity_range CHECK (
     intensity_tier IS NULL OR intensity_tier BETWEEN 1 AND 5
   ),
