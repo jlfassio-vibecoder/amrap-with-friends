@@ -17,31 +17,31 @@ describe('normalizeMissionNameQuery', () => {
 });
 
 describe('filterWorkoutTemplates', () => {
-  it('returns 13 Blood Shunt templates at 5 minutes', () => {
+  it('returns 14 Blood Shunt templates at 5 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
         durationMinutes: 5,
         category: 'blood-shunt',
       })
-    ).toHaveLength(13);
+    ).toHaveLength(14);
   });
 
-  it('returns 10 Blood Shunt templates at 10 minutes', () => {
+  it('returns 13 Blood Shunt templates at 10 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
         durationMinutes: 10,
         category: 'blood-shunt',
       })
-    ).toHaveLength(10);
+    ).toHaveLength(13);
   });
 
-  it('returns 11 Blood Shunt templates at 15 minutes', () => {
+  it('returns 15 Blood Shunt templates at 15 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
         durationMinutes: 15,
         category: 'blood-shunt',
       })
-    ).toHaveLength(11);
+    ).toHaveLength(15);
   });
 
   it('returns 13 Localized Trap templates at 5 minutes', () => {
@@ -53,22 +53,22 @@ describe('filterWorkoutTemplates', () => {
     ).toHaveLength(13);
   });
 
-  it('returns 10 Localized Trap templates at 10 minutes', () => {
+  it('returns 14 Localized Trap templates at 10 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
         durationMinutes: 10,
         category: 'localized-trap',
       })
-    ).toHaveLength(10);
+    ).toHaveLength(14);
   });
 
-  it('returns 10 Localized Trap templates at 15 minutes', () => {
+  it('returns 13 Localized Trap templates at 15 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
         durationMinutes: 15,
         category: 'localized-trap',
       })
-    ).toHaveLength(10);
+    ).toHaveLength(13);
   });
 
   it('returns 13 Engine Room templates at 5 minutes', () => {
@@ -80,49 +80,49 @@ describe('filterWorkoutTemplates', () => {
     ).toHaveLength(13);
   });
 
-  it('returns 11 Engine Room templates at 10 minutes', () => {
+  it('returns 14 Engine Room templates at 10 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
         durationMinutes: 10,
         category: 'engine-room',
       })
-    ).toHaveLength(11);
+    ).toHaveLength(14);
   });
 
-  it('returns 10 Engine Room templates at 15 minutes', () => {
+  it('returns 14 Engine Room templates at 15 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
         durationMinutes: 15,
         category: 'engine-room',
       })
-    ).toHaveLength(10);
+    ).toHaveLength(14);
   });
 
-  it('returns 13 Midline Tension templates at 5 minutes', () => {
+  it('returns 14 Midline Tension templates at 5 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
         durationMinutes: 5,
         category: 'midline-tension',
       })
-    ).toHaveLength(13);
+    ).toHaveLength(14);
   });
 
-  it('returns 10 Midline Tension templates at 10 minutes', () => {
+  it('returns 14 Midline Tension templates at 10 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
         durationMinutes: 10,
         category: 'midline-tension',
       })
-    ).toHaveLength(10);
+    ).toHaveLength(14);
   });
 
-  it('returns 10 Midline Tension templates at 15 minutes', () => {
+  it('returns 13 Midline Tension templates at 15 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
         durationMinutes: 15,
         category: 'midline-tension',
       })
-    ).toHaveLength(10);
+    ).toHaveLength(13);
   });
 
   it('returns empty for 20 minutes', () => {
@@ -134,31 +134,31 @@ describe('filterWorkoutTemplates', () => {
     ).toEqual([]);
   });
 
-  it('returns 10 Aerobic Matrix templates at 20 minutes', () => {
+  it('returns 13 Aerobic Matrix templates at 20 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
         durationMinutes: 20,
         category: 'aerobic-matrix',
       })
-    ).toHaveLength(10);
+    ).toHaveLength(13);
   });
 
-  it('returns 10 4-Point Cascade templates at 20 minutes', () => {
+  it('returns 13 4-Point Cascade templates at 20 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
         durationMinutes: 20,
         category: 'four-point-cascade',
       })
-    ).toHaveLength(10);
+    ).toHaveLength(13);
   });
 
-  it('returns 10 Armor Protocol templates at 20 minutes', () => {
+  it('returns 13 Armor Protocol templates at 20 minutes', () => {
     expect(
       filterWorkoutTemplates(WORKOUT_TEMPLATES, {
         durationMinutes: 20,
         category: 'armor-protocol',
       })
-    ).toHaveLength(10);
+    ).toHaveLength(13);
   });
 
   it('filters by exact intensity within domain and category', () => {
@@ -169,6 +169,7 @@ describe('filterWorkoutTemplates', () => {
     });
     expect(matches.map((template) => template.name).sort()).toEqual([
       'Iron Will',
+      'The Iron Yoke',
       'The Shield',
       'The Trench',
     ]);
@@ -215,7 +216,11 @@ describe('filterWorkoutTemplates', () => {
       nameQuery: 'the',
       intensityTier: 5,
     });
-    expect(matches.map((template) => template.name).sort()).toEqual(['The Shield', 'The Trench']);
+    expect(matches.map((template) => template.name).sort()).toEqual([
+      'The Iron Yoke',
+      'The Shield',
+      'The Trench',
+    ]);
   });
 
   it('leaves domain and category filtering unchanged for empty or whitespace nameQuery', () => {

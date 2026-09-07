@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { WORKOUT_TEMPLATES, type WorkoutTemplate } from '@/data/workoutTemplates';
 import { filterWorkoutTemplates } from '@/lib/workout/filterWorkoutTemplates';
 import { benchmarkTemplateIdFor } from './campaignBenchmarks';
+import { deriveCampaignRoles } from './campaignRoles';
 import { orderPoolByVolume, repsPerRound } from './campaignVolume';
 import { planCampaignWorkouts } from './planCampaignWorkouts';
 import { CampaignValidationError, type CampaignOccurrence, type CampaignTrack } from './types';
@@ -284,9 +285,11 @@ describe('planCampaignWorkouts', () => {
         }).filter((entry) => entry.id !== 'the-hemodynamic')
       );
 
-      // Mission 1 is the benchmark; the first pass through the build pool
-      // follows it, one mission per template.
-      const firstPass = planned.slice(1, 1 + buildPool.length);
+      // Deloads and retests interrupt the calendar; only build slots walk the pool.
+      const roles = deriveCampaignRoles(planned);
+      const firstPass = planned
+        .filter((_, index) => roles[index] === 'build')
+        .slice(0, buildPool.length);
       expect(firstPass.map((entry) => entry.templateId)).toEqual(
         buildPool.map((entry) => entry.id)
       );
