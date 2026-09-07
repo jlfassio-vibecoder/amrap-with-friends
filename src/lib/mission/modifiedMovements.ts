@@ -90,6 +90,6 @@ export function readModifiedMovements(value: unknown): string[] {
   }
   return value
     .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
-    .map((entry) => entry.slice(0, MAX_MOVEMENT_NAME_LENGTH))
+    .map((entry) => entry.trim().slice(0, MAX_MOVEMENT_NAME_LENGTH))
     .slice(0, MAX_MODIFIED_MOVEMENTS);
 }

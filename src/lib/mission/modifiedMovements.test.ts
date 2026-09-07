@@ -90,6 +90,7 @@ describe('readModifiedMovements', () => {
     expect(readModifiedMovements(null)).toEqual([]);
     expect(readModifiedMovements('Sprawls')).toEqual([]);
     expect(readModifiedMovements(['Sprawls', '', 3, null])).toEqual(['Sprawls']);
+    expect(readModifiedMovements(['  Diamond Push-ups  '])).toEqual(['Diamond Push-ups']);
   });
 });
 

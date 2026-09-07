@@ -121,16 +121,17 @@ function MyMissionCard({
     onToggle: () => void;
   };
 }) {
+  const modifiedBadge = formatModifiedBadge(entry.modifiedMovements);
   return (
     <div className="card space-y-2 p-4 text-sm">
       <MyMissionMovements title={myMissionWorkoutTitle(entry)} workout={entry.workout} />
       <p className="text-center text-secondary">
         {formatMissionWhen(entry)} · {entry.durationMinutes} min ·{' '}
         {formatMyMissionScoreDisplay(entry)} · {entry.state}
-        {formatModifiedBadge(entry.modifiedMovements) ? (
+        {modifiedBadge ? (
           <>
             {' · '}
-            <span title={formatModifiedBadge(entry.modifiedMovements) ?? undefined}>Modified</span>
+            <span title={modifiedBadge}>Modified</span>
           </>
         ) : null}
         {entry.isFeatured ? ' · Featured' : ''}

@@ -93,6 +93,7 @@ Deno.test('handleSubmitParticipantResult rejects second submit when score is loc
       claimToken: 'claim-token',
       partialReps: 15,
       segmentIndex: 0,
+      modifiedMovements: [],
     },
     {
       authUserId: null,
@@ -134,6 +135,7 @@ Deno.test('handleSubmitParticipantResult rejects second submit when score is loc
       claimToken: 'claim-token',
       partialReps: 10,
       segmentIndex: 0,
+      modifiedMovements: [],
     },
     {
       authUserId: null,
@@ -177,6 +179,7 @@ Deno.test('handleSubmitParticipantResult ignores client-side score tampering inp
       claimToken: 'claim-token',
       partialReps: 15,
       segmentIndex: 0,
+      modifiedMovements: [],
     },
     {
       authUserId: null,
@@ -215,6 +218,7 @@ Deno.test('handleSubmitParticipantResult fails closed when rounds cannot be load
       claimToken: 'claim-token',
       partialReps: 0,
       segmentIndex: 0,
+      modifiedMovements: [],
     },
     {
       authUserId: null,
