@@ -1,6 +1,10 @@
-import { CHECK_IN_DIMENSIONS, RPE_OPTIONS } from '@/data/missionCheckIn';
+import {
+  CHECK_IN_DIMENSIONS,
+  PAIN_CHECK_IN_WARNING,
+  RPE_OPTIONS,
+  type CheckInDimensionId,
+} from '@/data/missionCheckIn';
 import { MAX_SESSION_NOTES_LENGTH, type MissionCheckIns } from '@/lib/mission/missionCheckIn';
-import type { CheckInDimensionId } from '@/data/missionCheckIn';
 
 export interface MissionCheckInValue {
   rpe: number | null;
@@ -106,6 +110,11 @@ export function MissionCheckInPanel({
                 </button>
               ))}
             </div>
+            {dimension.id === 'pain' && value.checkIns.pain === 'pain--felt' ? (
+              <p role="status" className="text-sm leading-relaxed text-secondary">
+                {PAIN_CHECK_IN_WARNING}
+              </p>
+            ) : null}
           </fieldset>
         ))}
 

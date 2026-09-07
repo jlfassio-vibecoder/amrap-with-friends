@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { PAIN_CHECK_IN_WARNING } from '@/data/missionCheckIn';
 import { MissionCheckInPanel } from '@/components/mission/MissionCheckInPanel';
 
 afterEach(cleanup);
@@ -44,5 +45,31 @@ describe('MissionCheckInPanel', () => {
       sessionNotes: '',
       checkIns: {},
     });
+  });
+
+  it('shows the medical warning only while Felt pain is selected', () => {
+    const { rerender } = render(
+      <MissionCheckInPanel
+        value={{ rpe: null, sessionNotes: '', checkIns: {} }}
+        onChange={() => undefined}
+      />
+    );
+    expect(screen.queryByText(PAIN_CHECK_IN_WARNING)).toBeNull();
+
+    rerender(
+      <MissionCheckInPanel
+        value={{ rpe: null, sessionNotes: '', checkIns: { pain: 'pain--felt' } }}
+        onChange={() => undefined}
+      />
+    );
+    expect(screen.getByRole('status').textContent).toBe(PAIN_CHECK_IN_WARNING);
+
+    rerender(
+      <MissionCheckInPanel
+        value={{ rpe: null, sessionNotes: '', checkIns: {} }}
+        onChange={() => undefined}
+      />
+    );
+    expect(screen.queryByText(PAIN_CHECK_IN_WARNING)).toBeNull();
   });
 });

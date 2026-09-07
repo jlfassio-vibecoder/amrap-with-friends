@@ -1,4 +1,4 @@
-import { CHECK_IN_DIMENSIONS } from '@/data/missionCheckIn';
+import { CHECK_IN_DIMENSIONS, PAIN_CHECK_IN_WARNING } from '@/data/missionCheckIn';
 import { rpeLabel, type MissionCheckIns } from '@/lib/mission/missionCheckIn';
 
 interface MyMissionCheckInProps {
@@ -71,6 +71,12 @@ export function MyMissionCheckIn({ rpe, sessionNotes, checkIns }: MyMissionCheck
               </li>
             ))}
           </ul>
+        ) : null}
+
+        {checkIns.pain === 'pain--felt' ? (
+          <p role="status" className="text-sm leading-relaxed text-secondary">
+            {PAIN_CHECK_IN_WARNING}
+          </p>
         ) : null}
 
         {/* Whole, and wrapped: the point of writing it down is reading it later. */}

@@ -366,10 +366,10 @@ RPE, the chips and the notes as written.
 
 ### Still open
 
-The `pain` dimension records "Felt pain" and the product does nothing with it
-beyond showing it back. That is enough to not be dishonest, and it is not
-enough. Deciding what the product owes someone who reports pain is a real
-decision and it has not been made — it should not be improvised in a component.
+None. Marking Felt pain shows a frozen medical warning at capture and on
+read-back: discontinue any exercise that causes pain, seek medical attention if
+necessary, and this app does not give medical advice. That is the product
+response — still no triage, coaching, or load effect.
 
 ---
 

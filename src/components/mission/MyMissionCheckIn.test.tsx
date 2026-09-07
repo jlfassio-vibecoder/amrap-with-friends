@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
+import { PAIN_CHECK_IN_WARNING } from '@/data/missionCheckIn';
 import { MyMissionCheckIn } from '@/components/mission/MyMissionCheckIn';
 
 afterEach(cleanup);
@@ -45,6 +46,7 @@ describe('MyMissionCheckIn', () => {
     render(<MyMissionCheckIn rpe={null} sessionNotes="" checkIns={{ pain: 'pain--felt' }} />);
     // "Felt pain" already reads as a sentence; "Pain: Felt pain" does not.
     expect(screen.getByText('Felt pain')).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toBe(PAIN_CHECK_IN_WARNING);
   });
 
   it('ignores an option id this build no longer knows', () => {

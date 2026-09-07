@@ -87,3 +87,10 @@ export const CHECK_IN_DIMENSIONS: readonly CheckInDimension[] = [
     options: [{ id: 'pain--felt', label: 'Felt pain' }],
   },
 ];
+
+/**
+ * Shown whenever `pain--felt` is selected or stored.
+ * Frozen with the option ids — silent edits of this disclaimer fail CI.
+ */
+export const PAIN_CHECK_IN_WARNING =
+  'If you felt pain during this workout, discontinue any exercise that causes pain. Seek medical attention if necessary. This app does not give medical advice.';

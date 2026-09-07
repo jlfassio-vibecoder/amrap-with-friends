@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CHECK_IN_DIMENSIONS, RPE_OPTIONS } from '@/data/missionCheckIn';
+import { CHECK_IN_DIMENSIONS, PAIN_CHECK_IN_WARNING, RPE_OPTIONS } from '@/data/missionCheckIn';
 import {
   MAX_SESSION_NOTES_LENGTH,
   normalizeCheckIns,
@@ -33,6 +33,12 @@ describe('missionCheckIn catalog', () => {
       'pain--felt',
     ]);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('pins the pain medical warning', () => {
+    expect(PAIN_CHECK_IN_WARNING).toBe(
+      'If you felt pain during this workout, discontinue any exercise that causes pain. Seek medical attention if necessary. This app does not give medical advice.'
+    );
   });
 });
 
