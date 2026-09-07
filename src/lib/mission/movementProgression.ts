@@ -1,5 +1,8 @@
 import { formatModifiedBadge } from '@/lib/mission/modifiedMovements';
 import { formatVariantBadge, type MovementVariantSelection } from '@/lib/mission/exerciseScaling';
+import { versionKeyFor } from '@/lib/mission/movementVersion';
+
+export { versionKeyFor } from '@/lib/mission/movementVersion';
 
 /**
  * Reading stored scalings back as a story: "from the knees — 40, 45, 48 reps",
@@ -65,27 +68,6 @@ export const AS_PROGRAMMED_LABEL = 'As programmed';
 
 function entryAt(entry: ProgressionInput): string {
   return entry.scheduledAt ?? entry.createdAt;
-}
-
-/**
- * The exact version performed, as a sortable key.
- *
- * A movement marked modified without a named scaling is its own version — it is
- * genuinely a different thing from a named one, and merging them would claim a
- * like-for-like comparison the data does not support.
- */
-export function versionKeyFor(entry: {
-  modifiedMovements: string[];
-  movementVariants: MovementVariantSelection;
-}): string {
-  const names = new Set<string>([
-    ...entry.modifiedMovements,
-    ...Object.keys(entry.movementVariants ?? {}),
-  ]);
-  return [...names]
-    .sort()
-    .map((name) => `${name}#${entry.movementVariants?.[name] ?? ''}`)
-    .join('|');
 }
 
 function labelFor(entry: ProgressionInput): string {

@@ -1,7 +1,8 @@
 # Plan: marking a movement as modified
 
 **Branch:** `feature/modified-movements`
-**Status:** Phases 1–3 shipped, including the pre-mission picker and the progression view.
+**Status:** Phases 1–3 shipped, including the pre-mission picker, the progression
+view and the same-variant ghost.
 **Last updated:** 2026-09-09
 
 ---
@@ -153,10 +154,32 @@ reach is one thing; removing a teammate from a shared workout is another, and a
 teammate who scaled a movement is still someone to train alongside. This is
 settled, not deferred — the migration says so at the call site.
 
-**Open:** should a _modified_ run race the athlete's best _modified_ run on the
-same template? That is the like-for-like comparison and it is the one that shows
-progression. It needs the phase-2 variant names to be meaningful — a generic flag
-cannot tell knee push-ups from an incline. Deferred.
+**Also decided, once phase 3 made it possible: yes.** A modified run now races
+the athlete's best previous run of the _exact same version_. This was deferred
+because a generic "modified" flag cannot tell knee push-ups from an incline; the
+named variants and the pre-mission picker between them supply both halves — what
+the version is, and the fact that the athlete has said which one they are about
+to do.
+
+`available_ghosts` gains `p_version_key`. Empty or absent asks for the standard
+best only, exactly as before. A named version additionally returns
+`variant_best`: the best scored run whose whole modification state matches.
+`personal_best` is unchanged and still standard-only, and both come back
+together — an athlete's own standard best is not something to hide from them, it
+is just not the like-for-like curve when they have said they are scaling.
+
+The match is on the **whole** modification state, not on the movement asked
+about. Scaling the push-ups and scaling the squats instead are two different
+workouts, and a ghost built from the wrong one paces wrong. Same rule as the
+progression view, and the same key: `versionKeyFor`.
+
+That key now exists in TypeScript and in SQL, which is drift waiting to happen —
+and drift here does not raise. The keys simply stop matching, the ghost is
+silently absent, and nothing says why. `movementVersion.contract.test.ts` parses
+`movement_version_key` out of the migration and runs both over every scaling in
+the library plus the cases a collation would get wrong. The SQL sorts
+`COLLATE "C"` and the TypeScript sorts by code point, so the database's own
+locale never decides whether a ghost matches.
 
 ### 2. The leaderboard within one mission
 
@@ -305,7 +328,8 @@ before the mission, which is exactly the friction this design avoids.
 - An athlete can mark one movement without leaving the results flow.
 - A modified result and an identical unmodified one produce the same final score,
   the same PVI, and the same training load. Asserted in tests.
-- A modified result never becomes the ghost for a standard attempt.
+- A modified result never becomes the ghost for a standard attempt, and a scaled
+  attempt can race the athlete's best run of that same scaling.
 - A retest that differs in modification state from its benchmark says so.
 - Marking a movement costs nothing, and the UI says as much where the athlete
   decides.
@@ -314,14 +338,15 @@ before the mission, which is exactly the friction this design avoids.
 
 ## Key files
 
-| Area                | Paths                                                                                                                            |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Capture             | `src/components/PartialRepsModal.tsx`, `HonestyLockCheckbox.tsx`                                                                 |
-| Pre-mission picker  | `src/components/mission/PreMissionScalingPicker.tsx`, `src/lib/mission/scalingPlan.ts`, `src/pages/MissionWaitingRoomPage.tsx`   |
-| Progression view    | `src/components/mission/ScalingProgressionPanel.tsx`, `src/lib/mission/movementProgression.ts`, `src/pages/MyMissionsPage.tsx`   |
-| Submit path         | `src/lib/api/missionSync.ts` (`submitParticipantResult`), `supabase/functions/submit-participant-result/handler.ts` + `index.ts` |
-| Storage             | `participant_segment_results` (new `modified_movements text[]`)                                                                  |
-| Badge               | `src/components/MissionScorecard.tsx`, leaderboard rows, `src/pages/MyMissionsPage.tsx`                                          |
-| Ghosts (phase 2)    | `available_ghosts` in `20260824140000_session_template_id_and_ghost_rpcs.sql`                                                    |
-| Campaigns (phase 2) | `src/lib/campaign/` comparison surfaces                                                                                          |
-| Must not change     | `computeScoreBreakdown.ts`, `getDomainWeight.ts`, `compute_overtraining_load`, classification queries                            |
+| Area                | Paths                                                                                                                                   |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Capture             | `src/components/PartialRepsModal.tsx`, `HonestyLockCheckbox.tsx`                                                                        |
+| Pre-mission picker  | `src/components/mission/PreMissionScalingPicker.tsx`, `src/lib/mission/scalingPlan.ts`, `src/pages/MissionWaitingRoomPage.tsx`          |
+| Progression view    | `src/components/mission/ScalingProgressionPanel.tsx`, `src/lib/mission/movementProgression.ts`, `src/pages/MyMissionsPage.tsx`          |
+| Submit path         | `src/lib/api/missionSync.ts` (`submitParticipantResult`), `supabase/functions/submit-participant-result/handler.ts` + `index.ts`        |
+| Storage             | `participant_segment_results` (new `modified_movements text[]`)                                                                         |
+| Badge               | `src/components/MissionScorecard.tsx`, leaderboard rows, `src/pages/MyMissionsPage.tsx`                                                 |
+| Ghosts (phase 2)    | `available_ghosts` in `20260824140000_session_template_id_and_ghost_rpcs.sql`                                                           |
+| Same-variant ghost  | `20260909170000_same_variant_ghost.sql`, `src/lib/mission/movementVersion.ts`, `src/lib/api/ghost.ts`, `src/components/GhostPicker.tsx` |
+| Campaigns (phase 2) | `src/lib/campaign/` comparison surfaces                                                                                                 |
+| Must not change     | `computeScoreBreakdown.ts`, `getDomainWeight.ts`, `compute_overtraining_load`, classification queries                                   |

@@ -5,7 +5,7 @@ import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { ghostRunRefToStoredSelection } from '@/hooks/useGhostPacer';
 import { setStoredGhostSelection, type StoredGhostSelection } from '@/lib/missionIdentity';
 
-export type GhostPickerValue = 'none' | 'personal-best' | `crew:${string}`;
+export type GhostPickerValue = 'none' | 'personal-best' | 'variant-best' | `crew:${string}`;
 
 interface GhostPickerProps {
   missionId: string;
@@ -13,6 +13,16 @@ interface GhostPickerProps {
   durationMinutes: number;
   value: StoredGhostSelection | null;
   onChange: (selection: StoredGhostSelection | null) => void;
+  /**
+   * The version the athlete has said they will perform, from `versionKeyFor`.
+   *
+   * Empty means as programmed, and only the standard best is offered. Naming a
+   * version additionally offers their best previous run of that same version —
+   * the like-for-like curve, and the only one they can actually chase.
+   */
+  versionKey?: string;
+  /** How that version reads, e.g. "Diamond Push-ups: from the knees". */
+  versionLabel?: string | null;
   /** When true, omit the Select Pacer title/intro — parent step supplies the label. */
   embedded?: boolean;
 }
@@ -26,6 +36,15 @@ function formatGhostDate(createdAt: string): string {
     month: 'short',
     day: 'numeric',
   });
+}
+
+/** Prefixed, because on its own "48 reps" gives no clue which version it was. */
+function variantBestLabel(ghost: GhostRunRef, versionLabel: string | null): string {
+  const dateLabel = formatGhostDate(ghost.createdAt);
+  const version = versionLabel ?? 'Same scaling';
+  return dateLabel
+    ? `${version} · ${ghost.finalScore} reps · ${dateLabel}`
+    : `${version} · ${ghost.finalScore} reps`;
 }
 
 function personalBestLabel(ghost: GhostRunRef): string {
@@ -52,13 +71,20 @@ export function GhostPicker({
   durationMinutes,
   value,
   onChange,
+  versionKey = '',
+  versionLabel = null,
   embedded = false,
 }: GhostPickerProps) {
   const { isAuthenticated, isAuthLoading } = useAmrapAuth();
   const [personalBest, setPersonalBest] = useState<GhostRunRef | null>(null);
+  const [variantBest, setVariantBest] = useState<GhostRunRef | null>(null);
   const [crewRuns, setCrewRuns] = useState<GhostRunRef[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  // False until a fetch for the current inputs has come back. `isLoading` is
+  // set in a microtask, so on the very first render nothing is loading and
+  // nothing has loaded — and those two are not the same state.
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
 
   const canFetchGhosts = !isAuthLoading && isAuthenticated;
@@ -69,6 +95,7 @@ export function GhostPicker({
     }
 
     let cancelled = false;
+    setHasLoaded(false);
 
     queueMicrotask(() => {
       if (!cancelled) {
@@ -77,48 +104,90 @@ export function GhostPicker({
       }
     });
 
-    fetchAvailableGhosts(templateId, durationMinutes, missionId).then((result) => {
+    fetchAvailableGhosts(templateId, durationMinutes, missionId, versionKey).then((result) => {
       if (cancelled) {
         return;
       }
 
       if (result.error) {
         setPersonalBest(null);
+        setVariantBest(null);
         setCrewRuns([]);
         setLoadError(result.error.message);
         setIsLoading(false);
+        setHasLoaded(true);
         return;
       }
 
       setPersonalBest(result.data?.personalBest ?? null);
+      setVariantBest(result.data?.variantBest ?? null);
       setCrewRuns(result.data?.friends ?? []);
       setIsLoading(false);
+      setHasLoaded(true);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [canFetchGhosts, templateId, durationMinutes, missionId]);
+  }, [canFetchGhosts, templateId, durationMinutes, missionId, versionKey]);
 
   const displayedPersonalBest = canFetchGhosts ? personalBest : null;
+  const displayedVariantBest = canFetchGhosts ? variantBest : null;
   const displayedCrew = canFetchGhosts ? crewRuns : [];
+
+  function isSameRun(run: GhostRunRef, selection: StoredGhostSelection): boolean {
+    return run.participantId === selection.participantId && run.missionId === selection.missionId;
+  }
 
   let selectedValue: GhostPickerValue = 'none';
   if (value) {
-    const crewMatch = displayedCrew.find(
-      (run) => run.participantId === value.participantId && run.missionId === value.missionId
-    );
+    // Matched by run, not by label. A label is display copy; two of the three
+    // option kinds now start with a movement name, and the athlete's selection
+    // has to survive the copy changing.
+    const crewMatch = displayedCrew.find((run) => isSameRun(run, value));
     if (crewMatch) {
       selectedValue = crewOptionValue(crewMatch.participantId);
-    } else if (value.label.startsWith('Personal Best') && displayedPersonalBest) {
+    } else if (displayedVariantBest && isSameRun(displayedVariantBest, value)) {
+      selectedValue = 'variant-best';
+    } else if (displayedPersonalBest && isSameRun(displayedPersonalBest, value)) {
       selectedValue = 'personal-best';
     }
   }
+
+  // An athlete who picks the knee-push-up ghost and then unticks the scaling has
+  // a selection the server will no longer offer. Left alone it stays invisible
+  // in the select while still pacing the mission, so drop it rather than race a
+  // version they have said they are not doing.
+  const selectionIsStale =
+    value !== null &&
+    selectedValue === 'none' &&
+    canFetchGhosts &&
+    hasLoaded &&
+    !isLoading &&
+    !loadError;
+  useEffect(() => {
+    if (!selectionIsStale) {
+      return;
+    }
+    setStoredGhostSelection(missionId, null);
+    onChange(null);
+  }, [selectionIsStale, missionId, onChange]);
 
   function handleSelect(nextValue: GhostPickerValue) {
     if (nextValue === 'none') {
       setStoredGhostSelection(missionId, null);
       onChange(null);
+      return;
+    }
+
+    if (nextValue === 'variant-best') {
+      if (!displayedVariantBest) {
+        return;
+      }
+      const label = variantBestLabel(displayedVariantBest, versionLabel);
+      const selection = ghostRunRefToStoredSelection(displayedVariantBest, label);
+      setStoredGhostSelection(missionId, selection);
+      onChange(selection);
       return;
     }
 
@@ -193,6 +262,11 @@ export function GhostPicker({
               {crewGhostLabel(run)}
             </option>
           ))}
+          {displayedVariantBest ? (
+            <option value="variant-best">
+              {variantBestLabel(displayedVariantBest, versionLabel)}
+            </option>
+          ) : null}
           {displayedPersonalBest ? (
             <option value="personal-best">{personalBestLabel(displayedPersonalBest)}</option>
           ) : null}
@@ -206,9 +280,16 @@ export function GhostPicker({
       {canFetchGhosts &&
       !isLoading &&
       !displayedPersonalBest &&
+      !displayedVariantBest &&
       displayedCrew.length === 0 &&
       !loadError ? (
         <p className="text-xs text-muted">No locked personal best found for this template yet.</p>
+      ) : null}
+
+      {canFetchGhosts && !isLoading && versionKey !== '' && !displayedVariantBest && !loadError ? (
+        <p className="text-xs text-muted">
+          First time doing it this way — finish it and it becomes the pace to beat.
+        </p>
       ) : null}
 
       {authOpen ? <AuthModal onClose={() => setAuthOpen(false)} /> : null}

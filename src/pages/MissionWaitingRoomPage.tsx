@@ -75,7 +75,8 @@ import { shouldShowMissionReset } from '@/lib/mission/shouldShowMissionReset';
 import { shouldSubscribeRallyPointOnMission } from '@/lib/rallyPoint/shouldSubscribeRallyPointOnMission';
 import { shouldUseMissionRealtimeTables } from '@/lib/realtime/shouldUseMissionRealtimeTables';
 import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
-import type { MovementVariantSelection } from '@/lib/mission/exerciseScaling';
+import { formatVariantBadge, type MovementVariantSelection } from '@/lib/mission/exerciseScaling';
+import { versionKeyFor } from '@/lib/mission/movementVersion';
 import { clearScalingPlan, readScalingPlan, writeScalingPlan } from '@/lib/mission/scalingPlan';
 import {
   getStoredRallyPointIdForMission,
@@ -1091,6 +1092,15 @@ function LiveMissionView({
     );
   }, [missionId, participantId, workoutFingerprint]);
 
+  // The pacer offers the athlete's best run of this exact version, so it has to
+  // follow the picker rather than the workout: change the scaling and the ghost
+  // worth racing changes with it.
+  const scalingVersionKey = versionKeyFor({
+    modifiedMovements: Object.keys(scalingPlan),
+    movementVariants: scalingPlan,
+  });
+  const scalingVersionLabel = formatVariantBadge(scalingPlan);
+
   const handleScalingPlanChange = (variants: MovementVariantSelection) => {
     setScalingPlan(variants);
     writeScalingPlan(missionId, participantId, variants);
@@ -1391,6 +1401,8 @@ function LiveMissionView({
                   actionsEnabled={missionReady}
                   onAudioUnlock={handleAudioUnlock}
                   showPacer={showGhostPicker}
+                  ghostVersionKey={scalingVersionKey}
+                  ghostVersionLabel={scalingVersionLabel}
                   templateId={live.templateId}
                   durationMinutes={live.workDurationSec / 60}
                   ghostSelection={ghostSelection}
