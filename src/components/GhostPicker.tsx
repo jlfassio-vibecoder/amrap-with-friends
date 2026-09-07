@@ -95,10 +95,12 @@ export function GhostPicker({
     }
 
     let cancelled = false;
-    setHasLoaded(false);
 
+    // Deferred with the other resets: setState synchronously in an effect body
+    // cascades renders, which is what this microtask has always been here for.
     queueMicrotask(() => {
       if (!cancelled) {
+        setHasLoaded(false);
         setIsLoading(true);
         setLoadError(null);
       }

@@ -33,6 +33,7 @@ import { ArmedRallyPointControls } from '@/components/mission/ArmedRallyPointCon
 import { HostRallyPointSteps } from '@/components/mission/HostRallyPointSteps';
 import { LogMissedRound } from '@/components/mission/LogMissedRound';
 import { PreMissionScalingPicker } from '@/components/mission/PreMissionScalingPicker';
+import { GhostPicker } from '@/components/GhostPicker';
 import { SafetyNoticeModal } from '@/components/safety/SafetyNoticeModal';
 import { useMissionSafetyNotices } from '@/components/safety/useMissionSafetyNotices';
 import { CoachWalkthrough } from '@/components/walkthrough/CoachWalkthrough';
@@ -77,6 +78,7 @@ import { shouldUseMissionRealtimeTables } from '@/lib/realtime/shouldUseMissionR
 import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
 import { formatVariantBadge, type MovementVariantSelection } from '@/lib/mission/exerciseScaling';
 import { versionKeyFor } from '@/lib/mission/movementVersion';
+import { shouldShowPacerPicker } from '@/lib/mission/shouldShowPacerPicker';
 import { clearScalingPlan, readScalingPlan, writeScalingPlan } from '@/lib/mission/scalingPlan';
 import {
   getStoredRallyPointIdForMission,
@@ -759,9 +761,10 @@ function LiveMissionView({
     selfBaseScore,
   });
 
-  const isSoloTemplated =
-    live.participantCount === 1 && live.templateId !== null && livePhase === 'waiting';
-  const showGhostPicker = isSoloTemplated;
+  const showGhostPicker = shouldShowPacerPicker({
+    templateId: live.templateId,
+    phase: livePhase,
+  });
   // Copilot suggestion ignored: ghost pacer error display and strip suppression on load failure already exist.
   const showGhostPacerError =
     activeGhostSelection !== null && livePhase === 'work' && ghostPacer.error !== null;
@@ -1441,6 +1444,24 @@ function LiveMissionView({
 
               {!isHost && live.phase === 'waiting' ? (
                 <CopyInviteLink missionId={missionId} rallyPointId={rallyPointId} />
+              ) : null}
+
+              {/*
+                Joiners never had a pacer at all: the picker lives inside the
+                host's rally-point steps, and the old gate meant the only person
+                who ever saw it was a host training alone. Their own choice,
+                private to them — the host does not pick pacers for the squad.
+              */}
+              {!isHost && showGhostPicker && live.templateId ? (
+                <GhostPicker
+                  missionId={missionId}
+                  templateId={live.templateId}
+                  durationMinutes={live.workDurationSec / 60}
+                  value={ghostSelection}
+                  onChange={setGhostSelection}
+                  versionKey={scalingVersionKey}
+                  versionLabel={scalingVersionLabel}
+                />
               ) : null}
 
               {showGhostPacerError && activeGhostSelection ? (

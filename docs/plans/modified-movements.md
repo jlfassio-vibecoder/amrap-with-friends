@@ -168,6 +168,23 @@ best only, exactly as before. A named version additionally returns
 together — an athlete's own standard best is not something to hide from them, it
 is just not the like-for-like curve when they have said they are modifying.
 
+**The pacer is no longer solo-only.** It shipped requiring
+`participantCount === 1`, on the reasoning that racing a stored curve while a
+squad watched the same clock was a distraction. The same-variant ghost inverts
+that: an athlete who modifies a movement is often the one who feels furthest
+behind in a
+group, and their best previous run of that exact version is the one number on
+the screen that is actually theirs to beat — the live leaderboard is not,
+because the others are doing a different version of the workout. The gate is now
+`shouldShowPacerPicker` (template present, still in the rally point) and
+participant count does not reach it.
+
+Joiners get a picker of their own for the first time. It had only ever lived
+inside the host's rally-point steps, so the old gate meant the only person who
+ever saw it was a host training alone. A pacer stays a private choice: everyone
+picks their own, nobody else sees it, "None" is still the default, and the host
+does not pick pacers for the squad.
+
 The match is on the **whole** modification state, not on the movement asked
 about. Modifying the push-ups and modifying the squats instead are two different
 workouts, and a ghost built from the wrong one paces wrong. Same rule as the
@@ -348,5 +365,6 @@ before the mission, which is exactly the friction this design avoids.
 | Badge               | `src/components/MissionScorecard.tsx`, leaderboard rows, `src/pages/MyMissionsPage.tsx`                                                 |
 | Ghosts (phase 2)    | `available_ghosts` in `20260824140000_session_template_id_and_ghost_rpcs.sql`                                                           |
 | Same-variant ghost  | `20260909170000_same_variant_ghost.sql`, `src/lib/mission/movementVersion.ts`, `src/lib/api/ghost.ts`, `src/components/GhostPicker.tsx` |
+| Pacer visibility    | `src/lib/mission/shouldShowPacerPicker.ts`, `src/pages/MissionWaitingRoomPage.tsx`                                                      |
 | Campaigns (phase 2) | `src/lib/campaign/` comparison surfaces                                                                                                 |
 | Must not change     | `computeScoreBreakdown.ts`, `getDomainWeight.ts`, `compute_overtraining_load`, classification queries                                   |
