@@ -2,7 +2,6 @@ import { callRpc } from '@/lib/api/callRpc';
 import { readModifiedMovements } from '@/lib/mission/modifiedMovements';
 import { readMovementVariants } from '@/lib/mission/exerciseScaling';
 import {
-  formatCheckInSummary,
   readCheckIns,
   readRpe,
   readSessionNotes,
@@ -136,15 +135,6 @@ export function formatMyMissionShareText(entry: MyMissionEntry): string {
 
   const movements = entry.workout.map(formatMyMissionExerciseLine).join('\n');
   return `${title}\n\n${movements}\n\n${meta}`;
-}
-
-/** Badge / title line for a stored check-in, or null when nothing was logged. */
-export function formatMyMissionCheckInSummary(entry: MyMissionEntry): string | null {
-  return formatCheckInSummary({
-    rpe: entry.rpe,
-    sessionNotes: entry.sessionNotes,
-    checkIns: entry.checkIns,
-  });
 }
 
 export function canDeleteMyMission(entry: MyMissionEntry): boolean {

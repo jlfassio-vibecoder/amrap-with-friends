@@ -329,6 +329,50 @@ not a record.
 
 ---
 
+## Post-mission check-in (RPE, chips, notes)
+
+Added alongside the modification mark, under the same rule: free to give, never
+part of the score.
+
+**A check-in is private to its author.** Nothing in the product shows one
+athlete another's notes, pain mark, mood or sleep, and nothing should — the
+write path asks under "Anything else to remember next time?", which is a promise
+about audience. So `rpe`, `session_notes` and `check_ins` are **not** granted to
+`anon`/`authenticated` and are **not** on `get_mission_live_state`. That RPC is
+`SECURITY DEFINER` and returns every participant's segment result to anyone
+holding a claim or host token, guests included; the membership RLS policy is
+`USING (is_mission_participant(mission_id))`, so a column grant is a grant to
+every teammate. `my_missions` is the one read path they belong on, because it is
+scoped to `p.user_id = v_uid`. `checkInPrivacy.test.ts` pins all three edges.
+
+This is where the modified-movement pattern does **not** transfer.
+`modified_movements` is public by design — it is printed on the leaderboard so
+another athlete can read the score. Copying its grants onto this data was the
+mistake `20260909200000_check_in_is_private.sql` undoes.
+
+**The RPE series is not split by version, but says when the version changed.**
+RPE is normalised to the athlete already, and splitting would break the trend
+for exactly the people who progress out of a modification. The number is
+comparable across versions; the inference is not — 6 → 8 after moving from knee
+push-ups to full ones is not a fitness decline. So the series stays whole and
+carries one sentence, which is decision 3 applied again for the same reason: any
+correction factor would be invented.
+
+**A check-in is read back in full.** It shipped as a "Check-in" word with the
+whole thing in a `title` attribute truncated to 40 characters — unreachable on
+touch, which is the device most of these missions are run from. An athlete could
+write 280 characters and never read a word back. `MyMissionCheckIn` shows the
+RPE, the chips and the notes as written.
+
+### Still open
+
+The `pain` dimension records "Felt pain" and the product does nothing with it
+beyond showing it back. That is enough to not be dishonest, and it is not
+enough. Deciding what the product owes someone who reports pain is a real
+decision and it has not been made — it should not be improvised in a component.
+
+---
+
 ## Integrity note
 
 Marking modified _after_ seeing the score invites rationalising. The risk is

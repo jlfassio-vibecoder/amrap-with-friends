@@ -116,12 +116,13 @@ export interface ParticipantSegmentResultRow {
   modified_movements: string[] | null;
   /** `{ movement name: scaling option id }` when the scaling was named. */
   movement_variants: Record<string, string> | null;
-  /** Optional session RPE 1–10. */
-  rpe: number | null;
-  /** Optional free-text notes. */
-  session_notes: string | null;
-  /** Optional structured check-in chips. */
-  check_ins: Record<string, string> | null;
+  /*
+   * No rpe / session_notes / check_ins here on purpose. A live payload is
+   * every participant's rows, delivered to every participant and to guests, so
+   * anything on it is shared with the mission. Check-ins are private to their
+   * author and reach them through my_missions, which is scoped to their own
+   * user id. See 20260909200000_check_in_is_private.sql.
+   */
   updated_at: string;
 }
 

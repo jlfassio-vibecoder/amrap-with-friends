@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CHECK_IN_DIMENSIONS, RPE_OPTIONS } from '@/data/missionCheckIn';
 import {
-  formatCheckInSummary,
   MAX_SESSION_NOTES_LENGTH,
   normalizeCheckIns,
   normalizeRpe,
@@ -88,23 +87,5 @@ describe('normalizeCheckIns', () => {
   it('rejects non-objects', () => {
     expect(normalizeCheckIns(null)).toEqual({});
     expect(normalizeCheckIns(['energy--ok'])).toEqual({});
-  });
-});
-
-describe('formatCheckInSummary', () => {
-  it('builds a readable badge line', () => {
-    expect(
-      formatCheckInSummary({
-        rpe: 7,
-        checkIns: { starting_soreness: 'soreness--mild', pain: 'pain--felt' },
-        sessionNotes: 'knees felt better after warm-up',
-      })
-    ).toBe(
-      'RPE 7 (Very hard) · Starting soreness: Mild · Felt pain · knees felt better after warm-up'
-    );
-  });
-
-  it('returns null when nothing was logged', () => {
-    expect(formatCheckInSummary({ rpe: null, checkIns: {}, sessionNotes: '' })).toBeNull();
   });
 });

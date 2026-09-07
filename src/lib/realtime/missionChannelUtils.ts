@@ -12,7 +12,6 @@ import type { ScoreBreakdown } from '@/lib/scoring/types';
 import { parseScoreBreakdownJson } from '@/lib/scoring/parseScoreBreakdownJson';
 import { readModifiedMovements } from '@/lib/mission/modifiedMovements';
 import { readMovementVariants } from '@/lib/mission/exerciseScaling';
-import { readCheckIns, readRpe, readSessionNotes } from '@/lib/mission/missionCheckIn';
 import { computeBaseScore } from '@/lib/scoring/computeBaseScore';
 import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
 import { computeScoreBreakdown } from '@/lib/scoring/computeScoreBreakdown';
@@ -246,15 +245,6 @@ export function parseSegmentResultRow(
     score_breakdown: scoreBreakdown,
     modified_movements: readModifiedMovements(record.modified_movements),
     movement_variants: readMovementVariants(record.movement_variants),
-    rpe: readRpe(record.rpe),
-    session_notes: (() => {
-      const notes = readSessionNotes(record.session_notes);
-      return notes.length > 0 ? notes : null;
-    })(),
-    check_ins: (() => {
-      const checkIns = readCheckIns(record.check_ins);
-      return Object.keys(checkIns).length > 0 ? checkIns : null;
-    })(),
     updated_at: updatedAt,
   };
 }

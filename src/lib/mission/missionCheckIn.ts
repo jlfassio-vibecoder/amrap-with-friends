@@ -79,55 +79,6 @@ export function readCheckIns(value: unknown): MissionCheckIns {
   return normalizeCheckIns(value);
 }
 
-export function hasCheckInContent(selection: {
-  rpe: number | null;
-  sessionNotes: string;
-  checkIns: MissionCheckIns;
-}): boolean {
-  return (
-    selection.rpe !== null ||
-    selection.sessionNotes.length > 0 ||
-    Object.keys(selection.checkIns).length > 0
-  );
-}
-
-/** "RPE 7 · Starting soreness: Mild · Felt pain" for badges and titles. */
-export function formatCheckInSummary(selection: {
-  rpe: number | null;
-  sessionNotes?: string;
-  checkIns: MissionCheckIns;
-}): string | null {
-  const parts: string[] = [];
-
-  if (selection.rpe !== null) {
-    const label = RPE_OPTIONS.find((option) => option.value === selection.rpe)?.label;
-    parts.push(label ? `RPE ${selection.rpe} (${label})` : `RPE ${selection.rpe}`);
-  }
-
-  for (const dimension of CHECK_IN_DIMENSIONS) {
-    const optionId = selection.checkIns[dimension.id];
-    if (!optionId) {
-      continue;
-    }
-    const option = dimension.options.find((entry) => entry.id === optionId);
-    if (!option) {
-      continue;
-    }
-    if (dimension.id === 'pain') {
-      parts.push(option.label);
-      continue;
-    }
-    parts.push(`${dimension.title}: ${option.label}`);
-  }
-
-  const notes = selection.sessionNotes?.trim() ?? '';
-  if (notes.length > 0) {
-    parts.push(notes.length > 40 ? `${notes.slice(0, 37)}…` : notes);
-  }
-
-  return parts.length > 0 ? parts.join(' · ') : null;
-}
-
 export function rpeLabel(value: number): string | null {
   return RPE_OPTIONS.find((option) => option.value === value)?.label ?? null;
 }

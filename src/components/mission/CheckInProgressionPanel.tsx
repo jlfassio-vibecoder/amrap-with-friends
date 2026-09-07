@@ -1,5 +1,6 @@
 import {
   buildCheckInProgression,
+  checkInVersionNote,
   formatCheckInRpeDelta,
   formatCheckInRpeSeries,
   type CheckInProgressionInput,
@@ -33,6 +34,7 @@ export function CheckInProgressionPanel({ entries }: CheckInProgressionPanelProp
       <ul className="space-y-3">
         {groups.map((group) => {
           const delta = formatCheckInRpeDelta(group);
+          const versionNote = checkInVersionNote(group);
           return (
             <li key={`${group.templateId}@${group.durationMinutes}`} className="space-y-1">
               <p className="text-sm font-semibold text-ink">
@@ -42,6 +44,7 @@ export function CheckInProgressionPanel({ entries }: CheckInProgressionPanelProp
                 {formatCheckInRpeSeries(group)}
                 {delta ? <span className="ml-2 text-xs text-muted">({delta})</span> : null}
               </p>
+              {versionNote ? <p className="text-xs text-muted">{versionNote}</p> : null}
             </li>
           );
         })}
