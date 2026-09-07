@@ -23,15 +23,14 @@ describe('the ladder data', () => {
     expect(missing.map((exercise) => exercise.id)).toEqual([]);
   });
 
-  it('gives every option a unique id, because ids are stored', () => {
-    const ids = EXERCISE_SCALING.flatMap((ladder) => ladder.options.map((option) => option.id));
-    expect(new Set(ids).size).toBe(new Set(ids).size);
+  it('keeps a shared option id pointing at the same label', () => {
+    // Shared ladders reuse ids on purpose; the pin is that the same id never
+    // means two different things.
     const seen = new Map<string, string>();
     for (const ladder of EXERCISE_SCALING) {
       for (const option of ladder.options) {
         const previous = seen.get(option.id);
         if (previous !== undefined) {
-          // Shared ladders are intentional; the same id must mean the same thing.
           expect(previous).toBe(option.label);
         }
         seen.set(option.id, option.label);

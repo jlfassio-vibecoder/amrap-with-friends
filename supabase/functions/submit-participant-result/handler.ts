@@ -90,6 +90,8 @@ export function normalizeSubmitRequest(
 
 /** Longest movement name stored, matching the workout validator's own limit. */
 const MAX_MOVEMENT_NAME_LENGTH = 120;
+/** Longest frozen scaling option id a client may submit. */
+const MAX_MOVEMENT_VARIANT_OPTION_ID_LENGTH = 120;
 /** Upper bound so a malformed client cannot write an unbounded array. */
 const MAX_MODIFIED_MOVEMENTS = 12;
 
@@ -111,7 +113,11 @@ export function normalizeMovementVariantMap(value: unknown): Record<string, stri
 
   const cleaned: Record<string, string> = {};
   for (const [name, optionId] of Object.entries(value as Record<string, unknown>)) {
-    if (typeof optionId !== 'string' || !optionId || optionId.length > MAX_MOVEMENT_NAME_LENGTH) {
+    if (
+      typeof optionId !== 'string' ||
+      !optionId ||
+      optionId.length > MAX_MOVEMENT_VARIANT_OPTION_ID_LENGTH
+    ) {
       continue;
     }
     cleaned[name.slice(0, MAX_MOVEMENT_NAME_LENGTH)] = optionId;

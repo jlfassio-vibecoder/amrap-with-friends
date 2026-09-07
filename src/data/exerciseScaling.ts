@@ -178,9 +178,10 @@ const DIP_LADDER: ScalingOption[] = [
 ];
 
 /**
- * One ladder per exercise that has a sensible scaling path. An exercise with no
- * entry simply offers no named options — the plain "modified" mark still works,
- * which is why this list can grow over time instead of having to be complete.
+ * One ladder per library exercise. `exerciseScaling.test.ts` requires every
+ * `EXERCISE_LIBRARY` id to appear here so a new exercise cannot ship without a
+ * named path; the plain "modified" mark remains available as a fallback if a
+ * chosen option is later dropped from a ladder.
  */
 export const EXERCISE_SCALING: ScalingLadder[] = [
   // Push-ups, in every variation the library programmes.
