@@ -142,9 +142,16 @@ edited underneath it, and reads correctly in a badge tooltip without a lookup.
 modified run should not become the ghost an athlete races on their next standard
 attempt — that turns a scaled score into a target they cannot reach.
 
-**Recommendation:** filter modified results out of the ghost query. Keep them
-visible in My Missions; they are the athlete's own history, just not their
-standard-movement best.
+**Decided:** filter modified results out of the ghost query. Keep them visible in
+My Missions; they are the athlete's own history, just not their standard-movement
+best.
+
+**Also decided: the campaign pacer stays unfiltered.** The same function has a
+second query that races live teammates on the current occurrence rather than a
+stored personal best. Declining to hand an athlete a stale target they cannot
+reach is one thing; removing a teammate from a shared workout is another, and a
+teammate who scaled a movement is still someone to train alongside. This is
+settled, not deferred — the migration says so at the call site.
 
 **Open:** should a _modified_ run race the athlete's best _modified_ run on the
 same template? That is the like-for-like comparison and it is the one that shows

@@ -9,9 +9,11 @@
 --    the ghost that changes.
 --
 --    The campaign pacer further down that same function is deliberately NOT
---    filtered. It races live teammates on the same occurrence rather than a
---    stored best, and dropping a teammate out of someone's pacer removes a
---    person from a shared workout — a different decision, left open.
+--    filtered, and that is a settled decision rather than an oversight. It races
+--    live teammates on the current occurrence rather than a stored best, so
+--    filtering it would remove a person from a shared workout instead of
+--    declining to hand back a stale target. A teammate who scaled a movement is
+--    still someone to train alongside. Do not "fix" this.
 --
 -- 2. campaign_standings reports whether each score was modified, so a retest can
 --    say when it does not match its benchmark. Moving from knee push-ups to full
