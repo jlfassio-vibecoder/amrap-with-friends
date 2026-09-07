@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { HonestyLockCheckbox } from '@/components/HonestyLockCheckbox';
+import { ModificationOptionChip } from '@/components/mission/ModificationOptionChip';
 import type { WorkoutExercise } from '@/lib/api/missionTypes';
 import { normalizeModifiedMovements } from '@/lib/mission/modifiedMovements';
 import {
@@ -149,21 +150,13 @@ export function PartialRepsModal({
                     {isModified && options.length > 0 ? (
                       <div className="ml-7 flex flex-wrap gap-1.5">
                         {options.map((option) => (
-                          <button
+                          <ModificationOptionChip
                             key={option.id}
-                            type="button"
-                            title={option.how}
-                            aria-pressed={variants[exercise.name] === option.id}
+                            option={option}
+                            pressed={variants[exercise.name] === option.id}
                             disabled={isSubmitting}
-                            className={
-                              variants[exercise.name] === option.id
-                                ? 'rounded-full bg-accent px-2.5 py-1 text-xs font-semibold text-on-accent'
-                                : 'rounded-full border border-border bg-surface px-2.5 py-1 text-xs text-ink'
-                            }
                             onClick={() => chooseVariant(exercise.name, option.id)}
-                          >
-                            {option.label}
-                          </button>
+                          />
                         ))}
                       </div>
                     ) : null}

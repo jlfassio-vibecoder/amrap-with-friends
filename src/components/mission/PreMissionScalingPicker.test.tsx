@@ -67,6 +67,11 @@ describe('PreMissionScalingPicker', () => {
     expect(screen.getByText(/Modifying does not lower your score/i)).toBeTruthy();
   });
 
+  it('keeps the how-line on each option for hover', () => {
+    render(<PreMissionScalingPicker workout={[PUSH_UPS]} variants={{}} onChange={() => {}} />);
+    expect(screen.getByText(/Knees down, hips in line with the shoulders/i)).toBeTruthy();
+  });
+
   it('summarises how many modifications are already chosen', () => {
     render(
       <PreMissionScalingPicker

@@ -1,3 +1,4 @@
+import { ModificationOptionChip } from '@/components/mission/ModificationOptionChip';
 import type { WorkoutExercise } from '@/lib/api/missionTypes';
 import {
   scalingOptionsForMovement,
@@ -68,21 +69,13 @@ export function PreMissionScalingPicker({
               <p className="text-sm text-ink">{exercise.name}</p>
               <div className="flex flex-wrap gap-1.5">
                 {options.map((option) => (
-                  <button
+                  <ModificationOptionChip
                     key={option.id}
-                    type="button"
-                    title={option.how}
-                    aria-pressed={variants[exercise.name] === option.id}
+                    option={option}
+                    pressed={variants[exercise.name] === option.id}
                     disabled={disabled}
-                    className={
-                      variants[exercise.name] === option.id
-                        ? 'rounded-full bg-accent px-2.5 py-1 text-xs font-semibold text-on-accent'
-                        : 'rounded-full border border-border bg-surface px-2.5 py-1 text-xs text-ink'
-                    }
                     onClick={() => choose(exercise.name, option.id)}
-                  >
-                    {option.label}
-                  </button>
+                  />
                 ))}
               </div>
             </div>
