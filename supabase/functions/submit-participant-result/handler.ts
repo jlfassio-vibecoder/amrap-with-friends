@@ -16,6 +16,8 @@ export interface SubmitParticipantResultRequest {
    * why it is absent from computeLockedScore's inputs entirely.
    */
   modifiedMovements: string[];
+  /** `{ movement name: scaling option id }` when the scaling was named. */
+  movementVariants: Record<string, string>;
 }
 
 export interface SubmitParticipantResultResponse {
@@ -67,6 +69,7 @@ export function normalizeSubmitRequest(
     partialReps: typeof body.partialReps === 'number' ? body.partialReps : Number.NaN,
     segmentIndex: typeof body.segmentIndex === 'number' ? body.segmentIndex : Number.NaN,
     modifiedMovements: normalizeModifiedMovementNames(body.modifiedMovements),
+    movementVariants: normalizeMovementVariantMap(body.movementVariants),
   };
 }
 
@@ -81,6 +84,30 @@ const MAX_MODIFIED_MOVEMENTS = 12;
  * The client already filters these against the workout it rendered; this is the
  * server refusing to store anything unbounded, not a second source of truth.
  */
+/**
+ * Bound the variant map the client sent. The client already checks each choice
+ * against the movement's own ladder; this only refuses to store something
+ * unbounded or the wrong shape.
+ */
+export function normalizeMovementVariantMap(value: unknown): Record<string, string> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+
+  const cleaned: Record<string, string> = {};
+  for (const [name, optionId] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof optionId !== 'string' || !optionId || optionId.length > MAX_MOVEMENT_NAME_LENGTH) {
+      continue;
+    }
+    cleaned[name.slice(0, MAX_MOVEMENT_NAME_LENGTH)] = optionId;
+    if (Object.keys(cleaned).length >= MAX_MODIFIED_MOVEMENTS) {
+      break;
+    }
+  }
+
+  return cleaned;
+}
+
 export function normalizeModifiedMovementNames(value: unknown): string[] {
   if (!Array.isArray(value)) {
     return [];
@@ -225,6 +252,7 @@ export async function handleSubmitParticipantResult(
       finalScore: number;
       scoreBreakdown: ScoreBreakdown;
       modifiedMovements: string[];
+      movementVariants: Record<string, string>;
     }) => Promise<{ ok: true } | { ok: false; reason: string }>;
   }
 ): Promise<SubmitParticipantResultResponse> {
@@ -290,6 +318,7 @@ export async function handleSubmitParticipantResult(
     finalScore: breakdown.finalScore,
     scoreBreakdown: breakdown,
     modifiedMovements: body.modifiedMovements,
+    movementVariants: body.movementVariants,
   });
 
   if (!persisted.ok) {

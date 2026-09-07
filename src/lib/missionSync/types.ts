@@ -114,6 +114,8 @@ export interface ParticipantSegmentResultRow {
   score_breakdown: ScoreBreakdown | null;
   /** Movements the athlete performed differently from the programmed version. */
   modified_movements: string[] | null;
+  /** `{ movement name: scaling option id }` when the scaling was named. */
+  movement_variants: Record<string, string> | null;
   updated_at: string;
 }
 
@@ -125,6 +127,8 @@ export interface SubmitParticipantResultInput {
   segmentIndex: number;
   /** Movements the athlete marked as modified. Absent means as programmed. */
   modifiedMovements?: string[];
+  /** `{ movement name: scaling option id }` for any scaling they named. */
+  movementVariants?: Record<string, string>;
 }
 
 export interface SubmitParticipantResultSuccess {
@@ -173,4 +177,6 @@ export interface LeaderboardEntry {
   isSelf: boolean;
   /** Empty when the mission was performed as programmed. */
   modifiedMovements: string[];
+  /** `{ movement name: scaling option id }` for any scaling the athlete named. */
+  movementVariants: Record<string, string>;
 }

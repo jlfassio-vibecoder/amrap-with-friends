@@ -61,7 +61,7 @@ describe('PartialRepsModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Increase partial reps' }));
     lockIn();
 
-    expect(onSubmit).toHaveBeenCalledWith(1, ['Diamond Push-ups']);
+    expect(onSubmit).toHaveBeenCalledWith(1, ['Diamond Push-ups'], {});
   });
 
   it('submits nothing when no movement is marked', () => {
@@ -77,7 +77,7 @@ describe('PartialRepsModal', () => {
 
     lockIn();
 
-    expect(onSubmit).toHaveBeenCalledWith(0, []);
+    expect(onSubmit).toHaveBeenCalledWith(0, [], {});
   });
 
   it('lets a mark be taken back before locking', () => {
@@ -95,7 +95,7 @@ describe('PartialRepsModal', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: 'Sprawls' }));
     lockIn();
 
-    expect(onSubmit).toHaveBeenCalledWith(0, []);
+    expect(onSubmit).toHaveBeenCalledWith(0, [], {});
   });
 
   it('does not gate the submit on the modification question', () => {
@@ -120,6 +120,67 @@ describe('PartialRepsModal', () => {
 
     expect(screen.queryByText(/did you modify/i)).toBeNull();
     lockIn();
-    expect(onSubmit).toHaveBeenCalledWith(0, []);
+    expect(onSubmit).toHaveBeenCalledWith(0, [], {});
+  });
+
+  it('offers named scalings once a movement is marked, and submits the choice', () => {
+    const onSubmit = vi.fn();
+    render(
+      <PartialRepsModal
+        repsPerRound={32}
+        isSubmitting={false}
+        workout={workout}
+        onSubmit={onSubmit}
+      />
+    );
+
+    // Nothing on offer until the athlete says the movement changed.
+    expect(screen.queryByRole('button', { name: 'From the knees' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Diamond Push-ups' }));
+    fireEvent.click(screen.getByRole('button', { name: 'From the knees' }));
+    lockIn();
+
+    expect(onSubmit).toHaveBeenCalledWith(0, ['Diamond Push-ups'], {
+      'Diamond Push-ups': 'push-up--knees',
+    });
+  });
+
+  it('drops a named scaling when the movement is un-marked', () => {
+    // A variant on a movement the athlete says they did as programmed is a
+    // contradiction, so the mark and the detail have to come off together.
+    const onSubmit = vi.fn();
+    render(
+      <PartialRepsModal
+        repsPerRound={32}
+        isSubmitting={false}
+        workout={workout}
+        onSubmit={onSubmit}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Diamond Push-ups' }));
+    fireEvent.click(screen.getByRole('button', { name: 'From the knees' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Diamond Push-ups' }));
+    lockIn();
+
+    expect(onSubmit).toHaveBeenCalledWith(0, [], {});
+  });
+
+  it('does not require naming the scaling', () => {
+    const onSubmit = vi.fn();
+    render(
+      <PartialRepsModal
+        repsPerRound={32}
+        isSubmitting={false}
+        workout={workout}
+        onSubmit={onSubmit}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Sprawls' }));
+    lockIn();
+
+    expect(onSubmit).toHaveBeenCalledWith(0, ['Sprawls'], {});
   });
 });

@@ -2,6 +2,11 @@ import { useState } from 'react';
 import { HonestyLockCheckbox } from '@/components/HonestyLockCheckbox';
 import type { WorkoutExercise } from '@/lib/api/missionTypes';
 import { normalizeModifiedMovements } from '@/lib/mission/modifiedMovements';
+import {
+  normalizeMovementVariants,
+  scalingOptionsForMovement,
+  type MovementVariantSelection,
+} from '@/lib/mission/exerciseScaling';
 
 interface PartialRepsModalProps {
   repsPerRound: number;
@@ -9,7 +14,11 @@ interface PartialRepsModalProps {
   error?: string | null;
   /** The movements as programmed, so the athlete can mark any they changed. */
   workout?: WorkoutExercise[];
-  onSubmit: (partialReps: number, modifiedMovements: string[]) => void;
+  onSubmit: (
+    partialReps: number,
+    modifiedMovements: string[],
+    movementVariants: MovementVariantSelection
+  ) => void;
 }
 
 export function PartialRepsModal({
@@ -24,10 +33,27 @@ export function PartialRepsModal({
   const [partialReps, setPartialReps] = useState(0);
   const [integrityAcknowledged, setIntegrityAcknowledged] = useState(false);
   const [modified, setModified] = useState<string[]>([]);
+  const [variants, setVariants] = useState<MovementVariantSelection>({});
 
   function toggleModified(name: string) {
-    setModified((current) =>
-      current.includes(name) ? current.filter((entry) => entry !== name) : [...current, name]
+    setModified((current) => {
+      if (current.includes(name)) {
+        // Un-marking a movement drops the scaling with it — a named variant on a
+        // movement the athlete says they did as programmed is a contradiction.
+        setVariants((current) =>
+          Object.fromEntries(Object.entries(current).filter(([key]) => key !== name))
+        );
+        return current.filter((entry) => entry !== name);
+      }
+      return [...current, name];
+    });
+  }
+
+  function chooseVariant(name: string, optionId: string) {
+    setVariants((current) =>
+      current[name] === optionId
+        ? Object.fromEntries(Object.entries(current).filter(([key]) => key !== name))
+        : { ...current, [name]: optionId }
     );
   }
 
@@ -92,25 +118,50 @@ export function PartialRepsModal({
         {workout.length > 0 ? (
           <fieldset className="space-y-2 border-t border-divider pt-4">
             <legend className="text-sm font-semibold text-ink">Did you modify any movement?</legend>
-            <div className="space-y-1.5">
-              {workout.map((exercise) => (
-                <label
-                  key={exercise.name}
-                  className="flex cursor-pointer items-center gap-3 text-sm text-ink"
-                >
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 shrink-0 accent-[var(--color-accent)]"
-                    checked={modified.includes(exercise.name)}
-                    disabled={isSubmitting}
-                    onChange={() => toggleModified(exercise.name)}
-                  />
-                  {exercise.name}
-                </label>
-              ))}
+            <div className="space-y-2">
+              {workout.map((exercise) => {
+                const isModified = modified.includes(exercise.name);
+                const options = scalingOptionsForMovement(exercise.name);
+                return (
+                  <div key={exercise.name} className="space-y-1.5">
+                    <label className="flex cursor-pointer items-center gap-3 text-sm text-ink">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 shrink-0 accent-[var(--color-accent)]"
+                        checked={isModified}
+                        disabled={isSubmitting}
+                        onChange={() => toggleModified(exercise.name)}
+                      />
+                      {exercise.name}
+                    </label>
+                    {isModified && options.length > 0 ? (
+                      <div className="ml-7 flex flex-wrap gap-1.5">
+                        {options.map((option) => (
+                          <button
+                            key={option.id}
+                            type="button"
+                            title={option.how}
+                            aria-pressed={variants[exercise.name] === option.id}
+                            disabled={isSubmitting}
+                            className={
+                              variants[exercise.name] === option.id
+                                ? 'rounded-full bg-accent px-2.5 py-1 text-xs font-semibold text-on-accent'
+                                : 'rounded-full border border-border bg-surface px-2.5 py-1 text-xs text-ink'
+                            }
+                            onClick={() => chooseVariant(exercise.name, option.id)}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
             <p className="text-xs text-muted">
-              Marked movements are shown on your score. They do not lower it.
+              Naming how you scaled it lets you compare against the same version next time. Marked
+              movements are shown on your score. They do not lower it.
             </p>
           </fieldset>
         ) : null}
@@ -123,7 +174,13 @@ export function PartialRepsModal({
             canSubmit ? 'btn-primary w-full' : 'btn-outline w-full cursor-not-allowed opacity-50'
           }
           disabled={!canSubmit}
-          onClick={() => onSubmit(partialReps, normalizeModifiedMovements(modified, workout))}
+          onClick={() =>
+            onSubmit(
+              partialReps,
+              normalizeModifiedMovements(modified, workout),
+              normalizeMovementVariants(variants, workout)
+            )
+          }
         >
           {submitLabel}
         </button>

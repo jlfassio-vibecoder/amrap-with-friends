@@ -1,5 +1,6 @@
 import { callRpc } from '@/lib/api/callRpc';
 import { readModifiedMovements } from '@/lib/mission/modifiedMovements';
+import { readMovementVariants } from '@/lib/mission/exerciseScaling';
 import type { WorkoutExercise } from '@/lib/api/missionTypes';
 import type { ScoreBreakdown } from '@/lib/scoring/types';
 import { parseScoreBreakdownJson } from '@/lib/scoring/parseScoreBreakdownJson';
@@ -35,6 +36,8 @@ export interface MyMissionEntry {
   scoreBreakdown: ScoreBreakdown | null;
   /** Empty when the mission was performed as programmed. */
   modifiedMovements: string[];
+  /** `{ movement name: scaling option id }` for any scaling the athlete named. */
+  movementVariants: Record<string, string>;
   coachWorkoutName: string | null;
 }
 
@@ -202,6 +205,7 @@ function parseMyMissionEntry(raw: unknown): MyMissionEntry | null {
     templateId: readString(row.template_id),
     rallyPointId: readString(row.rally_point_id),
     modifiedMovements: readModifiedMovements(row.modified_movements),
+    movementVariants: readMovementVariants(row.movement_variants),
     chainItemCount: readNumber(row.chain_item_count) ?? 0,
     chainUnstartedCount: readNumber(row.chain_unstarted_count) ?? 0,
     state,

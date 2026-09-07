@@ -1,7 +1,7 @@
 # Plan: marking a movement as modified
 
 **Branch:** `feature/modified-movements`
-**Status:** Phases 1 and 2 shipped — phase 3 (named variants) is next
+**Status:** Phases 1–3 shipped. Remaining: choosing a scaling _before_ the mission, and a progression view.
 **Last updated:** 2026-09-08
 
 ---
@@ -232,18 +232,25 @@ and an editable one invites tidying history. Revisit only if people ask.
 - Standard-only filter in `available_ghosts`.
 - Benchmark/retest mismatch note per decision 3.
 
-### Phase 3 — Named variants (the feature this is really for)
+### Phase 3 — Named variants (the feature this is really for) — **partly done**
 
 Choosing "Knee Diamond Push-ups" before the mission rather than flagging
 "modified" after it. This is what turns the mark into progression: _40 → 45 → 48
 reps on knee push-ups, then the standard movement_ is a story the product can
 tell; "not standard" is not.
 
-It needs a variant relationship in the exercise library — a scaling ladder per
-movement — which is content work across 69 exercises, not code. Phase 1 and 2 are
-deliberately shaped so that the pre-mission picker writes **the same field** the
-post-mission checklist writes; two sources of truth for one fact is the failure
-mode to avoid.
+**Shipped:** the scaling ladder itself (`src/data/exerciseScaling.ts`, covering
+all 73 library exercises), and naming the scaling in the end-of-mission checklist.
+Marking a movement now reveals its ladder — "Hands elevated / From the knees /
+Partial range" for a push-up — and the choice is stored in `movement_variants`
+alongside the existing `modified_movements` mark.
+
+Option ids are frozen for the same reason benchmark ids are: they are stored, so
+an id that changes meaning silently rewrites history. A test pins the current set.
+
+**Still to do:** choosing the scaling _before_ the mission rather than after, and
+a progression view that reads the stored variants back — "knee push-ups: 40 → 45
+→ 48". The data now exists for both; neither needs another schema change.
 
 ### Non-goals (v1)
 

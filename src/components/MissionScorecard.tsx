@@ -1,5 +1,6 @@
 import type { LeaderboardEntry } from '@/lib/missionSync/types';
 import { formatModifiedBadge } from '@/lib/mission/modifiedMovements';
+import { formatVariantBadge } from '@/lib/mission/exerciseScaling';
 import { AppLink } from '@/components/AppLink';
 import { resolvePacingData } from '@/lib/scoring/resolvePacingData';
 import { ScoreBreakdownDisplay } from '@/components/ScoreBreakdownDisplay';
@@ -57,7 +58,8 @@ export function MissionScorecard({
 }: MissionScorecardProps) {
   const navigate = useNavigate();
   const titleId = 'mission-scorecard-title';
-  const modifiedBadge = formatModifiedBadge(entry.modifiedMovements);
+  const modifiedBadge =
+    formatVariantBadge(entry.movementVariants) ?? formatModifiedBadge(entry.modifiedMovements);
   const showSaveAction = saveState !== 'unavailable';
   const saveDisabled = saveState === 'saving' || saveState === 'saved';
   const [daisyError, setDaisyError] = useState<string | null>(null);

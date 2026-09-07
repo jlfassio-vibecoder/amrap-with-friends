@@ -259,6 +259,7 @@ export async function submitParticipantResult(input: SubmitParticipantResultInpu
       partialReps: input.partialReps,
       segmentIndex: input.segmentIndex,
       modifiedMovements: input.modifiedMovements ?? [],
+      movementVariants: input.movementVariants ?? {},
     },
   });
 

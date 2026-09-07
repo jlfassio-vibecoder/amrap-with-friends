@@ -48,6 +48,7 @@ function baseEntry(overrides: Partial<MyMissionEntry> = {}): MyMissionEntry {
     finalScore: null,
     scoreBreakdown: null,
     modifiedMovements: [],
+    movementVariants: {},
     coachWorkoutName: null,
     ...overrides,
   };

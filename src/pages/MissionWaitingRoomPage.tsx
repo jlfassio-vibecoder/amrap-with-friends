@@ -1097,10 +1097,14 @@ function LiveMissionView({
     }
   };
 
-  const handleSubmitPartialReps = async (partialReps: number, modifiedMovements: string[]) => {
+  const handleSubmitPartialReps = async (
+    partialReps: number,
+    modifiedMovements: string[],
+    movementVariants: Record<string, string>
+  ) => {
     setIsSubmittingPartialReps(true);
     try {
-      await live.submitPartialReps(partialReps, modifiedMovements);
+      await live.submitPartialReps(partialReps, modifiedMovements, movementVariants);
     } finally {
       setIsSubmittingPartialReps(false);
     }
