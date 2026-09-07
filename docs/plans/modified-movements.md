@@ -1,7 +1,7 @@
 # Plan: marking a movement as modified
 
 **Branch:** `feature/modified-movements`
-**Status:** Draft for approval
+**Status:** Phases 1 and 2 shipped — phase 3 (named variants) is next
 **Last updated:** 2026-09-08
 
 ---
@@ -175,7 +175,9 @@ exists to produce. Reporting "you scored 12 fewer reps" to someone who moved fro
 knee push-ups to full ones is the product actively discouraging the thing it
 wants.
 
-**Options:**
+**Decided: (a).**
+
+**Options considered:**
 
 - **(a)** Surface the mismatch as context on the comparison: "Your benchmark was
   modified; this retest was not." Cheap, honest, no maths.
@@ -207,7 +209,7 @@ and an editable one invites tidying history. Revisit only if people ask.
 
 ## Phased delivery
 
-### Phase 1 — Capture and badge
+### Phase 1 — Capture and badge — **done**
 
 - Column, edge-function field, and the checklist in `PartialRepsModal`.
 - Badge on the scorecard, mission leaderboard and My Missions.
@@ -218,7 +220,7 @@ and an editable one invites tidying history. Revisit only if people ask.
   identically — the guarantee is worth pinning, because it is the one a future
   change is most likely to break by accident.
 
-### Phase 2 — Ghost and campaign handling
+### Phase 2 — Ghost and campaign handling — **done**
 
 - Standard-only filter in `available_ghosts`.
 - Benchmark/retest mismatch note per decision 3.

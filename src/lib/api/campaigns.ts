@@ -739,6 +739,7 @@ export async function fetchCampaignStandings(
         userId,
         finalScore,
         madeUp: row.made_up === true,
+        modified: row.modified === true,
       };
     })
     .filter((entry): entry is CampaignStandingsScore => entry !== null);

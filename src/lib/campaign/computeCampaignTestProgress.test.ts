@@ -4,7 +4,9 @@ import {
   formatCampaignRepDelta,
   formatCampaignRepScore,
   type TestProgressOccurrence,
+  campaignTestComparisonNote,
 } from './computeCampaignTestProgress';
+import type { CampaignTestProgressRow } from './computeCampaignTestProgress';
 import type { CampaignStandingsMember, CampaignStandingsScore } from './computeCampaignStandings';
 
 function occurrence(
@@ -117,6 +119,8 @@ describe('computeCampaignTestProgress', () => {
         retestScore: null,
         benchmarkMadeUp: false,
         retestMadeUp: false,
+        benchmarkModified: false,
+        retestModified: false,
         delta: null,
       },
     ]);
@@ -497,5 +501,53 @@ describe('formatCampaignRepScore / formatCampaignRepDelta', () => {
     expect(formatCampaignRepDelta(-3)).toBe('−3 reps');
     expect(formatCampaignRepDelta(0)).toBe('0 reps');
     expect(formatCampaignRepDelta(null)).toBe('—');
+  });
+});
+
+describe('campaignTestComparisonNote', () => {
+  const row = (overrides: Partial<CampaignTestProgressRow> = {}): CampaignTestProgressRow => ({
+    userId: 'u1',
+    nickname: 'Coach',
+    left: false,
+    benchmarkScore: 200,
+    retestScore: 188,
+    benchmarkMadeUp: false,
+    retestMadeUp: false,
+    benchmarkModified: false,
+    retestModified: false,
+    delta: -12,
+    ...overrides,
+  });
+
+  it('says nothing when both sides were performed the same way', () => {
+    expect(campaignTestComparisonNote(row())).toBeNull();
+    expect(
+      campaignTestComparisonNote(row({ benchmarkModified: true, retestModified: true }))
+    ).toBeNull();
+  });
+
+  it('says nothing when there is no delta to qualify', () => {
+    expect(campaignTestComparisonNote(row({ delta: null, benchmarkModified: true }))).toBeNull();
+  });
+
+  it('names the progress a falling rep count hides', () => {
+    // Modified benchmark, standard retest: the athlete moved onto the
+    // programmed movement. The delta alone reads as going backwards.
+    const note = campaignTestComparisonNote(row({ benchmarkModified: true }));
+    expect(note).toMatch(/progress/i);
+    expect(note).toMatch(/not a like-for-like/i);
+  });
+
+  it('flags the reverse without claiming it is progress', () => {
+    const note = campaignTestComparisonNote(row({ retestModified: true, delta: 12 }));
+    expect(note).toMatch(/not a like-for-like/i);
+    expect(note).not.toMatch(/progress/i);
+  });
+
+  it('never adjusts the number itself', () => {
+    // Any correction factor would be invented, and this product does not
+    // publish invented numbers. The delta stands; a sentence sits beside it.
+    const modified = row({ benchmarkModified: true });
+    expect(modified.delta).toBe(-12);
   });
 });

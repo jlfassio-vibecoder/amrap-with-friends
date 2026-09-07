@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { formatModifiedBadge } from '@/lib/mission/modifiedMovements';
 import { AppLink } from '@/components/AppLink';
 import { Link } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
@@ -126,6 +127,12 @@ function MyMissionCard({
       <p className="text-center text-secondary">
         {formatMissionWhen(entry)} · {entry.durationMinutes} min ·{' '}
         {formatMyMissionScoreDisplay(entry)} · {entry.state}
+        {formatModifiedBadge(entry.modifiedMovements) ? (
+          <>
+            {' · '}
+            <span title={formatModifiedBadge(entry.modifiedMovements) ?? undefined}>Modified</span>
+          </>
+        ) : null}
         {entry.isFeatured ? ' · Featured' : ''}
       </p>
       <div className="flex flex-wrap items-center gap-3">

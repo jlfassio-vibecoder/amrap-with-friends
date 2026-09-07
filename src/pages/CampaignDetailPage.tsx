@@ -33,6 +33,7 @@ import {
   canRescheduleOccurrence,
   computeCampaignTestProgress,
   deriveCampaignRoles,
+  campaignTestComparisonNote,
   formatCampaignRepDelta,
   formatCampaignRepScore,
   formatCampaignShape,
@@ -454,6 +455,16 @@ export default function CampaignDetailPage() {
                           <span className="ml-2 text-xs uppercase tracking-widest text-muted">
                             Made up
                           </span>
+                        ) : null}
+                        {row.benchmarkModified || row.retestModified ? (
+                          <span className="ml-2 text-xs uppercase tracking-widest text-muted">
+                            Modified
+                          </span>
+                        ) : null}
+                        {campaignTestComparisonNote(row) ? (
+                          <p className="mt-1 text-xs font-normal normal-case text-secondary">
+                            {campaignTestComparisonNote(row)}
+                          </p>
                         ) : null}
                       </td>
                       <td className="py-2.5 pr-3 tabular-nums text-ink">

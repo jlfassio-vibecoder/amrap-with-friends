@@ -23,6 +23,10 @@ export type CampaignTestProgressRow = {
   retestMadeUp: boolean;
   /** Latest scored retest minus benchmark; null when either side is missing. */
   delta: number | null;
+  /** True when a movement was modified in the Week 1 mission. */
+  benchmarkModified: boolean;
+  /** True when a movement was modified in the latest scored retest. */
+  retestModified: boolean;
 };
 
 export type CampaignTestProgress = {
@@ -82,6 +86,7 @@ export function computeCampaignTestProgress(
 
   const scoresByOccurrence = new Map<string, Map<string, number>>();
   const madeUpByOccurrence = new Map<string, Map<string, boolean>>();
+  const modifiedByOccurrence = new Map<string, Map<string, boolean>>();
   for (const entry of scores) {
     const value = scoreValue(entry.finalScore);
     if (value === null) {
@@ -100,6 +105,13 @@ export function computeCampaignTestProgress(
       madeUpByOccurrence.set(entry.occurrenceId, madeUpByUser);
     }
     madeUpByUser.set(entry.userId, entry.madeUp === true);
+
+    let modifiedByUser = modifiedByOccurrence.get(entry.occurrenceId);
+    if (!modifiedByUser) {
+      modifiedByUser = new Map();
+      modifiedByOccurrence.set(entry.occurrenceId, modifiedByUser);
+    }
+    modifiedByUser.set(entry.userId, entry.modified === true);
   }
 
   function scoreFor(occurrenceId: string, userId: string): number | null {
@@ -110,6 +122,10 @@ export function computeCampaignTestProgress(
     return madeUpByOccurrence.get(occurrenceId)?.get(userId) === true;
   }
 
+  function modifiedFor(occurrenceId: string, userId: string): boolean {
+    return modifiedByOccurrence.get(occurrenceId)?.get(userId) === true;
+  }
+
   const rows: CampaignTestProgressRow[] = members.map((member) => {
     const joinedAfterBenchmark = member.joinedLocalDate > benchmark.localDate;
     const benchmarkScore = joinedAfterBenchmark
@@ -117,9 +133,12 @@ export function computeCampaignTestProgress(
       : scoreFor(benchmark.occurrenceId, member.userId);
     const benchmarkMadeUp =
       benchmarkScore !== null && madeUpFor(benchmark.occurrenceId, member.userId);
+    const benchmarkModified =
+      benchmarkScore !== null && modifiedFor(benchmark.occurrenceId, member.userId);
 
     let retestScore: number | null = null;
     let retestMadeUp = false;
+    let retestModified = false;
     for (const index of retestIndices) {
       const occurrence = occurrences[index];
       if (member.joinedLocalDate > occurrence.localDate) {
@@ -129,6 +148,7 @@ export function computeCampaignTestProgress(
       if (value !== null) {
         retestScore = value;
         retestMadeUp = madeUpFor(occurrence.occurrenceId, member.userId);
+        retestModified = modifiedFor(occurrence.occurrenceId, member.userId);
       }
     }
 
@@ -143,6 +163,8 @@ export function computeCampaignTestProgress(
       retestScore,
       benchmarkMadeUp,
       retestMadeUp,
+      benchmarkModified,
+      retestModified,
       delta,
     };
   });
@@ -193,4 +215,27 @@ export function formatCampaignRepDelta(delta: number | null): string {
     return `−${Math.abs(delta)} reps`;
   }
   return '0 reps';
+}
+
+/**
+ * Context for a delta whose two sides were not performed the same way.
+ *
+ * The delta itself is kept. An athlete who moved from knee push-ups to the
+ * programmed movement has made real progress, and a rep count that fell says the
+ * opposite unless something explains it — but adjusting the number would mean
+ * inventing a correction factor, which this product does not do. So the number
+ * stands and a sentence sits beside it.
+ */
+export function campaignTestComparisonNote(
+  row: Pick<CampaignTestProgressRow, 'benchmarkModified' | 'retestModified' | 'delta'>
+): string | null {
+  if (row.delta === null || row.benchmarkModified === row.retestModified) {
+    return null;
+  }
+
+  if (row.benchmarkModified) {
+    return 'You modified a movement in week one and not in this retest, so the two are not a like-for-like comparison — moving to the programmed movement is progress the rep count does not show.';
+  }
+
+  return 'You modified a movement in this retest and not in week one, so the two are not a like-for-like comparison.';
 }
