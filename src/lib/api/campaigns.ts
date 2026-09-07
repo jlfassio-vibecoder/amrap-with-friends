@@ -31,6 +31,7 @@ export interface CampaignSummary {
   /** Host-only: null for members, so they cannot re-share the campaign. */
   inviteCode: string | null;
   totalMissions: number;
+  /** Occurrences the signed-in athlete has a usable live or makeup score for. */
   completedMissions: number;
   memberCount: number;
 }

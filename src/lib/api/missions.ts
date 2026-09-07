@@ -69,6 +69,9 @@ function mapRpcError(message: string | undefined): string {
   if (message.includes('Host mission limit reached')) {
     return 'You already have 3 active missions.';
   }
+  if (message.includes('Make this up from your campaign')) {
+    return 'You still owe this workout on a campaign. Make it up from the campaign schedule.';
+  }
   if (message.includes('invalid_timezone')) {
     return 'Could not determine your timezone.';
   }

@@ -136,10 +136,49 @@ describe('CampaignDetailPage', () => {
     expect(screen.getByText('Eight rounds by week four.')).toBeTruthy();
   });
 
-  it('reports progress from the occurrences that are done', async () => {
+  it('reports progress from the viewer scores, not crew occurrence status', async () => {
+    fetchDetailMock.mockResolvedValue({
+      data: detail({
+        occurrences: [
+          occurrence(1, 1, { status: 'done', missionId: 's1' }),
+          occurrence(2, 1, { status: 'skipped' }),
+          occurrence(3, 2),
+          occurrence(4, 2),
+        ],
+      }),
+      error: null,
+    });
+    fetchStandingsMock.mockResolvedValue({
+      data: {
+        standings: [],
+        members: [],
+        scores: [
+          { occurrenceId: 'o1', userId: 'user-1', finalScore: 40 },
+          { occurrenceId: 'o2', userId: 'user-1', finalScore: 294, madeUp: true },
+        ],
+      },
+      error: null,
+    });
     renderPage();
-    await waitFor(() => expect(screen.getByText('1 of 4 missions done')).toBeTruthy());
-    expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('25');
+    await waitFor(() => expect(screen.getByText('2 of 4 missions done')).toBeTruthy());
+    expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('50');
+  });
+
+  it('does not count a crew-done row the viewer has not scored', async () => {
+    fetchDetailMock.mockResolvedValue({
+      data: detail({
+        occurrences: [
+          occurrence(1, 1, { status: 'done', missionId: 's1' }),
+          occurrence(2, 1),
+          occurrence(3, 2),
+          occurrence(4, 2),
+        ],
+      }),
+      error: null,
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByText('0 of 4 missions done')).toBeTruthy());
+    expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('0');
   });
 
   it('shows empty standings copy before any mission is generated', async () => {
@@ -778,6 +817,48 @@ describe('CampaignDetailPage', () => {
       expect(screen.getByText(/Next up: Mon 5 Oct/)).toBeTruthy();
       expect(screen.getAllByRole('button', { name: 'Make this up' }).length).toBeGreaterThan(0);
       expect(screen.getAllByRole('button', { name: 'Skip' }).length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Missed').length).toBeGreaterThan(0);
+    });
+
+    it('shows Done on a skipped row once the viewer has a makeup score', async () => {
+      fetchDetailMock.mockResolvedValue({
+        data: detail({
+          members: [
+            {
+              userId: 'user-1',
+              role: 'host',
+              nickname: 'Maya',
+              joinedAt: '2026-09-01T00:00:00Z',
+            },
+          ],
+          makeups: [{ occurrenceId: 'o2', missionId: 'makeup-diverter' }],
+          occurrences: [
+            occurrence(1, 1, { status: 'done', localDate: '2026-10-05', missionId: 's1' }),
+            occurrence(2, 1, { status: 'skipped', localDate: '2026-10-07' }),
+            occurrence(3, 2, { status: 'planned', localDate: '2026-10-12' }),
+          ],
+        }),
+        error: null,
+      });
+      fetchStandingsMock.mockResolvedValue({
+        data: {
+          standings: [],
+          members: [],
+          scores: [{ occurrenceId: 'o2', userId: 'user-1', finalScore: 294, madeUp: true }],
+        },
+        error: null,
+      });
+
+      renderPage();
+
+      await waitFor(() => expect(screen.getByText('You owe 1 mission')).toBeTruthy());
+      await waitFor(() => expect(screen.getByText('1 of 3 missions done')).toBeTruthy());
+      expect(
+        screen
+          .getAllByRole('link', { name: 'Done' })
+          .some((link) => link.getAttribute('href') === '/mission/makeup-diverter')
+      ).toBe(true);
+      // Crew-done without a personal score reads Missed.
       expect(screen.getByText('Missed')).toBeTruthy();
     });
 

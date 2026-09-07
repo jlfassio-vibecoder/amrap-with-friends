@@ -4,17 +4,11 @@ import { CampaignRoleBadge } from '@/components/campaign/CampaignRoleBadge';
 import { WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
 import type { CampaignOccurrenceEntry } from '@/lib/api/campaigns';
 import {
+  campaignScheduleStatusLabel,
   formatOccurrenceDate,
   groupOccurrencesByWeek,
   type CampaignOccurrenceRole,
 } from '@/lib/campaign';
-
-const OCCURRENCE_LABEL: Record<string, string> = {
-  planned: 'Planned',
-  generated: 'Mission open',
-  done: 'Done',
-  skipped: 'Missed',
-};
 
 const WORKOUT_NAMES = new Map(WORKOUT_TEMPLATES.map((template) => [template.id, template.name]));
 
@@ -25,6 +19,10 @@ interface CampaignScheduleSectionProps {
   owedOccurrenceIds: Set<string>;
   /** Only the queue head may be skipped (matches RPC). */
   owedHeadOccurrenceId: string | null;
+  /** Occurrences the viewer has a usable score for (live or makeup). */
+  viewerCompletedOccurrenceIds: Set<string>;
+  /** Makeup mission ids keyed by occurrence, for linking Done when the crew never ran it. */
+  viewerMakeupMissionByOccurrenceId: Map<string, string>;
   makeupBusy: boolean;
   /** When true, the head owed row already has an open makeup mission. */
   headHasOpenMakeup?: boolean;
@@ -41,6 +39,8 @@ export function CampaignScheduleSection({
   roleBySequence,
   owedOccurrenceIds,
   owedHeadOccurrenceId,
+  viewerCompletedOccurrenceIds,
+  viewerMakeupMissionByOccurrenceId,
   makeupBusy,
   headHasOpenMakeup = false,
   onMakeUp,
@@ -86,6 +86,15 @@ export function CampaignScheduleSection({
               const editing = editingId === occurrence.occurrenceId;
               const isOwed = owedOccurrenceIds.has(occurrence.occurrenceId);
               const isHead = owedHeadOccurrenceId === occurrence.occurrenceId;
+              const viewerCompleted = viewerCompletedOccurrenceIds.has(occurrence.occurrenceId);
+              const statusLabel = campaignScheduleStatusLabel({
+                status: occurrence.status,
+                viewerCompleted,
+              });
+              const linkMissionId =
+                occurrence.missionId ??
+                viewerMakeupMissionByOccurrenceId.get(occurrence.occurrenceId) ??
+                null;
               return (
                 <li key={occurrence.occurrenceId} className="space-y-2 px-4 py-3">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -101,13 +110,15 @@ export function CampaignScheduleSection({
                         <span>{WORKOUT_NAMES.get(occurrence.templateId) ?? 'Workout'}</span>
                       ) : null}
                       <span>{occurrence.durationMinutes} min</span>
-                      {occurrence.missionId ? (
-                        <Link className="link-accent" to={`/mission/${occurrence.missionId}`}>
-                          {OCCURRENCE_LABEL[occurrence.status] ?? occurrence.status}
+                      {linkMissionId ? (
+                        <Link className="link-accent" to={`/mission/${linkMissionId}`}>
+                          {statusLabel}
                         </Link>
+                      ) : viewerCompleted ? (
+                        <span className="text-sm font-semibold text-accent">{statusLabel}</span>
                       ) : (
                         <span className="text-xs uppercase tracking-widest text-muted">
-                          {OCCURRENCE_LABEL[occurrence.status] ?? occurrence.status}
+                          {statusLabel}
                         </span>
                       )}
                       {isOwed ? (

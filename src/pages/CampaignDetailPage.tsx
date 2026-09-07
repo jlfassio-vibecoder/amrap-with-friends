@@ -25,6 +25,7 @@ import {
 import {
   campaignMakeupQueue,
   campaignProgress,
+  campaignViewerCompletedCount,
   campaignRoleDescription,
   campaignRoleLabel,
   canDeleteCampaign,
@@ -257,7 +258,13 @@ export default function CampaignDetailPage() {
   }
 
   const progress = campaignProgress(
-    detail.occurrences.filter((occurrence) => occurrence.status === 'done').length,
+    user?.id
+      ? campaignViewerCompletedCount({
+          occurrenceIds: detail.occurrences.map((occurrence) => occurrence.occurrenceId),
+          viewerUserId: user.id,
+          scores: standingsScores,
+        })
+      : 0,
     detail.occurrences.length
   );
 
@@ -320,6 +327,19 @@ export default function CampaignDetailPage() {
       : [];
   const owedHead = owedQueue[0] ?? null;
   const owedOccurrenceIds = new Set(owedQueue.map((row) => row.occurrenceId));
+  const viewerCompletedOccurrenceIds = new Set(
+    standingsScores
+      .filter(
+        (score) =>
+          score.userId === user?.id &&
+          typeof score.finalScore === 'number' &&
+          Number.isFinite(score.finalScore)
+      )
+      .map((score) => score.occurrenceId)
+  );
+  const viewerMakeupMissionByOccurrenceId = new Map(
+    detail.makeups.map((row) => [row.occurrenceId, row.missionId])
+  );
   const headHasOpenMakeup = Boolean(
     owedHead && detail.makeups.some((row) => row.occurrenceId === owedHead.occurrenceId)
   );
@@ -683,6 +703,8 @@ export default function CampaignDetailPage() {
         roleBySequence={roleBySequence}
         owedOccurrenceIds={owedOccurrenceIds}
         owedHeadOccurrenceId={owedHead?.occurrenceId ?? null}
+        viewerCompletedOccurrenceIds={viewerCompletedOccurrenceIds}
+        viewerMakeupMissionByOccurrenceId={viewerMakeupMissionByOccurrenceId}
         makeupBusy={makeupBusy}
         headHasOpenMakeup={headHasOpenMakeup}
         onMakeUp={(occurrenceId) => void handleMakeUp(occurrenceId)}
