@@ -1,13 +1,26 @@
 import { useState } from 'react';
 import { HonestyLockCheckbox } from '@/components/HonestyLockCheckbox';
+import { MissionCheckInPanel } from '@/components/mission/MissionCheckInPanel';
 import { ModificationOptionChip } from '@/components/mission/ModificationOptionChip';
 import type { WorkoutExercise } from '@/lib/api/missionTypes';
 import { normalizeModifiedMovements } from '@/lib/mission/modifiedMovements';
+import {
+  normalizeCheckIns,
+  normalizeRpe,
+  normalizeSessionNotes,
+  type MissionCheckIns,
+} from '@/lib/mission/missionCheckIn';
 import {
   normalizeMovementVariants,
   scalingOptionsForMovement,
   type MovementVariantSelection,
 } from '@/lib/mission/exerciseScaling';
+
+export interface MissionCheckInSubmit {
+  rpe: number | null;
+  sessionNotes: string;
+  checkIns: MissionCheckIns;
+}
 
 interface PartialRepsModalProps {
   repsPerRound: number;
@@ -25,7 +38,8 @@ interface PartialRepsModalProps {
   onSubmit: (
     partialReps: number,
     modifiedMovements: string[],
-    movementVariants: MovementVariantSelection
+    movementVariants: MovementVariantSelection,
+    checkIn: MissionCheckInSubmit
   ) => void;
 }
 
@@ -47,6 +61,11 @@ export function PartialRepsModal({
     normalizeMovementVariants(initialVariants, workout)
   );
   const [modified, setModified] = useState<string[]>(() => Object.keys(variants));
+  const [checkIn, setCheckIn] = useState<MissionCheckInSubmit>({
+    rpe: null,
+    sessionNotes: '',
+    checkIns: {},
+  });
 
   function toggleModified(name: string) {
     setModified((current) => {
@@ -88,7 +107,7 @@ export function PartialRepsModal({
       aria-modal="true"
       aria-labelledby={titleId}
     >
-      <div className="card w-full max-w-md space-y-4 p-6">
+      <div className="card max-h-[90vh] w-full max-w-md space-y-4 overflow-y-auto p-6">
         <h2 id={titleId} className="text-display text-xl text-ink">
           TIME CALLED. BREATHE.
         </h2>
@@ -127,6 +146,8 @@ export function PartialRepsModal({
           disabled={isSubmitting}
           onChange={setIntegrityAcknowledged}
         />
+
+        <MissionCheckInPanel value={checkIn} disabled={isSubmitting} onChange={setCheckIn} />
 
         {workout.length > 0 ? (
           <fieldset className="space-y-2 border-t border-divider pt-4">
@@ -183,7 +204,12 @@ export function PartialRepsModal({
             onSubmit(
               partialReps,
               normalizeModifiedMovements(modified, workout),
-              normalizeMovementVariants(variants, workout)
+              normalizeMovementVariants(variants, workout),
+              {
+                rpe: normalizeRpe(checkIn.rpe),
+                sessionNotes: normalizeSessionNotes(checkIn.sessionNotes),
+                checkIns: normalizeCheckIns(checkIn.checkIns),
+              }
             )
           }
         >

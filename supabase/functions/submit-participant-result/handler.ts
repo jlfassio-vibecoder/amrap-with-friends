@@ -3,6 +3,12 @@ import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
 import { computeScoreBreakdown } from '@/lib/scoring/computeScoreBreakdown';
 import type { ScoreBreakdown } from '@/lib/scoring/types';
 import type { WorkoutExercise } from '@/lib/api/missionTypes';
+import {
+  normalizeCheckIns,
+  normalizeRpe,
+  normalizeSessionNotes,
+  type MissionCheckIns,
+} from '@/lib/mission/missionCheckIn';
 
 export interface SubmitParticipantResultRequest {
   missionId: string;
@@ -18,6 +24,12 @@ export interface SubmitParticipantResultRequest {
   modifiedMovements: string[];
   /** `{ movement name: scaling option id }` when the scaling was named. */
   movementVariants: Record<string, string>;
+  /** Optional session RPE 1–10. Null when not logged. */
+  rpe: number | null;
+  /** Optional free-text notes. */
+  sessionNotes: string;
+  /** Optional structured check-in chips. */
+  checkIns: MissionCheckIns;
 }
 
 export interface SubmitParticipantResultResponse {
@@ -70,6 +82,9 @@ export function normalizeSubmitRequest(
     segmentIndex: typeof body.segmentIndex === 'number' ? body.segmentIndex : Number.NaN,
     modifiedMovements: normalizeModifiedMovementNames(body.modifiedMovements),
     movementVariants: normalizeMovementVariantMap(body.movementVariants),
+    rpe: normalizeRpe(body.rpe),
+    sessionNotes: normalizeSessionNotes(body.sessionNotes),
+    checkIns: normalizeCheckIns(body.checkIns),
   };
 }
 
@@ -253,6 +268,9 @@ export async function handleSubmitParticipantResult(
       scoreBreakdown: ScoreBreakdown;
       modifiedMovements: string[];
       movementVariants: Record<string, string>;
+      rpe: number | null;
+      sessionNotes: string;
+      checkIns: MissionCheckIns;
     }) => Promise<{ ok: true } | { ok: false; reason: string }>;
   }
 ): Promise<SubmitParticipantResultResponse> {
@@ -319,6 +337,9 @@ export async function handleSubmitParticipantResult(
     scoreBreakdown: breakdown,
     modifiedMovements: body.modifiedMovements,
     movementVariants: body.movementVariants,
+    rpe: body.rpe,
+    sessionNotes: body.sessionNotes,
+    checkIns: body.checkIns,
   });
 
   if (!persisted.ok) {

@@ -116,6 +116,12 @@ export interface ParticipantSegmentResultRow {
   modified_movements: string[] | null;
   /** `{ movement name: scaling option id }` when the scaling was named. */
   movement_variants: Record<string, string> | null;
+  /** Optional session RPE 1–10. */
+  rpe: number | null;
+  /** Optional free-text notes. */
+  session_notes: string | null;
+  /** Optional structured check-in chips. */
+  check_ins: Record<string, string> | null;
   updated_at: string;
 }
 
@@ -129,6 +135,12 @@ export interface SubmitParticipantResultInput {
   modifiedMovements?: string[];
   /** `{ movement name: scaling option id }` for any scaling they named. */
   movementVariants?: Record<string, string>;
+  /** Optional session RPE 1–10. Absent / null means not logged. */
+  rpe?: number | null;
+  /** Optional free-text notes (≤280). */
+  sessionNotes?: string;
+  /** Optional structured check-in chips `{ dimensionId: optionId }`. */
+  checkIns?: Record<string, string>;
 }
 
 export interface SubmitParticipantResultSuccess {

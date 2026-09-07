@@ -1144,11 +1144,16 @@ function LiveMissionView({
   const handleSubmitPartialReps = async (
     partialReps: number,
     modifiedMovements: string[],
-    movementVariants: Record<string, string>
+    movementVariants: Record<string, string>,
+    checkIn: {
+      rpe: number | null;
+      sessionNotes: string;
+      checkIns: Record<string, string>;
+    }
   ) => {
     setIsSubmittingPartialReps(true);
     try {
-      await live.submitPartialReps(partialReps, modifiedMovements, movementVariants);
+      await live.submitPartialReps(partialReps, modifiedMovements, movementVariants, checkIn);
       // The result row is now the record; the draft has nothing left to say.
       clearScalingPlan(missionId, participantId);
     } finally {

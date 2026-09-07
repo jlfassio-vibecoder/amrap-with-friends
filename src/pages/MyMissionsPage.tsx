@@ -9,10 +9,12 @@ import { AssignedWorkoutsPanel } from '@/components/mission/AssignedWorkoutsPane
 import { SendWorkoutToSquad } from '@/components/mission/SendWorkoutToSquad';
 import { MyCampaignsPanel } from '@/components/campaign/MyCampaignsPanel';
 import { ScalingProgressionPanel } from '@/components/mission/ScalingProgressionPanel';
+import { CheckInProgressionPanel } from '@/components/mission/CheckInProgressionPanel';
 import {
   canDeleteMyMission,
   deleteIncompleteMission,
   fetchMyMissions,
+  formatMyMissionCheckInSummary,
   formatMyMissionExerciseLine,
   formatMyMissionScoreDisplay,
   formatMyMissionShareText,
@@ -127,6 +129,7 @@ function MyMissionCard({
   // — and fall back to the plain mark when no named option was chosen.
   const modifiedBadge =
     formatVariantBadge(entry.movementVariants) ?? formatModifiedBadge(entry.modifiedMovements);
+  const checkInSummary = formatMyMissionCheckInSummary(entry);
   return (
     <div className="card space-y-2 p-4 text-sm">
       <MyMissionMovements title={myMissionWorkoutTitle(entry)} workout={entry.workout} />
@@ -137,6 +140,12 @@ function MyMissionCard({
           <>
             {' · '}
             <span title={modifiedBadge}>Modified</span>
+          </>
+        ) : null}
+        {checkInSummary ? (
+          <>
+            {' · '}
+            <span title={checkInSummary}>Check-in</span>
           </>
         ) : null}
         {entry.isFeatured ? ' · Featured' : ''}
@@ -331,6 +340,8 @@ export default function MyMissionsPage() {
       <MyCampaignsPanel showCreateCta={false} />
 
       <ScalingProgressionPanel entries={entries} />
+
+      <CheckInProgressionPanel entries={entries} />
 
       {loading ? <p className="text-sm text-secondary">Loading…</p> : null}
 

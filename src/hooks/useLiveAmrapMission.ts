@@ -86,7 +86,12 @@ export interface UseLiveAmrapMissionReturn {
   submitPartialReps: (
     partialReps: number,
     modifiedMovements?: string[],
-    movementVariants?: Record<string, string>
+    movementVariants?: Record<string, string>,
+    checkIn?: {
+      rpe: number | null;
+      sessionNotes: string;
+      checkIns: Record<string, string>;
+    }
   ) => Promise<void>;
 }
 
@@ -763,7 +768,12 @@ export function useLiveAmrapMission(
     async (
       partialReps: number,
       modifiedMovements: string[] = [],
-      movementVariants: Record<string, string> = {}
+      movementVariants: Record<string, string> = {},
+      checkIn: {
+        rpe: number | null;
+        sessionNotes: string;
+        checkIns: Record<string, string>;
+      } = { rpe: null, sessionNotes: '', checkIns: {} }
     ) => {
       if (isPractice || !participantId || hasSubmittedPartialReps) {
         return;
@@ -787,6 +797,9 @@ export function useLiveAmrapMission(
         segmentIndex,
         modifiedMovements,
         movementVariants,
+        rpe: checkIn.rpe,
+        sessionNotes: checkIn.sessionNotes,
+        checkIns: checkIn.checkIns,
       });
 
       if (result.data?.ok === false && result.data.reason === 'score_already_locked') {

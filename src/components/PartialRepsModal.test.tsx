@@ -61,7 +61,16 @@ describe('PartialRepsModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Increase partial reps' }));
     lockIn();
 
-    expect(onSubmit).toHaveBeenCalledWith(1, ['Diamond Push-ups'], {});
+    expect(onSubmit).toHaveBeenCalledWith(
+      1,
+      ['Diamond Push-ups'],
+      {},
+      {
+        rpe: null,
+        sessionNotes: '',
+        checkIns: {},
+      }
+    );
   });
 
   it('submits nothing when no movement is marked', () => {
@@ -77,7 +86,7 @@ describe('PartialRepsModal', () => {
 
     lockIn();
 
-    expect(onSubmit).toHaveBeenCalledWith(0, [], {});
+    expect(onSubmit).toHaveBeenCalledWith(0, [], {}, { rpe: null, sessionNotes: '', checkIns: {} });
   });
 
   it('lets a mark be taken back before locking', () => {
@@ -95,7 +104,7 @@ describe('PartialRepsModal', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: 'Sprawls' }));
     lockIn();
 
-    expect(onSubmit).toHaveBeenCalledWith(0, [], {});
+    expect(onSubmit).toHaveBeenCalledWith(0, [], {}, { rpe: null, sessionNotes: '', checkIns: {} });
   });
 
   it('does not gate the submit on the modification question', () => {
@@ -120,7 +129,7 @@ describe('PartialRepsModal', () => {
 
     expect(screen.queryByText(/did you modify/i)).toBeNull();
     lockIn();
-    expect(onSubmit).toHaveBeenCalledWith(0, [], {});
+    expect(onSubmit).toHaveBeenCalledWith(0, [], {}, { rpe: null, sessionNotes: '', checkIns: {} });
   });
 
   it('offers named options once a movement is marked, and submits the choice', () => {
@@ -141,9 +150,14 @@ describe('PartialRepsModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'From the knees' }));
     lockIn();
 
-    expect(onSubmit).toHaveBeenCalledWith(0, ['Diamond Push-ups'], {
-      'Diamond Push-ups': 'push-up--knees',
-    });
+    expect(onSubmit).toHaveBeenCalledWith(
+      0,
+      ['Diamond Push-ups'],
+      {
+        'Diamond Push-ups': 'push-up--knees',
+      },
+      { rpe: null, sessionNotes: '', checkIns: {} }
+    );
   });
 
   it('drops a named option when the movement is un-marked', () => {
@@ -164,7 +178,7 @@ describe('PartialRepsModal', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: 'Diamond Push-ups' }));
     lockIn();
 
-    expect(onSubmit).toHaveBeenCalledWith(0, [], {});
+    expect(onSubmit).toHaveBeenCalledWith(0, [], {}, { rpe: null, sessionNotes: '', checkIns: {} });
   });
 
   it('does not require naming the option', () => {
@@ -181,7 +195,12 @@ describe('PartialRepsModal', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: 'Sprawls' }));
     lockIn();
 
-    expect(onSubmit).toHaveBeenCalledWith(0, ['Sprawls'], {});
+    expect(onSubmit).toHaveBeenCalledWith(
+      0,
+      ['Sprawls'],
+      {},
+      { rpe: null, sessionNotes: '', checkIns: {} }
+    );
   });
 
   it('pre-ticks a movement whose option was chosen before the mission', () => {
@@ -203,9 +222,14 @@ describe('PartialRepsModal', () => {
     ).toBe('true');
 
     lockIn();
-    expect(onSubmit).toHaveBeenCalledWith(0, ['Diamond Push-ups'], {
-      'Diamond Push-ups': 'push-up--knees',
-    });
+    expect(onSubmit).toHaveBeenCalledWith(
+      0,
+      ['Diamond Push-ups'],
+      {
+        'Diamond Push-ups': 'push-up--knees',
+      },
+      { rpe: null, sessionNotes: '', checkIns: {} }
+    );
   });
 
   it('lets the athlete drop a pre-mission option they did not end up needing', () => {
@@ -222,7 +246,7 @@ describe('PartialRepsModal', () => {
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Diamond Push-ups' }));
     lockIn();
-    expect(onSubmit).toHaveBeenCalledWith(0, [], {});
+    expect(onSubmit).toHaveBeenCalledWith(0, [], {}, { rpe: null, sessionNotes: '', checkIns: {} });
   });
 
   it('ignores a seeded option for a movement this workout does not programme', () => {
@@ -238,6 +262,6 @@ describe('PartialRepsModal', () => {
     );
 
     lockIn();
-    expect(onSubmit).toHaveBeenCalledWith(0, [], {});
+    expect(onSubmit).toHaveBeenCalledWith(0, [], {}, { rpe: null, sessionNotes: '', checkIns: {} });
   });
 });

@@ -12,6 +12,8 @@
     "@/lib/timeDomains": "../../src/lib/timeDomains.ts",
     "@/lib/api/missionTypes": "../../src/lib/api/missionTypes.ts",
     "@/lib/missionSync/types": "../../src/lib/missionSync/types.ts",
+    "@/lib/mission/missionCheckIn": "../../src/lib/mission/missionCheckIn.ts",
+    "@/data/missionCheckIn": "../../src/data/missionCheckIn.ts",
     "@/data/workoutTemplates": "../../src/data/workoutTemplates.ts",
     "@supabase/supabase-js": "jsr:@supabase/supabase-js@2"
   }
