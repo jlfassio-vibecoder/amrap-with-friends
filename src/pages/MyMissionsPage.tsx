@@ -124,7 +124,7 @@ function MyMissionCard({
   };
 }) {
   // Prefer what the athlete actually named — "Diamond Push-ups: from the knees"
-  // — and fall back to the plain mark when no scaling was named.
+  // — and fall back to the plain mark when no named option was chosen.
   const modifiedBadge =
     formatVariantBadge(entry.movementVariants) ?? formatModifiedBadge(entry.modifiedMovements);
   return (

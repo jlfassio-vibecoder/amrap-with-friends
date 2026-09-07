@@ -11,12 +11,12 @@ interface ScalingProgressionPanelProps {
 }
 
 /**
- * The payoff for naming a scaling: the same workout, the same clock, the same
- * version, in order.
+ * The payoff for naming a modification: the same workout, the same clock, the
+ * same version, in order.
  *
  * Versions sit side by side and are never merged into one trend — see
  * `movementProgression.ts` for why. Renders nothing until there is a comparison
- * to make, so it is invisible to anyone who has never scaled.
+ * to make, so it is invisible to anyone who has never modified a movement.
  */
 export function ScalingProgressionPanel({ entries }: ScalingProgressionPanelProps) {
   const groups = buildMovementProgression(entries);
@@ -28,7 +28,7 @@ export function ScalingProgressionPanel({ entries }: ScalingProgressionPanelProp
   return (
     <section className="card space-y-3 p-4">
       <div className="space-y-1">
-        <h2 className="text-display text-lg text-ink">Your scaling progress</h2>
+        <h2 className="text-display text-lg text-ink">Your modification progress</h2>
         <p className="text-sm text-secondary">
           The same workout at the same clock, grouped by how you performed it. Versions are shown
           apart because their scores are not the same measurement.

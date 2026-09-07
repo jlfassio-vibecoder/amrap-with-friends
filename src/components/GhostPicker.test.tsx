@@ -154,7 +154,7 @@ describe('GhostPicker', () => {
     );
   });
 
-  it('says so the first time an athlete scales this workout', async () => {
+  it('says so the first time an athlete modifies this workout', async () => {
     fetchAvailableGhostsMock.mockResolvedValue({
       data: { personalBest: STANDARD_BEST, variantBest: null, friends: [] },
       error: null,
@@ -234,8 +234,8 @@ describe('GhostPicker', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it('drops a ghost the athlete can no longer race after changing their scaling', async () => {
-    // They picked the knee ghost, then unticked the scaling. The server now
+  it('drops a ghost the athlete can no longer race after changing their modification', async () => {
+    // They picked the knee ghost, then unticked the modification. The server now
     // offers only the standard best, and the stale selection would otherwise
     // keep pacing them against a version they said they are not doing.
     fetchAvailableGhostsMock.mockResolvedValue({

@@ -85,7 +85,7 @@ export const RALLY_POINT_WALKTHROUGH_STEPS: RallyPointWalkthroughStep[] = [
     role: 'all',
     targetId: WALKTHROUGH_TARGET.chat,
     title: 'Talk it out',
-    body: 'Use chat to coordinate, call out scaling, or just talk trash before the clock.',
+    body: 'Use chat to coordinate, call out modifications, or just talk trash before the clock.',
   },
   {
     id: 'participants',

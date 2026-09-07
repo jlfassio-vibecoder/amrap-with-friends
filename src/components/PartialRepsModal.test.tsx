@@ -123,7 +123,7 @@ describe('PartialRepsModal', () => {
     expect(onSubmit).toHaveBeenCalledWith(0, [], {});
   });
 
-  it('offers named scalings once a movement is marked, and submits the choice', () => {
+  it('offers named options once a movement is marked, and submits the choice', () => {
     const onSubmit = vi.fn();
     render(
       <PartialRepsModal
@@ -146,7 +146,7 @@ describe('PartialRepsModal', () => {
     });
   });
 
-  it('drops a named scaling when the movement is un-marked', () => {
+  it('drops a named option when the movement is un-marked', () => {
     // A variant on a movement the athlete says they did as programmed is a
     // contradiction, so the mark and the detail have to come off together.
     const onSubmit = vi.fn();
@@ -167,7 +167,7 @@ describe('PartialRepsModal', () => {
     expect(onSubmit).toHaveBeenCalledWith(0, [], {});
   });
 
-  it('does not require naming the scaling', () => {
+  it('does not require naming the option', () => {
     const onSubmit = vi.fn();
     render(
       <PartialRepsModal
@@ -184,7 +184,7 @@ describe('PartialRepsModal', () => {
     expect(onSubmit).toHaveBeenCalledWith(0, ['Sprawls'], {});
   });
 
-  it('pre-ticks a movement whose scaling was chosen before the mission', () => {
+  it('pre-ticks a movement whose option was chosen before the mission', () => {
     const onSubmit = vi.fn();
     render(
       <PartialRepsModal
@@ -208,7 +208,7 @@ describe('PartialRepsModal', () => {
     });
   });
 
-  it('lets the athlete drop a pre-mission scaling they did not end up needing', () => {
+  it('lets the athlete drop a pre-mission option they did not end up needing', () => {
     const onSubmit = vi.fn();
     render(
       <PartialRepsModal
@@ -225,7 +225,7 @@ describe('PartialRepsModal', () => {
     expect(onSubmit).toHaveBeenCalledWith(0, [], {});
   });
 
-  it('ignores a seeded scaling for a movement this workout does not programme', () => {
+  it('ignores a seeded option for a movement this workout does not programme', () => {
     const onSubmit = vi.fn();
     render(
       <PartialRepsModal

@@ -41,7 +41,7 @@ function formatGhostDate(createdAt: string): string {
 /** Prefixed, because on its own "48 reps" gives no clue which version it was. */
 function variantBestLabel(ghost: GhostRunRef, versionLabel: string | null): string {
   const dateLabel = formatGhostDate(ghost.createdAt);
-  const version = versionLabel ?? 'Same scaling';
+  const version = versionLabel ?? 'Same modification';
   return dateLabel
     ? `${version} · ${ghost.finalScore} reps · ${dateLabel}`
     : `${version} · ${ghost.finalScore} reps`;
@@ -154,7 +154,7 @@ export function GhostPicker({
     }
   }
 
-  // An athlete who picks the knee-push-up ghost and then unticks the scaling has
+  // An athlete who picks the knee-push-up ghost and then unticks the modification has
   // a selection the server will no longer offer. Left alone it stays invisible
   // in the select while still pacing the mission, so drop it rather than race a
   // version they have said they are not doing.

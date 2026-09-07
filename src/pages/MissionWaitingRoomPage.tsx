@@ -454,7 +454,7 @@ function LiveMissionView({
   const [resetBusy, setResetBusy] = useState(false);
   const [hostRestartedDeadEnd, setHostRestartedDeadEnd] = useState(false);
   const [isSubmittingPartialReps, setIsSubmittingPartialReps] = useState(false);
-  // A scaling chosen before the clock starts. Seeds the end-of-mission checklist;
+  // A modification chosen before the clock starts. Seeds the end-of-mission checklist;
   // the checklist is still the only thing that writes a result.
   const [scalingPlan, setScalingPlan] = useState<MovementVariantSelection>({});
   const [scorecardDismissed, setScorecardDismissed] = useState(false);

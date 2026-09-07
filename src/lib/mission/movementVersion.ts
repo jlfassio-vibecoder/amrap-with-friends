@@ -2,7 +2,7 @@ import type { MovementVariantSelection } from '@/lib/mission/exerciseScaling';
 
 /**
  * The exact version of a workout an athlete performed — which movements they
- * scaled, and to what.
+ * modified, and to what.
  *
  * Two consumers now share this key, so it has to be stable in both directions:
  * the progression view groups by it, and `available_ghosts` matches on it in
@@ -39,7 +39,7 @@ export function compareCodePoints(a: string, b: string): number {
  * `""` for a mission performed as programmed; otherwise
  * `name#optionId|name#optionId`, movements in code-point order.
  *
- * A movement marked modified without a named scaling keeps an empty option id
+ * A movement marked modified without a named option keeps an empty option id
  * and is therefore its own version. Merging it with a named one would claim a
  * like-for-like comparison the data does not support.
  */

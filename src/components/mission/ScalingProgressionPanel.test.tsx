@@ -24,7 +24,7 @@ const KNEES = {
 };
 
 describe('ScalingProgressionPanel', () => {
-  it('renders nothing for an athlete who has never scaled', () => {
+  it('renders nothing for an athlete who has never modified a movement', () => {
     const { container } = render(
       <ScalingProgressionPanel
         entries={[
@@ -50,9 +50,10 @@ describe('ScalingProgressionPanel', () => {
     expect(screen.getByText('40 → 45 → 48 reps')).toBeTruthy();
     expect(screen.getByText('(+8 reps)')).toBeTruthy();
     expect(screen.getByText('Diamond Push-ups: from the knees')).toBeTruthy();
+    expect(screen.getByText('Your modification progress')).toBeTruthy();
   });
 
-  it('lists a standard run beside the scaled one without merging them', () => {
+  it('lists a standard run beside the modified one without merging them', () => {
     render(
       <ScalingProgressionPanel
         entries={[

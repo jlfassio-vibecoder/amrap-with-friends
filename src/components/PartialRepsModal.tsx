@@ -15,10 +15,10 @@ interface PartialRepsModalProps {
   /** The movements as programmed, so the athlete can mark any they changed. */
   workout?: WorkoutExercise[];
   /**
-   * A scaling the athlete chose before the mission, pre-ticked here.
+   * A modification the athlete chose before the mission, pre-ticked here.
    *
    * A seed, not a submission: they can still change or clear it, and this modal
-   * remains the only place a scaling is written against the result.
+   * remains the only place a modification is written against the result.
    */
   initialVariants?: MovementVariantSelection;
   onSubmit: (
@@ -50,7 +50,7 @@ export function PartialRepsModal({
   function toggleModified(name: string) {
     setModified((current) => {
       if (current.includes(name)) {
-        // Un-marking a movement drops the scaling with it — a named variant on a
+        // Un-marking a movement drops the named option with it — a named variant on a
         // movement the athlete says they did as programmed is a contradiction.
         setVariants((current) =>
           Object.fromEntries(Object.entries(current).filter(([key]) => key !== name))
@@ -172,7 +172,7 @@ export function PartialRepsModal({
               })}
             </div>
             <p className="text-xs text-muted">
-              Naming how you scaled it lets you compare against the same version next time. Marked
+              Naming how you modified it lets you compare against the same version next time. Marked
               movements are shown on your score. They do not lower it.
             </p>
           </fieldset>

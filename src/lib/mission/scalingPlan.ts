@@ -5,10 +5,10 @@ import {
 } from '@/lib/mission/exerciseScaling';
 
 /**
- * A scaling an athlete chose *before* the mission, held until the result is
- * submitted.
+ * A modification an athlete chose *before* the mission, held until the result
+ * is submitted.
  *
- * This is a draft, not a second answer. The one place a scaling is ever
+ * This is a draft, not a second answer. The one place a modification is ever
  * recorded is the result row the end-of-mission checklist writes — the picker
  * seeds that checklist, and the checklist is still what the athlete confirms.
  * Two stores that both claim to say how a mission was performed is the failure
@@ -17,7 +17,7 @@ import {
  *
  * Per participant as well as per mission, because two people can share a device
  * (one phone propped against a wall is exactly how a squad of two runs this),
- * and their scalings are their own.
+ * and their modifications are their own.
  */
 
 const KEY_PREFIX = 'amrapScalingPlan';
@@ -87,11 +87,11 @@ function parsePlan(raw: string | null): StoredPlan | null {
 }
 
 /**
- * The plan for this mission, filtered to scalings the workout actually offers.
+ * The plan for this mission, filtered to options the workout actually offers.
  *
  * Normalising on read rather than trusting the store means a workout edited
- * after the athlete planned cannot show them a scaling for a movement that is
- * no longer programmed.
+ * after the athlete planned cannot show them a modification for a movement that
+ * is no longer programmed.
  */
 export function readScalingPlan(
   missionId: string,

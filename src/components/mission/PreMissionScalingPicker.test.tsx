@@ -61,12 +61,13 @@ describe('PreMissionScalingPicker', () => {
     expect(onChange).toHaveBeenCalledWith({ 'Diamond Push-ups': 'push-up--incline' });
   });
 
-  it('says scaling costs nothing, where the athlete decides', () => {
+  it('says modifying costs nothing, where the athlete decides', () => {
     render(<PreMissionScalingPicker workout={[PUSH_UPS]} variants={{}} onChange={() => {}} />);
-    expect(screen.getByText(/does not lower your score/i)).toBeTruthy();
+    expect(screen.getByText(/Need to modify a movement/i)).toBeTruthy();
+    expect(screen.getByText(/Modifying does not lower your score/i)).toBeTruthy();
   });
 
-  it('summarises how many scalings are already chosen', () => {
+  it('summarises how many modifications are already chosen', () => {
     render(
       <PreMissionScalingPicker
         workout={[PUSH_UPS]}

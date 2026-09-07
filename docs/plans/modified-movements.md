@@ -58,7 +58,7 @@ fortnight people learn not to tick it, and the product loses the data entirely �
 which is a worse outcome than never having asked. The mark has to be free to
 give.
 
-It is also not obviously right on the physiology. An AMRAP is self-paced: scale a
+It is also not obviously right on the physiology. An AMRAP is self-paced: modify a
 movement to something you can sustain and you complete **more rounds** at the
 same heart rate and the same perceived effort. The effort was the effort. What a
 modification changes is not how hard the athlete worked — it is **what the score
@@ -141,7 +141,7 @@ edited underneath it, and reads correctly in a badge tooltip without a lookup.
 
 `available_ghosts` returns the best `final_score` for a template and clock. A
 modified run should not become the ghost an athlete races on their next standard
-attempt — that turns a scaled score into a target they cannot reach.
+attempt — that turns a modified score into a target they cannot reach.
 
 **Decided:** filter modified results out of the ghost query. Keep them visible in
 My Missions; they are the athlete's own history, just not their standard-movement
@@ -151,7 +151,7 @@ best.
 second query that races live teammates on the current occurrence rather than a
 stored personal best. Declining to hand an athlete a stale target they cannot
 reach is one thing; removing a teammate from a shared workout is another, and a
-teammate who scaled a movement is still someone to train alongside. This is
+teammate who modified a movement is still someone to train alongside. This is
 settled, not deferred — the migration says so at the call site.
 
 **Also decided, once phase 3 made it possible: yes.** A modified run now races
@@ -166,17 +166,17 @@ best only, exactly as before. A named version additionally returns
 `variant_best`: the best scored run whose whole modification state matches.
 `personal_best` is unchanged and still standard-only, and both come back
 together — an athlete's own standard best is not something to hide from them, it
-is just not the like-for-like curve when they have said they are scaling.
+is just not the like-for-like curve when they have said they are modifying.
 
 The match is on the **whole** modification state, not on the movement asked
-about. Scaling the push-ups and scaling the squats instead are two different
+about. Modifying the push-ups and modifying the squats instead are two different
 workouts, and a ghost built from the wrong one paces wrong. Same rule as the
 progression view, and the same key: `versionKeyFor`.
 
 That key now exists in TypeScript and in SQL, which is drift waiting to happen —
 and drift here does not raise. The keys simply stop matching, the ghost is
 silently absent, and nothing says why. `movementVersion.contract.test.ts` parses
-`movement_version_key` out of the migration and runs both over every scaling in
+`movement_version_key` out of the migration and runs both over every option in
 the library plus the cases a collation would get wrong. The SQL sorts
 `COLLATE "C"` and the TypeScript sorts by code point, so the database's own
 locale never decides whether a ghost matches.
@@ -262,8 +262,8 @@ Choosing "Knee Diamond Push-ups" before the mission rather than flagging
 reps on knee push-ups, then the standard movement_ is a story the product can
 tell; "not standard" is not.
 
-**Shipped:** the scaling ladder itself (`src/data/exerciseScaling.ts`, covering
-all 73 library exercises), and naming the scaling in the end-of-mission checklist.
+**Shipped:** the modification ladder itself (`src/data/exerciseScaling.ts`, covering
+all 73 library exercises), and naming the option in the end-of-mission checklist.
 Marking a movement now reveals its ladder — "Hands elevated / From the knees /
 Partial range" for a push-up — and the choice is stored in `movement_variants`
 alongside the existing `modified_movements` mark.
@@ -272,11 +272,11 @@ Option ids are frozen for the same reason benchmark ids are: they are stored, so
 an id that changes meaning silently rewrites history. A test pins the current set.
 
 **Pre-mission picker** (`PreMissionScalingPicker`, in the rally point under the
-workout list): a collapsed "Need to scale a movement?" offering the ladder for
+workout list): a collapsed "Need to modify a movement?" offering the ladder for
 each programmed movement that has one. The choice is a **draft**, held in
 `localStorage` per mission _and_ per participant — two people share one propped-up
-phone often enough that a device-wide key would put one athlete's scaling on the
-other's score. It is deliberately not a second write path: the plan seeds
+phone often enough that a device-wide key would put one athlete's modification on
+the other's score. It is deliberately not a second write path: the plan seeds
 `PartialRepsModal`, the athlete confirms or changes it there, and the result row
 that modal writes stays the only record of how the mission was performed. The
 draft is cleared the moment the result is submitted.
@@ -291,14 +291,14 @@ exact version performed — "Diamond Push-ups: from the knees — 40 → 45 → 
 (+8 reps)", with "As programmed" listed beside it.
 
 Versions are never merged into one trend. A series is keyed by template, time
-cap, and the full modification state, because scaling the push-ups, scaling the
-squats instead, and the same workout at a different cap are three different
-measurements. A movement marked without a named scaling is its own version too —
+cap, and the full modification state, because modifying the push-ups, modifying
+the squats instead, and the same workout at a different cap are three different
+measurements. A movement marked without a named option is its own version too —
 merging it with a named one would claim a like-for-like comparison the data does
 not support. Nothing computes a correction between versions, for the same reason
 option (c) was rejected above: any factor would be invented. A group only
 renders once there are two scored missions on it and at least one of them was
-scaled, so the panel is invisible to anyone who has never scaled.
+modified, so the panel is invisible to anyone who has never modified a movement.
 
 A decline is reported as a decline. A panel that only ever shows improvement is
 not a record.
@@ -308,7 +308,7 @@ not a record.
 - Any change to score, load, intensity or classification.
 - Splitting leaderboards.
 - Editing the mark after the fact.
-- A scaling ladder in the exercise library.
+- A modification ladder in the exercise library.
 
 ---
 
@@ -328,8 +328,8 @@ before the mission, which is exactly the friction this design avoids.
 - An athlete can mark one movement without leaving the results flow.
 - A modified result and an identical unmodified one produce the same final score,
   the same PVI, and the same training load. Asserted in tests.
-- A modified result never becomes the ghost for a standard attempt, and a scaled
-  attempt can race the athlete's best run of that same scaling.
+- A modified result never becomes the ghost for a standard attempt, and a modified
+  attempt can race the athlete's best run of that same modification.
 - A retest that differs in modification state from its benchmark says so.
 - Marking a movement costs nothing, and the UI says as much where the athlete
   decides.

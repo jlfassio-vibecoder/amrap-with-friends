@@ -10,7 +10,7 @@ import type { WorkoutExercise } from '@/lib/api/missionTypes';
  * disclosure would lower the athlete's chronic baseline, worsening the next
  * week's acute:chronic ratio, and cost them progress toward Operator — so the
  * honest answer would be the expensive one, and within a fortnight nobody would
- * give it. An AMRAP is self-paced besides: scaling a movement buys more rounds
+ * give it. An AMRAP is self-paced besides: modifying a movement buys more rounds
  * at the same effort, so the effort was the effort.
  */
 

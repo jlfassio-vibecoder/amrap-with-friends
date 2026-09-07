@@ -5,15 +5,15 @@ import { versionKeyFor } from '@/lib/mission/movementVersion';
 export { versionKeyFor } from '@/lib/mission/movementVersion';
 
 /**
- * Reading stored scalings back as a story: "from the knees — 40, 45, 48 reps",
- * and then the same workout done as programmed.
+ * Reading stored modifications back as a story: "from the knees — 40, 45, 48
+ * reps", and then the same workout done as programmed.
  *
  * The comparison is only honest inside one exact version of one workout, so a
  * series is keyed by the workout, the clock, *and* the full modification state.
- * Scaling the push-ups changes the score; so does scaling the squats instead;
- * so does the same workout at a different time cap. Pooling any of those would
- * produce a trend line the athlete cannot act on, which is worse than showing
- * nothing.
+ * Modifying the push-ups changes the score; so does modifying the squats
+ * instead; so does the same workout at a different time cap. Pooling any of
+ * those would produce a trend line the athlete cannot act on, which is worse
+ * than showing nothing.
  *
  * Nothing here computes a correction between versions. A knee push-up score and
  * a standard one sit side by side and the athlete draws their own conclusion —
@@ -86,7 +86,8 @@ function labelFor(entry: ProgressionInput): string {
  *
  * A group is only worth showing when there is something to compare: at least
  * two scored missions on that workout and clock, and at least one of them
- * scaled. Repeat history with no scaling in it is the ghost's job, not this.
+ * modified. Repeat history with no modification in it is the ghost's job, not
+ * this.
  */
 export function buildMovementProgression(entries: readonly ProgressionInput[]): ProgressionGroup[] {
   const byGroup = new Map<string, ProgressionInput[]>();
