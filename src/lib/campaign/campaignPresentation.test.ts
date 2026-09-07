@@ -132,7 +132,7 @@ describe('campaignViewerCompletedCount', () => {
     ).toBe(1);
   });
 
-  it('does not count forfeits or null scores', () => {
+  it('does not count null or non-finite scores', () => {
     expect(
       campaignViewerCompletedCount({
         occurrenceIds,

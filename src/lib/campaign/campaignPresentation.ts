@@ -135,8 +135,9 @@ export type ViewerCompletedScore = {
 
 /**
  * How many campaign missions the signed-in athlete has a usable score for
- * (live or makeup). Forfeits do not count. Counts distinct occurrence ids so
- * a live + makeup pair for the same row cannot double-count.
+ * (live or makeup). Counts distinct occurrence ids so a live + makeup pair
+ * for the same row cannot double-count. Forfeits never produce a score, so
+ * they are already excluded by the usable-score filter.
  */
 export function campaignViewerCompletedCount(input: {
   occurrenceIds: Iterable<string>;
