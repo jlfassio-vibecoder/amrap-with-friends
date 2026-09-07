@@ -27,6 +27,10 @@ function entry(
     finalScore: null,
     scoreBreakdown: null,
     modifiedMovements: [],
+    movementVariants: {},
+    rpe: null,
+    sessionNotes: '',
+    checkIns: {},
     coachWorkoutName: null,
     ...overrides,
   };

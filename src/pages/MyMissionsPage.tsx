@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { formatModifiedBadge } from '@/lib/mission/modifiedMovements';
+import { formatVariantBadge } from '@/lib/mission/exerciseScaling';
 import { AppLink } from '@/components/AppLink';
 import { Link } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
@@ -7,6 +8,9 @@ import { MyMissionScoreBreakdownModal } from '@/components/MyMissionScoreBreakdo
 import { AssignedWorkoutsPanel } from '@/components/mission/AssignedWorkoutsPanel';
 import { SendWorkoutToSquad } from '@/components/mission/SendWorkoutToSquad';
 import { MyCampaignsPanel } from '@/components/campaign/MyCampaignsPanel';
+import { ScalingProgressionPanel } from '@/components/mission/ScalingProgressionPanel';
+import { CheckInProgressionPanel } from '@/components/mission/CheckInProgressionPanel';
+import { MyMissionCheckIn } from '@/components/mission/MyMissionCheckIn';
 import {
   canDeleteMyMission,
   deleteIncompleteMission,
@@ -121,7 +125,10 @@ function MyMissionCard({
     onToggle: () => void;
   };
 }) {
-  const modifiedBadge = formatModifiedBadge(entry.modifiedMovements);
+  // Prefer what the athlete actually named — "Diamond Push-ups: from the knees"
+  // — and fall back to the plain mark when no named option was chosen.
+  const modifiedBadge =
+    formatVariantBadge(entry.movementVariants) ?? formatModifiedBadge(entry.modifiedMovements);
   return (
     <div className="card space-y-2 p-4 text-sm">
       <MyMissionMovements title={myMissionWorkoutTitle(entry)} workout={entry.workout} />
@@ -177,6 +184,11 @@ function MyMissionCard({
           </button>
         ) : null}
       </div>
+      <MyMissionCheckIn
+        rpe={entry.rpe}
+        sessionNotes={entry.sessionNotes}
+        checkIns={entry.checkIns}
+      />
     </div>
   );
 }
@@ -324,6 +336,10 @@ export default function MyMissionsPage() {
       <AssignedWorkoutsPanel />
 
       <MyCampaignsPanel showCreateCta={false} />
+
+      <ScalingProgressionPanel entries={entries} />
+
+      <CheckInProgressionPanel entries={entries} />
 
       {loading ? <p className="text-sm text-secondary">Loading…</p> : null}
 

@@ -61,7 +61,16 @@ describe('PartialRepsModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Increase partial reps' }));
     lockIn();
 
-    expect(onSubmit).toHaveBeenCalledWith(1, ['Diamond Push-ups']);
+    expect(onSubmit).toHaveBeenCalledWith(
+      1,
+      ['Diamond Push-ups'],
+      {},
+      {
+        rpe: null,
+        sessionNotes: '',
+        checkIns: {},
+      }
+    );
   });
 
   it('submits nothing when no movement is marked', () => {
@@ -77,7 +86,7 @@ describe('PartialRepsModal', () => {
 
     lockIn();
 
-    expect(onSubmit).toHaveBeenCalledWith(0, []);
+    expect(onSubmit).toHaveBeenCalledWith(0, [], {}, { rpe: null, sessionNotes: '', checkIns: {} });
   });
 
   it('lets a mark be taken back before locking', () => {
@@ -95,7 +104,7 @@ describe('PartialRepsModal', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: 'Sprawls' }));
     lockIn();
 
-    expect(onSubmit).toHaveBeenCalledWith(0, []);
+    expect(onSubmit).toHaveBeenCalledWith(0, [], {}, { rpe: null, sessionNotes: '', checkIns: {} });
   });
 
   it('does not gate the submit on the modification question', () => {
@@ -120,6 +129,139 @@ describe('PartialRepsModal', () => {
 
     expect(screen.queryByText(/did you modify/i)).toBeNull();
     lockIn();
-    expect(onSubmit).toHaveBeenCalledWith(0, []);
+    expect(onSubmit).toHaveBeenCalledWith(0, [], {}, { rpe: null, sessionNotes: '', checkIns: {} });
+  });
+
+  it('offers named options once a movement is marked, and submits the choice', () => {
+    const onSubmit = vi.fn();
+    render(
+      <PartialRepsModal
+        repsPerRound={32}
+        isSubmitting={false}
+        workout={workout}
+        onSubmit={onSubmit}
+      />
+    );
+
+    // Nothing on offer until the athlete says the movement changed.
+    expect(screen.queryByRole('button', { name: 'From the knees' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Diamond Push-ups' }));
+    fireEvent.click(screen.getByRole('button', { name: 'From the knees' }));
+    lockIn();
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      0,
+      ['Diamond Push-ups'],
+      {
+        'Diamond Push-ups': 'push-up--knees',
+      },
+      { rpe: null, sessionNotes: '', checkIns: {} }
+    );
+  });
+
+  it('drops a named option when the movement is un-marked', () => {
+    // A variant on a movement the athlete says they did as programmed is a
+    // contradiction, so the mark and the detail have to come off together.
+    const onSubmit = vi.fn();
+    render(
+      <PartialRepsModal
+        repsPerRound={32}
+        isSubmitting={false}
+        workout={workout}
+        onSubmit={onSubmit}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Diamond Push-ups' }));
+    fireEvent.click(screen.getByRole('button', { name: 'From the knees' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Diamond Push-ups' }));
+    lockIn();
+
+    expect(onSubmit).toHaveBeenCalledWith(0, [], {}, { rpe: null, sessionNotes: '', checkIns: {} });
+  });
+
+  it('does not require naming the option', () => {
+    const onSubmit = vi.fn();
+    render(
+      <PartialRepsModal
+        repsPerRound={32}
+        isSubmitting={false}
+        workout={workout}
+        onSubmit={onSubmit}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Sprawls' }));
+    lockIn();
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      0,
+      ['Sprawls'],
+      {},
+      { rpe: null, sessionNotes: '', checkIns: {} }
+    );
+  });
+
+  it('pre-ticks a movement whose option was chosen before the mission', () => {
+    const onSubmit = vi.fn();
+    render(
+      <PartialRepsModal
+        repsPerRound={32}
+        isSubmitting={false}
+        workout={workout}
+        initialVariants={{ 'Diamond Push-ups': 'push-up--knees' }}
+        onSubmit={onSubmit}
+      />
+    );
+
+    const checkbox = screen.getByRole('checkbox', { name: 'Diamond Push-ups' }) as HTMLInputElement;
+    expect(checkbox.checked).toBe(true);
+    expect(
+      screen.getByRole('button', { name: 'From the knees' }).getAttribute('aria-pressed')
+    ).toBe('true');
+
+    lockIn();
+    expect(onSubmit).toHaveBeenCalledWith(
+      0,
+      ['Diamond Push-ups'],
+      {
+        'Diamond Push-ups': 'push-up--knees',
+      },
+      { rpe: null, sessionNotes: '', checkIns: {} }
+    );
+  });
+
+  it('lets the athlete drop a pre-mission option they did not end up needing', () => {
+    const onSubmit = vi.fn();
+    render(
+      <PartialRepsModal
+        repsPerRound={32}
+        isSubmitting={false}
+        workout={workout}
+        initialVariants={{ 'Diamond Push-ups': 'push-up--knees' }}
+        onSubmit={onSubmit}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Diamond Push-ups' }));
+    lockIn();
+    expect(onSubmit).toHaveBeenCalledWith(0, [], {}, { rpe: null, sessionNotes: '', checkIns: {} });
+  });
+
+  it('ignores a seeded option for a movement this workout does not programme', () => {
+    const onSubmit = vi.fn();
+    render(
+      <PartialRepsModal
+        repsPerRound={32}
+        isSubmitting={false}
+        workout={workout}
+        initialVariants={{ 'Pull-ups': 'push-up--knees' }}
+        onSubmit={onSubmit}
+      />
+    );
+
+    lockIn();
+    expect(onSubmit).toHaveBeenCalledWith(0, [], {}, { rpe: null, sessionNotes: '', checkIns: {} });
   });
 });

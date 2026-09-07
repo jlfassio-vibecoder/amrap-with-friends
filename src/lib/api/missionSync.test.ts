@@ -236,6 +236,10 @@ describe('missionSync API', () => {
         partialReps: 15,
         segmentIndex: 0,
         modifiedMovements: [],
+        movementVariants: {},
+        rpe: null,
+        sessionNotes: '',
+        checkIns: {},
       },
     });
     expect(result.error).toBeNull();

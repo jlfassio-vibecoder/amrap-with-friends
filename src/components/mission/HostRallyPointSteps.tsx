@@ -27,6 +27,9 @@ export interface HostRallyPointStepsProps {
   durationMinutes: number;
   ghostSelection: StoredGhostSelection | null;
   onGhostChange: (selection: StoredGhostSelection | null) => void;
+  /** The version the athlete plans to perform, so the pacer can offer its match. */
+  ghostVersionKey?: string;
+  ghostVersionLabel?: string | null;
 }
 
 function durationSummaryLabel(seconds: number | null): string {
@@ -48,6 +51,8 @@ export function HostRallyPointSteps({
   durationMinutes,
   ghostSelection,
   onGhostChange,
+  ghostVersionKey = '',
+  ghostVersionLabel = null,
 }: HostRallyPointStepsProps) {
   const baseId = useId();
   const [expandedStep, setExpandedStep] = useState<ExpandedStep>(() => (countdownArmed ? null : 0));
@@ -249,6 +254,8 @@ export function HostRallyPointSteps({
               durationMinutes={durationMinutes}
               value={ghostSelection}
               onChange={onGhostChange}
+              versionKey={ghostVersionKey}
+              versionLabel={ghostVersionLabel}
               embedded
             />
           </div>

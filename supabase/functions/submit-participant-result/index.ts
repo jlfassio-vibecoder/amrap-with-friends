@@ -129,6 +129,10 @@ Deno.serve(async (req) => {
           final_score: input.finalScore,
           score_breakdown: input.scoreBreakdown,
           modified_movements: input.modifiedMovements,
+          movement_variants: input.movementVariants,
+          rpe: input.rpe,
+          session_notes: input.sessionNotes.length > 0 ? input.sessionNotes : null,
+          check_ins: Object.keys(input.checkIns).length > 0 ? input.checkIns : null,
           locked_at: lockedAt,
           updated_at: lockedAt,
         })
@@ -155,6 +159,10 @@ Deno.serve(async (req) => {
           final_score: input.finalScore,
           score_breakdown: input.scoreBreakdown,
           modified_movements: input.modifiedMovements,
+          movement_variants: input.movementVariants,
+          rpe: input.rpe,
+          session_notes: input.sessionNotes.length > 0 ? input.sessionNotes : null,
+          check_ins: Object.keys(input.checkIns).length > 0 ? input.checkIns : null,
           locked_at: lockedAt,
         })
         .select('participant_id')

@@ -40,6 +40,30 @@ Deno.test('normalizeSubmitRequest prefers missionId and accepts legacy sessionId
   );
 });
 
+Deno.test('normalizeSubmitRequest keeps a valid check-in and drops unknowns', () => {
+  const body = normalizeSubmitRequest({
+    missionId: MISSION_ID,
+    participantId: PARTICIPANT_ID,
+    claimToken: 't',
+    partialReps: 1,
+    segmentIndex: 0,
+    rpe: 7,
+    sessionNotes: '  held back  ',
+    checkIns: {
+      energy: 'energy--ok',
+      starting_soreness: 'soreness--mild',
+      mystery: 'nope',
+    },
+  });
+
+  assertEquals(body.rpe, 7);
+  assertEquals(body.sessionNotes, 'held back');
+  assertEquals(body.checkIns, {
+    energy: 'energy--ok',
+    starting_soreness: 'soreness--mild',
+  });
+});
+
 Deno.test('deriveRoundDurationsSec computes elapsed deltas', () => {
   const rounds: RoundRow[] = [
     { round_index: 0, elapsed_sec_at_round: 60 },
@@ -94,6 +118,10 @@ Deno.test('handleSubmitParticipantResult rejects second submit when score is loc
       partialReps: 15,
       segmentIndex: 0,
       modifiedMovements: [],
+      movementVariants: {},
+      rpe: null,
+      sessionNotes: '',
+      checkIns: {},
     },
     {
       authUserId: null,
@@ -136,6 +164,10 @@ Deno.test('handleSubmitParticipantResult rejects second submit when score is loc
       partialReps: 10,
       segmentIndex: 0,
       modifiedMovements: [],
+      movementVariants: {},
+      rpe: null,
+      sessionNotes: '',
+      checkIns: {},
     },
     {
       authUserId: null,
@@ -180,6 +212,10 @@ Deno.test('handleSubmitParticipantResult ignores client-side score tampering inp
       partialReps: 15,
       segmentIndex: 0,
       modifiedMovements: [],
+      movementVariants: {},
+      rpe: null,
+      sessionNotes: '',
+      checkIns: {},
     },
     {
       authUserId: null,
@@ -219,6 +255,10 @@ Deno.test('handleSubmitParticipantResult fails closed when rounds cannot be load
       partialReps: 0,
       segmentIndex: 0,
       modifiedMovements: [],
+      movementVariants: {},
+      rpe: null,
+      sessionNotes: '',
+      checkIns: {},
     },
     {
       authUserId: null,

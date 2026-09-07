@@ -1,4 +1,5 @@
 import { EXERCISE_LIBRARY } from '@/data/exerciseLibrary';
+import { normalizeMovementName } from '@/lib/exercise/movementName';
 import {
   TIME_DOMAINS,
   WORKOUT_CATEGORIES,
@@ -14,11 +15,7 @@ import {
  * a given workout, the distribution of pacing scores — need volume we do not
  * have yet, and inventing them would be worse than not publishing.
  */
-const norm = (name: string) =>
-  name
-    .replace(/\s*\([^)]*\)\s*$/, '')
-    .trim()
-    .toLowerCase();
+const norm = normalizeMovementName;
 
 export interface MovementFrequency {
   name: string;

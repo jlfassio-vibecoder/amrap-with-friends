@@ -1,8 +1,9 @@
 # Plan: marking a movement as modified
 
 **Branch:** `feature/modified-movements`
-**Status:** Phases 1 and 2 shipped — phase 3 (named variants) is next
-**Last updated:** 2026-09-08
+**Status:** Phases 1–3 shipped, including the pre-mission picker, the progression
+view and the same-variant ghost.
+**Last updated:** 2026-09-09
 
 ---
 
@@ -57,7 +58,7 @@ fortnight people learn not to tick it, and the product loses the data entirely �
 which is a worse outcome than never having asked. The mark has to be free to
 give.
 
-It is also not obviously right on the physiology. An AMRAP is self-paced: scale a
+It is also not obviously right on the physiology. An AMRAP is self-paced: modify a
 movement to something you can sustain and you complete **more rounds** at the
 same heart rate and the same perceived effort. The effort was the effort. What a
 modification changes is not how hard the athlete worked — it is **what the score
@@ -140,7 +141,7 @@ edited underneath it, and reads correctly in a badge tooltip without a lookup.
 
 `available_ghosts` returns the best `final_score` for a template and clock. A
 modified run should not become the ghost an athlete races on their next standard
-attempt — that turns a scaled score into a target they cannot reach.
+attempt — that turns a modified score into a target they cannot reach.
 
 **Decided:** filter modified results out of the ghost query. Keep them visible in
 My Missions; they are the athlete's own history, just not their standard-movement
@@ -150,13 +151,52 @@ best.
 second query that races live teammates on the current occurrence rather than a
 stored personal best. Declining to hand an athlete a stale target they cannot
 reach is one thing; removing a teammate from a shared workout is another, and a
-teammate who scaled a movement is still someone to train alongside. This is
+teammate who modified a movement is still someone to train alongside. This is
 settled, not deferred — the migration says so at the call site.
 
-**Open:** should a _modified_ run race the athlete's best _modified_ run on the
-same template? That is the like-for-like comparison and it is the one that shows
-progression. It needs the phase-2 variant names to be meaningful — a generic flag
-cannot tell knee push-ups from an incline. Deferred.
+**Also decided, once phase 3 made it possible: yes.** A modified run now races
+the athlete's best previous run of the _exact same version_. This was deferred
+because a generic "modified" flag cannot tell knee push-ups from an incline; the
+named variants and the pre-mission picker between them supply both halves — what
+the version is, and the fact that the athlete has said which one they are about
+to do.
+
+`available_ghosts` gains `p_version_key`. Empty or absent asks for the standard
+best only, exactly as before. A named version additionally returns
+`variant_best`: the best scored run whose whole modification state matches.
+`personal_best` is unchanged and still standard-only, and both come back
+together — an athlete's own standard best is not something to hide from them, it
+is just not the like-for-like curve when they have said they are modifying.
+
+**The pacer is no longer solo-only.** It shipped requiring
+`participantCount === 1`, on the reasoning that racing a stored curve while a
+squad watched the same clock was a distraction. The same-variant ghost inverts
+that: an athlete who modifies a movement is often the one who feels furthest
+behind in a
+group, and their best previous run of that exact version is the one number on
+the screen that is actually theirs to beat — the live leaderboard is not,
+because the others are doing a different version of the workout. The gate is now
+`shouldShowPacerPicker` (template present, still in the rally point) and
+participant count does not reach it.
+
+Joiners get a picker of their own for the first time. It had only ever lived
+inside the host's rally-point steps, so the old gate meant the only person who
+ever saw it was a host training alone. A pacer stays a private choice: everyone
+picks their own, nobody else sees it, "None" is still the default, and the host
+does not pick pacers for the squad.
+
+The match is on the **whole** modification state, not on the movement asked
+about. Modifying the push-ups and modifying the squats instead are two different
+workouts, and a ghost built from the wrong one paces wrong. Same rule as the
+progression view, and the same key: `versionKeyFor`.
+
+That key now exists in TypeScript and in SQL, which is drift waiting to happen —
+and drift here does not raise. The keys simply stop matching, the ghost is
+silently absent, and nothing says why. `movementVersion.contract.test.ts` parses
+`movement_version_key` out of the migration and runs both over every option in
+the library plus the cases a collation would get wrong. The SQL sorts
+`COLLATE "C"` and the TypeScript sorts by code point, so the database's own
+locale never decides whether a ghost matches.
 
 ### 2. The leaderboard within one mission
 
@@ -232,25 +272,104 @@ and an editable one invites tidying history. Revisit only if people ask.
 - Standard-only filter in `available_ghosts`.
 - Benchmark/retest mismatch note per decision 3.
 
-### Phase 3 — Named variants (the feature this is really for)
+### Phase 3 — Named variants (the feature this is really for) — **done**
 
 Choosing "Knee Diamond Push-ups" before the mission rather than flagging
 "modified" after it. This is what turns the mark into progression: _40 → 45 → 48
 reps on knee push-ups, then the standard movement_ is a story the product can
 tell; "not standard" is not.
 
-It needs a variant relationship in the exercise library — a scaling ladder per
-movement — which is content work across 69 exercises, not code. Phase 1 and 2 are
-deliberately shaped so that the pre-mission picker writes **the same field** the
-post-mission checklist writes; two sources of truth for one fact is the failure
-mode to avoid.
+**Shipped:** the modification ladder itself (`src/data/exerciseScaling.ts`, covering
+all 73 library exercises), and naming the option in the end-of-mission checklist.
+Marking a movement now reveals its ladder — "Hands elevated / From the knees /
+Partial range" for a push-up — and the choice is stored in `movement_variants`
+alongside the existing `modified_movements` mark.
+
+Option ids are frozen for the same reason benchmark ids are: they are stored, so
+an id that changes meaning silently rewrites history. A test pins the current set.
+
+**Pre-mission picker** (`PreMissionScalingPicker`, in the rally point under the
+workout list): a collapsed "Need to modify a movement?" offering the ladder for
+each programmed movement that has one. The choice is a **draft**, held in
+`localStorage` per mission _and_ per participant — two people share one propped-up
+phone often enough that a device-wide key would put one athlete's modification on
+the other's score. It is deliberately not a second write path: the plan seeds
+`PartialRepsModal`, the athlete confirms or changes it there, and the result row
+that modal writes stays the only record of how the mission was performed. The
+draft is cleared the moment the result is submitted.
+
+Only movements with a named ladder appear before the mission. A bare "I modified
+this" has no meaning until it has happened; the end-of-mission checklist is still
+where any movement can be marked.
+
+**Progression view** (`ScalingProgressionPanel`, on My missions, built on the
+pure `movementProgression.ts`): the same workout at the same clock, split by the
+exact version performed — "Diamond Push-ups: from the knees — 40 → 45 → 48 reps
+(+8 reps)", with "As programmed" listed beside it.
+
+Versions are never merged into one trend. A series is keyed by template, time
+cap, and the full modification state, because modifying the push-ups, modifying
+the squats instead, and the same workout at a different cap are three different
+measurements. A movement marked without a named option is its own version too —
+merging it with a named one would claim a like-for-like comparison the data does
+not support. Nothing computes a correction between versions, for the same reason
+option (c) was rejected above: any factor would be invented. A group only
+renders once there are two scored missions on it and at least one of them was
+modified, so the panel is invisible to anyone who has never modified a movement.
+
+A decline is reported as a decline. A panel that only ever shows improvement is
+not a record.
 
 ### Non-goals (v1)
 
 - Any change to score, load, intensity or classification.
 - Splitting leaderboards.
 - Editing the mark after the fact.
-- A scaling ladder in the exercise library.
+- A modification ladder in the exercise library.
+
+---
+
+## Post-mission check-in (RPE, chips, notes)
+
+Added alongside the modification mark, under the same rule: free to give, never
+part of the score.
+
+**A check-in is private to its author.** Nothing in the product shows one
+athlete another's notes, pain mark, mood or sleep, and nothing should — the
+write path asks under "Anything else to remember next time?", which is a promise
+about audience. So `rpe`, `session_notes` and `check_ins` are **not** granted to
+`anon`/`authenticated` and are **not** on `get_mission_live_state`. That RPC is
+`SECURITY DEFINER` and returns every participant's segment result to anyone
+holding a claim or host token, guests included; the membership RLS policy is
+`USING (is_mission_participant(mission_id))`, so a column grant is a grant to
+every teammate. `my_missions` is the one read path they belong on, because it is
+scoped to `p.user_id = v_uid`. `checkInPrivacy.test.ts` pins all three edges.
+
+This is where the modified-movement pattern does **not** transfer.
+`modified_movements` is public by design — it is printed on the leaderboard so
+another athlete can read the score. Copying its grants onto this data was the
+mistake `20260909200000_check_in_is_private.sql` undoes.
+
+**The RPE series is not split by version, but says when the version changed.**
+RPE is normalised to the athlete already, and splitting would break the trend
+for exactly the people who progress out of a modification. The number is
+comparable across versions; the inference is not — 6 → 8 after moving from knee
+push-ups to full ones is not a fitness decline. So the series stays whole and
+carries one sentence, which is decision 3 applied again for the same reason: any
+correction factor would be invented.
+
+**A check-in is read back in full.** It shipped as a "Check-in" word with the
+whole thing in a `title` attribute truncated to 40 characters — unreachable on
+touch, which is the device most of these missions are run from. An athlete could
+write 280 characters and never read a word back. `MyMissionCheckIn` shows the
+RPE, the chips and the notes as written.
+
+### Still open
+
+None. Marking Felt pain shows a frozen medical warning at capture and on
+read-back: discontinue any exercise that causes pain, seek medical attention if
+necessary, and this app does not give medical advice. That is the product
+response — still no triage, coaching, or load effect.
 
 ---
 
@@ -270,7 +389,8 @@ before the mission, which is exactly the friction this design avoids.
 - An athlete can mark one movement without leaving the results flow.
 - A modified result and an identical unmodified one produce the same final score,
   the same PVI, and the same training load. Asserted in tests.
-- A modified result never becomes the ghost for a standard attempt.
+- A modified result never becomes the ghost for a standard attempt, and a modified
+  attempt can race the athlete's best run of that same modification.
 - A retest that differs in modification state from its benchmark says so.
 - Marking a movement costs nothing, and the UI says as much where the athlete
   decides.
@@ -279,12 +399,16 @@ before the mission, which is exactly the friction this design avoids.
 
 ## Key files
 
-| Area                | Paths                                                                                                                            |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Capture             | `src/components/PartialRepsModal.tsx`, `HonestyLockCheckbox.tsx`                                                                 |
-| Submit path         | `src/lib/api/missionSync.ts` (`submitParticipantResult`), `supabase/functions/submit-participant-result/handler.ts` + `index.ts` |
-| Storage             | `participant_segment_results` (new `modified_movements text[]`)                                                                  |
-| Badge               | `src/components/MissionScorecard.tsx`, leaderboard rows, `src/pages/MyMissionsPage.tsx`                                          |
-| Ghosts (phase 2)    | `available_ghosts` in `20260824140000_session_template_id_and_ghost_rpcs.sql`                                                    |
-| Campaigns (phase 2) | `src/lib/campaign/` comparison surfaces                                                                                          |
-| Must not change     | `computeScoreBreakdown.ts`, `getDomainWeight.ts`, `compute_overtraining_load`, classification queries                            |
+| Area                | Paths                                                                                                                                   |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Capture             | `src/components/PartialRepsModal.tsx`, `HonestyLockCheckbox.tsx`                                                                        |
+| Pre-mission picker  | `src/components/mission/PreMissionScalingPicker.tsx`, `src/lib/mission/scalingPlan.ts`, `src/pages/MissionWaitingRoomPage.tsx`          |
+| Progression view    | `src/components/mission/ScalingProgressionPanel.tsx`, `src/lib/mission/movementProgression.ts`, `src/pages/MyMissionsPage.tsx`          |
+| Submit path         | `src/lib/api/missionSync.ts` (`submitParticipantResult`), `supabase/functions/submit-participant-result/handler.ts` + `index.ts`        |
+| Storage             | `participant_segment_results` (new `modified_movements text[]`)                                                                         |
+| Badge               | `src/components/MissionScorecard.tsx`, leaderboard rows, `src/pages/MyMissionsPage.tsx`                                                 |
+| Ghosts (phase 2)    | `available_ghosts` in `20260824140000_session_template_id_and_ghost_rpcs.sql`                                                           |
+| Same-variant ghost  | `20260909170000_same_variant_ghost.sql`, `src/lib/mission/movementVersion.ts`, `src/lib/api/ghost.ts`, `src/components/GhostPicker.tsx` |
+| Pacer visibility    | `src/lib/mission/shouldShowPacerPicker.ts`, `src/pages/MissionWaitingRoomPage.tsx`                                                      |
+| Campaigns (phase 2) | `src/lib/campaign/` comparison surfaces                                                                                                 |
+| Must not change     | `computeScoreBreakdown.ts`, `getDomainWeight.ts`, `compute_overtraining_load`, classification queries                                   |

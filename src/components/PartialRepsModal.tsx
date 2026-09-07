@@ -1,7 +1,26 @@
 import { useState } from 'react';
 import { HonestyLockCheckbox } from '@/components/HonestyLockCheckbox';
+import { MissionCheckInPanel } from '@/components/mission/MissionCheckInPanel';
+import { ModificationOptionChip } from '@/components/mission/ModificationOptionChip';
 import type { WorkoutExercise } from '@/lib/api/missionTypes';
 import { normalizeModifiedMovements } from '@/lib/mission/modifiedMovements';
+import {
+  normalizeCheckIns,
+  normalizeRpe,
+  normalizeSessionNotes,
+  type MissionCheckIns,
+} from '@/lib/mission/missionCheckIn';
+import {
+  normalizeMovementVariants,
+  scalingOptionsForMovement,
+  type MovementVariantSelection,
+} from '@/lib/mission/exerciseScaling';
+
+export interface MissionCheckInSubmit {
+  rpe: number | null;
+  sessionNotes: string;
+  checkIns: MissionCheckIns;
+}
 
 interface PartialRepsModalProps {
   repsPerRound: number;
@@ -9,7 +28,19 @@ interface PartialRepsModalProps {
   error?: string | null;
   /** The movements as programmed, so the athlete can mark any they changed. */
   workout?: WorkoutExercise[];
-  onSubmit: (partialReps: number, modifiedMovements: string[]) => void;
+  /**
+   * A modification the athlete chose before the mission, pre-ticked here.
+   *
+   * A seed, not a submission: they can still change or clear it, and this modal
+   * remains the only place a modification is written against the result.
+   */
+  initialVariants?: MovementVariantSelection;
+  onSubmit: (
+    partialReps: number,
+    modifiedMovements: string[],
+    movementVariants: MovementVariantSelection,
+    checkIn: MissionCheckInSubmit
+  ) => void;
 }
 
 export function PartialRepsModal({
@@ -17,17 +48,44 @@ export function PartialRepsModal({
   isSubmitting,
   error,
   workout = [],
+  initialVariants,
   onSubmit,
 }: PartialRepsModalProps) {
   const titleId = 'partial-reps-modal-title';
   const maxPartialReps = Math.max(0, repsPerRound - 1);
   const [partialReps, setPartialReps] = useState(0);
   const [integrityAcknowledged, setIntegrityAcknowledged] = useState(false);
-  const [modified, setModified] = useState<string[]>([]);
+  // Read once, on mount: this modal opens after the mission and the plan cannot
+  // change underneath it, so re-syncing would only fight the athlete's edits.
+  const [variants, setVariants] = useState<MovementVariantSelection>(() =>
+    normalizeMovementVariants(initialVariants, workout)
+  );
+  const [modified, setModified] = useState<string[]>(() => Object.keys(variants));
+  const [checkIn, setCheckIn] = useState<MissionCheckInSubmit>({
+    rpe: null,
+    sessionNotes: '',
+    checkIns: {},
+  });
 
   function toggleModified(name: string) {
-    setModified((current) =>
-      current.includes(name) ? current.filter((entry) => entry !== name) : [...current, name]
+    setModified((current) => {
+      if (current.includes(name)) {
+        // Un-marking a movement drops the named option with it — a named variant on a
+        // movement the athlete says they did as programmed is a contradiction.
+        setVariants((current) =>
+          Object.fromEntries(Object.entries(current).filter(([key]) => key !== name))
+        );
+        return current.filter((entry) => entry !== name);
+      }
+      return [...current, name];
+    });
+  }
+
+  function chooseVariant(name: string, optionId: string) {
+    setVariants((current) =>
+      current[name] === optionId
+        ? Object.fromEntries(Object.entries(current).filter(([key]) => key !== name))
+        : { ...current, [name]: optionId }
     );
   }
 
@@ -49,7 +107,7 @@ export function PartialRepsModal({
       aria-modal="true"
       aria-labelledby={titleId}
     >
-      <div className="card w-full max-w-md space-y-4 p-6">
+      <div className="card max-h-[90vh] w-full max-w-md space-y-4 overflow-y-auto p-6">
         <h2 id={titleId} className="text-display text-xl text-ink">
           TIME CALLED. BREATHE.
         </h2>
@@ -89,28 +147,47 @@ export function PartialRepsModal({
           onChange={setIntegrityAcknowledged}
         />
 
+        <MissionCheckInPanel value={checkIn} disabled={isSubmitting} onChange={setCheckIn} />
+
         {workout.length > 0 ? (
           <fieldset className="space-y-2 border-t border-divider pt-4">
             <legend className="text-sm font-semibold text-ink">Did you modify any movement?</legend>
-            <div className="space-y-1.5">
-              {workout.map((exercise) => (
-                <label
-                  key={exercise.name}
-                  className="flex cursor-pointer items-center gap-3 text-sm text-ink"
-                >
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 shrink-0 accent-[var(--color-accent)]"
-                    checked={modified.includes(exercise.name)}
-                    disabled={isSubmitting}
-                    onChange={() => toggleModified(exercise.name)}
-                  />
-                  {exercise.name}
-                </label>
-              ))}
+            <div className="space-y-2">
+              {workout.map((exercise) => {
+                const isModified = modified.includes(exercise.name);
+                const options = scalingOptionsForMovement(exercise.name);
+                return (
+                  <div key={exercise.name} className="space-y-1.5">
+                    <label className="flex cursor-pointer items-center gap-3 text-sm text-ink">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 shrink-0 accent-[var(--color-accent)]"
+                        checked={isModified}
+                        disabled={isSubmitting}
+                        onChange={() => toggleModified(exercise.name)}
+                      />
+                      {exercise.name}
+                    </label>
+                    {isModified && options.length > 0 ? (
+                      <div className="ml-7 flex flex-wrap gap-1.5">
+                        {options.map((option) => (
+                          <ModificationOptionChip
+                            key={option.id}
+                            option={option}
+                            pressed={variants[exercise.name] === option.id}
+                            disabled={isSubmitting}
+                            onClick={() => chooseVariant(exercise.name, option.id)}
+                          />
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
             <p className="text-xs text-muted">
-              Marked movements are shown on your score. They do not lower it.
+              Naming how you modified it lets you compare against the same version next time. Marked
+              movements are shown on your score. They do not lower it.
             </p>
           </fieldset>
         ) : null}
@@ -123,7 +200,18 @@ export function PartialRepsModal({
             canSubmit ? 'btn-primary w-full' : 'btn-outline w-full cursor-not-allowed opacity-50'
           }
           disabled={!canSubmit}
-          onClick={() => onSubmit(partialReps, normalizeModifiedMovements(modified, workout))}
+          onClick={() =>
+            onSubmit(
+              partialReps,
+              normalizeModifiedMovements(modified, workout),
+              normalizeMovementVariants(variants, workout),
+              {
+                rpe: normalizeRpe(checkIn.rpe),
+                sessionNotes: normalizeSessionNotes(checkIn.sessionNotes),
+                checkIns: normalizeCheckIns(checkIn.checkIns),
+              }
+            )
+          }
         >
           {submitLabel}
         </button>

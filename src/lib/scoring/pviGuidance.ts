@@ -118,8 +118,8 @@ export function describeWeeklyPviGuidance(
     meaning,
     cause:
       unevenCause !== null
-        ? `${unevenCause} A wide spread on one mission usually means the opening rounds were run near maximum, or a round was interrupted: a long break, a missed Log round button, or scaling mid-workout. ${shortMissionNote}`
-        : `This is an average, so a single rough mission can carry it — check the splits on each before reading it as a pattern. A wide spread on one mission usually means the opening rounds were run near maximum, or a round was interrupted: a long break, a missed Log round button, or scaling mid-workout. ${shortMissionNote}`,
+        ? `${unevenCause} A wide spread on one mission usually means the opening rounds were run near maximum, or a round was interrupted: a long break, a missed Log round button, or modifying mid-workout. ${shortMissionNote}`
+        : `This is an average, so a single rough mission can carry it — check the splits on each before reading it as a pattern. A wide spread on one mission usually means the opening rounds were run near maximum, or a round was interrupted: a long break, a missed Log round button, or modifying mid-workout. ${shortMissionNote}`,
     fix:
       unevenFix ??
       'Open the splits on your missions to find which one was uneven. On that kind of workout next time, run the first round slower than you think you should, and log every round as you finish it.',

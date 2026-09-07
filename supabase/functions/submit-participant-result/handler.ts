@@ -3,6 +3,12 @@ import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
 import { computeScoreBreakdown } from '@/lib/scoring/computeScoreBreakdown';
 import type { ScoreBreakdown } from '@/lib/scoring/types';
 import type { WorkoutExercise } from '@/lib/api/missionTypes';
+import {
+  normalizeCheckIns,
+  normalizeRpe,
+  normalizeSessionNotes,
+  type MissionCheckIns,
+} from '@/lib/mission/missionCheckIn';
 
 export interface SubmitParticipantResultRequest {
   missionId: string;
@@ -16,6 +22,14 @@ export interface SubmitParticipantResultRequest {
    * why it is absent from computeLockedScore's inputs entirely.
    */
   modifiedMovements: string[];
+  /** `{ movement name: scaling option id }` when the scaling was named. */
+  movementVariants: Record<string, string>;
+  /** Optional session RPE 1–10. Null when not logged. */
+  rpe: number | null;
+  /** Optional free-text notes. */
+  sessionNotes: string;
+  /** Optional structured check-in chips. */
+  checkIns: MissionCheckIns;
 }
 
 export interface SubmitParticipantResultResponse {
@@ -67,11 +81,17 @@ export function normalizeSubmitRequest(
     partialReps: typeof body.partialReps === 'number' ? body.partialReps : Number.NaN,
     segmentIndex: typeof body.segmentIndex === 'number' ? body.segmentIndex : Number.NaN,
     modifiedMovements: normalizeModifiedMovementNames(body.modifiedMovements),
+    movementVariants: normalizeMovementVariantMap(body.movementVariants),
+    rpe: normalizeRpe(body.rpe),
+    sessionNotes: normalizeSessionNotes(body.sessionNotes),
+    checkIns: normalizeCheckIns(body.checkIns),
   };
 }
 
 /** Longest movement name stored, matching the workout validator's own limit. */
 const MAX_MOVEMENT_NAME_LENGTH = 120;
+/** Longest frozen scaling option id a client may submit. */
+const MAX_MOVEMENT_VARIANT_OPTION_ID_LENGTH = 120;
 /** Upper bound so a malformed client cannot write an unbounded array. */
 const MAX_MODIFIED_MOVEMENTS = 12;
 
@@ -81,6 +101,34 @@ const MAX_MODIFIED_MOVEMENTS = 12;
  * The client already filters these against the workout it rendered; this is the
  * server refusing to store anything unbounded, not a second source of truth.
  */
+/**
+ * Bound the variant map the client sent. The client already checks each choice
+ * against the movement's own ladder; this only refuses to store something
+ * unbounded or the wrong shape.
+ */
+export function normalizeMovementVariantMap(value: unknown): Record<string, string> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+
+  const cleaned: Record<string, string> = {};
+  for (const [name, optionId] of Object.entries(value as Record<string, unknown>)) {
+    if (
+      typeof optionId !== 'string' ||
+      !optionId ||
+      optionId.length > MAX_MOVEMENT_VARIANT_OPTION_ID_LENGTH
+    ) {
+      continue;
+    }
+    cleaned[name.slice(0, MAX_MOVEMENT_NAME_LENGTH)] = optionId;
+    if (Object.keys(cleaned).length >= MAX_MODIFIED_MOVEMENTS) {
+      break;
+    }
+  }
+
+  return cleaned;
+}
+
 export function normalizeModifiedMovementNames(value: unknown): string[] {
   if (!Array.isArray(value)) {
     return [];
@@ -225,6 +273,10 @@ export async function handleSubmitParticipantResult(
       finalScore: number;
       scoreBreakdown: ScoreBreakdown;
       modifiedMovements: string[];
+      movementVariants: Record<string, string>;
+      rpe: number | null;
+      sessionNotes: string;
+      checkIns: MissionCheckIns;
     }) => Promise<{ ok: true } | { ok: false; reason: string }>;
   }
 ): Promise<SubmitParticipantResultResponse> {
@@ -290,6 +342,10 @@ export async function handleSubmitParticipantResult(
     finalScore: breakdown.finalScore,
     scoreBreakdown: breakdown,
     modifiedMovements: body.modifiedMovements,
+    movementVariants: body.movementVariants,
+    rpe: body.rpe,
+    sessionNotes: body.sessionNotes,
+    checkIns: body.checkIns,
   });
 
   if (!persisted.ok) {

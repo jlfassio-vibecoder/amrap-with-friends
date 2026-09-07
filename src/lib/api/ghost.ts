@@ -12,7 +12,17 @@ export interface GhostRunRef {
 }
 
 export interface AvailableGhosts {
+  /** Best standard run. Never a modified one — a scaled score is not a target. */
   personalBest: GhostRunRef | null;
+  /**
+   * Best previous run of the exact version the athlete is about to perform.
+   *
+   * Null when no version was named, or when they have not done this workout
+   * that way before. Additive to `personalBest` rather than replacing it: their
+   * own standard best is theirs to see, it is just not the like-for-like
+   * comparison when they have said they are scaling.
+   */
+  variantBest: GhostRunRef | null;
   friends: GhostRunRef[];
 }
 
@@ -101,12 +111,15 @@ function parseGhostCurveRound(raw: unknown): GhostCurveRound | null {
 export async function fetchAvailableGhosts(
   templateId: string,
   durationMinutes: number,
-  forMissionId?: string | null
+  forMissionId?: string | null,
+  /** From `versionKeyFor`; empty or omitted asks for the standard best only. */
+  versionKey?: string | null
 ): Promise<{ data: AvailableGhosts | null; error: GhostApiError | null }> {
   const { data, error } = await callRpc('available_ghosts', {
     p_template_id: templateId,
     p_duration_minutes: durationMinutes,
     p_for_mission_id: forMissionId ?? null,
+    p_version_key: versionKey || null,
   });
 
   if (error) {
@@ -129,13 +142,14 @@ export async function fetchAvailableGhosts(
   }
 
   const personalBest = parseGhostRunRef(raw.personal_best);
+  const variantBest = parseGhostRunRef(raw.variant_best);
   const friendsRaw = Array.isArray(raw.friends) ? raw.friends : [];
   const friends = friendsRaw
     .map((entry) => parseGhostRunRef(entry))
     .filter((entry): entry is GhostRunRef => entry !== null);
 
   return {
-    data: { personalBest, friends },
+    data: { personalBest, variantBest, friends },
     error: null,
   };
 }

@@ -24,12 +24,15 @@ export interface ParticipantRosterEntry {
   rank: number;
   /** Empty when the mission was performed as programmed. */
   modifiedMovements: string[];
+  /** `{ movement name: scaling option id }` for any scaling the athlete named. */
+  movementVariants: Record<string, string>;
 }
 
 interface RosterMergeEntry {
   participantId: string;
   nickname: string;
   modifiedMovements?: string[];
+  movementVariants?: Record<string, string>;
   roundCount: number;
   repsPerRound: number;
   baseScore: number;
@@ -125,6 +128,7 @@ export function buildParticipantRoster(
       participantId: entry.participantId,
       nickname: entry.nickname,
       modifiedMovements: entry.modifiedMovements,
+      movementVariants: entry.movementVariants,
       roundCount: entry.roundCount,
       repsPerRound: entry.repsPerRound,
       baseScore: entry.baseScore,
@@ -185,6 +189,7 @@ export function buildParticipantRoster(
     isSelf: entry.participantId === selfParticipantId,
     rank: index + 1,
     modifiedMovements: entry.modifiedMovements ?? [],
+    movementVariants: entry.movementVariants ?? {},
   }));
 }
 

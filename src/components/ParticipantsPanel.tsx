@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { formatModifiedBadge } from '@/lib/mission/modifiedMovements';
+import { formatVariantBadge } from '@/lib/mission/exerciseScaling';
 import { PacingBadge } from '@/components/PacingBadge';
 import {
   buildParticipantRoster,
@@ -116,7 +117,8 @@ function RosterRow({
   const scoreDisplay = formatRosterScore(entry, phase, sortMode);
   // Shown, never hidden and never removed from the board: an honest mark that
   // costs an athlete their place on it would stop being given.
-  const modifiedBadge = formatModifiedBadge(entry.modifiedMovements);
+  const modifiedBadge =
+    formatVariantBadge(entry.movementVariants) ?? formatModifiedBadge(entry.modifiedMovements);
 
   return (
     <div role="listitem" className="flex items-center gap-2 px-2 py-1.5">

@@ -32,6 +32,8 @@ import { EditRallyScheduleForm } from '@/components/mission/EditRallyScheduleFor
 import { ArmedRallyPointControls } from '@/components/mission/ArmedRallyPointControls';
 import { HostRallyPointSteps } from '@/components/mission/HostRallyPointSteps';
 import { LogMissedRound } from '@/components/mission/LogMissedRound';
+import { PreMissionScalingPicker } from '@/components/mission/PreMissionScalingPicker';
+import { GhostPicker } from '@/components/GhostPicker';
 import { SafetyNoticeModal } from '@/components/safety/SafetyNoticeModal';
 import { useMissionSafetyNotices } from '@/components/safety/useMissionSafetyNotices';
 import { CoachWalkthrough } from '@/components/walkthrough/CoachWalkthrough';
@@ -74,6 +76,10 @@ import { shouldShowMissionReset } from '@/lib/mission/shouldShowMissionReset';
 import { shouldSubscribeRallyPointOnMission } from '@/lib/rallyPoint/shouldSubscribeRallyPointOnMission';
 import { shouldUseMissionRealtimeTables } from '@/lib/realtime/shouldUseMissionRealtimeTables';
 import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
+import { formatVariantBadge, type MovementVariantSelection } from '@/lib/mission/exerciseScaling';
+import { versionKeyFor } from '@/lib/mission/movementVersion';
+import { shouldShowPacerPicker } from '@/lib/mission/shouldShowPacerPicker';
+import { clearScalingPlan, readScalingPlan, writeScalingPlan } from '@/lib/mission/scalingPlan';
 import {
   getStoredRallyPointIdForMission,
   getStoredRallyPointMemberId,
@@ -450,6 +456,9 @@ function LiveMissionView({
   const [resetBusy, setResetBusy] = useState(false);
   const [hostRestartedDeadEnd, setHostRestartedDeadEnd] = useState(false);
   const [isSubmittingPartialReps, setIsSubmittingPartialReps] = useState(false);
+  // A modification chosen before the clock starts. Seeds the end-of-mission checklist;
+  // the checklist is still the only thing that writes a result.
+  const [scalingPlan, setScalingPlan] = useState<MovementVariantSelection>({});
   const [scorecardDismissed, setScorecardDismissed] = useState(false);
   const [missionLoadingDismissed, setMissionLoadingDismissed] = useState(false);
   const [authOpenForSave, setAuthOpenForSave] = useState(false);
@@ -752,9 +761,10 @@ function LiveMissionView({
     selfBaseScore,
   });
 
-  const isSoloTemplated =
-    live.participantCount === 1 && live.templateId !== null && livePhase === 'waiting';
-  const showGhostPicker = isSoloTemplated;
+  const showGhostPicker = shouldShowPacerPicker({
+    templateId: live.templateId,
+    phase: livePhase,
+  });
   // Copilot suggestion ignored: ghost pacer error display and strip suppression on load failure already exist.
   const showGhostPacerError =
     activeGhostSelection !== null && livePhase === 'work' && ghostPacer.error !== null;
@@ -1065,6 +1075,40 @@ function LiveMissionView({
           ? 'idle'
           : 'unavailable';
 
+  // Seed the picker once the workout has arrived. Keyed on the movement names
+  // rather than the array identity, so a realtime refresh of the same workout
+  // does not stamp over a choice the athlete just made.
+  // JSON rather than a delimiter, so a movement name is never split on its own
+  // punctuation on the way back out.
+  const workoutFingerprint = JSON.stringify(live.workout.map((exercise) => exercise.name));
+  useEffect(() => {
+    const names = JSON.parse(workoutFingerprint) as string[];
+    if (names.length === 0) {
+      return;
+    }
+    setScalingPlan(
+      readScalingPlan(
+        missionId,
+        participantId,
+        names.map((name) => ({ name }))
+      )
+    );
+  }, [missionId, participantId, workoutFingerprint]);
+
+  // The pacer offers the athlete's best run of this exact version, so it has to
+  // follow the picker rather than the workout: change the scaling and the ghost
+  // worth racing changes with it.
+  const scalingVersionKey = versionKeyFor({
+    modifiedMovements: Object.keys(scalingPlan),
+    movementVariants: scalingPlan,
+  });
+  const scalingVersionLabel = formatVariantBadge(scalingPlan);
+
+  const handleScalingPlanChange = (variants: MovementVariantSelection) => {
+    setScalingPlan(variants);
+    writeScalingPlan(missionId, participantId, variants);
+  };
+
   const handleScorecardSave = () => {
     if (!isAuthenticated) {
       pendingSaveAfterAuth.current = true;
@@ -1097,10 +1141,21 @@ function LiveMissionView({
     }
   };
 
-  const handleSubmitPartialReps = async (partialReps: number, modifiedMovements: string[]) => {
+  const handleSubmitPartialReps = async (
+    partialReps: number,
+    modifiedMovements: string[],
+    movementVariants: Record<string, string>,
+    checkIn: {
+      rpe: number | null;
+      sessionNotes: string;
+      checkIns: Record<string, string>;
+    }
+  ) => {
     setIsSubmittingPartialReps(true);
     try {
-      await live.submitPartialReps(partialReps, modifiedMovements);
+      await live.submitPartialReps(partialReps, modifiedMovements, movementVariants, checkIn);
+      // The result row is now the record; the draft has nothing left to say.
+      clearScalingPlan(missionId, participantId);
     } finally {
       setIsSubmittingPartialReps(false);
     }
@@ -1354,6 +1409,8 @@ function LiveMissionView({
                   actionsEnabled={missionReady}
                   onAudioUnlock={handleAudioUnlock}
                   showPacer={showGhostPicker}
+                  ghostVersionKey={scalingVersionKey}
+                  ghostVersionLabel={scalingVersionLabel}
                   templateId={live.templateId}
                   durationMinutes={live.workDurationSec / 60}
                   ghostSelection={ghostSelection}
@@ -1392,6 +1449,24 @@ function LiveMissionView({
 
               {!isHost && live.phase === 'waiting' ? (
                 <CopyInviteLink missionId={missionId} rallyPointId={rallyPointId} />
+              ) : null}
+
+              {/*
+                Joiners never had a pacer at all: the picker lives inside the
+                host's rally-point steps, and the old gate meant the only person
+                who ever saw it was a host training alone. Their own choice,
+                private to them — the host does not pick pacers for the squad.
+              */}
+              {!isHost && showGhostPicker && live.templateId ? (
+                <GhostPicker
+                  missionId={missionId}
+                  templateId={live.templateId}
+                  durationMinutes={live.workDurationSec / 60}
+                  value={ghostSelection}
+                  onChange={setGhostSelection}
+                  versionKey={scalingVersionKey}
+                  versionLabel={scalingVersionLabel}
+                />
               ) : null}
 
               {showGhostPacerError && activeGhostSelection ? (
@@ -1522,6 +1597,13 @@ function LiveMissionView({
                     </li>
                   ))}
                 </ul>
+                {live.phase === 'waiting' && !live.isPractice ? (
+                  <PreMissionScalingPicker
+                    workout={live.workout}
+                    variants={scalingPlan}
+                    onChange={handleScalingPlanChange}
+                  />
+                ) : null}
               </section>
             )}
           </div>
@@ -1676,6 +1758,7 @@ function LiveMissionView({
           isSubmitting={isSubmittingPartialReps}
           error={live.syncError}
           workout={live.workout}
+          initialVariants={scalingPlan}
           onSubmit={handleSubmitPartialReps}
         />
       ) : null}

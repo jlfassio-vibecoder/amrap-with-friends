@@ -26,6 +26,7 @@ function leaderboardEntry(
     rounds: [],
     isSelf: participantId === SELF_ID,
     modifiedMovements: [],
+    movementVariants: {},
   };
 }
 

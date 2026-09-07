@@ -83,7 +83,16 @@ export interface UseLiveAmrapMissionReturn {
   canLogMissedRound: boolean;
   /** Rounds this athlete has logged in the current segment. */
   myRoundCount: number;
-  submitPartialReps: (partialReps: number, modifiedMovements?: string[]) => Promise<void>;
+  submitPartialReps: (
+    partialReps: number,
+    modifiedMovements?: string[],
+    movementVariants?: Record<string, string>,
+    checkIn?: {
+      rpe: number | null;
+      sessionNotes: string;
+      checkIns: Record<string, string>;
+    }
+  ) => Promise<void>;
 }
 
 function mapTimerPhaseToMissionState(phase: AmrapTimerPhase): LiveMissionPhase {
@@ -756,7 +765,16 @@ export function useLiveAmrapMission(
   ]);
 
   const submitPartialRepsAction = useCallback(
-    async (partialReps: number, modifiedMovements: string[] = []) => {
+    async (
+      partialReps: number,
+      modifiedMovements: string[] = [],
+      movementVariants: Record<string, string> = {},
+      checkIn: {
+        rpe: number | null;
+        sessionNotes: string;
+        checkIns: Record<string, string>;
+      } = { rpe: null, sessionNotes: '', checkIns: {} }
+    ) => {
       if (isPractice || !participantId || hasSubmittedPartialReps) {
         return;
       }
@@ -778,6 +796,10 @@ export function useLiveAmrapMission(
         partialReps,
         segmentIndex,
         modifiedMovements,
+        movementVariants,
+        rpe: checkIn.rpe,
+        sessionNotes: checkIn.sessionNotes,
+        checkIns: checkIn.checkIns,
       });
 
       if (result.data?.ok === false && result.data.reason === 'score_already_locked') {
