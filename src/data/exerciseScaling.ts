@@ -177,6 +177,19 @@ const DIP_LADDER: ScalingOption[] = [
   },
 ];
 
+const SUPINE_BACK_LADDER: ScalingOption[] = [
+  {
+    id: 'supine-back--partial',
+    label: 'Shorter lift',
+    how: 'Drive into the floor but only lift as high as you can control without the hips or neck cheating.',
+  },
+  {
+    id: 'supine-back--hold',
+    label: 'Hold the squeeze',
+    how: 'Reach the top and freeze for a count instead of cycling reps. Same drive, less fatigue management.',
+  },
+];
+
 /**
  * One ladder per library exercise. `exerciseScaling.test.ts` requires every
  * `EXERCISE_LIBRARY` id to appear here so a new exercise cannot ship without a
@@ -273,6 +286,12 @@ export const EXERCISE_SCALING: ScalingLadder[] = [
   { exerciseId: 'reverse-snow-angels', options: HINGE_LADDER },
   { exerciseId: 'alternating-bird-dogs', options: HINGE_LADDER },
   { exerciseId: 'bodyweight-good-mornings', options: HINGE_LADDER },
+
+  // Supine floor presses for upper-back thickness and scapular control.
+  { exerciseId: 'back-widow', options: SUPINE_BACK_LADDER },
+  { exerciseId: 'w-press-ups', options: SUPINE_BACK_LADDER },
+  { exerciseId: 't-press-ups', options: SUPINE_BACK_LADDER },
+  { exerciseId: 'supine-floor-scapular-shrugs', options: SUPINE_BACK_LADDER },
 
   // Arms.
   { exerciseId: 'floor-dips', options: DIP_LADDER },
