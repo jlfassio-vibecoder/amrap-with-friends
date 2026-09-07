@@ -211,6 +211,7 @@ describe('fetchMyCampaigns', () => {
       role: 'host',
       inviteCode: 'ABC123',
       totalMissions: 8,
+      // Personal completion count from my_campaigns (live or makeup scores).
       completedMissions: 3,
       memberCount: 4,
     });

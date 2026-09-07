@@ -127,6 +127,59 @@ export function campaignProgress(done: number, total: number): CampaignProgress 
   return { done: clamped, total, percent: Math.round((clamped / total) * 100) };
 }
 
+export type ViewerCompletedScore = {
+  occurrenceId: string;
+  userId: string;
+  finalScore: number | null;
+};
+
+/**
+ * How many campaign missions the signed-in athlete has a usable score for
+ * (live or makeup). Counts distinct occurrence ids so a live + makeup pair
+ * for the same row cannot double-count. Forfeits never produce a score, so
+ * they are already excluded by the usable-score filter.
+ */
+export function campaignViewerCompletedCount(input: {
+  occurrenceIds: Iterable<string>;
+  viewerUserId: string;
+  scores: ViewerCompletedScore[];
+}): number {
+  const occurrenceIds = new Set(input.occurrenceIds);
+  const scored = new Set<string>();
+  for (const row of input.scores) {
+    if (row.userId !== input.viewerUserId) {
+      continue;
+    }
+    if (typeof row.finalScore !== 'number' || !Number.isFinite(row.finalScore)) {
+      continue;
+    }
+    if (!occurrenceIds.has(row.occurrenceId)) {
+      continue;
+    }
+    scored.add(row.occurrenceId);
+  }
+  return scored.size;
+}
+
+/**
+ * Schedule row status for the signed-in athlete.
+ *
+ * Done only when the viewer has a usable score. A crew `done` or `skipped`
+ * without their score is Missed — personal progress, not the crew calendar.
+ */
+export function campaignScheduleStatusLabel(input: {
+  status: string;
+  viewerCompleted: boolean;
+}): string {
+  if (input.viewerCompleted) {
+    return 'Done';
+  }
+  if (input.status === 'planned') return 'Planned';
+  if (input.status === 'generated') return 'Mission open';
+  if (input.status === 'done' || input.status === 'skipped') return 'Missed';
+  return input.status;
+}
+
 /**
  * Campaigns start tomorrow by default: today's slot may already have passed,
  * and a plan you cannot act on until next week reads as broken.

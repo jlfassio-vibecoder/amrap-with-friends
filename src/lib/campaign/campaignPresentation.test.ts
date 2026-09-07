@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   campaignProgress,
+  campaignScheduleStatusLabel,
+  campaignViewerCompletedCount,
   defaultCampaignStartDate,
   formatCampaignDate,
   formatCampaignShape,
@@ -101,6 +103,89 @@ describe('campaignProgress', () => {
   it('clamps a count that overshoots the total', () => {
     expect(campaignProgress(30, 24)).toEqual({ done: 24, total: 24, percent: 100 });
     expect(campaignProgress(-2, 24).done).toBe(0);
+  });
+});
+
+describe('campaignViewerCompletedCount', () => {
+  const occurrenceIds = ['o1', 'o2', 'o3', 'o4'];
+
+  it('counts live scores for the viewer', () => {
+    expect(
+      campaignViewerCompletedCount({
+        occurrenceIds,
+        viewerUserId: 'u1',
+        scores: [
+          { occurrenceId: 'o1', userId: 'u1', finalScore: 40 },
+          { occurrenceId: 'o2', userId: 'u2', finalScore: 50 },
+        ],
+      })
+    ).toBe(1);
+  });
+
+  it('counts a makeup score on a skipped crew row', () => {
+    expect(
+      campaignViewerCompletedCount({
+        occurrenceIds,
+        viewerUserId: 'u1',
+        scores: [{ occurrenceId: 'o2', userId: 'u1', finalScore: 294 }],
+      })
+    ).toBe(1);
+  });
+
+  it('does not count null or non-finite scores', () => {
+    expect(
+      campaignViewerCompletedCount({
+        occurrenceIds,
+        viewerUserId: 'u1',
+        scores: [
+          { occurrenceId: 'o1', userId: 'u1', finalScore: null },
+          { occurrenceId: 'o2', userId: 'u1', finalScore: Number.NaN },
+        ],
+      })
+    ).toBe(0);
+  });
+
+  it('does not double-count the same occurrence', () => {
+    expect(
+      campaignViewerCompletedCount({
+        occurrenceIds,
+        viewerUserId: 'u1',
+        scores: [
+          { occurrenceId: 'o1', userId: 'u1', finalScore: 40 },
+          { occurrenceId: 'o1', userId: 'u1', finalScore: 41 },
+        ],
+      })
+    ).toBe(1);
+  });
+
+  it('ignores scores for occurrences outside the campaign', () => {
+    expect(
+      campaignViewerCompletedCount({
+        occurrenceIds,
+        viewerUserId: 'u1',
+        scores: [{ occurrenceId: 'other', userId: 'u1', finalScore: 10 }],
+      })
+    ).toBe(0);
+  });
+});
+
+describe('campaignScheduleStatusLabel', () => {
+  it('maps open statuses and treats unscored terminal rows as Missed', () => {
+    expect(campaignScheduleStatusLabel({ status: 'skipped', viewerCompleted: false })).toBe(
+      'Missed'
+    );
+    expect(campaignScheduleStatusLabel({ status: 'done', viewerCompleted: false })).toBe('Missed');
+    expect(campaignScheduleStatusLabel({ status: 'generated', viewerCompleted: false })).toBe(
+      'Mission open'
+    );
+    expect(campaignScheduleStatusLabel({ status: 'planned', viewerCompleted: false })).toBe(
+      'Planned'
+    );
+  });
+
+  it('shows Done once the viewer has a usable score, even when the crew missed', () => {
+    expect(campaignScheduleStatusLabel({ status: 'skipped', viewerCompleted: true })).toBe('Done');
+    expect(campaignScheduleStatusLabel({ status: 'done', viewerCompleted: true })).toBe('Done');
   });
 });
 

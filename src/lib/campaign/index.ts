@@ -19,6 +19,8 @@ export {
   WEEKDAY_LABELS,
   WEEKDAY_SHORT,
   campaignProgress,
+  campaignScheduleStatusLabel,
+  campaignViewerCompletedCount,
   defaultCampaignStartDate,
   formatCampaignDate,
   formatCampaignShape,
@@ -29,7 +31,12 @@ export {
   selectCampaignPreviewWeekNumbers,
   suggestedSlots,
 } from './campaignPresentation';
-export type { CampaignProgress, CampaignWeekGroup, WeekGroupable } from './campaignPresentation';
+export type {
+  CampaignProgress,
+  CampaignWeekGroup,
+  ViewerCompletedScore,
+  WeekGroupable,
+} from './campaignPresentation';
 export { planCampaignWorkouts } from './planCampaignWorkouts';
 export type { PlanCampaignWorkoutsInput } from './planCampaignWorkouts';
 export { BENCHMARK_FINGERPRINTS, fingerprintWorkoutTemplate } from './benchmarkFingerprints';
@@ -59,6 +66,16 @@ export type {
   CampaignStandingsOccurrence,
   CampaignStandingsScore,
 } from './computeCampaignStandings';
+export {
+  campaignSquadProgressStatusLabel,
+  computeCampaignSquadProgress,
+} from './computeCampaignSquadProgress';
+export type {
+  CampaignSquadProgressInput,
+  CampaignSquadProgressRow,
+  SquadProgressForfeit,
+  SquadProgressOccurrence,
+} from './computeCampaignSquadProgress';
 export {
   campaignTestComparisonNote,
   computeCampaignTestProgress,
