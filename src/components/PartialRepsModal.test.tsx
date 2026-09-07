@@ -183,4 +183,61 @@ describe('PartialRepsModal', () => {
 
     expect(onSubmit).toHaveBeenCalledWith(0, ['Sprawls'], {});
   });
+
+  it('pre-ticks a movement whose scaling was chosen before the mission', () => {
+    const onSubmit = vi.fn();
+    render(
+      <PartialRepsModal
+        repsPerRound={32}
+        isSubmitting={false}
+        workout={workout}
+        initialVariants={{ 'Diamond Push-ups': 'push-up--knees' }}
+        onSubmit={onSubmit}
+      />
+    );
+
+    const checkbox = screen.getByRole('checkbox', { name: 'Diamond Push-ups' }) as HTMLInputElement;
+    expect(checkbox.checked).toBe(true);
+    expect(
+      screen.getByRole('button', { name: 'From the knees' }).getAttribute('aria-pressed')
+    ).toBe('true');
+
+    lockIn();
+    expect(onSubmit).toHaveBeenCalledWith(0, ['Diamond Push-ups'], {
+      'Diamond Push-ups': 'push-up--knees',
+    });
+  });
+
+  it('lets the athlete drop a pre-mission scaling they did not end up needing', () => {
+    const onSubmit = vi.fn();
+    render(
+      <PartialRepsModal
+        repsPerRound={32}
+        isSubmitting={false}
+        workout={workout}
+        initialVariants={{ 'Diamond Push-ups': 'push-up--knees' }}
+        onSubmit={onSubmit}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Diamond Push-ups' }));
+    lockIn();
+    expect(onSubmit).toHaveBeenCalledWith(0, [], {});
+  });
+
+  it('ignores a seeded scaling for a movement this workout does not programme', () => {
+    const onSubmit = vi.fn();
+    render(
+      <PartialRepsModal
+        repsPerRound={32}
+        isSubmitting={false}
+        workout={workout}
+        initialVariants={{ 'Pull-ups': 'push-up--knees' }}
+        onSubmit={onSubmit}
+      />
+    );
+
+    lockIn();
+    expect(onSubmit).toHaveBeenCalledWith(0, [], {});
+  });
 });

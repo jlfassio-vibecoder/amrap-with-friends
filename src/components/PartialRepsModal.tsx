@@ -14,6 +14,13 @@ interface PartialRepsModalProps {
   error?: string | null;
   /** The movements as programmed, so the athlete can mark any they changed. */
   workout?: WorkoutExercise[];
+  /**
+   * A scaling the athlete chose before the mission, pre-ticked here.
+   *
+   * A seed, not a submission: they can still change or clear it, and this modal
+   * remains the only place a scaling is written against the result.
+   */
+  initialVariants?: MovementVariantSelection;
   onSubmit: (
     partialReps: number,
     modifiedMovements: string[],
@@ -26,14 +33,19 @@ export function PartialRepsModal({
   isSubmitting,
   error,
   workout = [],
+  initialVariants,
   onSubmit,
 }: PartialRepsModalProps) {
   const titleId = 'partial-reps-modal-title';
   const maxPartialReps = Math.max(0, repsPerRound - 1);
   const [partialReps, setPartialReps] = useState(0);
   const [integrityAcknowledged, setIntegrityAcknowledged] = useState(false);
-  const [modified, setModified] = useState<string[]>([]);
-  const [variants, setVariants] = useState<MovementVariantSelection>({});
+  // Read once, on mount: this modal opens after the mission and the plan cannot
+  // change underneath it, so re-syncing would only fight the athlete's edits.
+  const [variants, setVariants] = useState<MovementVariantSelection>(() =>
+    normalizeMovementVariants(initialVariants, workout)
+  );
+  const [modified, setModified] = useState<string[]>(() => Object.keys(variants));
 
   function toggleModified(name: string) {
     setModified((current) => {

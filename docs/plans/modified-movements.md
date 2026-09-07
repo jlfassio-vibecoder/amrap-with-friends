@@ -1,8 +1,8 @@
 # Plan: marking a movement as modified
 
 **Branch:** `feature/modified-movements`
-**Status:** Phases 1–3 shipped. Remaining: choosing a scaling _before_ the mission, and a progression view.
-**Last updated:** 2026-09-08
+**Status:** Phases 1–3 shipped, including the pre-mission picker and the progression view.
+**Last updated:** 2026-09-09
 
 ---
 
@@ -232,7 +232,7 @@ and an editable one invites tidying history. Revisit only if people ask.
 - Standard-only filter in `available_ghosts`.
 - Benchmark/retest mismatch note per decision 3.
 
-### Phase 3 — Named variants (the feature this is really for) — **partly done**
+### Phase 3 — Named variants (the feature this is really for) — **done**
 
 Choosing "Knee Diamond Push-ups" before the mission rather than flagging
 "modified" after it. This is what turns the mark into progression: _40 → 45 → 48
@@ -248,9 +248,37 @@ alongside the existing `modified_movements` mark.
 Option ids are frozen for the same reason benchmark ids are: they are stored, so
 an id that changes meaning silently rewrites history. A test pins the current set.
 
-**Still to do:** choosing the scaling _before_ the mission rather than after, and
-a progression view that reads the stored variants back — "knee push-ups: 40 → 45
-→ 48". The data now exists for both; neither needs another schema change.
+**Pre-mission picker** (`PreMissionScalingPicker`, in the rally point under the
+workout list): a collapsed "Need to scale a movement?" offering the ladder for
+each programmed movement that has one. The choice is a **draft**, held in
+`localStorage` per mission _and_ per participant — two people share one propped-up
+phone often enough that a device-wide key would put one athlete's scaling on the
+other's score. It is deliberately not a second write path: the plan seeds
+`PartialRepsModal`, the athlete confirms or changes it there, and the result row
+that modal writes stays the only record of how the mission was performed. The
+draft is cleared the moment the result is submitted.
+
+Only movements with a named ladder appear before the mission. A bare "I modified
+this" has no meaning until it has happened; the end-of-mission checklist is still
+where any movement can be marked.
+
+**Progression view** (`ScalingProgressionPanel`, on My missions, built on the
+pure `movementProgression.ts`): the same workout at the same clock, split by the
+exact version performed — "Diamond Push-ups: from the knees — 40 → 45 → 48 reps
+(+8 reps)", with "As programmed" listed beside it.
+
+Versions are never merged into one trend. A series is keyed by template, time
+cap, and the full modification state, because scaling the push-ups, scaling the
+squats instead, and the same workout at a different cap are three different
+measurements. A movement marked without a named scaling is its own version too —
+merging it with a named one would claim a like-for-like comparison the data does
+not support. Nothing computes a correction between versions, for the same reason
+option (c) was rejected above: any factor would be invented. A group only
+renders once there are two scored missions on it and at least one of them was
+scaled, so the panel is invisible to anyone who has never scaled.
+
+A decline is reported as a decline. A panel that only ever shows improvement is
+not a record.
 
 ### Non-goals (v1)
 
@@ -289,6 +317,8 @@ before the mission, which is exactly the friction this design avoids.
 | Area                | Paths                                                                                                                            |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | Capture             | `src/components/PartialRepsModal.tsx`, `HonestyLockCheckbox.tsx`                                                                 |
+| Pre-mission picker  | `src/components/mission/PreMissionScalingPicker.tsx`, `src/lib/mission/scalingPlan.ts`, `src/pages/MissionWaitingRoomPage.tsx`   |
+| Progression view    | `src/components/mission/ScalingProgressionPanel.tsx`, `src/lib/mission/movementProgression.ts`, `src/pages/MyMissionsPage.tsx`   |
 | Submit path         | `src/lib/api/missionSync.ts` (`submitParticipantResult`), `supabase/functions/submit-participant-result/handler.ts` + `index.ts` |
 | Storage             | `participant_segment_results` (new `modified_movements text[]`)                                                                  |
 | Badge               | `src/components/MissionScorecard.tsx`, leaderboard rows, `src/pages/MyMissionsPage.tsx`                                          |

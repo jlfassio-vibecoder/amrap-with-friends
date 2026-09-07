@@ -32,6 +32,7 @@ import { EditRallyScheduleForm } from '@/components/mission/EditRallyScheduleFor
 import { ArmedRallyPointControls } from '@/components/mission/ArmedRallyPointControls';
 import { HostRallyPointSteps } from '@/components/mission/HostRallyPointSteps';
 import { LogMissedRound } from '@/components/mission/LogMissedRound';
+import { PreMissionScalingPicker } from '@/components/mission/PreMissionScalingPicker';
 import { SafetyNoticeModal } from '@/components/safety/SafetyNoticeModal';
 import { useMissionSafetyNotices } from '@/components/safety/useMissionSafetyNotices';
 import { CoachWalkthrough } from '@/components/walkthrough/CoachWalkthrough';
@@ -74,6 +75,8 @@ import { shouldShowMissionReset } from '@/lib/mission/shouldShowMissionReset';
 import { shouldSubscribeRallyPointOnMission } from '@/lib/rallyPoint/shouldSubscribeRallyPointOnMission';
 import { shouldUseMissionRealtimeTables } from '@/lib/realtime/shouldUseMissionRealtimeTables';
 import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
+import type { MovementVariantSelection } from '@/lib/mission/exerciseScaling';
+import { clearScalingPlan, readScalingPlan, writeScalingPlan } from '@/lib/mission/scalingPlan';
 import {
   getStoredRallyPointIdForMission,
   getStoredRallyPointMemberId,
@@ -450,6 +453,9 @@ function LiveMissionView({
   const [resetBusy, setResetBusy] = useState(false);
   const [hostRestartedDeadEnd, setHostRestartedDeadEnd] = useState(false);
   const [isSubmittingPartialReps, setIsSubmittingPartialReps] = useState(false);
+  // A scaling chosen before the clock starts. Seeds the end-of-mission checklist;
+  // the checklist is still the only thing that writes a result.
+  const [scalingPlan, setScalingPlan] = useState<MovementVariantSelection>({});
   const [scorecardDismissed, setScorecardDismissed] = useState(false);
   const [missionLoadingDismissed, setMissionLoadingDismissed] = useState(false);
   const [authOpenForSave, setAuthOpenForSave] = useState(false);
@@ -1065,6 +1071,31 @@ function LiveMissionView({
           ? 'idle'
           : 'unavailable';
 
+  // Seed the picker once the workout has arrived. Keyed on the movement names
+  // rather than the array identity, so a realtime refresh of the same workout
+  // does not stamp over a choice the athlete just made.
+  // JSON rather than a delimiter, so a movement name is never split on its own
+  // punctuation on the way back out.
+  const workoutFingerprint = JSON.stringify(live.workout.map((exercise) => exercise.name));
+  useEffect(() => {
+    const names = JSON.parse(workoutFingerprint) as string[];
+    if (names.length === 0) {
+      return;
+    }
+    setScalingPlan(
+      readScalingPlan(
+        missionId,
+        participantId,
+        names.map((name) => ({ name }))
+      )
+    );
+  }, [missionId, participantId, workoutFingerprint]);
+
+  const handleScalingPlanChange = (variants: MovementVariantSelection) => {
+    setScalingPlan(variants);
+    writeScalingPlan(missionId, participantId, variants);
+  };
+
   const handleScorecardSave = () => {
     if (!isAuthenticated) {
       pendingSaveAfterAuth.current = true;
@@ -1105,6 +1136,8 @@ function LiveMissionView({
     setIsSubmittingPartialReps(true);
     try {
       await live.submitPartialReps(partialReps, modifiedMovements, movementVariants);
+      // The result row is now the record; the draft has nothing left to say.
+      clearScalingPlan(missionId, participantId);
     } finally {
       setIsSubmittingPartialReps(false);
     }
@@ -1526,6 +1559,13 @@ function LiveMissionView({
                     </li>
                   ))}
                 </ul>
+                {live.phase === 'waiting' && !live.isPractice ? (
+                  <PreMissionScalingPicker
+                    workout={live.workout}
+                    variants={scalingPlan}
+                    onChange={handleScalingPlanChange}
+                  />
+                ) : null}
               </section>
             )}
           </div>
@@ -1680,6 +1720,7 @@ function LiveMissionView({
           isSubmitting={isSubmittingPartialReps}
           error={live.syncError}
           workout={live.workout}
+          initialVariants={scalingPlan}
           onSubmit={handleSubmitPartialReps}
         />
       ) : null}

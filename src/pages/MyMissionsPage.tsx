@@ -8,6 +8,7 @@ import { MyMissionScoreBreakdownModal } from '@/components/MyMissionScoreBreakdo
 import { AssignedWorkoutsPanel } from '@/components/mission/AssignedWorkoutsPanel';
 import { SendWorkoutToSquad } from '@/components/mission/SendWorkoutToSquad';
 import { MyCampaignsPanel } from '@/components/campaign/MyCampaignsPanel';
+import { ScalingProgressionPanel } from '@/components/mission/ScalingProgressionPanel';
 import {
   canDeleteMyMission,
   deleteIncompleteMission,
@@ -328,6 +329,8 @@ export default function MyMissionsPage() {
       <AssignedWorkoutsPanel />
 
       <MyCampaignsPanel showCreateCta={false} />
+
+      <ScalingProgressionPanel entries={entries} />
 
       {loading ? <p className="text-sm text-secondary">Loading…</p> : null}
 
