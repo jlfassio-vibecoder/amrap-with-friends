@@ -25,6 +25,7 @@ function leaderboardEntry(
     finalScore: roundCount * 20,
     rounds: [],
     isSelf: participantId === SELF_ID,
+    modifiedMovements: [],
   };
 }
 

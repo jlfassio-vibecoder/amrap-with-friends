@@ -19,6 +19,7 @@ describe('submit-participant-result function contract', () => {
     expect(index).toContain(".from('missions')");
     expect(index).toContain('mission_id');
     expect(index).toContain('locked_at');
+    expect(index).toContain('modified_movements');
     expect(index).not.toContain(".from('sessions')");
     expect(index).not.toMatch(/from\('sessions'\)/);
     expect(handler).toContain('missionId');

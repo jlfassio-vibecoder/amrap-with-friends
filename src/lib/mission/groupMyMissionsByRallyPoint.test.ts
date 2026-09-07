@@ -26,6 +26,7 @@ function entry(
     partialReps: 0,
     finalScore: null,
     scoreBreakdown: null,
+    modifiedMovements: [],
     coachWorkoutName: null,
     ...overrides,
   };

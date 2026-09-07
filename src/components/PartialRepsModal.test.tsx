@@ -1,85 +1,125 @@
-import { afterEach, describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { PartialRepsModal } from './PartialRepsModal';
 
-afterEach(() => {
-  cleanup();
-});
+afterEach(cleanup);
+
+const workout = [
+  { name: 'Reverse Lunges (Total)', target: 12 },
+  { name: 'Diamond Push-ups', target: 10 },
+  { name: 'Sprawls', target: 10 },
+];
+
+function lockIn() {
+  fireEvent.click(screen.getByRole('checkbox', { name: /full range of motion/i }));
+  fireEvent.click(screen.getByRole('button', { name: /I EARNED THIS/i }));
+}
 
 describe('PartialRepsModal', () => {
-  it('disables submit on mount and shows Submit label', () => {
-    render(<PartialRepsModal repsPerRound={40} isSubmitting={false} onSubmit={vi.fn()} />);
-
-    const submit = screen.getByRole('button', { name: 'Submit' });
-    expect(submit).toBeTruthy();
-    expect((submit as HTMLButtonElement).disabled).toBe(true);
-  });
-
-  it('shows required header and instruction copy', () => {
-    render(<PartialRepsModal repsPerRound={40} isSubmitting={false} onSubmit={vi.fn()} />);
-
-    expect(screen.getByRole('heading', { name: 'TIME CALLED. BREATHE.' })).toBeTruthy();
-    expect(
-      screen.getByText(
-        'Where did you break? Log the exact reps completed in your final, unfinished round.'
-      )
-    ).toBeTruthy();
-  });
-
-  it('enables submit and shows I EARNED THIS when honesty checkbox is checked', () => {
-    render(<PartialRepsModal repsPerRound={40} isSubmitting={false} onSubmit={vi.fn()} />);
-
-    fireEvent.click(screen.getByRole('checkbox'));
-
-    const submit = screen.getByRole('button', { name: 'I EARNED THIS' });
-    expect((submit as HTMLButtonElement).disabled).toBe(false);
-  });
-
-  it('re-disables submit and reverts label when honesty checkbox is unchecked', () => {
-    render(<PartialRepsModal repsPerRound={40} isSubmitting={false} onSubmit={vi.fn()} />);
-
-    const checkbox = screen.getByRole('checkbox');
-    fireEvent.click(checkbox);
-    expect(screen.getByRole('button', { name: 'I EARNED THIS' })).toBeTruthy();
-
-    fireEvent.click(checkbox);
-    const submit = screen.getByRole('button', { name: 'Submit' });
-    expect((submit as HTMLButtonElement).disabled).toBe(true);
-  });
-
-  it('calls onSubmit with the current stepper value when earned submit is clicked', () => {
-    const onSubmit = vi.fn();
-    render(<PartialRepsModal repsPerRound={40} isSubmitting={false} onSubmit={onSubmit} />);
-
-    for (let i = 0; i < 7; i += 1) {
-      fireEvent.click(screen.getByRole('button', { name: 'Increase partial reps' }));
-    }
-    fireEvent.click(screen.getByRole('checkbox'));
-    fireEvent.click(screen.getByRole('button', { name: 'I EARNED THIS' }));
-
-    expect(onSubmit).toHaveBeenCalledTimes(1);
-    expect(onSubmit).toHaveBeenCalledWith(7);
-  });
-
-  it('keeps submit disabled while isSubmitting even if checkbox is checked', () => {
-    render(<PartialRepsModal repsPerRound={40} isSubmitting={true} onSubmit={vi.fn()} />);
-
-    fireEvent.click(screen.getByRole('checkbox'));
-
-    const submit = screen.getByRole('button', { name: 'Submitting…' });
-    expect((submit as HTMLButtonElement).disabled).toBe(true);
-  });
-
-  it('shows a submit error on the overlay', () => {
+  it('offers every programmed movement to mark', () => {
     render(
       <PartialRepsModal
-        repsPerRound={40}
+        repsPerRound={32}
         isSubmitting={false}
-        error="Could not load your rounds. Please try again."
+        workout={workout}
         onSubmit={vi.fn()}
       />
     );
 
-    expect(screen.getByText('Could not load your rounds. Please try again.')).toBeTruthy();
+    for (const exercise of workout) {
+      expect(screen.getByRole('checkbox', { name: exercise.name })).toBeTruthy();
+    }
+  });
+
+  it('says the mark is free, where the athlete decides', () => {
+    // If they believe the box costs points they will not tick it, and the
+    // feature collects nothing.
+    render(
+      <PartialRepsModal
+        repsPerRound={32}
+        isSubmitting={false}
+        workout={workout}
+        onSubmit={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText(/do not lower it/i)).toBeTruthy();
+  });
+
+  it('submits the marked movements alongside the reps', () => {
+    const onSubmit = vi.fn();
+    render(
+      <PartialRepsModal
+        repsPerRound={32}
+        isSubmitting={false}
+        workout={workout}
+        onSubmit={onSubmit}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Diamond Push-ups' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Increase partial reps' }));
+    lockIn();
+
+    expect(onSubmit).toHaveBeenCalledWith(1, ['Diamond Push-ups']);
+  });
+
+  it('submits nothing when no movement is marked', () => {
+    const onSubmit = vi.fn();
+    render(
+      <PartialRepsModal
+        repsPerRound={32}
+        isSubmitting={false}
+        workout={workout}
+        onSubmit={onSubmit}
+      />
+    );
+
+    lockIn();
+
+    expect(onSubmit).toHaveBeenCalledWith(0, []);
+  });
+
+  it('lets a mark be taken back before locking', () => {
+    const onSubmit = vi.fn();
+    render(
+      <PartialRepsModal
+        repsPerRound={32}
+        isSubmitting={false}
+        workout={workout}
+        onSubmit={onSubmit}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Sprawls' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Sprawls' }));
+    lockIn();
+
+    expect(onSubmit).toHaveBeenCalledWith(0, []);
+  });
+
+  it('does not gate the submit on the modification question', () => {
+    // The honesty lock is required; marking a modification is optional.
+    const onSubmit = vi.fn();
+    render(
+      <PartialRepsModal
+        repsPerRound={32}
+        isSubmitting={false}
+        workout={workout}
+        onSubmit={onSubmit}
+      />
+    );
+
+    lockIn();
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders without a workout, for callers that have none', () => {
+    const onSubmit = vi.fn();
+    render(<PartialRepsModal repsPerRound={32} isSubmitting={false} onSubmit={onSubmit} />);
+
+    expect(screen.queryByText(/did you modify/i)).toBeNull();
+    lockIn();
+    expect(onSubmit).toHaveBeenCalledWith(0, []);
   });
 });

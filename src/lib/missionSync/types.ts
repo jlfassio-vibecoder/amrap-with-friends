@@ -112,6 +112,8 @@ export interface ParticipantSegmentResultRow {
   partial_reps: number;
   final_score: number | null;
   score_breakdown: ScoreBreakdown | null;
+  /** Movements the athlete performed differently from the programmed version. */
+  modified_movements: string[] | null;
   updated_at: string;
 }
 
@@ -121,6 +123,8 @@ export interface SubmitParticipantResultInput {
   claimToken: string;
   partialReps: number;
   segmentIndex: number;
+  /** Movements the athlete marked as modified. Absent means as programmed. */
+  modifiedMovements?: string[];
 }
 
 export interface SubmitParticipantResultSuccess {
@@ -167,4 +171,6 @@ export interface LeaderboardEntry {
   finalScore: number;
   rounds: LeaderboardRoundEntry[];
   isSelf: boolean;
+  /** Empty when the mission was performed as programmed. */
+  modifiedMovements: string[];
 }

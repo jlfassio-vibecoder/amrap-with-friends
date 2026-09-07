@@ -1,4 +1,5 @@
 import type { LeaderboardEntry } from '@/lib/missionSync/types';
+import { formatModifiedBadge } from '@/lib/mission/modifiedMovements';
 import { AppLink } from '@/components/AppLink';
 import { resolvePacingData } from '@/lib/scoring/resolvePacingData';
 import { ScoreBreakdownDisplay } from '@/components/ScoreBreakdownDisplay';
@@ -56,6 +57,7 @@ export function MissionScorecard({
 }: MissionScorecardProps) {
   const navigate = useNavigate();
   const titleId = 'mission-scorecard-title';
+  const modifiedBadge = formatModifiedBadge(entry.modifiedMovements);
   const showSaveAction = saveState !== 'unavailable';
   const saveDisabled = saveState === 'saving' || saveState === 'saved';
   const [daisyError, setDaisyError] = useState<string | null>(null);
@@ -112,6 +114,13 @@ export function MissionScorecard({
             Close
           </button>
         </div>
+
+        {modifiedBadge ? (
+          <p className="rounded-card border border-border bg-page px-3 py-2 text-xs text-secondary">
+            <span className="font-semibold text-ink">{modifiedBadge}.</span> Recorded on your score
+            so it can be read fairly. It does not lower it.
+          </p>
+        ) : null}
 
         <ScoreBreakdownDisplay
           breakdown={{

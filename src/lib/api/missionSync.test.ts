@@ -235,6 +235,7 @@ describe('missionSync API', () => {
         claimToken: 'claim-token',
         partialReps: 15,
         segmentIndex: 0,
+        modifiedMovements: [],
       },
     });
     expect(result.error).toBeNull();

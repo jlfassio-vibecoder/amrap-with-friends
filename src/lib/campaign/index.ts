@@ -60,6 +60,7 @@ export type {
   CampaignStandingsScore,
 } from './computeCampaignStandings';
 export {
+  campaignTestComparisonNote,
   computeCampaignTestProgress,
   formatCampaignRepDelta,
   formatCampaignRepScore,

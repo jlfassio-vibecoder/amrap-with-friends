@@ -26,6 +26,8 @@ export type CampaignStandingsScore = {
   finalScore: number | null;
   /** True when the score came from a makeup mission. */
   madeUp?: boolean;
+  /** True when the athlete modified a movement in that mission. */
+  modified?: boolean;
 };
 
 export type CampaignStandingsInput = {

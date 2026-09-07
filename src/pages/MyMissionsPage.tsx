@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { formatModifiedBadge } from '@/lib/mission/modifiedMovements';
 import { AppLink } from '@/components/AppLink';
 import { Link } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
@@ -120,12 +121,19 @@ function MyMissionCard({
     onToggle: () => void;
   };
 }) {
+  const modifiedBadge = formatModifiedBadge(entry.modifiedMovements);
   return (
     <div className="card space-y-2 p-4 text-sm">
       <MyMissionMovements title={myMissionWorkoutTitle(entry)} workout={entry.workout} />
       <p className="text-center text-secondary">
         {formatMissionWhen(entry)} · {entry.durationMinutes} min ·{' '}
         {formatMyMissionScoreDisplay(entry)} · {entry.state}
+        {modifiedBadge ? (
+          <>
+            {' · '}
+            <span title={modifiedBadge}>Modified</span>
+          </>
+        ) : null}
         {entry.isFeatured ? ' · Featured' : ''}
       </p>
       <div className="flex flex-wrap items-center gap-3">

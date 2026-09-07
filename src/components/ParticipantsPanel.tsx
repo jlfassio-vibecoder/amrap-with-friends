@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { formatModifiedBadge } from '@/lib/mission/modifiedMovements';
 import { PacingBadge } from '@/components/PacingBadge';
 import {
   buildParticipantRoster,
@@ -113,6 +114,9 @@ function RosterRow({
 }) {
   const showPacingBadge = phase === 'finished' && entry.pviVerdict.length > 0;
   const scoreDisplay = formatRosterScore(entry, phase, sortMode);
+  // Shown, never hidden and never removed from the board: an honest mark that
+  // costs an athlete their place on it would stop being given.
+  const modifiedBadge = formatModifiedBadge(entry.modifiedMovements);
 
   return (
     <div role="listitem" className="flex items-center gap-2 px-2 py-1.5">
@@ -127,6 +131,14 @@ function RosterRow({
         {entry.nickname}
         {entry.isSelf ? ' (you)' : ''}
       </span>
+      {modifiedBadge ? (
+        <span
+          className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary"
+          title={modifiedBadge}
+        >
+          Modified
+        </span>
+      ) : null}
       {showPacingBadge ? (
         <PacingBadge classification={entry.pviClassification} verdict={entry.pviVerdict} />
       ) : null}

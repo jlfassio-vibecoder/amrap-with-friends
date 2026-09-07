@@ -1097,10 +1097,10 @@ function LiveMissionView({
     }
   };
 
-  const handleSubmitPartialReps = async (partialReps: number) => {
+  const handleSubmitPartialReps = async (partialReps: number, modifiedMovements: string[]) => {
     setIsSubmittingPartialReps(true);
     try {
-      await live.submitPartialReps(partialReps);
+      await live.submitPartialReps(partialReps, modifiedMovements);
     } finally {
       setIsSubmittingPartialReps(false);
     }
@@ -1675,6 +1675,7 @@ function LiveMissionView({
           repsPerRound={live.repsPerRound}
           isSubmitting={isSubmittingPartialReps}
           error={live.syncError}
+          workout={live.workout}
           onSubmit={handleSubmitPartialReps}
         />
       ) : null}
