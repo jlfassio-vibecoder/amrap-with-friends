@@ -10,6 +10,7 @@ import type {
 import type { WorkoutExercise } from '@/lib/api/missionTypes';
 import type { ScoreBreakdown } from '@/lib/scoring/types';
 import { parseScoreBreakdownJson } from '@/lib/scoring/parseScoreBreakdownJson';
+import { readModifiedMovements } from '@/lib/mission/modifiedMovements';
 import { computeBaseScore } from '@/lib/scoring/computeBaseScore';
 import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
 import { computeScoreBreakdown } from '@/lib/scoring/computeScoreBreakdown';
@@ -241,6 +242,7 @@ export function parseSegmentResultRow(
     partial_reps: partialReps,
     final_score: finalScore,
     score_breakdown: scoreBreakdown,
+    modified_movements: readModifiedMovements(record.modified_movements),
     updated_at: updatedAt,
   };
 }
@@ -407,6 +409,7 @@ export function buildLeaderboard(
   }
 
   const partialByParticipant = new Map<string, number>();
+  const modifiedByParticipant = new Map<string, string[]>();
   const lockedByParticipant = new Map<string, { finalScore: number; breakdown: ScoreBreakdown }>();
 
   for (const result of segmentResults) {
@@ -415,6 +418,10 @@ export function buildLeaderboard(
     }
 
     partialByParticipant.set(result.participant_id, result.partial_reps);
+    modifiedByParticipant.set(
+      result.participant_id,
+      readModifiedMovements(result.modified_movements)
+    );
 
     if (result.final_score !== null && result.score_breakdown !== null) {
       lockedByParticipant.set(result.participant_id, {
@@ -487,6 +494,7 @@ export function buildLeaderboard(
         finalScore,
         rounds: roundSummaries,
         isSelf: participant.id === selfParticipantId,
+        modifiedMovements: modifiedByParticipant.get(participant.id) ?? [],
       };
     })
     .sort((a, b) => {

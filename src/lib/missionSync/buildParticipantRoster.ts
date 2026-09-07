@@ -22,11 +22,14 @@ export interface ParticipantRosterEntry {
   isOnline: boolean;
   isSelf: boolean;
   rank: number;
+  /** Empty when the mission was performed as programmed. */
+  modifiedMovements: string[];
 }
 
 interface RosterMergeEntry {
   participantId: string;
   nickname: string;
+  modifiedMovements?: string[];
   roundCount: number;
   repsPerRound: number;
   baseScore: number;
@@ -121,6 +124,7 @@ export function buildParticipantRoster(
     byId.set(entry.participantId, {
       participantId: entry.participantId,
       nickname: entry.nickname,
+      modifiedMovements: entry.modifiedMovements,
       roundCount: entry.roundCount,
       repsPerRound: entry.repsPerRound,
       baseScore: entry.baseScore,
@@ -180,6 +184,7 @@ export function buildParticipantRoster(
     isOnline: entry.isOnline,
     isSelf: entry.participantId === selfParticipantId,
     rank: index + 1,
+    modifiedMovements: entry.modifiedMovements ?? [],
   }));
 }
 

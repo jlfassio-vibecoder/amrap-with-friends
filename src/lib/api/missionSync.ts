@@ -258,6 +258,7 @@ export async function submitParticipantResult(input: SubmitParticipantResultInpu
       claimToken: input.claimToken,
       partialReps: input.partialReps,
       segmentIndex: input.segmentIndex,
+      modifiedMovements: input.modifiedMovements ?? [],
     },
   });
 

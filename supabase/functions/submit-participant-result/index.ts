@@ -127,6 +127,7 @@ Deno.serve(async (req) => {
           partial_reps: input.partialReps,
           final_score: input.finalScore,
           score_breakdown: input.scoreBreakdown,
+          modified_movements: input.modifiedMovements,
           updated_at: new Date().toISOString(),
         })
         .eq('participant_id', input.participantId)
@@ -151,6 +152,7 @@ Deno.serve(async (req) => {
           partial_reps: input.partialReps,
           final_score: input.finalScore,
           score_breakdown: input.scoreBreakdown,
+          modified_movements: input.modifiedMovements,
         })
         .select('participant_id')
         .maybeSingle();

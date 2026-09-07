@@ -10,6 +10,12 @@ export interface SubmitParticipantResultRequest {
   claimToken: string;
   partialReps: number;
   segmentIndex: number;
+  /**
+   * Movements the athlete performed differently from the programmed version.
+   * Recorded for comparability only — it takes no part in the score, which is
+   * why it is absent from computeLockedScore's inputs entirely.
+   */
+  modifiedMovements: string[];
 }
 
 export interface SubmitParticipantResultResponse {
@@ -60,7 +66,46 @@ export function normalizeSubmitRequest(
     claimToken: typeof body.claimToken === 'string' ? body.claimToken : '',
     partialReps: typeof body.partialReps === 'number' ? body.partialReps : Number.NaN,
     segmentIndex: typeof body.segmentIndex === 'number' ? body.segmentIndex : Number.NaN,
+    modifiedMovements: normalizeModifiedMovementNames(body.modifiedMovements),
   };
+}
+
+/** Longest movement name stored, matching the workout validator's own limit. */
+const MAX_MOVEMENT_NAME_LENGTH = 120;
+/** Upper bound so a malformed client cannot write an unbounded array. */
+const MAX_MODIFIED_MOVEMENTS = 12;
+
+/**
+ * Bound and de-duplicate the marks a client sent.
+ *
+ * The client already filters these against the workout it rendered; this is the
+ * server refusing to store anything unbounded, not a second source of truth.
+ */
+export function normalizeModifiedMovementNames(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+  const cleaned: string[] = [];
+
+  for (const entry of value) {
+    if (typeof entry !== 'string') {
+      continue;
+    }
+    const name = entry.trim().slice(0, MAX_MOVEMENT_NAME_LENGTH);
+    const key = name.toLowerCase();
+    if (!name || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    cleaned.push(name);
+    if (cleaned.length >= MAX_MODIFIED_MOVEMENTS) {
+      break;
+    }
+  }
+
+  return cleaned;
 }
 
 export function deriveRoundDurationsSec(rounds: RoundRow[]): number[] {
@@ -179,6 +224,7 @@ export async function handleSubmitParticipantResult(
       partialReps: number;
       finalScore: number;
       scoreBreakdown: ScoreBreakdown;
+      modifiedMovements: string[];
     }) => Promise<{ ok: true } | { ok: false; reason: string }>;
   }
 ): Promise<SubmitParticipantResultResponse> {
@@ -243,6 +289,7 @@ export async function handleSubmitParticipantResult(
     partialReps: body.partialReps,
     finalScore: breakdown.finalScore,
     scoreBreakdown: breakdown,
+    modifiedMovements: body.modifiedMovements,
   });
 
   if (!persisted.ok) {

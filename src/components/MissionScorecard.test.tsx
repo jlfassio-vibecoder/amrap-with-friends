@@ -44,6 +44,7 @@ const entry: LeaderboardEntry = {
     { roundNumber: 3, durationSec: 71 },
   ],
   isSelf: true,
+  modifiedMovements: [],
 };
 
 const scorecardProps = {
