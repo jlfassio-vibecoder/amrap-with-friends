@@ -115,6 +115,7 @@ export default function HUDPage() {
               <WeeklyBaselineBar
                 weekMinutes={telemetry.weekMinutes}
                 weekPviAverage={telemetry.weekPviAverage}
+                weekPviMissions={telemetry.weekPviMissions}
                 weekEndsAt={telemetry.weekEndsAt}
                 baselineMinutes={quotas.civilianMinutes}
               />

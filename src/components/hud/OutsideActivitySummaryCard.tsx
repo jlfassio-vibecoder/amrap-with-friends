@@ -11,7 +11,7 @@ export function OutsideActivitySummaryCard({ entries }: OutsideActivitySummaryCa
 
   return (
     <ActivityWindowSummaryCard
-      title="Outside Activity — Last 7 Days"
+      title="Outside Activity — Rolling 7 Days"
       ariaLabel="Outside activity summary"
       missionCount={summary.missionCount}
       totalMinutes={summary.totalMinutes}

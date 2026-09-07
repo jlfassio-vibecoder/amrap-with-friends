@@ -441,6 +441,9 @@ describe('fetchCoachUserDetail', () => {
       acuteLoad7d: 120,
       chronicWeeklyLoad28d: 60,
       consecutiveHighIntensityDays: 2,
+      acuteMinutes7d: 0,
+      chronicWeeklyMinutes28d: 0,
+      observedDays: 28,
     });
   });
 });

@@ -121,6 +121,7 @@ Deno.serve(async (req) => {
       return data;
     },
     persistResult: async (input) => {
+      const lockedAt = new Date().toISOString();
       const { data: updated, error: updateError } = await adminClient
         .from('participant_segment_results')
         .update({
@@ -128,7 +129,8 @@ Deno.serve(async (req) => {
           final_score: input.finalScore,
           score_breakdown: input.scoreBreakdown,
           modified_movements: input.modifiedMovements,
-          updated_at: new Date().toISOString(),
+          locked_at: lockedAt,
+          updated_at: lockedAt,
         })
         .eq('participant_id', input.participantId)
         .eq('segment_index', input.segmentIndex)
@@ -153,6 +155,7 @@ Deno.serve(async (req) => {
           final_score: input.finalScore,
           score_breakdown: input.scoreBreakdown,
           modified_movements: input.modifiedMovements,
+          locked_at: lockedAt,
         })
         .select('participant_id')
         .maybeSingle();
