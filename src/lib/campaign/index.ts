@@ -67,6 +67,16 @@ export type {
   CampaignStandingsScore,
 } from './computeCampaignStandings';
 export {
+  campaignSquadProgressStatusLabel,
+  computeCampaignSquadProgress,
+} from './computeCampaignSquadProgress';
+export type {
+  CampaignSquadProgressInput,
+  CampaignSquadProgressRow,
+  SquadProgressForfeit,
+  SquadProgressOccurrence,
+} from './computeCampaignSquadProgress';
+export {
   campaignTestComparisonNote,
   computeCampaignTestProgress,
   formatCampaignRepDelta,

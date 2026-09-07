@@ -18,7 +18,6 @@ import {
   skipCampaignMakeup,
   updateCampaign,
   type CampaignDetail,
-  type CampaignStandingRow,
   type CampaignStandingsMember,
   type CampaignStandingsScore,
 } from '@/lib/api/campaigns';
@@ -28,10 +27,12 @@ import {
   campaignViewerCompletedCount,
   campaignRoleDescription,
   campaignRoleLabel,
+  campaignSquadProgressStatusLabel,
   canDeleteCampaign,
   canEditCampaign,
   canEndCampaign,
   canRescheduleOccurrence,
+  computeCampaignSquadProgress,
   computeCampaignTestProgress,
   deriveCampaignRoles,
   campaignTestComparisonNote,
@@ -50,19 +51,11 @@ const STATUS_LABEL: Record<string, string> = {
   abandoned: 'Ended early',
 };
 
-function formatNormalisedAverage(value: number | null): string {
-  if (value === null) {
-    return '—';
-  }
-  return `${Math.round(value * 100)}%`;
-}
-
 export default function CampaignDetailPage() {
   const { campaignId } = useParams<{ campaignId: string }>();
   const navigate = useNavigate();
   const { user } = useAmrapAuth();
   const [detail, setDetail] = useState<CampaignDetail | null>(null);
-  const [standings, setStandings] = useState<CampaignStandingRow[]>([]);
   const [standingsMembers, setStandingsMembers] = useState<CampaignStandingsMember[]>([]);
   const [standingsScores, setStandingsScores] = useState<CampaignStandingsScore[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +88,6 @@ export default function CampaignDetailPage() {
         if (detailResult.error || !detailResult.data) {
           setError(detailResult.error?.message ?? 'That campaign is not available.');
           setDetail(null);
-          setStandings([]);
           setStandingsMembers([]);
           setStandingsScores([]);
         } else {
@@ -103,11 +95,9 @@ export default function CampaignDetailPage() {
           setDetail(detailResult.data);
           // Standings ACL mirrors detail; a soft failure leaves the rest of the page usable.
           if (standingsResult.error) {
-            setStandings([]);
             setStandingsMembers([]);
             setStandingsScores([]);
           } else {
-            setStandings(standingsResult.data.standings);
             setStandingsMembers(standingsResult.data.members);
             setStandingsScores(standingsResult.data.scores);
           }
@@ -120,7 +110,6 @@ export default function CampaignDetailPage() {
         }
         setError('That campaign is not available.');
         setDetail(null);
-        setStandings([]);
         setStandingsMembers([]);
         setStandingsScores([]);
         setLoadedId(campaignId);
@@ -239,11 +228,7 @@ export default function CampaignDetailPage() {
   }
 
   async function handleSkipMakeup(occurrenceId: string) {
-    if (
-      !window.confirm(
-        'Skip this mission? You will not make it up. It still counts in campaign standings, and missing it lowers your attendance. You cannot undo this.'
-      )
-    ) {
+    if (!window.confirm('Skip this mission? You will not make it up, and you cannot undo this.')) {
       return;
     }
     setMakeupBusy(true);
@@ -288,7 +273,10 @@ export default function CampaignDetailPage() {
   const showEdit = canEditCampaign(lifecycle);
 
   const hasCountableMissions = detail.occurrences.some(
-    (occurrence) => occurrence.status === 'generated' || occurrence.status === 'done'
+    (occurrence) =>
+      occurrence.status === 'generated' ||
+      occurrence.status === 'done' ||
+      occurrence.status === 'skipped'
   );
   const hasMadeUpScores = standingsScores.some((score) => score.madeUp === true);
   const madeUpFootnote =
@@ -304,6 +292,18 @@ export default function CampaignDetailPage() {
     members: standingsMembers,
     scores: standingsScores,
     campaignStatus: detail.status,
+  });
+
+  const squadProgress = computeCampaignSquadProgress({
+    members: standingsMembers,
+    occurrences: detail.occurrences.map((occurrence) => ({
+      occurrenceId: occurrence.occurrenceId,
+      sequence: occurrence.sequence,
+      localDate: occurrence.localDate,
+      status: occurrence.status,
+    })),
+    scores: standingsScores,
+    forfeits: detail.forfeits,
   });
 
   const viewerMember = detail.members.find((member) => member.userId === user?.id);
@@ -509,26 +509,29 @@ export default function CampaignDetailPage() {
       ) : null}
 
       <section className="card space-y-4 p-6">
-        <h2 className="text-display text-xl text-ink">Standings</h2>
+        <div>
+          <h2 className="text-display text-xl text-ink">Squad progress</h2>
+          <p className="text-sm text-secondary">
+            Who's caught up, and who still has missions to make up.
+          </p>
+        </div>
         {!hasCountableMissions ? (
           <p className="text-sm text-secondary">
-            Standings show up once the first campaign mission is generated.
+            Squad progress shows up once the first campaign mission is open.
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[20rem] text-left text-sm">
               <thead>
                 <tr className="border-b border-divider text-xs uppercase tracking-widest text-muted">
-                  <th className="pb-2 pr-3 font-semibold">Rank</th>
                   <th className="pb-2 pr-3 font-semibold">Athlete</th>
-                  <th className="pb-2 pr-3 font-semibold">Average</th>
-                  <th className="pb-2 font-semibold">Missions attended</th>
+                  <th className="pb-2 pr-3 font-semibold">Status</th>
+                  <th className="pb-2 font-semibold">So far</th>
                 </tr>
               </thead>
               <tbody>
-                {standings.map((row) => (
+                {squadProgress.map((row) => (
                   <tr key={row.userId} className="border-b border-divider last:border-0">
-                    <td className="py-2.5 pr-3 tabular-nums text-secondary">{row.rank}</td>
                     <td className="py-2.5 pr-3 text-ink">
                       {row.nickname ?? 'Athlete'}
                       {row.left ? (
@@ -536,14 +539,9 @@ export default function CampaignDetailPage() {
                           Left
                         </span>
                       ) : null}
-                      {row.hasMadeUp ? (
-                        <span className="ml-2 text-xs uppercase tracking-widest text-muted">
-                          Made up
-                        </span>
-                      ) : null}
                     </td>
-                    <td className="py-2.5 pr-3 tabular-nums text-ink">
-                      {formatNormalisedAverage(row.normalisedAverage)}
+                    <td className="py-2.5 pr-3 text-ink">
+                      {campaignSquadProgressStatusLabel(row.owedCount)}
                     </td>
                     <td className="py-2.5 tabular-nums text-secondary">
                       {row.attended} of {row.eligible}
@@ -552,9 +550,6 @@ export default function CampaignDetailPage() {
                 ))}
               </tbody>
             </table>
-            {hasMadeUpScores ? (
-              <p className="mt-3 text-sm text-secondary">{madeUpFootnote}</p>
-            ) : null}
           </div>
         )}
       </section>

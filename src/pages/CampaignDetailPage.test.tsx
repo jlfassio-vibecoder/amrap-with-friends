@@ -181,7 +181,7 @@ describe('CampaignDetailPage', () => {
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('0');
   });
 
-  it('shows empty standings copy before any mission is generated', async () => {
+  it('shows empty squad progress copy before any mission is open', async () => {
     fetchDetailMock.mockResolvedValue({
       data: detail({
         occurrences: [occurrence(1, 1), occurrence(2, 1), occurrence(3, 2), occurrence(4, 2)],
@@ -189,46 +189,29 @@ describe('CampaignDetailPage', () => {
       error: null,
     });
     renderPage();
-    await waitFor(() => expect(screen.getByText('Standings')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Squad progress')).toBeTruthy());
     expect(
-      screen.getByText('Standings show up once the first campaign mission is generated.')
+      screen.getByText('Squad progress shows up once the first campaign mission is open.')
     ).toBeTruthy();
   });
 
-  it('lists standings with rank, average, and missions attended', async () => {
+  it('lists squad progress with status and so-far attendance, debt first', async () => {
     fetchDetailMock.mockResolvedValue({
       data: detail({
         occurrences: [
-          occurrence(1, 1, { status: 'done', missionId: 's1' }),
-          occurrence(2, 1, { status: 'generated', missionId: 's2' }),
+          occurrence(1, 1, { status: 'done', missionId: 's1', localDate: '2026-10-05' }),
+          occurrence(2, 1, { status: 'done', missionId: 's2', localDate: '2026-10-07' }),
+        ],
+        members: [
+          { userId: 'u1', role: 'host', nickname: 'Maya', joinedAt: '2026-09-01T00:00:00Z' },
+          { userId: 'u2', role: 'member', nickname: 'Jules', joinedAt: '2026-09-02T00:00:00Z' },
         ],
       }),
       error: null,
     });
     fetchStandingsMock.mockResolvedValue({
       data: {
-        standings: [
-          {
-            userId: 'u1',
-            nickname: 'Maya',
-            normalisedAverage: 1,
-            attended: 2,
-            eligible: 2,
-            left: false,
-            hasMadeUp: false,
-            rank: 1,
-          },
-          {
-            userId: 'u2',
-            nickname: 'Jules',
-            normalisedAverage: 0.5,
-            attended: 1,
-            eligible: 2,
-            left: true,
-            hasMadeUp: false,
-            rank: 2,
-          },
-        ],
+        standings: [],
         members: [
           {
             userId: 'u1',
@@ -243,16 +226,27 @@ describe('CampaignDetailPage', () => {
             left: true,
           },
         ],
-        scores: [],
+        scores: [
+          { occurrenceId: 'o1', userId: 'u1', finalScore: 40 },
+          { occurrenceId: 'o2', userId: 'u1', finalScore: 42 },
+          { occurrenceId: 'o1', userId: 'u2', finalScore: 30 },
+        ],
       },
       error: null,
     });
     renderPage();
-    await waitFor(() => expect(screen.getByText('100%')).toBeTruthy());
-    expect(screen.getByText('50%')).toBeTruthy();
+    await waitFor(() => expect(screen.getByText('1 to make up')).toBeTruthy());
+    expect(screen.getByText('On track')).toBeTruthy();
     expect(screen.getByText('2 of 2')).toBeTruthy();
     expect(screen.getByText('1 of 2')).toBeTruthy();
     expect(screen.getAllByText('Left').length).toBeGreaterThan(0);
+    // Debt sorts above On track.
+    const rows = screen.getAllByRole('row').map((row) => row.textContent ?? '');
+    const julesIdx = rows.findIndex((text) => text.includes('Jules'));
+    const mayaIdx = rows.findIndex((text) => text.includes('Maya') && text.includes('On track'));
+    expect(julesIdx).toBeGreaterThan(-1);
+    expect(mayaIdx).toBeGreaterThan(-1);
+    expect(julesIdx).toBeLessThan(mayaIdx);
   });
 
   it('marks makeup scores and shows the Made up footnote', async () => {
