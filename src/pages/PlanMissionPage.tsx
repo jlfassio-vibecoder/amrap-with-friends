@@ -333,7 +333,7 @@ export default function PlanMissionPage() {
           <h2 className="text-lg font-semibold text-ink">Mission</h2>
           <p className="text-sm text-secondary">
             Pick a workout or chain a few, then go live or schedule a rally point. Best when you
-            want one session with friends today.
+            want to launch a solo mission or train with friends.
           </p>
           <AppLink className="btn-primary inline-flex" to="/create">
             Plan mission
