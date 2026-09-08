@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@/contexts/ThemeProvider';
+import { AMQAP_FLOWS } from '@/data/amqapFlows';
 import { WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
+import { templateToExercises } from '@/lib/workout/templateToExercises';
 import {
   markGuidedIgnitionComplete,
   resetGuidedIgnitionPrefs,
@@ -488,5 +490,41 @@ describe('CreateMissionPage time cap', () => {
       expect(createRallyPointMock).toHaveBeenCalled();
     });
     expect(createRallyPointMock.mock.calls[0]![0]).toMatchObject({ durationMinutes: 4 });
+  });
+});
+
+describe('CreateMissionPage AMQAP', () => {
+  beforeEach(() => {
+    markGuidedIgnitionComplete();
+  });
+
+  it('errors when AMQAP is selected but no flow is chosen', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'AMQAP' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Launch' }));
+
+    expect(screen.getByText(/Select a quality flow before planning a mission/i)).toBeTruthy();
+    expect(createRallyPointMock).not.toHaveBeenCalled();
+  });
+
+  it('launches the selected quality flow at I1 with that workout', async () => {
+    const flow = AMQAP_FLOWS.find((entry) => entry.id === 'amqap-foundational-10')!;
+    renderPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'AMQAP' }));
+    fireEvent.click(screen.getByRole('button', { name: /Foundational Continuous Flow/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Launch' }));
+
+    await waitFor(() => {
+      expect(createRallyPointMock).toHaveBeenCalled();
+    });
+    expect(createRallyPointMock.mock.calls[0]?.[0]).toMatchObject({
+      templateId: flow.id,
+      intensityTier: 1,
+      durationMinutes: 10,
+      workout: templateToExercises(flow),
+    });
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith('/mission/m1');
+    });
   });
 });

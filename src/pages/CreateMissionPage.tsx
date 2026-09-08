@@ -19,10 +19,17 @@ import {
   type WorkoutSource,
 } from '@/components/createMission/WorkoutSourceToggle';
 import { WorkoutTemplatePicker } from '@/components/createMission/WorkoutTemplatePicker';
+import { AmqapFlowPicker } from '@/components/createMission/AmqapFlowPicker';
 import { RetestBanner } from '@/components/createMission/RetestBanner';
 import { CoachWodPicker } from '@/components/createMission/CoachWodPicker';
 import { exercisesToWorkoutText } from '@/lib/workout/templateToExercises';
 import type { PublishedCoachWorkout } from '@/lib/api/coachWod';
+import {
+  AMQAP_FLOWS,
+  isAmqapTimeDomain,
+  type AmqapFlowId,
+  type AmqapTimeDomain,
+} from '@/data/amqapFlows';
 import {
   TIME_DOMAINS,
   WORKOUT_CATEGORIES,
@@ -118,6 +125,7 @@ export default function CreateMissionPage() {
   const [selectedDomain, setSelectedDomain] = useState<TimeDomain>(5);
   const [selectedCategory, setSelectedCategory] = useState<WorkoutCategory>('blood-shunt');
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([]);
+  const [selectedAmqapFlowId, setSelectedAmqapFlowId] = useState<AmqapFlowId>('foundational');
   const [selectedCoachWorkout, setSelectedCoachWorkout] = useState<PublishedCoachWorkout | null>(
     null
   );
@@ -226,7 +234,10 @@ export default function CreateMissionPage() {
 
   const focusTemplateId = selectedTemplateIds[0] ?? null;
   const selectedTemplate = useMemo(
-    () => WORKOUT_TEMPLATES.find((template) => template.id === focusTemplateId) ?? null,
+    () =>
+      WORKOUT_TEMPLATES.find((template) => template.id === focusTemplateId) ??
+      AMQAP_FLOWS.find((template) => template.id === focusTemplateId) ??
+      null,
     [focusTemplateId]
   );
 
@@ -292,14 +303,15 @@ export default function CreateMissionPage() {
     } catch {
       movements = [];
     }
+    const usesSelectedTemplate = workoutSource === 'library' || workoutSource === 'amqap';
     const intensityTier =
-      workoutSource === 'library' && selectedTemplate
+      usesSelectedTemplate && selectedTemplate
         ? selectedTemplate.intensityTier
         : workoutSource === 'coach' && selectedCoachWorkout
           ? selectedCoachWorkout.intensityTier
           : CUSTOM_WORKOUT_INTENSITY_TIER;
     const templateId =
-      workoutSource === 'library' && selectedTemplate
+      usesSelectedTemplate && selectedTemplate
         ? selectedTemplate.id
         : workoutSource === 'coach' && selectedCoachWorkout
           ? `coach:${selectedCoachWorkout.id}`
@@ -466,14 +478,38 @@ export default function CreateMissionPage() {
     setMissionChainDraft([]);
   }
 
+  function handleAmqapDurationChange(duration: AmqapTimeDomain) {
+    setSelectedDomain(duration);
+    setDurationMinutes(duration);
+    setSelectedTemplateIds([]);
+  }
+
+  function handleAmqapTemplateSelect(template: WorkoutTemplate) {
+    if (selectedTemplateIds.includes(template.id)) {
+      setSelectedTemplateIds([]);
+      return;
+    }
+    applyLibraryTemplate(template);
+    setSelectedTemplateIds([template.id]);
+  }
+
   function handleWorkoutSourceChange(source: WorkoutSource) {
-    setWorkoutSource(source);
+    setError(null);
     if (source !== 'library') {
       setMissionChainDraft([]);
+    }
+    if (source !== workoutSource) {
       setSelectedTemplateIds([]);
     }
     if (source !== 'coach') {
       setSelectedCoachWorkout(null);
+    }
+    setWorkoutSource(source);
+    if (source === 'amqap' && !isAmqapTimeDomain(durationMinutes)) {
+      setSelectedDomain(10);
+      setDurationMinutes(10);
+    } else if (source === 'amqap' && isAmqapTimeDomain(durationMinutes)) {
+      setSelectedDomain(durationMinutes);
     }
   }
 
@@ -575,6 +611,16 @@ export default function CreateMissionPage() {
       !launchTemplate
     ) {
       setError('Select a workout from the library before planning a mission.');
+      return;
+    }
+
+    if (
+      workoutSource === 'amqap' &&
+      selectedTemplateIds.length === 0 &&
+      !selectedTemplate &&
+      !launchTemplate
+    ) {
+      setError('Select a quality flow before planning a mission.');
       return;
     }
 
@@ -689,7 +735,7 @@ export default function CreateMissionPage() {
         ? firstChainItem.intensityTier
         : launchTemplate
           ? launchTemplate.intensityTier
-          : workoutSource === 'library' && selectedTemplate
+          : (workoutSource === 'library' || workoutSource === 'amqap') && selectedTemplate
             ? selectedTemplate.intensityTier
             : workoutSource === 'coach' && selectedCoachWorkout
               ? selectedCoachWorkout.intensityTier
@@ -698,7 +744,7 @@ export default function CreateMissionPage() {
         ? firstChainItem.templateId
         : launchTemplate
           ? launchTemplate.id
-          : workoutSource === 'library' && selectedTemplate
+          : (workoutSource === 'library' || workoutSource === 'amqap') && selectedTemplate
             ? selectedTemplate.id
             : workoutSource === 'coach' && selectedCoachWorkout
               ? `coach:${selectedCoachWorkout.id}`
@@ -898,6 +944,15 @@ export default function CreateMissionPage() {
                     onCategoryChange={setSelectedCategory}
                     onTemplateSelect={handleTemplateSelect}
                   />
+                ) : workoutSource === 'amqap' ? (
+                  <AmqapFlowPicker
+                    durationMinutes={isAmqapTimeDomain(selectedDomain) ? selectedDomain : 10}
+                    selectedFlowId={selectedAmqapFlowId}
+                    selectedTemplateIds={selectedTemplateIds}
+                    onDurationChange={handleAmqapDurationChange}
+                    onFlowChange={setSelectedAmqapFlowId}
+                    onTemplateSelect={handleAmqapTemplateSelect}
+                  />
                 ) : (
                   <CoachWodPicker
                     selectedWorkoutId={selectedCoachWorkout?.id ?? null}
@@ -952,7 +1007,13 @@ export default function CreateMissionPage() {
                 chainedWorkoutCount={missionChain.length}
                 loading={loading}
                 onNicknameChange={setNickname}
-                durationLockedNote={retest ? 'set by your benchmark' : null}
+                durationLockedNote={
+                  retest
+                    ? 'set by your benchmark'
+                    : workoutSource === 'amqap'
+                      ? 'set by this quality flow'
+                      : null
+                }
                 onDurationChange={handleSummaryDurationChange}
                 onCapChange={(cap) => {
                   setDurationMinutes(cap);

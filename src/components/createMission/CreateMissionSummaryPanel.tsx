@@ -17,7 +17,7 @@ interface CreateMissionSummaryPanelProps {
   durationMinutes: MissionTimeCap;
   /** The library bucket the clock belongs to. */
   selectedDomain: TimeDomain;
-  workoutSource: 'custom' | 'library' | 'coach';
+  workoutSource: 'custom' | 'library' | 'coach' | 'amqap';
   selectedTemplate: WorkoutTemplate | null;
   selectedCoachWorkout: {
     name: string;
@@ -102,8 +102,9 @@ export function CreateMissionSummaryPanel({
   // so it stays locked. A library workout no longer does: its minute is the
   // default, not a cage.
   const durationLockedByCoachWorkout = workoutSource === 'coach' && selectedCoachWorkout !== null;
-  const templateSelected = workoutSource === 'library' && selectedTemplate !== null;
-  const showSingleTemplatePreview = workoutSource === 'library' && selectedTemplate !== null;
+  const templateSelected =
+    (workoutSource === 'library' || workoutSource === 'amqap') && selectedTemplate !== null;
+  const showSingleTemplatePreview = templateSelected;
   const submitDisabled = loading || capReached;
   const submitLabel = loading
     ? 'Creating…'

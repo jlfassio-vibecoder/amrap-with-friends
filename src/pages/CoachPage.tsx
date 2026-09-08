@@ -11,7 +11,14 @@ import { CoachSectionHeader } from '@/components/coach/CoachSectionHeader';
 import { CoachStatGrid } from '@/components/coach/CoachStatGrid';
 import { CoachUserDetailPanel } from '@/components/coach/CoachUserDetailPanel';
 import { CoachUserPicker } from '@/components/coach/CoachUserPicker';
-import { fetchCoachDashboard, type CoachDashboard, type CoachUserListRow } from '@/lib/api/coach';
+import { CoachWindowPicker } from '@/components/coach/CoachWindowPicker';
+import {
+  coachDashboardWindowLabel,
+  fetchCoachDashboard,
+  type CoachDashboard,
+  type CoachDashboardWindow,
+  type CoachUserListRow,
+} from '@/lib/api/coach';
 import { GUEST_BROWSERS_STAT_ID } from '@/lib/coach/guestBrowsersWindows';
 import { formatCoachLabel } from '@/lib/coach/formatCoachLabel';
 import { useOnlineAnonIds } from '@/hooks/useOnlineUserIds';
@@ -26,11 +33,12 @@ export default function CoachPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<CoachUserListRow | null>(null);
   const [guestBrowsersOpen, setGuestBrowsersOpen] = useState(false);
+  const [reportWindow, setReportWindow] = useState<CoachDashboardWindow>('all');
   const onlineAnonIds = useOnlineAnonIds();
 
   useEffect(() => {
     let cancelled = false;
-    fetchCoachDashboard().then((result) => {
+    fetchCoachDashboard(reportWindow).then((result) => {
       if (cancelled) {
         return;
       }
@@ -44,7 +52,15 @@ export default function CoachPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reportWindow]);
+
+  // Reset in the handler rather than in the effect: a synchronous setState
+  // inside an effect body triggers a cascading render.
+  function handleWindowChange(next: CoachDashboardWindow) {
+    setLoading(true);
+    setError(null);
+    setReportWindow(next);
+  }
 
   return (
     <main className="min-h-screen bg-page">
@@ -95,7 +111,14 @@ export default function CoachPage() {
         {!selectedUser && dashboard ? (
           <>
             <section className="space-y-3">
-              <CoachSectionHeader title="Overview" />
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <CoachSectionHeader title="Overview" />
+                <CoachWindowPicker
+                  value={reportWindow}
+                  onChange={handleWindowChange}
+                  disabled={loading}
+                />
+              </div>
               <CoachStatGrid
                 selectedId={guestBrowsersOpen ? GUEST_BROWSERS_STAT_ID : null}
                 onSelect={(id) => setGuestBrowsersOpen(id === GUEST_BROWSERS_STAT_ID)}
@@ -122,14 +145,20 @@ export default function CoachPage() {
                   },
                 ]}
               />
+              <p className="text-xs text-secondary">
+                These tiles name their own window and do not follow the picker; every section below
+                does.
+              </p>
               {guestBrowsersOpen ? (
                 <CoachGuestBrowsersPanel onDismiss={() => setGuestBrowsersOpen(false)} />
               ) : null}
             </section>
 
             <section className="space-y-3">
-              <CoachSectionHeader title="Where commitment dies" />
-              <div className="grid gap-4 sm:grid-cols-3">
+              <CoachSectionHeader
+                title={`Where commitment dies · ${coachDashboardWindowLabel(dashboard.window)}`}
+              />
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <CoachFunnelCard
                   title="Guest → account (claim)"
                   steps={[
@@ -158,11 +187,107 @@ export default function CoachPage() {
                   ratePct={dashboard.rallyConversion.conversionRatePct}
                   rateLabel="Conversion rate"
                 />
+                {dashboard.signupFunnel.map((row) => (
+                  <CoachFunnelCard
+                    key={row.method}
+                    title={`Sign-up (${formatCoachLabel(row.method)})`}
+                    steps={[
+                      { label: 'Attempted', value: row.attempts },
+                      { label: 'Completed', value: row.completions },
+                      { label: 'Awaiting email', value: row.awaitingConfirmation },
+                      { label: 'Failed', value: row.failures },
+                    ]}
+                    ratePct={row.completionRatePct}
+                    rateLabel="Completion rate"
+                  />
+                ))}
+              </div>
+              <div className="card space-y-2 p-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-secondary">
+                  Why sign-in and sign-up fail
+                </h3>
+                <CoachDataTable
+                  rows={dashboard.authFailureReasons}
+                  rowKey={(row) => `${row.stage}-${row.reason}`}
+                  emptyLabel="No auth failures logged yet."
+                  columns={[
+                    { header: 'Stage', render: (row) => formatCoachLabel(row.stage) },
+                    { header: 'Reason', render: (row) => formatCoachLabel(row.reason) },
+                    { header: 'Count', render: (row) => row.failureCount, align: 'right' },
+                    {
+                      header: '% of failures',
+                      render: (row) => pct(row.pctOfFailures),
+                      align: 'right',
+                    },
+                  ]}
+                />
+                <p className="text-xs text-secondary">
+                  Google sign-up completions are not observable — the OAuth redirect leaves the app,
+                  and the sign-in that comes back carries no link to the attempt that started it.
+                </p>
               </div>
             </section>
 
             <section className="space-y-3">
-              <CoachSectionHeader title="Which workouts / flows to fix or promote" />
+              <CoachSectionHeader
+                title={`Do campaigns get finished · ${coachDashboardWindowLabel(dashboard.window)}`}
+              />
+              <div className="grid gap-4 lg:grid-cols-2">
+                <CoachFunnelCard
+                  title="Concluded campaigns"
+                  steps={[
+                    { label: 'Concluded', value: dashboard.campaignFunnel.campaignsConcluded },
+                    { label: 'Started', value: dashboard.campaignFunnel.campaignsStarted },
+                    { label: 'Halfway', value: dashboard.campaignFunnel.campaignsReachedHalfway },
+                    {
+                      label: 'All missions done',
+                      value: dashboard.campaignFunnel.campaignsFinished,
+                    },
+                  ]}
+                  ratePct={dashboard.campaignFunnel.finishRatePct}
+                  rateLabel="Finish rate"
+                />
+                <div className="card space-y-2 p-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-secondary">
+                    By campaign length
+                  </h3>
+                  <CoachDataTable
+                    rows={dashboard.campaignLengthAdherence}
+                    rowKey={(row) => String(row.weekCount)}
+                    emptyLabel="No campaigns have concluded yet."
+                    columns={[
+                      { header: 'Length', render: (row) => `${row.weekCount} weeks` },
+                      { header: 'Campaigns', render: (row) => row.campaigns, align: 'right' },
+                      {
+                        header: 'Finished',
+                        render: (row) => row.campaignsFinished,
+                        align: 'right',
+                      },
+                      {
+                        header: 'Missions done %',
+                        render: (row) => pct(row.occurrenceAdherencePct),
+                        align: 'right',
+                      },
+                    ]}
+                  />
+                </div>
+              </div>
+              <p className="text-sm text-secondary">
+                {dashboard.campaignFunnel.campaignsInFlight} of{' '}
+                {dashboard.campaignFunnel.campaignsCreated} campaigns are still in flight and are
+                left out of the funnel — a campaign in week two has not failed to finish. Missions
+                actually done across concluded campaigns:{' '}
+                <span className="font-semibold text-ink">
+                  {pct(dashboard.campaignFunnel.occurrenceAdherencePct)}
+                </span>
+                .
+              </p>
+            </section>
+
+            <section className="space-y-3">
+              <CoachSectionHeader
+                title={`Which workouts / flows to fix or promote · ${coachDashboardWindowLabel(dashboard.window)}`}
+              />
               <div className="card space-y-4 p-4">
                 <CoachDataTable
                   rows={dashboard.templatePerformance}
@@ -201,7 +326,9 @@ export default function CoachPage() {
             </section>
 
             <section className="space-y-3">
-              <CoachSectionHeader title="Build for hosts, joiners, or both" />
+              <CoachSectionHeader
+                title={`Build for hosts, joiners, or both · ${coachDashboardWindowLabel(dashboard.window)}`}
+              />
               <div className="card p-4">
                 <CoachDataTable
                   rows={dashboard.hostVsJoinerRetention}
@@ -226,7 +353,9 @@ export default function CoachPage() {
             </section>
 
             <section className="space-y-3">
-              <CoachSectionHeader title="Safari / PWA friction worth engineering time" />
+              <CoachSectionHeader
+                title={`Safari / PWA friction worth engineering time · ${coachDashboardWindowLabel(dashboard.window)}`}
+              />
               <div className="card p-4">
                 <CoachDataTable
                   rows={dashboard.audioUnlockRate}
@@ -249,7 +378,9 @@ export default function CoachPage() {
             </section>
 
             <section className="space-y-3">
-              <CoachSectionHeader title="Dev reliability" />
+              <CoachSectionHeader
+                title={`Dev reliability · ${coachDashboardWindowLabel(dashboard.window)}`}
+              />
               <div className="grid gap-4 lg:grid-cols-2">
                 <div className="card space-y-2 p-4">
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-secondary">

@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { CreateMissionSummaryPanel } from './CreateMissionSummaryPanel';
+import { AMQAP_FLOWS } from '@/data/amqapFlows';
 import { WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
+import { formatTemplateMovementLine } from '@/lib/workout/templateToExercises';
 
 afterEach(() => {
   cleanup();
@@ -84,5 +86,27 @@ describe('CreateMissionSummaryPanel', () => {
 
     expect(screen.getByText('First workout of 3 workouts')).toBeTruthy();
     expect(screen.queryByText('Selected workout')).toBeNull();
+  });
+
+  it('previews a quality flow and locks the clock', () => {
+    const flow = AMQAP_FLOWS.find((entry) => entry.id === 'amqap-foundational-10')!;
+    render(
+      <CreateMissionSummaryPanel
+        {...baseProps}
+        workoutSource="amqap"
+        selectedTemplate={flow}
+        durationMinutes={10}
+        selectedDomain={10}
+        durationLockedNote="set by this quality flow"
+        scheduleMode="now"
+        capReached={false}
+      />
+    );
+
+    expect(screen.getByText('Selected workout')).toBeTruthy();
+    expect(screen.getByText(flow.name)).toBeTruthy();
+    expect(screen.getByText(formatTemplateMovementLine(flow.movements[0]!))).toBeTruthy();
+    expect(screen.getByText(/10 min — set by this quality flow/)).toBeTruthy();
+    expect(screen.queryByRole('group', { name: 'Time cap' })).toBeNull();
   });
 });

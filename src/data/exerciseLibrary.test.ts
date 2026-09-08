@@ -204,6 +204,39 @@ describe('getExerciseInfo', () => {
     expect(getExerciseInfo('Superman Raises')?.id).toBe('superman-raises');
     expect(getExerciseInfo('Superman Hold')?.id).toBe('superman-hold');
   });
+
+  it('matches AMQAP mobility names, including per-side suffixes', () => {
+    expect(getExerciseInfo('90/90 Hip Transitions')?.id).toBe('90-90-hip-transitions');
+    expect(getExerciseInfo('90/90 Hip Transitions (5/side)')?.id).toBe('90-90-hip-transitions');
+    expect(getExerciseInfo('Spiderman Lunge with Thoracic Reach (5/side)')?.id).toBe(
+      'spiderman-lunge-with-thoracic-reach'
+    );
+    expect(getExerciseInfo('Downward-Facing Dog to Cobra')?.id).toBe(
+      'downward-facing-dog-to-cobra'
+    );
+    expect(getExerciseInfo('Quadruped Hip Circles (5/side)')?.id).toBe('quadruped-hip-circles');
+    expect(getExerciseInfo('Low Lunge (5/side)')?.id).toBe('low-lunge');
+    expect(getExerciseInfo('Half Moon Pose (15-Sec/side)')?.id).toBe('half-moon-pose');
+    expect(getExerciseInfo('Prone Internal Rotation Windshield Wipers')?.id).toBe(
+      'prone-internal-rotation-windshield-wipers'
+    );
+    expect(getExerciseInfo('Cobra Pose')?.id).toBe('cobra-pose');
+    expect(getExerciseInfo("Child's Pose")?.id).toBe('childs-pose');
+    expect(getExerciseInfo('Cat & Cow')?.id).toBe('cat-and-cow');
+    expect(getExerciseInfo('Downward-Facing Dog')?.id).toBe('downward-facing-dog');
+    expect(getExerciseInfo('Camel Pose')?.id).toBe('camel-pose');
+    expect(getExerciseInfo('Pigeon Pose (20-Sec/side)')?.id).toBe('pigeon-pose');
+    expect(getExerciseInfo('90/90 Hip Internal Rotation Lift (5/side)')?.id).toBe(
+      '90-90-hip-internal-rotation-lift'
+    );
+  });
+
+  it('keeps Downward-Facing Dog separate from the dog-to-cobra wave', () => {
+    expect(getExerciseInfo('Downward-Facing Dog')?.id).toBe('downward-facing-dog');
+    expect(getExerciseInfo('Downward-Facing Dog to Cobra')?.id).toBe(
+      'downward-facing-dog-to-cobra'
+    );
+  });
 });
 
 describe('EXERCISE_LIBRARY primaryPatterns', () => {

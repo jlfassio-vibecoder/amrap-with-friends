@@ -48,13 +48,13 @@ describe('track payload anon_id', () => {
 
   it('includes anon_id when the browser has a persistable id', () => {
     getOrCreateAnonIdMock.mockReturnValue(UUID);
-    track('page_viewed');
+    track('practice_started');
     expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ anon_id: UUID }));
   });
 
   it('omits anon_id when identity is null', () => {
     getOrCreateAnonIdMock.mockReturnValue(null);
-    track('page_viewed');
+    track('practice_started');
     const payload = insertMock.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(payload).toBeDefined();
     expect(payload).not.toHaveProperty('anon_id');
@@ -62,13 +62,13 @@ describe('track payload anon_id', () => {
 
   it('omits anon_id from trackBeacon when identity is null', () => {
     getOrCreateAnonIdMock.mockReturnValue(null);
-    expect(trackBeacon('page_unloaded')).toBe(true);
+    expect(trackBeacon('mission_abandoned')).toBe(true);
     expect(beaconPayload()).not.toHaveProperty('anon_id');
   });
 
   it('includes anon_id on trackBeacon when the browser has a persistable id', () => {
     getOrCreateAnonIdMock.mockReturnValue(UUID);
-    expect(trackBeacon('page_unloaded')).toBe(true);
+    expect(trackBeacon('mission_abandoned')).toBe(true);
     expect(beaconPayload().anon_id).toBe(UUID);
   });
 });

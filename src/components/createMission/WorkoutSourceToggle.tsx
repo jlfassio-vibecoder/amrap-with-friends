@@ -1,9 +1,10 @@
-export type WorkoutSource = 'custom' | 'library' | 'coach';
+export type WorkoutSource = 'custom' | 'library' | 'coach' | 'amqap';
 
 const OPTIONS: Array<{ value: WorkoutSource; label: string }> = [
   { value: 'custom', label: 'Custom' },
   { value: 'library', label: 'Choose from library' },
   { value: 'coach', label: 'Coach WODs' },
+  { value: 'amqap', label: 'AMQAP' },
 ];
 
 interface WorkoutSourceToggleProps {

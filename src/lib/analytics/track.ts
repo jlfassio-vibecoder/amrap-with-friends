@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { getOrCreateAnonId } from '@/lib/analytics/identity';
+import type { AnalyticsEventName } from '@/lib/analytics/events';
 
 export interface TrackContext {
   userId?: string | null;
@@ -7,7 +8,11 @@ export interface TrackContext {
   participantId?: string | null;
 }
 
-function buildPayload(eventName: string, props: Record<string, unknown>, context: TrackContext) {
+function buildPayload(
+  eventName: AnalyticsEventName,
+  props: Record<string, unknown>,
+  context: TrackContext
+) {
   const anonId = getOrCreateAnonId();
   return {
     event_name: eventName,
@@ -23,7 +28,7 @@ function buildPayload(eventName: string, props: Record<string, unknown>, context
 
 /** Fire-and-forget product analytics event. Never throws — a failed write should never break the feature it's observing. */
 export function track(
-  eventName: string,
+  eventName: AnalyticsEventName,
   props: Record<string, unknown> = {},
   context: TrackContext = {}
 ): void {
@@ -54,7 +59,7 @@ export function track(
  * derived from auth.uid().
  */
 export function trackBeacon(
-  eventName: string,
+  eventName: AnalyticsEventName,
   props: Record<string, unknown> = {},
   context: TrackContext = {}
 ): boolean {
