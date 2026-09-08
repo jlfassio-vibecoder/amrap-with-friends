@@ -95,16 +95,13 @@ describe('PlanMissionPage', () => {
     for (const preset of CAMPAIGN_MISSION_PRESETS) {
       expect(screen.getByText(preset.name)).toBeTruthy();
     }
-    expect(screen.getByText('Sprint')).toBeTruthy();
+    expect(screen.getAllByText('Sprint').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Crucible').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Grind').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('Crucible + Grind')).toBeTruthy();
-    expect(screen.getAllByRole('button', { name: 'Launch' })).toHaveLength(
-      CHAIN_MISSION_PRESETS.length
-    );
-    expect(screen.getAllByRole('button', { name: 'Start' })).toHaveLength(
-      CAMPAIGN_MISSION_PRESETS.length
-    );
+    expect(screen.getAllByText('Marathon').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText('Crucible + Grind')).toBeNull();
+    expect(screen.getAllByRole('button', { name: 'Launch' })).toHaveLength(16);
+    expect(screen.getAllByRole('button', { name: 'Start' })).toHaveLength(16);
   });
 
   it('launches a chain preset into the first mission', async () => {

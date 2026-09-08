@@ -12,6 +12,7 @@ import {
 
 describe('planMissionPresets', () => {
   it('resolves every chain preset against the workout library', () => {
+    expect(CHAIN_MISSION_PRESETS).toHaveLength(16);
     for (const preset of CHAIN_MISSION_PRESETS) {
       const templates = resolveChainPresetTemplates(preset);
       expect(templates).toHaveLength(preset.templateIds.length);
@@ -30,11 +31,11 @@ describe('planMissionPresets', () => {
     }
   });
 
-  it('defines three campaign packs with valid tracks and week counts', () => {
-    expect(CAMPAIGN_MISSION_PRESETS).toHaveLength(3);
+  it('defines sixteen campaign packs with valid tracks and week counts', () => {
+    expect(CAMPAIGN_MISSION_PRESETS).toHaveLength(16);
     for (const preset of CAMPAIGN_MISSION_PRESETS) {
       expect(preset.name).toMatch(/\d+-week/);
-      expect(preset.tracks.length).toBeGreaterThanOrEqual(1);
+      expect(preset.tracks.length).toBe(1);
       expect(preset.missionsPerWeek).toBeGreaterThanOrEqual(1);
       expect([2, 4, 6, 8, 12]).toContain(preset.weekCount);
       expect(preset.domains).toEqual([
@@ -43,27 +44,33 @@ describe('planMissionPresets', () => {
     }
   });
 
-  it('labels packs with Sprint / Crucible / Grind brands from the fitness guide', () => {
+  it('labels packs with Sprint / Crucible / Grind / Marathon brands', () => {
     expect(presetCategoryLabel([5]).brandName).toBe('Sprint');
     expect(presetCategoryLabel([10]).brandName).toBe('Crucible');
     expect(presetCategoryLabel([15]).brandName).toBe('Grind');
-    expect(presetCategoryLabel([10, 15]).brandName).toBe('Crucible + Grind');
-    expect(presetCategoryLabel([5]).tagline).toBeTruthy();
+    expect(presetCategoryLabel([20]).brandName).toBe('Marathon');
   });
 
-  it('groups chains under Sprint, Crucible, and Grind', () => {
+  it('groups chains with four packs under each domain brand', () => {
     const groups = groupPresetsByCategory(CHAIN_MISSION_PRESETS);
-    expect(groups.map((group) => group.label.brandName)).toEqual(['Sprint', 'Crucible', 'Grind']);
-    expect(groups.every((group) => group.presets.length >= 1)).toBe(true);
+    expect(groups.map((group) => group.label.brandName)).toEqual([
+      'Sprint',
+      'Crucible',
+      'Grind',
+      'Marathon',
+    ]);
+    expect(groups.every((group) => group.presets.length === 4)).toBe(true);
   });
 
-  it('groups campaigns under Crucible, Crucible + Grind, and Grind', () => {
+  it('groups campaigns with four packs under each domain brand', () => {
     const groups = groupPresetsByCategory(CAMPAIGN_MISSION_PRESETS);
     expect(groups.map((group) => group.label.brandName)).toEqual([
+      'Sprint',
       'Crucible',
-      'Crucible + Grind',
       'Grind',
+      'Marathon',
     ]);
+    expect(groups.every((group) => group.presets.length === 4)).toBe(true);
     for (const group of groups) {
       for (const preset of group.presets) {
         expect(group.label.brandName).toBe(

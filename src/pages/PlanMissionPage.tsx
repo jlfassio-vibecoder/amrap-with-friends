@@ -235,16 +235,13 @@ export default function PlanMissionPage() {
               </p>
               <p className="text-sm text-secondary">{label.tagline}</p>
             </div>
-            <ul className="space-y-3">
+            <ul className="grid gap-3 sm:grid-cols-2">
               {presets.map((preset) => {
                 const templates = resolveChainPresetTemplates(preset);
                 const busy = busyId === preset.id;
                 return (
-                  <li
-                    key={preset.id}
-                    className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="space-y-1">
+                  <li key={preset.id} className="card flex flex-col gap-3 p-5">
+                    <div className="flex-1 space-y-1">
                       <p className="font-semibold text-ink">{preset.name}</p>
                       <p className="text-sm text-secondary">{preset.blurb}</p>
                       <p className="text-xs text-muted">
@@ -253,7 +250,7 @@ export default function PlanMissionPage() {
                     </div>
                     <button
                       type="button"
-                      className="btn-primary shrink-0"
+                      className="btn-primary w-full"
                       disabled={busy || busyId !== null || capReached}
                       onClick={() => void launchChain(preset)}
                     >
@@ -285,23 +282,20 @@ export default function PlanMissionPage() {
               </p>
               <p className="text-sm text-secondary">{label.tagline}</p>
             </div>
-            <ul className="space-y-3">
+            <ul className="grid gap-3 sm:grid-cols-2">
               {presets.map((preset) => {
                 const busy = busyId === preset.id;
                 const shape = formatCampaignShape(preset.weekCount, preset.missionsPerWeek);
                 return (
-                  <li
-                    key={preset.id}
-                    className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="space-y-1">
+                  <li key={preset.id} className="card flex flex-col gap-3 p-5">
+                    <div className="flex-1 space-y-1">
                       <p className="font-semibold text-ink">{preset.name}</p>
                       <p className="text-sm text-secondary">{preset.goal}</p>
                       <p className="text-xs text-muted">{shape}</p>
                     </div>
                     <button
                       type="button"
-                      className="btn-primary shrink-0"
+                      className="btn-primary w-full"
                       disabled={busy || busyId !== null}
                       onClick={() => void startCampaign(preset)}
                     >
