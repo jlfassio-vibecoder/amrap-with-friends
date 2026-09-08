@@ -1263,6 +1263,239 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
       'Keep your torso vertical. If you lean forward over your front knee as you walk, you are putting massive shear force on the patella.',
     photos: sequencePhotos('walking-lunges'),
   }),
+  libEntry({
+    id: '90-90-hip-transitions',
+    name: '90/90 Hip Transitions',
+    setupAndExecution: [
+      'Sit tall with both knees bent to 90 degrees: one shin in front, the other trailing to the side. Heels stay pinned to the floor.',
+      'Keep the torso upright and slowly rotate the pelvis so the trail leg becomes the new lead leg. Land softly, then reverse.',
+    ],
+    commonMistakes: [
+      'Letting the heels lift so the knees yank the hips through instead of the pelvis rotating.',
+      'Rounding the low back to cheat the switch when one hip will not turn.',
+    ],
+    coachingCue: '"Heels stay, torso tall, hips do the turning."',
+    amrapTip:
+      'This is a quality pass, not a race. Pause in each 90/90 long enough to feel which hip is locked before you flip.',
+    photos: sequencePhotos('90-90-hip-transitions', 'Seated 90/90 switch — both leads'),
+  }),
+  libEntry({
+    id: 'spiderman-lunge-with-thoracic-reach',
+    name: 'Spiderman Lunge with Thoracic Reach',
+    setupAndExecution: [
+      'From a high plank, step one foot outside the matching hand into a deep lunge. The trail knee stays off the floor and the trail hip stays long.',
+      'Rotate the chest toward the front leg and reach that same-side arm to the ceiling. Let the eyes follow the hand, then plant and switch sides.',
+    ],
+    commonMistakes: [
+      'Spinning the hips with the arm so the reach comes from the low back, not the mid-back.',
+      'Collapsing the trail hip toward the floor instead of driving it long and open.',
+    ],
+    coachingCue: '"Square the hips, then unscrew the ribcage."',
+    amrapTip:
+      'Hold the reach for a breath. If you whip the arm up and down, you skip the thoracic rotation this movement is for.',
+    photos: sequencePhotos(
+      'spiderman-lunge-with-thoracic-reach',
+      'Lunge plus same-side reach to the ceiling'
+    ),
+  }),
+  libEntry({
+    id: 'downward-facing-dog-to-cobra',
+    name: 'Downward-Facing Dog to Cobra',
+    setupAndExecution: [
+      'Press into an inverted V: hips high, heels reaching toward the floor, shoulders away from the ears.',
+      'Swoop the chest forward and low, then lift into Cobra with the pelvis on the floor and the arms straight enough to open the front body. Flow back to the V without dumping the low back.',
+    ],
+    commonMistakes: [
+      'Crashing the hips to the floor on the swoop so the lumbar spine takes the whole wave.',
+      'Leaving the shoulders shrugged by the ears in the inverted V.',
+    ],
+    coachingCue: '"Wave the spine; do not slam the landing."',
+    amrapTip:
+      'Move slow enough that each vertebra participates. Fast dog-to-cobra is just a sloppy burpee without the jump.',
+    photos: sequencePhotos(
+      'downward-facing-dog-to-cobra',
+      'Inverted V into a controlled cobra wave'
+    ),
+  }),
+  libEntry({
+    id: 'quadruped-hip-circles',
+    name: 'Quadruped Hip Circles',
+    setupAndExecution: [
+      'Start on all fours with a quiet, neutral spine. Keep one knee bent near 90 degrees and lift it just off the floor.',
+      'Draw the largest slow circle you can without the pelvis rocking. Finish the set on that side before you switch.',
+    ],
+    commonMistakes: [
+      'Hiking the pelvis so the circle is a spinal wiggle instead of a hip path.',
+      'Rushing small, sloppy loops instead of owning the end of each arc.',
+    ],
+    coachingCue: '"The torso is a table. Only the knee draws the circle."',
+    amrapTip:
+      'Five honest circles beat fifteen scribbles. If the pelvis starts walking, shrink the circle until it is quiet again.',
+    photos: sequencePhotos('quadruped-hip-circles', 'All-fours hip circle with a still spine'),
+  }),
+  libEntry({
+    id: 'low-lunge',
+    name: 'Low Lunge',
+    setupAndExecution: [
+      'Step one foot forward between the hands. Drop the back knee toward the floor and stack the front knee over the ankle.',
+      'Lift the chest, square the hips to the front, and pulse or breathe in that long stance before you switch sides.',
+    ],
+    commonMistakes: [
+      'Letting the front knee cave inward as the hips sink.',
+      'Hinging the chest onto the front thigh instead of staying tall through the ribcage.',
+    ],
+    coachingCue: '"Long back leg, proud chest, hips square."',
+    amrapTip:
+      'Sink on the exhale. Bouncing the hips off the floor turns a hip-flexor opener into a bad split jump.',
+    photos: sequencePhotos('low-lunge', 'Long stance with the chest lifted'),
+  }),
+  libEntry({
+    id: 'half-moon-pose',
+    name: 'Half Moon Pose',
+    setupAndExecution: [
+      'From a low lunge, plant the front hand on the floor or a block just ahead of the front foot.',
+      'Rotate the torso open, lift the back leg parallel to the floor, and stack the top hip over the bottom. Reach the free arm to the sky and look up only if the neck is happy.',
+    ],
+    commonMistakes: [
+      'Letting the lifted hip roll toward the floor so the pose becomes a twisted lunge.',
+      'Locking the standing knee hard and dumping all the load into that joint.',
+    ],
+    coachingCue: '"Stack the hips like plates, then reach out of both ends."',
+    amrapTip:
+      'Find one still breath on each side. Wobbling through five rushed reps teaches panic, not balance.',
+    photos: sequencePhotos('half-moon-pose', 'Open torso with the back leg lifted'),
+  }),
+  libEntry({
+    id: 'prone-internal-rotation-windshield-wipers',
+    name: 'Prone Internal Rotation Windshield Wipers',
+    setupAndExecution: [
+      'Lie on your stomach with both knees bent to 90 degrees and the feet up toward the ceiling.',
+      'Keep the pelvis glued to the floor and slowly let both feet drift out to the sides. Pause where the hips want to lift, then return to vertical.',
+    ],
+    commonMistakes: [
+      'Peeling a hip bone off the floor to buy extra range the capsule does not have.',
+      'Kicking the feet out with momentum instead of lowering them under control.',
+    ],
+    coachingCue: '"Pelvis stays heavy. The feet only go as far as the hips allow."',
+    amrapTip:
+      'Stop the instant a hip lifts. That is the real end range — forcing past it just rotates the lumbar spine.',
+    photos: sequencePhotos(
+      'prone-internal-rotation-windshield-wipers',
+      'Face-down, knees bent, feet drifting out'
+    ),
+  }),
+  libEntry({
+    id: 'cobra-pose',
+    name: 'Cobra Pose',
+    setupAndExecution: [
+      'Lie face down with the tops of the feet on the floor and the hands under the shoulders.',
+      'Press the pubic bone down, then lift the chest using the back first. Straighten the arms only as far as the low back stays quiet.',
+    ],
+    commonMistakes: [
+      'Locking the elbows and hanging off the low back with the glutes asleep.',
+      'Craning the chin to the ceiling so the neck does the backbend.',
+    ],
+    coachingCue: '"Lead with the chest, not the chin."',
+    amrapTip:
+      'Five slow lifts beat one stuck hold. Lower with the same control you used to come up.',
+    photos: sequencePhotos('cobra-pose', 'Chest lifted, pelvis heavy on the floor'),
+  }),
+  libEntry({
+    id: 'childs-pose',
+    name: "Child's Pose",
+    setupAndExecution: [
+      'Kneel, sit the hips back toward the heels, and reach the arms forward or rest them by the sides.',
+      'Forehead to the floor. Breathe into the back of the ribs and let the shoulders drop away from the ears.',
+    ],
+    commonMistakes: [
+      'Perching on the knees with the hips high, so the pose never becomes a rest.',
+      'Holding the breath and gripping the jaw while the forehead is down.',
+    ],
+    coachingCue: '"Hips heavy, forehead heavy, breath wide."',
+    amrapTip:
+      'This is the down-shift. If you cut it short to chase another round, you missed the point of the flow.',
+    photos: sequencePhotos('childs-pose', 'Hips toward the heels, forehead down'),
+  }),
+  libEntry({
+    id: 'cat-and-cow',
+    name: 'Cat & Cow',
+    setupAndExecution: [
+      'On all fours, stack shoulders over wrists and hips over knees.',
+      'Inhale into Cow: belly drops, chest opens, gaze soft. Exhale into Cat: navel to spine, tailbone tucks, chin nods. Move one vertebra at a time.',
+    ],
+    commonMistakes: [
+      'Snapping from a full arch to a full round with no stations in between.',
+      'Dumping all the motion into the neck while the mid-back stays stiff.',
+    ],
+    coachingCue: '"Breathe the shape. Do not throw the shape."',
+    amrapTip:
+      'Eight slow cycles warm the discs. If you race them, you are just nodding your head on all fours.',
+    photos: sequencePhotos('cat-and-cow', 'Tabletop flexion and extension'),
+  }),
+  libEntry({
+    id: 'downward-facing-dog',
+    name: 'Downward-Facing Dog',
+    setupAndExecution: [
+      'From all fours, tuck the toes, lift the knees, and send the hips up and back into an inverted V.',
+      'Press the floor away, soften the knees if the hamstrings yank the spine, and reach the heels toward the floor without forcing them down.',
+    ],
+    commonMistakes: [
+      'Dumping the chest toward the feet so the shoulders collapse and the neck hangs.',
+      'Locking both knees to chase the heels down and rounding the low back to get there.',
+    ],
+    coachingCue: '"Hips high, arms long, neck soft."',
+    amrapTip:
+      'Bend the knees and keep the spine long. A pretty heel line with a rounded back is the wrong trade.',
+    photos: sequencePhotos('downward-facing-dog', 'Inverted V with long arms'),
+  }),
+  libEntry({
+    id: 'camel-pose',
+    name: 'Camel Pose',
+    setupAndExecution: [
+      'Kneel tall with the knees under the hips and the thighs vertical. Hands can stay on the low back or reach for the heels.',
+      'Lift the chest first, then ease the gaze up and back. Keep the hips over the knees — do not sit toward the heels.',
+    ],
+    commonMistakes: [
+      'Folding from the low back while the hips drift toward the heels.',
+      'Dropping the head back with no chest lift, so the neck takes the whole opener.',
+    ],
+    coachingCue: '"Hips stay over the knees. The chest goes first."',
+    amrapTip:
+      'Twenty seconds is enough. If you cannot breathe in the shape, come up an inch and open from the ribs instead.',
+    photos: sequencePhotos('camel-pose', 'Tall kneel with the chest opening back'),
+  }),
+  libEntry({
+    id: 'pigeon-pose',
+    name: 'Pigeon Pose',
+    setupAndExecution: [
+      'From Downward-Facing Dog, sweep one shin across the mat. The front knee points roughly toward the same-side wrist; the back leg stays long.',
+      'Square the hips toward the floor as much as they allow, then walk the hands forward or stay upright. Switch sides after the hold.',
+    ],
+    commonMistakes: [
+      'Letting the back hip roll open so you are sitting on the flesh instead of facing the floor.',
+      'Cranking the front shin parallel to the mat when the knee is already yelling.',
+    ],
+    coachingCue: '"Square what you can. Prop what you cannot."',
+    amrapTip:
+      'Twenty seconds a side is a quality pass, not a contest to fold the chest to the floor. Come up if the front knee complains.',
+    photos: sequencePhotos('pigeon-pose', 'Front shin across, back leg long'),
+  }),
+  libEntry({
+    id: '90-90-hip-internal-rotation-lift',
+    name: '90/90 Hip Internal Rotation Lift',
+    setupAndExecution: [
+      'Sit in 90/90. Shift onto the front hip so the trail shin is behind you and both knees stay near 90 degrees.',
+      'Keep the torso tall and lift the back foot off the floor without leaning away or cranking the lumbar spine. Lower slowly and switch sides.',
+    ],
+    commonMistakes: [
+      'Leaning the ribs away from the back leg to fake a higher lift.',
+      'Using a lumbar twist to get the foot up when the hip will not internally rotate.',
+    ],
+    coachingCue: '"Torso still. The back foot floats from the hip."',
+    amrapTip:
+      'A one-inch honest hover is the rep. Chasing height with the low back undoes the capsule work you just did in pigeon.',
+    photos: sequencePhotos('90-90-hip-internal-rotation-lift', '90/90 with the trail foot lifted'),
+  }),
 ];
 
 // Force a full reload when this data module changes — partial HMR can leave

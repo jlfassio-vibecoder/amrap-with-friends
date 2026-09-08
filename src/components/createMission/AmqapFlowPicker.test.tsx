@@ -71,6 +71,18 @@ describe('AmqapFlowPicker', () => {
     expect(screen.getByText(/synovial pump/i)).toBeTruthy();
   });
 
+  it('exposes a How to control for every movement on the card', () => {
+    renderPicker();
+
+    expect(screen.getByRole('button', { name: 'How to do 90/90 Hip Transitions' })).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'How to do Spiderman Lunge with Thoracic Reach' })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'How to do Downward-Facing Dog to Cobra' })
+    ).toBeTruthy();
+  });
+
   it('lists the 15-minute version of the selected family', () => {
     const fifteen = AMQAP_FLOWS.find((flow) => flow.id === 'amqap-spinal-15');
     renderPicker({ durationMinutes: 15, selectedFlowId: 'spinal' });

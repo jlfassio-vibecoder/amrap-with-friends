@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { getExerciseInfo } from '@/data/exerciseLibrary';
 import { AMQAP_FLOWS } from './amqapFlows';
 
 function flow(id: string) {
@@ -54,5 +55,14 @@ describe('AMQAP quality-round prescriptions', () => {
       { name: '90/90 Hip Internal Rotation Lift (5/side)', reps: 10 },
       { name: 'Cobra Pose', reps: 5 },
     ]);
+  });
+
+  it('resolves a How-to entry for every programmed movement', () => {
+    const names = new Set(
+      AMQAP_FLOWS.flatMap((entry) => entry.movements.map((movement) => movement.name))
+    );
+    for (const name of names) {
+      expect(getExerciseInfo(name), name).toBeTruthy();
+    }
   });
 });
