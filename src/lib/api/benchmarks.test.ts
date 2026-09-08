@@ -174,7 +174,7 @@ describe('personalBenchmarkSlots', () => {
   it('holds a slot for a live benchmark', () => {
     const benchmark = parseAthleteBenchmark(ROW);
     expect(personalBenchmarkSlots([benchmark!])).toEqual([
-      { domain: 10, source: 'personal', templateId: 'the-valve' },
+      { domain: 10, source: 'personal', templateId: 'the-valve', durationMinutes: 10 },
     ]);
   });
 

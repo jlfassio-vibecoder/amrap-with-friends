@@ -82,6 +82,7 @@ export function personalBenchmarkSlots(benchmarks: readonly AthleteBenchmark[]):
       domain: benchmark.timeDomain,
       source: 'personal' as const,
       templateId: benchmark.templateId,
+      durationMinutes: benchmark.durationMinutes,
     }));
 }
 

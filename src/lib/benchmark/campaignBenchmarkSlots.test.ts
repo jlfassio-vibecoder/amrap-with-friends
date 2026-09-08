@@ -52,8 +52,18 @@ describe('campaignBenchmarkSlots', () => {
     // …and the third slot goes once two personal ones are taken.
     const full = [
       ...slots,
-      { domain: 5 as const, source: 'personal' as const, templateId: 'flash-flood' },
-      { domain: 15 as const, source: 'personal' as const, templateId: 'the-equalizer' },
+      {
+        domain: 5 as const,
+        source: 'personal' as const,
+        templateId: 'flash-flood',
+        durationMinutes: 5,
+      },
+      {
+        domain: 15 as const,
+        source: 'personal' as const,
+        templateId: 'the-equalizer',
+        durationMinutes: 15,
+      },
     ];
     expect(canDesignateBenchmark({ templateId: 'the-valve', cap: 20, slots: full })).toMatchObject({
       reason: 'at-limit',

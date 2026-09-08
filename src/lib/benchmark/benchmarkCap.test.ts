@@ -13,12 +13,14 @@ const personal = (domain: 5 | 10 | 15 | 20, templateId = 'the-valve'): Benchmark
   domain,
   source: 'personal',
   templateId,
+  durationMinutes: domain,
 });
 
 const campaign = (domain: 5 | 10 | 15 | 20): BenchmarkSlot => ({
   domain,
   source: 'campaign',
   templateId: 'the-hemodynamic',
+  durationMinutes: domain,
   campaignName: '8-week Blood Shunt',
 });
 

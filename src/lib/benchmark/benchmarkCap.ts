@@ -37,6 +37,12 @@ export interface BenchmarkSlot {
   source: BenchmarkSource;
   /** Library template id. */
   templateId: string;
+  /**
+   * The clock the test actually runs at, which is not the domain: a benchmark
+   * at 12 minutes lives in the 15-minute domain, and printing the domain would
+   * tell the athlete they are testing at a clock they never chose.
+   */
+  durationMinutes: MissionTimeCap;
   /** Campaign name for a campaign slot, so the UI can say which one. */
   campaignName?: string;
 }

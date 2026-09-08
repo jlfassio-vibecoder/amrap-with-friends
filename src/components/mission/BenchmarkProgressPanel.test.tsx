@@ -162,6 +162,7 @@ describe('BenchmarkProgressPanel', () => {
               domain: 20,
               source: 'campaign',
               templateId: 'the-pacer',
+              durationMinutes: 20,
               campaignName: '8-week Blood Shunt',
             },
           ]}
@@ -180,7 +181,13 @@ describe('BenchmarkProgressPanel', () => {
           benchmarks={[]}
           missions={[]}
           campaignSlots={[
-            { domain: 20, source: 'campaign', templateId: 'the-pacer', campaignName: 'Winter' },
+            {
+              domain: 20 as const,
+              source: 'campaign' as const,
+              templateId: 'the-pacer',
+              durationMinutes: 20,
+              campaignName: 'Winter',
+            },
           ]}
           now={NOW}
         />
@@ -220,5 +227,122 @@ describe('BenchmarkProgressPanel', () => {
       </MemoryRouter>
     );
     expect(screen.queryByText(/fatigue as much as fitness/)).toBeNull();
+  });
+
+  it('shows a campaign benchmark’s own scores, not just that a slot is taken', () => {
+    render(
+      <MemoryRouter>
+        <BenchmarkProgressPanel
+          benchmarks={[]}
+          missions={[
+            run({
+              missionId: 'w1',
+              templateId: 'the-hemodynamic',
+              createdAt: daysAgo(60),
+              finalScore: 142,
+            }),
+            run({
+              missionId: 'w8',
+              templateId: 'the-hemodynamic',
+              createdAt: daysAgo(5),
+              finalScore: 168,
+            }),
+          ]}
+          campaignSlots={[
+            {
+              domain: 10,
+              source: 'campaign',
+              templateId: 'the-hemodynamic',
+              durationMinutes: 10,
+              campaignName: '8-week Blood Shunt',
+            },
+          ]}
+          now={NOW}
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('142 → 168 reps')).toBeTruthy();
+    expect(screen.getByText('+26 (+18.3%)')).toBeTruthy();
+    expect(screen.getByText(/Held by 8-week Blood Shunt/)).toBeTruthy();
+  });
+
+  it('offers no retest on a campaign benchmark — the campaign schedules it', () => {
+    render(
+      <MemoryRouter>
+        <BenchmarkProgressPanel
+          benchmarks={[]}
+          missions={[
+            run({
+              missionId: 'w1',
+              templateId: 'the-hemodynamic',
+              createdAt: daysAgo(90),
+              finalScore: 142,
+            }),
+          ]}
+          campaignSlots={[
+            {
+              domain: 10,
+              source: 'campaign',
+              templateId: 'the-hemodynamic',
+              durationMinutes: 10,
+              campaignName: 'Winter',
+            },
+          ]}
+          now={NOW}
+        />
+      </MemoryRouter>
+    );
+
+    // Ninety days would be long overdue for a personal benchmark. Offering a
+    // Retest here would open a mission the campaign calendar knows nothing of.
+    expect(screen.queryByRole('link', { name: 'Retest' })).toBeNull();
+    expect(screen.queryByText(/Retest due/)).toBeNull();
+  });
+
+  it('prints a campaign benchmark’s real clock, not its domain', () => {
+    render(
+      <MemoryRouter>
+        <BenchmarkProgressPanel
+          benchmarks={[]}
+          missions={[]}
+          campaignSlots={[
+            {
+              domain: 15,
+              source: 'campaign',
+              templateId: 'the-equalizer',
+              durationMinutes: 12,
+              campaignName: 'Winter',
+            },
+          ]}
+          now={NOW}
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/· 12 min/)).toBeTruthy();
+    expect(screen.queryByText(/· 15 min/)).toBeNull();
+  });
+
+  it('says a campaign benchmark has no attempt yet rather than inventing one', () => {
+    render(
+      <MemoryRouter>
+        <BenchmarkProgressPanel
+          benchmarks={[]}
+          missions={[]}
+          campaignSlots={[
+            {
+              domain: 10,
+              source: 'campaign',
+              templateId: 'the-hemodynamic',
+              durationMinutes: 10,
+              campaignName: 'Winter',
+            },
+          ]}
+          now={NOW}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getByText('No attempt yet')).toBeTruthy();
   });
 });

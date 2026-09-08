@@ -1,7 +1,7 @@
 # Plan: benchmarks an athlete designates for themselves
 
 **Branch:** `feature/personal-benchmarks` (proposed)
-**Status:** Phases 1–3 shipped. Phase 4 open.
+**Status:** Phases 1–4 shipped. Feature complete.
 **Last updated:** 2026-09-09
 
 ---
@@ -291,10 +291,10 @@ than pre-filled.
 **Phase 3 — the HUD card. ✅ Shipped.** The rows, the slot count, the readiness
 caveat, and campaign-held slots shown as rows of their own.
 
-**Phase 4 — unify the campaign badge.** Render the campaign's derived benchmark
-through the same row component, and count a campaign benchmark in the card.
-Deliberately last: it is the only phase that touches shipped campaign surfaces,
-and it is worth nothing until phases 1–3 exist.
+**Phase 4 — unify the campaign badge. ✅ Shipped.** `BenchmarkRow` renders both
+sources, and a campaign benchmark shows its own scores rather than only holding
+a slot. No campaign internals were touched: roles stay derived, the ids stay
+frozen, and `benchmarkFingerprints.ts` is untouched.
 
 ### Settled
 
@@ -334,6 +334,32 @@ page uses.
 right thing to enforce in the cheaper place. `benchmarkCap.contract.test.ts`
 pins the numbers the two halves do share — the limit, the four domains, the legal
 clocks, the coach-workout refusal, the unique index and the grants.
+
+### Phase 4 notes
+
+**One row component, two sources.** `BenchmarkRow` renders a personal and a
+campaign benchmark identically — the scores, the change, the "first attempt"
+caveat and the off-version disclosure are the same, because the derivation
+behind them is literally the same function. Only who schedules the retest
+differs, and that is one prop.
+
+**A campaign benchmark's version is the athlete's first attempt at it.** Nobody
+designated it, so nothing stored says how it would be performed; the week-one
+run is what the retests are measured against, which is exactly the role
+`version_key` plays for a personal benchmark. Taking the _first_ rather than the
+most recent matters: an athlete who modified week one and later retested
+standard has made a change, not set a new baseline, and taking the latest
+version would silently redefine the test so that their progress vanished from
+the series.
+
+**No Retest link on a campaign row.** The campaign owns that calendar, and
+offering a retest here would open a mission its schedule knows nothing about.
+The row says who holds the slot instead.
+
+**Fixed in passing:** phase 3's campaign row printed the _domain_ as the clock,
+so a campaign testing at 12 minutes read "15 min". `BenchmarkSlot` now carries
+the real `durationMinutes`, and the attempt search matches on it — matching on
+the domain would let a 15-minute run define the version of a 12-minute test.
 
 ### Phase 3 notes
 

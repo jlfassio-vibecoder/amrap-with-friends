@@ -78,6 +78,7 @@ export function campaignBenchmarkSlots(
       domain,
       source: 'campaign',
       templateId: benchmark.templateId as string,
+      durationMinutes: benchmark.durationMinutes,
       campaignName: campaign.name,
     });
   }
