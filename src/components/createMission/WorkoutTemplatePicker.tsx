@@ -18,7 +18,9 @@ import {
 } from '@/lib/workout/filterWorkoutTemplates';
 import { WorkoutTemplateCard } from '@/components/createMission/WorkoutTemplateCard';
 import { SmartRecoveryToggle } from '@/components/createMission/SmartRecoveryToggle';
+import { TimeDomainInfoModal } from '@/components/createMission/TimeDomainInfoModal';
 import { WorkoutStyleInfoModal } from '@/components/workoutStyle/WorkoutStyleInfoModal';
+import { guidanceForDomain } from '@/data/timeDomainGuidance';
 import type { ClassificationQuotas } from '@/lib/hud/classificationQuotas';
 import type { ClassificationRank, HudClassification } from '@/lib/hud/types';
 import type { TemplateRecoveryLock } from '@/lib/smartRecovery/computeRecoveryLocks';
@@ -28,7 +30,7 @@ const INTENSITY_OPTIONS: Array<IntensityTier | null> = [null, 1, 2, 3, 4, 5];
 interface WorkoutTemplatePickerProps {
   durationMinutes: TimeDomain;
   selectedCategory: WorkoutCategory;
-  selectedTemplateId: string | null;
+  selectedTemplateIds: string[];
   classification?: HudClassification | null;
   perceivedClassification?: ClassificationRank | null;
   quotas?: ClassificationQuotas;
@@ -47,7 +49,7 @@ interface WorkoutTemplatePickerProps {
 export function WorkoutTemplatePicker({
   durationMinutes,
   selectedCategory,
-  selectedTemplateId,
+  selectedTemplateIds,
   classification = null,
   perceivedClassification = null,
   quotas,
@@ -63,9 +65,11 @@ export function WorkoutTemplatePicker({
   onTemplateSelect,
 }: WorkoutTemplatePickerProps) {
   const [infoCategory, setInfoCategory] = useState<WorkoutCategory | null>(null);
+  const [infoDomain, setInfoDomain] = useState<TimeDomain | null>(null);
   const [intensityTier, setIntensityTier] = useState<IntensityTier | null>(null);
   const [nameQuery, setNameQuery] = useState('');
   const searching = normalizeMissionNameQuery(nameQuery).length > 0;
+  const selectedDomainGuidance = guidanceForDomain(durationMinutes);
 
   const visibleTemplates = filterWorkoutTemplates(WORKOUT_TEMPLATES, {
     durationMinutes,
@@ -108,19 +112,43 @@ export function WorkoutTemplatePicker({
             const selected = durationMinutes === duration;
 
             return (
-              <button
+              <div
                 key={duration}
-                type="button"
-                disabled={!available || searching}
-                className={chipClassName(selected, available)}
-                onClick={() => onDurationChange(duration)}
+                className={`inline-flex items-center gap-1.5 ${
+                  selected
+                    ? 'rounded-full bg-accent py-2 pl-4 pr-2 text-sm font-semibold text-on-accent'
+                    : available
+                      ? 'hover:border-accent/40 rounded-full border border-border bg-surface py-2 pl-4 pr-2 text-sm font-semibold text-ink'
+                      : 'rounded-full border border-border bg-surface py-2 pl-4 pr-2 text-sm font-semibold text-muted opacity-60'
+                }`}
               >
-                {duration} min
-                {!available ? <span className="ml-1 text-xs uppercase">Soon</span> : null}
-              </button>
+                <button
+                  type="button"
+                  disabled={!available || searching}
+                  className="bg-transparent text-inherit disabled:opacity-60"
+                  onClick={() => onDurationChange(duration)}
+                >
+                  {duration} min
+                  {!available ? <span className="ml-1 text-xs uppercase">Soon</span> : null}
+                </button>
+                <button
+                  type="button"
+                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold leading-none hover:opacity-80 ${
+                    selected ? 'bg-on-accent text-accent' : 'bg-accent text-on-accent'
+                  }`}
+                  aria-label={`What's the ${duration} min domain?`}
+                  title={`Learn what the ${duration} min domain is for`}
+                  onClick={() => setInfoDomain(duration)}
+                >
+                  ?
+                </button>
+              </div>
             );
           })}
         </div>
+        {!searching ? (
+          <p className="text-sm text-secondary">{selectedDomainGuidance.tagline}</p>
+        ) : null}
       </div>
 
       <div className="space-y-2">
@@ -129,32 +157,38 @@ export function WorkoutTemplatePicker({
           {visibleCategories.map((category) => {
             const available = isCategoryAvailable(category, durationMinutes, WORKOUT_TEMPLATES);
             const selected = selectedCategory === category.id;
+            const label = categoryDisplayForDuration(category, durationMinutes).label;
 
             return (
-              <div key={category.id} className="flex items-center gap-1">
+              <div
+                key={category.id}
+                className={`inline-flex items-center gap-1.5 ${
+                  selected
+                    ? 'rounded-full bg-accent py-2 pl-4 pr-2 text-sm font-semibold text-on-accent'
+                    : available
+                      ? 'hover:border-accent/40 rounded-full border border-border bg-surface py-2 pl-4 pr-2 text-sm font-semibold text-ink'
+                      : 'rounded-full border border-border bg-surface py-2 pl-4 pr-2 text-sm font-semibold text-muted opacity-60'
+                }`}
+              >
                 <button
                   type="button"
                   disabled={!available || searching}
-                  className={chipClassName(selected, available)}
+                  className="bg-transparent text-inherit disabled:opacity-60"
                   onClick={() => onCategoryChange(category.id)}
                 >
-                  {categoryDisplayForDuration(category, durationMinutes).label}
+                  {label}
                   {!available ? <span className="ml-1 text-xs uppercase">Soon</span> : null}
                 </button>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1.5 text-xs font-semibold text-secondary hover:border-accent hover:bg-accent-tint hover:text-ink"
-                  aria-label={`What's ${category.label}?`}
-                  title={`Learn what the ${category.label} style is for`}
+                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold leading-none hover:opacity-80 ${
+                    selected ? 'bg-on-accent text-accent' : 'bg-accent text-on-accent'
+                  }`}
+                  aria-label={`What's ${label}?`}
+                  title={`Learn what the ${label} style is for`}
                   onClick={() => setInfoCategory(category.id)}
                 >
-                  <span
-                    className="flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] font-bold leading-none text-on-accent"
-                    aria-hidden="true"
-                  >
-                    ?
-                  </span>
-                  Guide
+                  ?
                 </button>
               </div>
             );
@@ -223,7 +257,7 @@ export function WorkoutTemplatePicker({
               <WorkoutTemplateCard
                 key={template.id}
                 template={template}
-                selected={selectedTemplateId === template.id}
+                selected={selectedTemplateIds.includes(template.id)}
                 classification={classification}
                 perceivedClassification={perceivedClassification}
                 quotas={quotas}
@@ -241,6 +275,14 @@ export function WorkoutTemplatePicker({
           </p>
         )}
       </div>
+
+      {infoDomain !== null ? (
+        <TimeDomainInfoModal
+          domain={infoDomain}
+          onClose={() => setInfoDomain(null)}
+          onBrowse={onDurationChange}
+        />
+      ) : null}
 
       {infoCategory ? (
         <WorkoutStyleInfoModal

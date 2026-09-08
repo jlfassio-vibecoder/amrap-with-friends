@@ -369,12 +369,12 @@ describe('MyMissionsPage chain groups', () => {
 });
 
 describe('MyMissionsPage CTAs', () => {
-  it('links Create mission and New campaign to their routes', async () => {
+  it('links Plan mission and New campaign to their routes', async () => {
     fetchMyMissionsMock.mockResolvedValue({ data: [], error: null });
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: 'Create mission' }).getAttribute('href')).toBe(
+      expect(screen.getByRole('link', { name: 'Plan mission' }).getAttribute('href')).toBe(
         '/create'
       );
       expect(screen.getByRole('link', { name: 'New campaign' }).getAttribute('href')).toBe(

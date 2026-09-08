@@ -10,9 +10,7 @@ import { capsForDomain, domainForCap, type MissionTimeCap } from '@/lib/timeDoma
 
 interface MissionChainBuilderProps {
   items: ChainDraftItem[];
-  canAdd: boolean;
   isAuthenticated: boolean;
-  onAdd: () => void;
   onMoveUp: (index: number) => void;
   onMoveDown: (index: number) => void;
   onRemove: (index: number) => void;
@@ -30,9 +28,7 @@ function formatTotalSec(totalSec: number): string {
 
 export function MissionChainBuilder({
   items,
-  canAdd,
   isAuthenticated,
-  onAdd,
   onMoveUp,
   onMoveDown,
   onRemove,
@@ -55,25 +51,13 @@ export function MissionChainBuilder({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold">Mission chain</p>
-        {isAuthenticated ? (
-          <button
-            type="button"
-            className="btn-outline px-3 py-1.5 text-xs font-semibold"
-            disabled={!canAdd}
-            onClick={onAdd}
-          >
-            Add to chain
-          </button>
-        ) : (
-          <p className="text-xs text-secondary">Sign in to chain missions</p>
-        )}
-      </div>
+      <p className="text-sm font-semibold">Mission chain</p>
 
       {items.length === 0 ? (
         <p className="text-sm text-secondary">
-          Add up to {MAX_CHAIN_LENGTH} library missions. Rest between them is set automatically.
+          {isAuthenticated
+            ? 'Select missions in the library. Rest between them is set automatically.'
+            : 'Sign in to chain missions.'}
         </p>
       ) : (
         <ol className="space-y-3">

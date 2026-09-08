@@ -522,7 +522,7 @@ export default function RallyPointPage() {
                 <WorkoutTemplatePicker
                   durationMinutes={selectedDomain}
                   selectedCategory={selectedCategory}
-                  selectedTemplateId={selectedTemplateId}
+                  selectedTemplateIds={selectedTemplateId ? [selectedTemplateId] : []}
                   smartRecoveryEnabled={smartRecovery.enabled}
                   onSmartRecoveryEnabledChange={smartRecovery.setEnabled}
                   recoveryLocks={smartRecovery.locks}

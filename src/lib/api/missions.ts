@@ -52,13 +52,13 @@ function mapRpcError(message: string | undefined): string {
     return 'Check your workout list and try again.';
   }
   if (message.includes('Authentication required')) {
-    return 'Sign in to create a mission.';
+    return 'Sign in to plan a mission.';
   }
   if (message.includes('Sign in to schedule a mission')) {
     return 'Sign in to schedule a mission.';
   }
   if (message.includes('Intake required')) {
-    return 'Complete intake before creating a mission.';
+    return 'Complete intake before planning a mission.';
   }
   if (message.includes('Rally time must be in the future')) {
     return 'Rally time must be in the future.';

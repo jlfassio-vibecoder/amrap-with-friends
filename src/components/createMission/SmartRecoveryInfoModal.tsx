@@ -5,7 +5,7 @@ interface SmartRecoveryInfoModalProps {
 }
 
 /**
- * Explains the optional recovery advisory on Create mission / Next Mission.
+ * Explains the optional recovery advisory on Plan mission / Next Mission.
  * Windows match src/lib/smartRecovery/recoveryRules.ts.
  */
 export function SmartRecoveryInfoModal({ onClose }: SmartRecoveryInfoModalProps) {

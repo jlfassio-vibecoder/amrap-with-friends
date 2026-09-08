@@ -26,7 +26,7 @@ opaque verb for one action. Same brand, opposite sides of the line.
 
 | Term             | Means                                                                                                                            | Where it belongs                                                            |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| **Mission**      | One AMRAP workout, start to finish. The only word for it.                                                                        | Everywhere — "Create mission", `/mission/:id`, `missions` the table         |
+| **Mission**      | One AMRAP workout, start to finish. The only word for it.                                                                        | Everywhere — "Plan mission", `/mission/:id`, `missions` the table           |
 | **Campaign**     | A multi-week programme (2–12 weeks, 1–5 missions a week) with an end goal.                                                       | Buttons, page titles, routes. Always with its length: "8-week campaign"     |
 | **Squad**        | A persistent friends list for inviting people to train together. Not a mission. Prefer this over "crew" on mission/hub surfaces. | Buttons, page titles, routes, nav — "Your squad", `/squad`                  |
 | **Rally point**  | The gather/start screen for **this** mission — countdown, Start, Practice. Route `/mission/:id`.                                 | Waiting-room page title, walkthrough, featured "opens shortly before start" |
@@ -127,7 +127,8 @@ Kept here so they don't creep back in.
 | Return to a lobby you scheduled for later | Return to a mission you scheduled for later |
 | Staging area not found                    | Rally point not found                       |
 | Session (as the word for one workout)     | Mission                                     |
-| Create session / My sessions              | Create mission / My missions                |
+| Create session / My sessions              | Plan mission / My missions                  |
+| Create mission                            | Plan mission                                |
 | T-Minus console                           | Set the countdown                           |
 | Work (phase label)                        | Live                                        |
 

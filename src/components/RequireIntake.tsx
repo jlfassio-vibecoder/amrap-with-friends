@@ -29,8 +29,8 @@ export function RequireIntake({
   children,
   guestMode,
   signedOutPreview,
-  gateTitle = 'Create mission',
-  gateMessage = 'Sign in and set up your profile before creating a mission. You can still join as a guest.',
+  gateTitle = 'Plan mission',
+  gateMessage = 'Sign in and set up your profile before planning a mission. You can still join as a guest.',
   gateAllowsGuest = true,
   identityGate = 'overlay',
 }: RequireIntakeProps) {

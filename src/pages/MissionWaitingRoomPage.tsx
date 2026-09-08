@@ -425,7 +425,7 @@ export default function MissionWaitingRoomPage() {
           My missions
         </Link>
         <Link className="link-accent" to="/create">
-          Create mission
+          Plan mission
         </Link>
       </div>
     </main>
