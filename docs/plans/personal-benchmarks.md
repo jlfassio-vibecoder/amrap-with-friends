@@ -1,7 +1,7 @@
 # Plan: benchmarks an athlete designates for themselves
 
 **Branch:** `feature/personal-benchmarks` (proposed)
-**Status:** Phases 1–2 shipped. Phases 3–4 open.
+**Status:** Phases 1–3 shipped. Phase 4 open.
 **Last updated:** 2026-09-09
 
 ---
@@ -288,8 +288,8 @@ the due calculation, the Benchmarks panel on My missions, and the Retest
 shortcut at `/create?benchmark=<id>` with the workout and clock replaced rather
 than pre-filled.
 
-**Phase 3 — the HUD card.** The three rows, the version note, the readiness
-note.
+**Phase 3 — the HUD card. ✅ Shipped.** The rows, the slot count, the readiness
+caveat, and campaign-held slots shown as rows of their own.
 
 **Phase 4 — unify the campaign badge.** Render the campaign's derived benchmark
 through the same row component, and count a campaign benchmark in the card.
@@ -334,6 +334,24 @@ page uses.
 right thing to enforce in the cheaper place. `benchmarkCap.contract.test.ts`
 pins the numbers the two halves do share — the limit, the four domains, the legal
 clocks, the coach-workout refusal, the unique index and the grants.
+
+### Phase 3 notes
+
+**The card lives on the HUD only.** Phase 2 put the panel on My missions
+because that was where the data already was; the design always placed it on the
+HUD, below the load cards and above the domain matrix, and two copies of one
+card is worse than either. My missions keeps the pill and Retire, which is
+where managing a designation belongs.
+
+**A campaign-held slot gets a row, not just a smaller number.** "2 of 3 active"
+with no explanation reads like a bug to the athlete who only designated one.
+The campaign's row names the campaign and says it schedules its own retests.
+
+**The readiness caveat is a sentence and stays one.** It appears at `elevated`
+and `high`, it does not hide the Retest link, it does not move the due date, and
+a test asserts it never prescribes a rest day — settled in the overtraining
+work, because an athlete who stops training drops the chronic baseline that
+caused the warning and makes next week's ratio worse.
 
 ### Phase 2 notes
 

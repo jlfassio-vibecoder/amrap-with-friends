@@ -150,4 +150,75 @@ describe('BenchmarkProgressPanel', () => {
     );
     expect(screen.getByText('Diamond Push-ups: from the knees')).toBeTruthy();
   });
+
+  it('counts a campaign slot in the header and says which campaign holds it', () => {
+    render(
+      <MemoryRouter>
+        <BenchmarkProgressPanel
+          benchmarks={[BENCHMARK]}
+          missions={[]}
+          campaignSlots={[
+            {
+              domain: 20,
+              source: 'campaign',
+              templateId: 'the-pacer',
+              campaignName: '8-week Blood Shunt',
+            },
+          ]}
+          now={NOW}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getByText('2 of 3 active')).toBeTruthy();
+    expect(screen.getByText(/Held by 8-week Blood Shunt/)).toBeTruthy();
+  });
+
+  it('renders for an athlete whose only slot is a campaign', () => {
+    render(
+      <MemoryRouter>
+        <BenchmarkProgressPanel
+          benchmarks={[]}
+          missions={[]}
+          campaignSlots={[
+            { domain: 20, source: 'campaign', templateId: 'the-pacer', campaignName: 'Winter' },
+          ]}
+          now={NOW}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getByText('1 of 3 active')).toBeTruthy();
+  });
+
+  it('warns that a test under high load reads as fatigue, without blocking it', () => {
+    const since = Array.from({ length: 8 }, (_, index) =>
+      run({ missionId: `s${index}`, templateId: 'equilibrium', createdAt: daysAgo(30 - index) })
+    );
+    render(
+      <MemoryRouter>
+        <BenchmarkProgressPanel
+          benchmarks={[BENCHMARK]}
+          missions={[run({ missionId: 'm1', createdAt: daysAgo(60) }), ...since]}
+          riskLevel="high"
+          now={NOW}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getByText(/fatigue as much as fitness/)).toBeTruthy();
+    // A caveat, never a gate: the retest is still one tap away.
+    expect(screen.getByRole('link', { name: 'Retest' })).toBeTruthy();
+  });
+
+  it('stays quiet about readiness when the load is ordinary', () => {
+    render(
+      <MemoryRouter>
+        <BenchmarkProgressPanel
+          benchmarks={[BENCHMARK]}
+          missions={[]}
+          riskLevel="normal"
+          now={NOW}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.queryByText(/fatigue as much as fitness/)).toBeNull();
+  });
 });

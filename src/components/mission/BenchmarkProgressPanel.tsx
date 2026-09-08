@@ -12,6 +12,9 @@ import {
 } from '@/lib/benchmark/benchmarkStatus';
 import { formatVariantBadge } from '@/lib/mission/exerciseScaling';
 import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
+import { MAX_ACTIVE_BENCHMARKS, type BenchmarkSlot } from '@/lib/benchmark/benchmarkCap';
+import { benchmarkReadinessNote } from '@/lib/benchmark/benchmarkReadiness';
+import type { OvertrainingRiskLevel } from '@/lib/hud/evaluateOvertrainingRisk';
 
 interface BenchmarkProgressPanelProps {
   benchmarks: readonly AthleteBenchmark[];
@@ -23,6 +26,17 @@ interface BenchmarkProgressPanelProps {
    * makes a status flicker.
    */
   now: number;
+  /**
+   * Slots a live campaign is holding. Counted in the header, because an athlete
+   * whose third slot went to a campaign should be told where it went rather
+   * than left to wonder why they cannot designate another.
+   */
+  campaignSlots?: readonly BenchmarkSlot[];
+  /**
+   * The athlete's current load, for the readiness caveat. Omit it and no
+   * caveat is shown — never a gate either way.
+   */
+  riskLevel?: OvertrainingRiskLevel;
 }
 
 /** "142 → 156 reps". Oldest to newest, the way it happened. */
@@ -56,12 +70,21 @@ function formatChange(history: BenchmarkHistory): string | null {
  * trend, and there is no projection, no goal line and no "on track", because
  * there is no validated model for how fast a benchmark should move.
  */
-export function BenchmarkProgressPanel({ benchmarks, missions, now }: BenchmarkProgressPanelProps) {
+export function BenchmarkProgressPanel({
+  benchmarks,
+  missions,
+  now,
+  campaignSlots = [],
+  riskLevel,
+}: BenchmarkProgressPanelProps) {
   const active = benchmarks.filter((benchmark) => benchmark.retiredAt === null);
-  if (active.length === 0) {
+  if (active.length === 0 && campaignSlots.length === 0) {
     // No empty state selling the feature. Designating happens on the mission.
     return null;
   }
+
+  const used = active.length + campaignSlots.length;
+  const readiness = riskLevel ? benchmarkReadinessNote(riskLevel) : null;
 
   const missionDates = missions.map((mission) => ({
     at: mission.scheduledAt ?? mission.createdAt,
@@ -71,10 +94,16 @@ export function BenchmarkProgressPanel({ benchmarks, missions, now }: BenchmarkP
   return (
     <section className="card space-y-3 p-4">
       <div className="space-y-1">
-        <h2 className="text-display text-lg text-ink">Benchmarks</h2>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-display text-lg text-ink">Benchmarks</h2>
+          <span className="text-xs text-muted">
+            {used} of {MAX_ACTIVE_BENCHMARKS} active
+          </span>
+        </div>
         <p className="text-sm text-secondary">
           Workouts you measure against. Same workout, same clock, performed the same way.
         </p>
+        {readiness ? <p className="text-xs text-muted">{readiness}</p> : null}
       </div>
 
       <ul className="space-y-4">
@@ -143,6 +172,16 @@ export function BenchmarkProgressPanel({ benchmarks, missions, now }: BenchmarkP
             </li>
           );
         })}
+        {campaignSlots.map((slot) => (
+          <li key={`campaign:${slot.domain}`} className="space-y-1">
+            <p className="text-sm font-semibold text-ink">
+              {resolveWorkoutTitle(slot.templateId)} · {slot.domain} min
+            </p>
+            <p className="text-xs text-muted">
+              Held by {slot.campaignName ?? 'a campaign'}, which schedules its own retests.
+            </p>
+          </li>
+        ))}
       </ul>
     </section>
   );
