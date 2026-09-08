@@ -71,6 +71,10 @@ export function ScoreTrendChart({ weeks }: ScoreTrendChartProps) {
   const bandWidth = weeks.length > 0 ? plotWidth / weeks.length : plotWidth;
 
   const gridlineValues = [0, ceiling / 2, ceiling];
+  // At 12 weeks a date label per band would overlap its neighbours, so thin
+  // them to at most eight — counted back from the current week, so that one
+  // is always labelled and the kept labels stay evenly spaced.
+  const labelStride = Math.max(1, Math.ceil(weeks.length / 8));
   const intensityShift =
     summary !== null ? isIntensityShiftWeek(summary.currentWeek, summary.previousWeek) : false;
 
@@ -185,14 +189,16 @@ export function ScoreTrendChart({ weeks }: ScoreTrendChartProps) {
                       {week.totalScore}
                     </text>
                   ) : null}
-                  <text
-                    x={bandX + bandWidth / 2}
-                    y={PADDING.top + plotHeight + 12}
-                    textAnchor="middle"
-                    className="fill-secondary text-[8px]"
-                  >
-                    {formatWeekLabel(week.weekStart)}
-                  </text>
+                  {(weeks.length - 1 - index) % labelStride === 0 ? (
+                    <text
+                      x={bandX + bandWidth / 2}
+                      y={PADDING.top + plotHeight + 12}
+                      textAnchor="middle"
+                      className="fill-secondary text-[8px]"
+                    >
+                      {formatWeekLabel(week.weekStart)}
+                    </text>
+                  ) : null}
                 </g>
               );
             })}

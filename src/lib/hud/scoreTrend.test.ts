@@ -1,118 +1,58 @@
 import { describe, expect, it } from 'vitest';
 import {
-  buildScoreTrend,
   isIntensityShiftWeek,
   niceCeiling,
+  scoreTrendFromHistory,
   summarizeScoreTrend,
   type ScoreTrendWeek,
 } from '@/lib/hud/scoreTrend';
-import type { MyMissionEntry } from '@/lib/api/myMissions';
+import type { HudHistoryWeek } from '@/lib/hud/types';
 
-// A Wednesday, so "this week" runs Monday 2026-09-07 through Sunday 2026-09-13
-// — every fixture below is dated against that anchor.
-const NOW = new Date('2026-09-09T12:00:00');
-
-function entry(overrides: Partial<MyMissionEntry> = {}): MyMissionEntry {
+function historyWeek(overrides: Partial<HudHistoryWeek> = {}): HudHistoryWeek {
   return {
-    participantId: '11111111-1111-4111-8111-111111111111',
-    nickname: 'Justin',
-    joinedAt: '2026-09-01T12:00:00.000Z',
-    role: 'host',
-    missionId: '22222222-2222-4222-8222-222222222222',
-    createdAt: '2026-09-09T12:00:00.000Z',
-    scheduledAt: null,
-    isFeatured: false,
-    durationMinutes: 20,
-    workout: [],
-    templateId: null,
-    rallyPointId: null,
-    chainItemCount: 0,
-    chainUnstartedCount: 0,
-    state: 'finished',
-    segmentIndex: 0,
-    roundCount: 10,
-    partialReps: 0,
-    finalScore: 236,
-    scoreBreakdown: null,
-    modifiedMovements: [],
-    movementVariants: {},
-    rpe: null,
-    sessionNotes: '',
-    checkIns: {},
-    coachWorkoutName: null,
+    weekStart: new Date(2026, 8, 7).toISOString(),
+    minutes: 0,
+    compliant: false,
+    missionCount: 0,
+    score: 0,
+    pviAverage: null,
+    missions: [],
     ...overrides,
   };
 }
 
-function weekAt(dateIso: string, overrides: Partial<MyMissionEntry> = {}) {
-  return entry({ scheduledAt: dateIso, ...overrides });
-}
+describe('scoreTrendFromHistory', () => {
+  it('carries the weeks through in order, without rebucketing them', () => {
+    const weeks = scoreTrendFromHistory([
+      historyWeek({ minutes: 20, score: 200, missionCount: 1 }),
+      historyWeek({ minutes: 40, score: 500, missionCount: 2 }),
+    ]);
 
-describe('buildScoreTrend', () => {
-  it('returns exactly weekCount buckets, oldest first, ending at the current week', () => {
-    const weeks = buildScoreTrend([], 4, NOW);
-    expect(weeks).toHaveLength(4);
-    // Current week (containing NOW) is last; each earlier bucket is 7 days back.
-    const starts = weeks.map((w) => new Date(w.weekStart).getTime());
-    for (let i = 1; i < starts.length; i += 1) {
-      expect(starts[i] - starts[i - 1]).toBe(7 * 24 * 60 * 60 * 1000);
-    }
-    // Read back in local time, not toISOString(): a UTC+ machine would see
-    // local midnight Sept 7 serialize to a Sept 6 instant, failing a
-    // same-machine-only assertion for a reason that has nothing to do with
-    // the bucketing logic under test.
-    const lastWeekStart = new Date(weeks[3].weekStart);
-    expect([
-      lastWeekStart.getFullYear(),
-      lastWeekStart.getMonth(),
-      lastWeekStart.getDate(),
-    ]).toEqual([2026, 8, 7]);
+    expect(weeks).toHaveLength(2);
+    expect(weeks[0].totalScore).toBe(200);
+    expect(weeks[0].totalMinutes).toBe(20);
+    expect(weeks[1].totalScore).toBe(500);
+    expect(weeks[1].missionCount).toBe(2);
   });
 
-  it('sums score and minutes for missions that land in the same week', () => {
-    const entries = [
-      weekAt('2026-09-08T09:00:00', { finalScore: 200, durationMinutes: 15 }),
-      weekAt('2026-09-10T09:00:00', { finalScore: 150, durationMinutes: 10 }),
-    ];
-    const weeks = buildScoreTrend(entries, 1, NOW);
-    expect(weeks[0].totalScore).toBe(350);
-    expect(weeks[0].totalMinutes).toBe(25);
-    expect(weeks[0].missionCount).toBe(2);
-    expect(weeks[0].scorePerMinute).toBe(14);
+  it('derives score per minute to one decimal', () => {
+    const [week] = scoreTrendFromHistory([historyWeek({ minutes: 60, score: 700 })]);
+    expect(week.scorePerMinute).toBe(11.7);
   });
 
-  it('keeps a mission out of a week it does not belong to', () => {
-    // The prior Sunday, one week back from the current Monday-start.
-    const entries = [weekAt('2026-09-06T23:59:00', { finalScore: 999, durationMinutes: 20 })];
-    const weeks = buildScoreTrend(entries, 2, NOW);
-    expect(weeks[0].totalScore).toBe(999); // Prior week
-    expect(weeks[1].totalScore).toBe(0); // Current week — untouched
+  it('leaves score per minute null for a week with no minutes', () => {
+    const [week] = scoreTrendFromHistory([historyWeek()]);
+    expect(week.scorePerMinute).toBeNull();
   });
 
-  it('excludes missions with no locked score', () => {
-    const entries = [weekAt('2026-09-08T09:00:00', { finalScore: null })];
-    const weeks = buildScoreTrend(entries, 1, NOW);
-    expect(weeks[0].totalScore).toBe(0);
-    expect(weeks[0].missionCount).toBe(0);
+  it('preserves weekStart untouched, since the server already anchored it', () => {
+    const weekStart = new Date(2026, 7, 31).toISOString();
+    const [week] = scoreTrendFromHistory([historyWeek({ weekStart })]);
+    expect(week.weekStart).toBe(weekStart);
   });
 
-  it('falls back to createdAt when scheduledAt is null', () => {
-    const entries = [
-      entry({ scheduledAt: null, createdAt: '2026-09-08T09:00:00', finalScore: 100 }),
-    ];
-    const weeks = buildScoreTrend(entries, 1, NOW);
-    expect(weeks[0].totalScore).toBe(100);
-  });
-
-  it('leaves scorePerMinute null for a week with no logged minutes', () => {
-    const weeks = buildScoreTrend([], 1, NOW);
-    expect(weeks[0].scorePerMinute).toBeNull();
-  });
-
-  it('drops a mission with an unparseable date rather than throwing', () => {
-    const entries = [weekAt('not-a-date', { finalScore: 100 })];
-    expect(() => buildScoreTrend(entries, 1, NOW)).not.toThrow();
-    expect(buildScoreTrend(entries, 1, NOW)[0].totalScore).toBe(0);
+  it('is empty when the server sent no weeks', () => {
+    expect(scoreTrendFromHistory([])).toEqual([]);
   });
 });
 

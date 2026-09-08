@@ -5,7 +5,9 @@ import type {
   HudActivity7d,
   HudClassification,
   HudDomainMinutes,
+  HudHistoryWeek,
   HudOvertraining,
+  HudWeekMission,
   HudWeekPviMission,
   HUDTelemetryPayload,
 } from '@/lib/hud/types';
@@ -249,6 +251,132 @@ function readWeekPviMissions(value: unknown): HudWeekPviMission[] {
   return missions;
 }
 
+function readWeekMission(value: unknown): HudWeekMission | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const row = value as Record<string, unknown>;
+  const missionId = readString(row.missionId);
+  const durationMinutes = readNonNegativeInt(row.durationMinutes);
+  const lockedAt = readString(row.lockedAt);
+  const templateRaw = row.templateId;
+
+  // History missions include locked workouts whose PVI is JSON null — a normal
+  // ScoreBreakdown value when pacing cannot be computed. Do not reuse
+  // readWeekPviMission, which requires a numeric pvi for the weekly PVI card.
+  let pvi: number | null;
+  if (row.pvi === null || row.pvi === undefined) {
+    pvi = null;
+  } else {
+    pvi = readNumber(row.pvi);
+    if (pvi === null) {
+      return null;
+    }
+  }
+
+  if (missionId === null || durationMinutes === null || lockedAt === null) {
+    return null;
+  }
+
+  let templateId: string | null;
+  if (templateRaw === null || templateRaw === undefined) {
+    templateId = null;
+  } else {
+    templateId = readString(templateRaw);
+    if (templateId === null) {
+      return null;
+    }
+  }
+
+  const rawScore = row.finalScore;
+  if (rawScore === null || rawScore === undefined) {
+    return { missionId, pvi, durationMinutes, templateId, lockedAt, finalScore: null };
+  }
+
+  const finalScore = readNumber(rawScore);
+  if (finalScore === null) {
+    return null;
+  }
+  return { missionId, pvi, durationMinutes, templateId, lockedAt, finalScore };
+}
+
+function readHistoryWeek(value: unknown): HudHistoryWeek | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const row = value as Record<string, unknown>;
+  const weekStart = readString(row.weekStart);
+  const minutes = readNonNegativeInt(row.minutes);
+  const missionCount = readNonNegativeInt(row.missionCount);
+  const score = readNumber(row.score);
+
+  if (
+    weekStart === null ||
+    minutes === null ||
+    missionCount === null ||
+    score === null ||
+    typeof row.compliant !== 'boolean'
+  ) {
+    return null;
+  }
+
+  const rawPvi = row.pviAverage;
+  let pviAverage: number | null;
+  if (rawPvi === null || rawPvi === undefined) {
+    pviAverage = null;
+  } else {
+    pviAverage = readNumber(rawPvi);
+    if (pviAverage === null) {
+      return null;
+    }
+  }
+
+  const rawMissions = row.missions;
+  const missions: HudWeekMission[] = [];
+  if (Array.isArray(rawMissions)) {
+    for (const item of rawMissions) {
+      const mission = readWeekMission(item);
+      if (mission === null) {
+        return null;
+      }
+      missions.push(mission);
+    }
+  }
+
+  return {
+    weekStart,
+    minutes,
+    compliant: row.compliant,
+    missionCount,
+    score,
+    pviAverage,
+    missions,
+  };
+}
+
+/**
+ * Missing or malformed → `[]`, the same tolerance `readWeekPviMissions` uses:
+ * a client running ahead of the week-history migration keeps its telemetry and
+ * degrades to the read-only attrition grid rather than losing the whole HUD.
+ */
+function readHistoryWeeks(value: unknown): HudHistoryWeek[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const weeks: HudHistoryWeek[] = [];
+  for (const item of value) {
+    const parsed = readHistoryWeek(item);
+    if (parsed === null) {
+      return [];
+    }
+    weeks.push(parsed);
+  }
+  return weeks;
+}
+
 export function parseHudTelemetryPayload(value: unknown): HUDTelemetryPayload | null {
   if (!value || typeof value !== 'object') {
     return null;
@@ -301,6 +429,7 @@ export function parseHudTelemetryPayload(value: unknown): HUDTelemetryPayload | 
     weekEndsAt,
     lastLockedAt,
     attrition,
+    weeks: readHistoryWeeks(row.weeks),
     domainMinutes30d,
     classification,
     activity7d,
