@@ -56,20 +56,15 @@ BEGIN
     WHERE event_name = 'presence_heartbeat'
       AND occurred_at < now() - p_compact_after
       AND coalesce((props ->> 'compacted')::boolean, false) IS NOT TRUE
-    RETURNING user_id, anon_id, occurred_at, route
+    RETURNING user_id, anon_id, occurred_at
   ),
   inserted AS (
-    INSERT INTO public.analytics_events
-      (event_name, occurred_at, user_id, anon_id, route, props)
+    INSERT INTO public.analytics_events (event_name, occurred_at, user_id, anon_id, props)
     SELECT
       'presence_heartbeat',
       max(d.occurred_at),
       d.user_id,
       d.anon_id,
-      -- The route of the latest ping in the hour, not an arbitrary one:
-      -- coach_anon_summary reads lastRoute off the single most recent event,
-      -- and for a guest idle more than two days that row is now this one.
-      (array_agg(d.route ORDER BY d.occurred_at DESC))[1],
       jsonb_build_object('compacted', true, 'ping_count', count(*))
     FROM deleted d
     GROUP BY d.user_id, d.anon_id, date_trunc('hour', d.occurred_at)
