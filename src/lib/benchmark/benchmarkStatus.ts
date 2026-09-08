@@ -34,7 +34,7 @@ export type BenchmarkStatus =
       state: 'waiting';
       daysRemaining: number;
       missionsRemaining: number;
-      /** Which gate the athlete is actually waiting on — the later of the two. */
+      /** Days until clear, else missions — days first when both remain. */
       binding: 'days' | 'missions';
     };
 

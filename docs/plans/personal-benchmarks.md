@@ -1,8 +1,8 @@
 # Plan: benchmarks an athlete designates for themselves
 
-**Branch:** `feature/personal-benchmarks` (proposed)
+**Branch:** `feature/modified-movements`
 **Status:** Phases 1–4 shipped, reviewed, three defects fixed. Feature complete.
-**Last updated:** 2026-09-09
+**Last updated:** 2026-09-08
 
 ---
 
