@@ -810,6 +810,7 @@ export default function CreateMissionPage() {
                 hideSelectedWorkoutPreview={missionChain.length >= 1}
                 loading={loading}
                 onNicknameChange={setNickname}
+                durationLockedNote={retest ? 'set by your benchmark' : null}
                 onDurationChange={handleSummaryDurationChange}
                 onCapChange={setDurationMinutes}
                 onScheduleModeChange={setScheduleMode}

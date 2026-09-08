@@ -1,8 +1,12 @@
-import type { AthleteBenchmark } from '@/lib/api/benchmarks';
+import { personalBenchmarkSlots, type AthleteBenchmark } from '@/lib/api/benchmarks';
 import { buildBenchmarkHistory, type AttemptCandidate } from '@/lib/benchmark/benchmarkAttempts';
 import { campaignBenchmarkHistory } from '@/lib/benchmark/campaignBenchmarkHistory';
 import { benchmarkStatus, missionsSince } from '@/lib/benchmark/benchmarkStatus';
-import { MAX_ACTIVE_BENCHMARKS, type BenchmarkSlot } from '@/lib/benchmark/benchmarkCap';
+import {
+  MAX_ACTIVE_BENCHMARKS,
+  activeBenchmarkCount,
+  type BenchmarkSlot,
+} from '@/lib/benchmark/benchmarkCap';
 import { benchmarkReadinessNote } from '@/lib/benchmark/benchmarkReadiness';
 import { BenchmarkRow } from '@/components/mission/BenchmarkRow';
 import { formatVariantBadge } from '@/lib/mission/exerciseScaling';
@@ -58,7 +62,12 @@ export function BenchmarkProgressPanel({
     return null;
   }
 
-  const used = active.length + campaignSlots.length;
+  // Domains, not rows. The cap is one benchmark per domain, so counting slots
+  // over-reports the moment two occupants share one — two live campaigns can
+  // both test at ten minutes, and nothing stops a personal benchmark sitting in
+  // a domain a campaign later claims. Saying "3 of 3" to someone who can still
+  // designate at two other clocks is worse than saying nothing.
+  const used = activeBenchmarkCount([...campaignSlots, ...personalBenchmarkSlots(active)]);
   const readiness = riskLevel ? benchmarkReadinessNote(riskLevel) : null;
 
   const missionDates = missions.map((mission) => ({
@@ -120,7 +129,10 @@ export function BenchmarkProgressPanel({
           const history = campaignBenchmarkHistory(slot, missions);
           return (
             <BenchmarkRow
-              key={`campaign:${slot.domain}`}
+              // Keyed by the campaign, not the domain: two campaigns testing at
+              // the same clock are two rows, and a shared key makes React
+              // reconcile them as one.
+              key={`campaign:${slot.campaignName ?? ''}:${slot.templateId}:${slot.durationMinutes}`}
               templateId={slot.templateId}
               durationMinutes={slot.durationMinutes}
               history={history}

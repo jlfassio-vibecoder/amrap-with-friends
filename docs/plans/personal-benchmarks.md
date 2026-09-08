@@ -1,7 +1,7 @@
 # Plan: benchmarks an athlete designates for themselves
 
 **Branch:** `feature/personal-benchmarks` (proposed)
-**Status:** Phases 1–4 shipped. Feature complete.
+**Status:** Phases 1–4 shipped, reviewed, three defects fixed. Feature complete.
 **Last updated:** 2026-09-09
 
 ---
@@ -334,6 +334,52 @@ page uses.
 right thing to enforce in the cheaper place. `benchmarkCap.contract.test.ts`
 pins the numbers the two halves do share — the limit, the four domains, the legal
 clocks, the coach-workout refusal, the unique index and the grants.
+
+### Review findings
+
+Three defects found reviewing the finished feature, all fixed.
+
+**The card counted rows, not domains.** `used = active.length +
+campaignSlots.length`, but the cap is one benchmark per _domain_. Nothing stops
+two live campaigns testing at ten minutes, and a personal benchmark can predate
+a campaign that later claims its domain — so the header could say "3 of 3
+active" to someone who could still designate at two other clocks, contradicting
+the control that would have let them. Now `activeBenchmarkCount` over both
+sources, the same function the cap itself uses.
+
+**Two campaigns at one clock shared a React key.** `campaign:${slot.domain}`
+made React reconcile two real rows as one. Keyed by campaign, template and clock
+now.
+
+**The retest's clock was not actually locked.** `RetestBanner` promised "same
+workout, same clock", and the summary panel's `onCapChange` was live underneath
+it — change the cap mid-retest and the mission silently stops counting as an
+attempt. The clock now renders as a locked value, reusing the treatment a coach
+workout's fixed duration already had.
+
+**And one integrity gap in the floor.** `designate_benchmark` validated
+`p_duration_minutes` and `p_time_domain` independently, so a 25-minute test
+could be filed against the 5-minute slot with every CHECK passing. Unreachable
+from this client, which derives the domain from the cap — but the function's
+whole stated purpose is to hold whatever the client does, and a mismatched pair
+would occupy the wrong slot permanently with nothing able to notice.
+`20260909240000` checks the pair, and the contract test now runs the SQL arms
+against `domainForCap` over every legal clock.
+
+### Known costs, not defects
+
+**Extra fetches on two hot paths.** The designate control fetches benchmarks and
+campaigns on every rally-point load, for host and joiner alike; the HUD card
+adds benchmarks, missions and campaigns. That is the price of deriving attempts
+instead of storing them, and it is still the right trade — but it is three RPCs
+on the HUD and two on the waiting room, and worth revisiting if either gets
+slow.
+
+**A failed campaign fetch on first load frees a slot it should hold.** The
+control keeps previous slots when the campaign fetch fails, but on a first load
+there are none to keep, so the athlete could designate into a campaign-held
+domain. Soft by design — over-designating costs training, not integrity — but
+the code comment there claims more protection than it delivers.
 
 ### Phase 4 notes
 

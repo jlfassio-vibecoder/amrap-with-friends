@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { BenchmarkProgressPanel } from '@/components/mission/BenchmarkProgressPanel';
@@ -344,5 +344,87 @@ describe('BenchmarkProgressPanel', () => {
       </MemoryRouter>
     );
     expect(screen.getByText('No attempt yet')).toBeTruthy();
+  });
+
+  it('counts occupied domains, not rows, when two campaigns share a clock', () => {
+    // Nothing stops two live campaigns testing at ten minutes. Counting rows
+    // would say "2 of 3" for one occupied domain — and with a personal
+    // benchmark too, "3 of 3" to someone who can still designate at two other
+    // clocks.
+    const shared = (name: string, templateId: string) => ({
+      domain: 10 as const,
+      source: 'campaign' as const,
+      templateId,
+      durationMinutes: 10,
+      campaignName: name,
+    });
+
+    render(
+      <MemoryRouter>
+        <BenchmarkProgressPanel
+          benchmarks={[]}
+          missions={[]}
+          campaignSlots={[shared('A', 'the-hemodynamic'), shared('B', 'equilibrium')]}
+          now={NOW}
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('1 of 3 active')).toBeTruthy();
+    // Both campaigns are still real tests the athlete is running, so both show.
+    expect(screen.getByText(/Held by A/)).toBeTruthy();
+    expect(screen.getByText(/Held by B/)).toBeTruthy();
+  });
+
+  it('does not double-count a personal benchmark sitting in a campaign’s domain', () => {
+    // The RPC cannot see campaigns, so a personal benchmark can predate a
+    // campaign that later tests at the same clock.
+    render(
+      <MemoryRouter>
+        <BenchmarkProgressPanel
+          benchmarks={[BENCHMARK]}
+          missions={[]}
+          campaignSlots={[
+            {
+              domain: 10,
+              source: 'campaign',
+              templateId: 'the-hemodynamic',
+              durationMinutes: 10,
+              campaignName: 'Winter',
+            },
+          ]}
+          now={NOW}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getByText('1 of 3 active')).toBeTruthy();
+  });
+
+  it('gives two campaigns at one clock distinct rows', () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const shared = (name: string, templateId: string) => ({
+      domain: 10 as const,
+      source: 'campaign' as const,
+      templateId,
+      durationMinutes: 10,
+      campaignName: name,
+    });
+
+    render(
+      <MemoryRouter>
+        <BenchmarkProgressPanel
+          benchmarks={[]}
+          missions={[]}
+          campaignSlots={[shared('A', 'the-hemodynamic'), shared('B', 'equilibrium')]}
+          now={NOW}
+        />
+      </MemoryRouter>
+    );
+
+    const duplicateKey = errors.mock.calls.some((call) =>
+      String(call[0]).includes('two children with the same key')
+    );
+    errors.mockRestore();
+    expect(duplicateKey).toBe(false);
   });
 });

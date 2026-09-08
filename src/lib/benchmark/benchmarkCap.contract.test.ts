@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { TIME_DOMAINS } from '@/data/workoutTemplates';
 import { MAX_ACTIVE_BENCHMARKS } from '@/lib/benchmark/benchmarkCap';
-import { MAX_TIME_CAP, MIN_TIME_CAP, capsForDomain } from '@/lib/timeDomains';
+import { MAX_TIME_CAP, MIN_TIME_CAP, capsForDomain, domainForCap } from '@/lib/timeDomains';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../../..');
 const migration = readFileSync(
@@ -14,6 +14,11 @@ const migration = readFileSync(
 /** designate_benchmark was re-created here when it gained the variants column. */
 const variantsMigration = readFileSync(
   join(root, 'supabase/migrations/20260909230000_benchmark_movement_variants.sql'),
+  'utf8'
+);
+/** …and again here, when it learned that the clock and the domain are one fact. */
+const liveDesignate = readFileSync(
+  join(root, 'supabase/migrations/20260909240000_benchmark_domain_matches_cap.sql'),
   'utf8'
 );
 
@@ -75,16 +80,60 @@ describe('the SQL floor matches the TypeScript cap', () => {
   });
 
   it('refuses a coach workout, the same rule isBenchmarkableTemplate applies', () => {
-    // Asserted on the live definition, which moved when the function was
-    // re-created to take the variants — the original body is now history.
-    expect(variantsMigration).toContain("IF v_template LIKE 'coach:%' THEN");
-    expect(variantsMigration).toContain("'reason', 'coach_workout'");
+    // Asserted on the live definition. The function has been re-created twice;
+    // every guard has to survive each rewrite, which is exactly what a
+    // re-created function is likely to quietly drop.
+    expect(liveDesignate).toContain("IF v_template LIKE 'coach:%' THEN");
+    expect(liveDesignate).toContain("'reason', 'coach_workout'");
   });
 
-  it('keeps the limit when designate_benchmark is re-created', () => {
-    const limit = /IF v_active >= (\d+) THEN/.exec(variantsMigration);
-    expect(limit, 'the re-created function lost its at_limit guard').not.toBeNull();
-    expect(Number(limit![1])).toBe(MAX_ACTIVE_BENCHMARKS);
+  it('still refuses a coach workout in the intermediate definition', () => {
+    expect(variantsMigration).toContain("IF v_template LIKE 'coach:%' THEN");
+  });
+
+  it('agrees with domainForCap about which domain a clock belongs to', () => {
+    // The clock and the domain are one fact, and the RPC now checks the pair.
+    // Its arms are read out of the migration and run against the TypeScript
+    // table over every legal clock and both gap clocks.
+    const arms = [
+      ...liveDesignate.matchAll(/WHEN p_duration_minutes BETWEEN (\d+) AND (\d+) THEN (\d+)/g),
+    ].map((match) => ({
+      min: Number(match[1]),
+      max: Number(match[2]),
+      domain: Number(match[3]),
+    }));
+    expect(arms, 'the domain/cap agreement check is missing').toHaveLength(TIME_DOMAINS.length);
+
+    const sqlDomainFor = (cap: number) =>
+      arms.find((arm) => cap >= arm.min && cap <= arm.max)?.domain ?? null;
+
+    for (const domain of TIME_DOMAINS) {
+      for (const cap of capsForDomain(domain)) {
+        expect(sqlDomainFor(cap), `SQL puts ${cap} in the wrong domain`).toBe(domainForCap(cap));
+      }
+    }
+    for (const cap of [6, 11, 16, 17, MIN_TIME_CAP - 1, MAX_TIME_CAP + 1]) {
+      expect(sqlDomainFor(cap)).toBeNull();
+      expect(domainForCap(cap)).toBeNull();
+    }
+  });
+
+  it('rejects a mismatched pair rather than filing it against the wrong slot', () => {
+    expect(liveDesignate).toContain("'reason', 'domain_mismatch'");
+    expect(liveDesignate).toMatch(
+      /v_expected_domain IS NULL OR v_expected_domain <> p_time_domain/
+    );
+  });
+
+  it('keeps the limit through every re-creation of designate_benchmark', () => {
+    for (const [name, sql] of [
+      ['variants', variantsMigration],
+      ['domain match', liveDesignate],
+    ] as const) {
+      const limit = /IF v_active >= (\d+) THEN/.exec(sql);
+      expect(limit, `the ${name} rewrite lost its at_limit guard`).not.toBeNull();
+      expect(Number(limit![1])).toBe(MAX_ACTIVE_BENCHMARKS);
+    }
   });
 
   it('drops the old signature rather than leaving an ambiguous overload', () => {

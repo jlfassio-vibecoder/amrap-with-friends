@@ -33,6 +33,7 @@ const REFUSAL_MESSAGES: Record<string, string> = {
   invalid_template: 'This mission has no workout to measure against.',
   coach_workout: 'Coach workouts cannot be benchmarks yet — a coach can change one underneath you.',
   invalid_domain: 'This clock cannot carry a benchmark.',
+  domain_mismatch: 'This clock cannot carry a benchmark.',
   invalid_duration: 'This clock cannot carry a benchmark.',
   at_limit: 'You already have three benchmarks running. Retire one first.',
   domain_taken: 'You already have a benchmark at this length. Retire it first.',
