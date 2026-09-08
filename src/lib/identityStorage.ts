@@ -45,11 +45,17 @@ function readRaw(store: Storage | null, key: string): string | null {
   }
 }
 
-function writeRaw(store: Storage | null, key: string, value: string): void {
+/** Returns whether the value actually landed — callers must not assume it did. */
+function writeRaw(store: Storage | null, key: string, value: string): boolean {
+  if (!store) {
+    return false;
+  }
   try {
-    store?.setItem(key, value);
+    store.setItem(key, value);
+    return true;
   } catch {
     /* storage unavailable or full */
+    return false;
   }
 }
 
@@ -159,10 +165,20 @@ export function readIdentityItem(prefix: string, id: string): string | null {
 export function writeIdentityItem(prefix: string, id: string, value: string): void {
   const key = identityStorageKey(prefix, id);
   const durable = durableStore();
-  writeRaw(durable, key, value);
-  touchAndPrune(durable, id, Date.now());
-  // Keep one source of truth so a later clear cannot resurrect a stale value.
-  removeRaw(legacyStore(), key);
+
+  if (writeRaw(durable, key, value)) {
+    touchAndPrune(durable, id, Date.now());
+    // Keep one source of truth so a later clear cannot resurrect a stale value.
+    // Only once the durable copy is safely written — dropping the per-tab copy
+    // after a failed write would leave the athlete with no identity at all.
+    removeRaw(legacyStore(), key);
+    return;
+  }
+
+  // localStorage is full, blocked, or unavailable. Fall back to the per-tab
+  // store: an identity that dies with the tab still beats no identity, and it
+  // is what this storage did before it was made durable.
+  writeRaw(legacyStore(), key, value);
 }
 
 export function removeIdentityItem(prefix: string, id: string): void {

@@ -15,12 +15,28 @@ function openNewTab(): void {
   sessionStorage.clear();
 }
 
+/** Quota exceeded, private mode, or site data blocked — localStorage.setItem throws. */
+function breakDurableWrites(): void {
+  const original = Storage.prototype.setItem;
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (
+    this: Storage,
+    key: string,
+    value: string
+  ) {
+    if (this === localStorage) {
+      throw new DOMException('QuotaExceededError');
+    }
+    original.call(this, key, value);
+  });
+}
+
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.useRealTimers();
   localStorage.clear();
   sessionStorage.clear();
@@ -60,6 +76,27 @@ describe('identity storage', () => {
 
     expect(readIdentityItem(PREFIX, MISSION_ID)).toBe('participant-1');
     expect(readIdentityItem(PREFIX, OTHER_MISSION_ID)).toBe('participant-2');
+  });
+
+  it('keeps the per-tab copy when the durable write fails', () => {
+    sessionStorage.setItem(identityStorageKey(PREFIX, MISSION_ID), 'legacy-participant');
+    breakDurableWrites();
+
+    // The migrating read must not destroy the only copy it just found.
+    expect(readIdentityItem(PREFIX, MISSION_ID)).toBe('legacy-participant');
+    expect(sessionStorage.getItem(identityStorageKey(PREFIX, MISSION_ID))).toBe(
+      'legacy-participant'
+    );
+    expect(readIdentityItem(PREFIX, MISSION_ID)).toBe('legacy-participant');
+  });
+
+  it('falls back to the per-tab store when the durable write fails', () => {
+    breakDurableWrites();
+
+    writeIdentityItem(PREFIX, MISSION_ID, 'participant-1');
+
+    // Per-tab is a worse seat than durable, but it is still a seat.
+    expect(readIdentityItem(PREFIX, MISSION_ID)).toBe('participant-1');
   });
 
   it('prunes identities untouched for longer than the retention window', () => {
