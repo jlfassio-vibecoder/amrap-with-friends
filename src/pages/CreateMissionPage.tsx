@@ -19,6 +19,7 @@ import {
   type WorkoutSource,
 } from '@/components/createMission/WorkoutSourceToggle';
 import { WorkoutTemplatePicker } from '@/components/createMission/WorkoutTemplatePicker';
+import { RetestBanner } from '@/components/createMission/RetestBanner';
 import { CoachWodPicker } from '@/components/createMission/CoachWodPicker';
 import { exercisesToWorkoutText, templateToExercises } from '@/lib/workout/templateToExercises';
 import type { PublishedCoachWorkout } from '@/lib/api/coachWod';
@@ -32,6 +33,9 @@ import {
 } from '@/data/workoutTemplates';
 import { defaultCapForDomain, domainForCap, type MissionTimeCap } from '@/lib/timeDomains';
 import { createMission, fetchHostActiveMissionCount } from '@/lib/api/missions';
+import { fetchMyBenchmarks, type AthleteBenchmark } from '@/lib/api/benchmarks';
+import { writeScalingPlan } from '@/lib/mission/scalingPlan';
+import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
 import { createRallyPointMission } from '@/lib/api/rallyPoint';
 import { setMissionChain as persistMissionChain } from '@/lib/api/missionChain';
 import { SendWorkoutToSquad } from '@/components/mission/SendWorkoutToSquad';
@@ -116,6 +120,8 @@ export default function CreateMissionPage() {
   const [showGuidedIgnition, setShowGuidedIgnition] = useState(() => !hasCompletedGuidedIgnition());
   const [guestNameOpen, setGuestNameOpen] = useState(false);
   const [missionChain, setMissionChainDraft] = useState<ChainDraftItem[]>([]);
+  /** Set from ?benchmark=<id>: the workout and clock are fixed while retesting. */
+  const [retest, setRetest] = useState<AthleteBenchmark | null>(null);
 
   useEffect(() => {
     const state = location.state as IntakeNavigationState | null;
@@ -263,6 +269,50 @@ export default function CreateMissionPage() {
       setSelectedCategory(nextCategory);
     }
   }
+
+  const benchmarkParam = searchParams.get('benchmark');
+  useEffect(() => {
+    if (!benchmarkParam || !isAuthenticated) {
+      return;
+    }
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) {
+        return;
+      }
+      void fetchMyBenchmarks().then((result) => {
+        if (cancelled || result.error || !result.data) {
+          return;
+        }
+        const match = result.data.find((entry) => entry.id === benchmarkParam);
+        // A benchmark id that is not the caller's own simply does not resolve;
+        // the page stays an ordinary Create rather than erroring at someone who
+        // followed a stale link.
+        if (!match) {
+          return;
+        }
+        const template = WORKOUT_TEMPLATES.find((entry) => entry.id === match.templateId);
+        if (!template) {
+          return;
+        }
+        setWorkoutSource('library');
+        setRetest(match);
+        setSelectedTemplateId(template.id);
+        setSelectedDomain(domainForCap(match.durationMinutes) ?? match.timeDomain);
+        // The benchmark's stored clock, not the template's default: the athlete
+        // may have benchmarked at 12 minutes in the 15-minute domain, and a
+        // retest at 15 would not be a retest.
+        setDurationMinutes(match.durationMinutes);
+        setWorkoutText(applyTemplate(template).workoutText);
+        if (template.category) {
+          setSelectedCategory(template.category);
+        }
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [benchmarkParam, isAuthenticated]);
 
   function handleSummaryDurationChange(duration: number) {
     // The summary control still offers the four canonical minutes, so anything
@@ -570,6 +620,14 @@ export default function CreateMissionPage() {
           }
         }
 
+        if (retest && Object.keys(retest.movementVariants).length > 0) {
+          // Carry the benchmark's modification onto the new mission, so the
+          // athlete retests the way they measured rather than defaulting to
+          // "as programmed" — and so the rally point offers the same-variant
+          // ghost without them having to reconstruct anything.
+          writeScalingPlan(created.missionId, created.participantId, retest.movementVariants);
+        }
+
         guidedLaunchTemplateRef.current = null;
         const missionPath = `/mission/${created.missionId}`;
         if (chainSaveError) {
@@ -652,9 +710,18 @@ export default function CreateMissionPage() {
                   .filter(Boolean)
                   .join(' ')}
               >
-                <WorkoutSourceToggle value={workoutSource} onChange={handleWorkoutSourceChange} />
+                {retest ? (
+                  <RetestBanner
+                    workoutTitle={resolveWorkoutTitle(retest.templateId)}
+                    durationMinutes={retest.durationMinutes}
+                    movementVariants={retest.movementVariants}
+                    onCancel={() => setRetest(null)}
+                  />
+                ) : (
+                  <WorkoutSourceToggle value={workoutSource} onChange={handleWorkoutSourceChange} />
+                )}
 
-                {workoutSource === 'custom' ? (
+                {retest ? null : workoutSource === 'custom' ? (
                   <label className="block space-y-1">
                     <span className="text-sm font-semibold">Workout (one exercise per line)</span>
                     <textarea
@@ -743,6 +810,7 @@ export default function CreateMissionPage() {
                 hideSelectedWorkoutPreview={missionChain.length >= 1}
                 loading={loading}
                 onNicknameChange={setNickname}
+                durationLockedNote={retest ? 'set by your benchmark' : null}
                 onDurationChange={handleSummaryDurationChange}
                 onCapChange={setDurationMinutes}
                 onScheduleModeChange={setScheduleMode}

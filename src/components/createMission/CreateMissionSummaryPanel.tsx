@@ -39,6 +39,12 @@ interface CreateMissionSummaryPanelProps {
   loading: boolean;
   onNicknameChange: (value: string) => void;
   /** Changes the time domain, and with it the canonical clock. */
+  /**
+   * Why the clock cannot be changed, when it cannot. A retest at a different
+   * clock is not a retest, so the control is replaced rather than merely
+   * discouraged — the same treatment a coach workout's fixed duration gets.
+   */
+  durationLockedNote?: string | null;
   onDurationChange: (value: number) => void;
   /** Moves the clock inside the current domain. */
   onCapChange: (value: MissionTimeCap) => void;
@@ -81,6 +87,7 @@ export function CreateMissionSummaryPanel({
   hideSelectedWorkoutPreview = false,
   loading,
   onNicknameChange,
+  durationLockedNote = null,
   onDurationChange,
   onCapChange,
   onScheduleModeChange,
@@ -117,7 +124,13 @@ export function CreateMissionSummaryPanel({
 
       {chainBuilder}
 
-      {durationLockedByCoachWorkout ? (
+      {durationLockedNote ? (
+        <SummaryField label="Duration">
+          <p className="text-sm font-semibold text-accent">
+            {durationMinutes} min — {durationLockedNote}
+          </p>
+        </SummaryField>
+      ) : durationLockedByCoachWorkout ? (
         <SummaryField label="Duration">
           <p className="text-sm font-semibold text-accent">
             {durationMinutes} min — set by selected workout

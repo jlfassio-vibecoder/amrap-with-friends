@@ -1,8 +1,8 @@
 # Plan: benchmarks an athlete designates for themselves
 
-**Branch:** `feature/personal-benchmarks` (proposed)
-**Status:** Design. Nothing built.
-**Last updated:** 2026-09-09
+**Branch:** `feature/modified-movements`
+**Status:** Phases 1–4 shipped, reviewed, three defects fixed. Feature complete.
+**Last updated:** 2026-09-08
 
 ---
 
@@ -278,30 +278,205 @@ the mission, before running it.
 
 ## Delivery
 
-**Phase 1 — designate and badge.** Table, RPCs, the checkbox in Create mission
-and on the rally point before start, the pill on My missions. Pure
-`benchmarkCap.ts` / `benchmarkStatus.ts` in `src/lib/` with tests. No HUD yet.
+**Phase 1 — designate and badge. ✅ Shipped.** Table, RPCs, the control on the
+rally point before start, the pill and Retire on My missions, and the pure cap
+rules in `src/lib/benchmark/`. Designation on the Create form was dropped from
+scope — see "Where designation happens" below.
 
-**Phase 2 — attempts and retest.** Derive attempts by version key, the due
-calculation, the Retest shortcut with template and cap locked and the ghost
-pre-selected.
+**Phase 2 — attempts and retest. ✅ Shipped.** Attempts derived by version key,
+the due calculation, the Benchmarks panel on My missions, and the Retest
+shortcut at `/create?benchmark=<id>` with the workout and clock replaced rather
+than pre-filled.
 
-**Phase 3 — the HUD card.** The three rows, the version note, the readiness
-note.
+**Phase 3 — the HUD card. ✅ Shipped.** The rows, the slot count, the readiness
+caveat, and campaign-held slots shown as rows of their own.
 
-**Phase 4 — unify the campaign badge.** Render the campaign's derived benchmark
-through the same row component, and count a campaign benchmark in the card.
-Deliberately last: it is the only phase that touches shipped campaign surfaces,
-and it is worth nothing until phases 1–3 exist.
+**Phase 4 — unify the campaign badge. ✅ Shipped.** `BenchmarkRow` renders both
+sources, and a campaign benchmark shows its own scores rather than only holding
+a slot. No campaign internals were touched: roles stay derived, the ids stay
+frozen, and `benchmarkFingerprints.ts` is untouched.
 
-### Open questions for Justin
+### Settled
 
-1. **Should a campaign benchmark occupy one of the three slots?** It is a real
-   test on a real cadence, so counting it is honest — but an athlete in a
-   campaign would find their personal slots quietly reduced to two. My
-   recommendation: **count it, and say so on the card**, because the cost is
-   real either way and hiding it does not make it smaller.
-2. **Coach workouts as benchmarks?** `template_id` covers `coach:<uuid>`
-   already. The risk is that a coach edits the workout underneath a stored
-   benchmark, which is precisely what `benchmarkFingerprints.ts` exists to
-   prevent for library benchmarks. Suggest **library templates only in v1**.
+1. **A campaign benchmark occupies one of the three.** Decided. An athlete in a
+   campaign has two personal slots, and the UI names the campaign holding the
+   third rather than leaving them to wonder where it went.
+2. **Library templates only.** Decided. A coach can edit their own workout
+   underneath a stored benchmark, and nothing fingerprints a coach workout the
+   way `benchmarkFingerprints.ts` covers the campaign benchmarks. Refused in the
+   RPC and in `isBenchmarkableTemplate`.
+
+---
+
+## Phase 1, as shipped
+
+`athlete_benchmarks`, the three RPCs, the designate control on the rally point,
+and the pill on My missions. No HUD, no attempts, no retest — those are phases 2
+and 3.
+
+### Where the cap is enforced, and why in two places
+
+The database enforces what must hold whatever the client does: **one personal
+benchmark per domain** (a partial unique index, not just a check — two
+concurrent designates both pass a SELECT-then-INSERT), **three personal at
+most**, and **library templates only**.
+
+It deliberately does not know about campaign benchmarks. `deriveCampaignRoles`
+is not "the first occurrence": it also requires the schedule to end by repeating
+its opening workout, and bails when there are more repeats than any campaign
+length schedules. A second copy of that in plpgsql would drift the first time
+either changed — and drift silently, since the only symptom is a cap that admits
+one benchmark too many. So `my_campaigns` now ships the raw ordered schedule and
+`campaignBenchmarkSlots.ts` decides, using the same function the campaign detail
+page uses.
+
+**Over-designating costs the athlete training, not integrity.** That is the
+right thing to enforce in the cheaper place. `benchmarkCap.contract.test.ts`
+pins the numbers the two halves do share — the limit, the four domains, the legal
+clocks, the coach-workout refusal, the unique index and the grants.
+
+### Review findings
+
+Three defects found reviewing the finished feature, all fixed.
+
+**The card counted rows, not domains.** `used = active.length +
+campaignSlots.length`, but the cap is one benchmark per _domain_. Nothing stops
+two live campaigns testing at ten minutes, and a personal benchmark can predate
+a campaign that later claims its domain — so the header could say "3 of 3
+active" to someone who could still designate at two other clocks, contradicting
+the control that would have let them. Now `activeBenchmarkCount` over both
+sources, the same function the cap itself uses.
+
+**Two campaigns at one clock shared a React key.** `campaign:${slot.domain}`
+made React reconcile two real rows as one. Keyed by campaign, template and clock
+now.
+
+**The retest's clock was not actually locked.** `RetestBanner` promised "same
+workout, same clock", and the summary panel's `onCapChange` was live underneath
+it — change the cap mid-retest and the mission silently stops counting as an
+attempt. The clock now renders as a locked value, reusing the treatment a coach
+workout's fixed duration already had.
+
+**And one integrity gap in the floor.** `designate_benchmark` validated
+`p_duration_minutes` and `p_time_domain` independently, so a 25-minute test
+could be filed against the 5-minute slot with every CHECK passing. Unreachable
+from this client, which derives the domain from the cap — but the function's
+whole stated purpose is to hold whatever the client does, and a mismatched pair
+would occupy the wrong slot permanently with nothing able to notice.
+`20260909240000` checks the pair, and the contract test now runs the SQL arms
+against `domainForCap` over every legal clock.
+
+### The fetch cost, since fixed
+
+The card first cost three RPCs on the HUD and two on the rally point, on
+surfaces every athlete opens constantly. `benchmark_overview` makes it one of
+each.
+
+The round trips were the smaller half. `my_missions` returns every row's full
+workout jsonb, its score breakdown, its coach-workout join and two correlated
+chain-item counts — none of which an attempt needs — so the HUD was pulling an
+athlete's entire mission history in workout-sized rows to compute a handful of
+scores. `benchmark_overview` returns eight columns per scored mission, and only
+when asked: the rally point leaves the flag off, because it only needs to know
+whether this workout is already a benchmark and which slots are free.
+
+Deriving attempts rather than storing them is still the right trade. This makes
+it the cheap side of it.
+
+`my_campaigns` gave the schedule back at the same time. It was added in phase 1
+purely to feed this card, and once `benchmark_overview` returned live campaigns'
+schedules itself, `my_campaigns` was sending up to sixty occurrence rows per
+campaign to every caller of My campaigns with nothing reading them — the fetch
+cost moved rather than removed.
+
+**One defect fell out of the same change.** The designate control used to fetch
+benchmarks and campaigns separately and keep its previous campaign slots when
+that half failed — which on a first load meant no slots at all, so a failed
+campaign fetch let an athlete designate into a campaign-held domain. One call
+means one outcome: both halves now succeed or fail together, and the control
+can never think a domain is free because half the answer arrived.
+
+### Phase 4 notes
+
+**One row component, two sources.** `BenchmarkRow` renders a personal and a
+campaign benchmark identically — the scores, the change, the "first attempt"
+caveat and the off-version disclosure are the same, because the derivation
+behind them is literally the same function. Only who schedules the retest
+differs, and that is one prop.
+
+**A campaign benchmark's version is the athlete's first attempt at it.** Nobody
+designated it, so nothing stored says how it would be performed; the week-one
+run is what the retests are measured against, which is exactly the role
+`version_key` plays for a personal benchmark. Taking the _first_ rather than the
+most recent matters: an athlete who modified week one and later retested
+standard has made a change, not set a new baseline, and taking the latest
+version would silently redefine the test so that their progress vanished from
+the series.
+
+**No Retest link on a campaign row.** The campaign owns that calendar, and
+offering a retest here would open a mission its schedule knows nothing about.
+The row says who holds the slot instead.
+
+**Fixed in passing:** phase 3's campaign row printed the _domain_ as the clock,
+so a campaign testing at 12 minutes read "15 min". `BenchmarkSlot` now carries
+the real `durationMinutes`, and the attempt search matches on it — matching on
+the domain would let a 15-minute run define the version of a 12-minute test.
+
+### Phase 3 notes
+
+**The card lives on the HUD only.** Phase 2 put the panel on My missions
+because that was where the data already was; the design always placed it on the
+HUD, below the load cards and above the domain matrix, and two copies of one
+card is worse than either. My missions keeps the pill and Retire, which is
+where managing a designation belongs.
+
+**A campaign-held slot gets a row, not just a smaller number.** "2 of 3 active"
+with no explanation reads like a bug to the athlete who only designated one.
+The campaign's row names the campaign and says it schedules its own retests.
+
+**The readiness caveat is a sentence and stays one.** It appears at `elevated`
+and `high`, it does not hide the Retest link, it does not move the due date, and
+a test asserts it never prescribes a rest day — settled in the overtraining
+work, because an athlete who stops training drops the chronic baseline that
+caused the warning and makes next week's ratio worse.
+
+### Phase 2 notes
+
+**A benchmark stores the modification, not only its fingerprint.**
+`version_key` stays the thing attempts are matched on, but it is one-way: names
+are joined with `|` and `#`, so a movement name containing either cannot be
+recovered, and `movementVersion.ts` deliberately never tries. Without the
+selection itself a retest would default to "as programmed", so an athlete who
+benchmarked on knee push-ups would silently retest on full ones and the
+comparison the feature exists for would be wrong by default.
+`movement_variants` is written at designation and read only to seed a retest, so
+the two can never disagree about what an attempt is.
+
+**Off-version runs are excluded but not hidden.** A run of the benchmark
+workout performed a different way is not an attempt — it is not comparable — but
+it is not discarded either. The panel says "1 other run of this workout was
+performed differently, so it is not in the series", because someone whose retest
+looks overdue when they have in fact done the workout deserves to know why it
+did not count.
+
+**The retest replaces the picker rather than pre-filling it.** A pre-filled
+picker is one stray tap away from silently measuring nothing. There is still an
+exit — "Start a different mission instead" — because locking without one turns a
+wrong tap into a trap.
+
+### Where designation happens
+
+On the rally point, before start — not on the Create form. By then the workout
+and the clock are settled and the athlete's modification plan is on the same
+screen, so the version the benchmark records is the version they are about to
+perform. Asking on Create would be asking before any of that is known.
+
+It is personal, not per mission: a joiner designates for themselves, and the
+host does not designate for the squad.
+
+### The badge covers runs from before the designation
+
+`benchmarkForMission` matches on workout and clock, so every run of a benchmark
+workout wears the pill, including ones from before it was designated. Same call
+the attempt derivation makes: what you scored on that workout at that clock is
+the measurement, whether or not a button was pressed first.

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AppLink } from '@/components/AppLink';
 import { AppHeader } from '@/components/AppHeader';
@@ -6,6 +7,7 @@ import { AttritionGrid } from '@/components/hud/AttritionGrid';
 import { ClassificationBadge } from '@/components/hud/ClassificationBadge';
 import { DailyTelemetry } from '@/components/hud/DailyTelemetry';
 import { DomainMatrixChart } from '@/components/hud/DomainMatrixChart';
+import { BenchmarkProgressPanel } from '@/components/mission/BenchmarkProgressPanel';
 import { InAppActivitySummaryCard } from '@/components/hud/InAppActivitySummaryCard';
 import { OutsideActivitySummaryCard } from '@/components/hud/OutsideActivitySummaryCard';
 import { OvertrainingWarningCard } from '@/components/hud/OvertrainingWarningCard';
@@ -14,6 +16,7 @@ import { PhysicalActivityLogForm } from '@/components/hud/PhysicalActivityLogFor
 import { WeeklyBaselineBar } from '@/components/hud/WeeklyBaselineBar';
 import { summarizePhysicalActivityWindow } from '@/lib/hud/activityWindowSummary';
 import { evaluateOvertrainingRisk } from '@/lib/hud/evaluateOvertrainingRisk';
+import { useBenchmarkProgress } from '@/hooks/useBenchmarkProgress';
 import { hasAthleteBodyMetrics } from '@/lib/api/athleteProfile';
 import { quotasFromProfile } from '@/lib/hud/classificationQuotas';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
@@ -31,6 +34,9 @@ export default function HUDPage() {
   const activityLog = usePhysicalActivityLog();
   const outsideSummary = summarizePhysicalActivityWindow(activityLog.entries);
   const overtrainingRisk = telemetry ? evaluateOvertrainingRisk(telemetry.overtraining) : null;
+  const benchmarkProgress = useBenchmarkProgress(!isAuthLoading && isAuthenticated);
+  // Read once per mount: a due date must not move because the HUD re-rendered.
+  const [nowMs] = useState(() => Date.now());
   const showOvertrainingWarning =
     overtrainingRisk !== null && overtrainingRisk.riskLevel !== 'normal';
 
@@ -120,6 +126,21 @@ export default function HUDPage() {
                 baselineMinutes={quotas.civilianMinutes}
               />
             </div>
+
+            {/*
+              Below the load cards and above the domain matrix: this is a
+              progress surface, not an alert, and it must not compete with the
+              overtraining card for attention.
+            */}
+            {benchmarkProgress.loading ? null : (
+              <BenchmarkProgressPanel
+                benchmarks={benchmarkProgress.benchmarks}
+                missions={benchmarkProgress.missions}
+                campaignSlots={benchmarkProgress.campaignSlots}
+                riskLevel={overtrainingRisk?.riskLevel}
+                now={nowMs}
+              />
+            )}
 
             <AttritionGrid attrition={telemetry.attrition} weekEndsAt={telemetry.weekEndsAt} />
             <DomainMatrixChart domainMinutes30d={telemetry.domainMinutes30d} />
