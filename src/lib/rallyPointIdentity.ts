@@ -1,3 +1,5 @@
+import { readIdentityItem, removeIdentityItem, writeIdentityItem } from '@/lib/identityStorage';
+
 const STORAGE_PREFIX = {
   rallyPointIdForMission: 'amrap_rally_point_id',
   rallyPointMemberId: 'amrap_rally_point_member_id',
@@ -5,56 +7,44 @@ const STORAGE_PREFIX = {
   rallyPointSeatClaim: 'amrap_rally_point_seat_claim',
 } as const;
 
-function storageKey(prefix: string, id: string): string {
-  return `${prefix}_${id}`;
+function readItem(prefix: string, id: string): string | null {
+  return readIdentityItem(prefix, id);
 }
 
-function readItem(key: string): string | null {
-  try {
-    return sessionStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function writeItem(key: string, value: string): void {
-  try {
-    sessionStorage.setItem(key, value);
-  } catch {
-    /* sessionStorage unavailable */
-  }
+function writeItem(prefix: string, id: string, value: string): void {
+  writeIdentityItem(prefix, id, value);
 }
 
 export function getStoredRallyPointIdForMission(missionId: string): string | null {
-  return readItem(storageKey(STORAGE_PREFIX.rallyPointIdForMission, missionId));
+  return readItem(STORAGE_PREFIX.rallyPointIdForMission, missionId);
 }
 
 export function setStoredRallyPointIdForMission(missionId: string, rallyPointId: string): void {
-  writeItem(storageKey(STORAGE_PREFIX.rallyPointIdForMission, missionId), rallyPointId);
+  writeItem(STORAGE_PREFIX.rallyPointIdForMission, missionId, rallyPointId);
 }
 
 export function getStoredRallyPointMemberId(rallyPointId: string): string | null {
-  return readItem(storageKey(STORAGE_PREFIX.rallyPointMemberId, rallyPointId));
+  return readItem(STORAGE_PREFIX.rallyPointMemberId, rallyPointId);
 }
 
 export function setStoredRallyPointMemberId(rallyPointId: string, memberId: string): void {
-  writeItem(storageKey(STORAGE_PREFIX.rallyPointMemberId, rallyPointId), memberId);
+  writeItem(STORAGE_PREFIX.rallyPointMemberId, rallyPointId, memberId);
 }
 
 export function getStoredRallyPointSeatClaim(rallyPointId: string): string | null {
-  return readItem(storageKey(STORAGE_PREFIX.rallyPointSeatClaim, rallyPointId));
+  return readItem(STORAGE_PREFIX.rallyPointSeatClaim, rallyPointId);
 }
 
 export function setStoredRallyPointSeatClaim(rallyPointId: string, seatClaim: string): void {
-  writeItem(storageKey(STORAGE_PREFIX.rallyPointSeatClaim, rallyPointId), seatClaim);
+  writeItem(STORAGE_PREFIX.rallyPointSeatClaim, rallyPointId, seatClaim);
 }
 
 export function getStoredRallyPointNickname(rallyPointId: string): string | null {
-  return readItem(storageKey(STORAGE_PREFIX.rallyPointNickname, rallyPointId));
+  return readItem(STORAGE_PREFIX.rallyPointNickname, rallyPointId);
 }
 
 export function setStoredRallyPointNickname(rallyPointId: string, nickname: string): void {
-  writeItem(storageKey(STORAGE_PREFIX.rallyPointNickname, rallyPointId), nickname);
+  writeItem(STORAGE_PREFIX.rallyPointNickname, rallyPointId, nickname);
 }
 
 export function persistRallyPointIdentity(
@@ -81,11 +71,7 @@ export function persistRallyPointIdentity(
  * someone new rather than trying to reclaim a seat that is no longer active.
  */
 export function clearStoredRallyPointIdentity(rallyPointId: string): void {
-  try {
-    sessionStorage.removeItem(storageKey(STORAGE_PREFIX.rallyPointMemberId, rallyPointId));
-    sessionStorage.removeItem(storageKey(STORAGE_PREFIX.rallyPointNickname, rallyPointId));
-    sessionStorage.removeItem(storageKey(STORAGE_PREFIX.rallyPointSeatClaim, rallyPointId));
-  } catch {
-    /* sessionStorage unavailable */
-  }
+  removeIdentityItem(STORAGE_PREFIX.rallyPointMemberId, rallyPointId);
+  removeIdentityItem(STORAGE_PREFIX.rallyPointNickname, rallyPointId);
+  removeIdentityItem(STORAGE_PREFIX.rallyPointSeatClaim, rallyPointId);
 }

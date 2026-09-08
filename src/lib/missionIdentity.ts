@@ -1,3 +1,5 @@
+import { readIdentityItem, removeIdentityItem, writeIdentityItem } from '@/lib/identityStorage';
+
 const STORAGE_PREFIX = {
   hostToken: 'amrap_host_token',
   participantId: 'amrap_participant_id',
@@ -6,72 +8,56 @@ const STORAGE_PREFIX = {
   ghost: 'amrap_ghost',
 } as const;
 
-function storageKey(prefix: string, missionId: string): string {
-  return `${prefix}_${missionId}`;
+function readItem(prefix: string, missionId: string): string | null {
+  return readIdentityItem(prefix, missionId);
 }
 
-function readItem(key: string): string | null {
-  try {
-    return sessionStorage.getItem(key);
-  } catch {
-    return null;
-  }
+function writeItem(prefix: string, missionId: string, value: string): void {
+  writeIdentityItem(prefix, missionId, value);
 }
 
-function writeItem(key: string, value: string): void {
-  try {
-    sessionStorage.setItem(key, value);
-  } catch {
-    /* sessionStorage unavailable */
-  }
+function removeItem(prefix: string, missionId: string): void {
+  removeIdentityItem(prefix, missionId);
 }
 
 export function getStoredHostToken(missionId: string): string | null {
-  return readItem(storageKey(STORAGE_PREFIX.hostToken, missionId));
+  return readItem(STORAGE_PREFIX.hostToken, missionId);
 }
 
 export function setStoredHostToken(missionId: string, token: string): void {
-  writeItem(storageKey(STORAGE_PREFIX.hostToken, missionId), token);
+  writeItem(STORAGE_PREFIX.hostToken, missionId, token);
 }
 
 export function clearStoredHostToken(missionId: string): void {
-  try {
-    sessionStorage.removeItem(storageKey(STORAGE_PREFIX.hostToken, missionId));
-  } catch {
-    /* sessionStorage unavailable */
-  }
+  removeItem(STORAGE_PREFIX.hostToken, missionId);
 }
 
 export function getStoredParticipantId(missionId: string): string | null {
-  return readItem(storageKey(STORAGE_PREFIX.participantId, missionId));
+  return readItem(STORAGE_PREFIX.participantId, missionId);
 }
 
 export function setStoredParticipantId(missionId: string, participantId: string): void {
-  writeItem(storageKey(STORAGE_PREFIX.participantId, missionId), participantId);
+  writeItem(STORAGE_PREFIX.participantId, missionId, participantId);
 }
 
 export function getStoredClaimToken(missionId: string): string | null {
-  return readItem(storageKey(STORAGE_PREFIX.claimToken, missionId));
+  return readItem(STORAGE_PREFIX.claimToken, missionId);
 }
 
 export function setStoredClaimToken(missionId: string, claimToken: string): void {
-  writeItem(storageKey(STORAGE_PREFIX.claimToken, missionId), claimToken);
+  writeItem(STORAGE_PREFIX.claimToken, missionId, claimToken);
 }
 
 export function clearStoredClaimToken(missionId: string): void {
-  try {
-    sessionStorage.removeItem(storageKey(STORAGE_PREFIX.claimToken, missionId));
-  } catch {
-    /* sessionStorage unavailable */
-  }
+  removeItem(STORAGE_PREFIX.claimToken, missionId);
 }
 
 export function getStoredNickname(missionId: string): string | null {
-  return readItem(storageKey(STORAGE_PREFIX.nickname, missionId));
+  return readItem(STORAGE_PREFIX.nickname, missionId);
 }
 
 export function setStoredNickname(missionId: string, nickname: string): void {
-  writeItem(storageKey(STORAGE_PREFIX.nickname, missionId), nickname);
+  writeItem(STORAGE_PREFIX.nickname, missionId, nickname);
 }
 
 export function persistMissionIdentity(
@@ -107,7 +93,7 @@ export interface StoredGhostSelection {
 }
 
 export function getStoredGhostSelection(missionId: string): StoredGhostSelection | null {
-  const raw = readItem(storageKey(STORAGE_PREFIX.ghost, missionId));
+  const raw = readItem(STORAGE_PREFIX.ghost, missionId);
   if (!raw || raw === 'none') {
     return null;
   }
@@ -133,19 +119,15 @@ export function setStoredGhostSelection(
   selection: StoredGhostSelection | null
 ): void {
   if (!selection) {
-    writeItem(storageKey(STORAGE_PREFIX.ghost, missionId), 'none');
+    writeItem(STORAGE_PREFIX.ghost, missionId, 'none');
     return;
   }
 
-  writeItem(storageKey(STORAGE_PREFIX.ghost, missionId), JSON.stringify(selection));
+  writeItem(STORAGE_PREFIX.ghost, missionId, JSON.stringify(selection));
 }
 
 export function clearStoredGhostSelection(missionId: string): void {
-  try {
-    sessionStorage.removeItem(storageKey(STORAGE_PREFIX.ghost, missionId));
-  } catch {
-    /* sessionStorage unavailable */
-  }
+  removeItem(STORAGE_PREFIX.ghost, missionId);
 }
 
 /** RallyPoint display name from email local-part (max 50). */
