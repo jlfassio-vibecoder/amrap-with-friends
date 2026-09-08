@@ -136,6 +136,126 @@
 }
 
 @layer components {
+  /* --- Round log feedback ---------------------------------------------
+     A logged round plays the vault-round-log sample; these carry its visual
+     half, all fired by the same tap (see `useRoundLogPulse`): the button
+     squashes and releases, concentric gradient ripples radiate from it, and
+     the clock digits flash the same success green before settling back to
+     accent. Kept short on purpose — "Log round" is tapped dozens of times
+     over one mission, and nothing here should still be moving by the next
+     tap.
+
+     The seal is toggled by removing and re-adding this class in JS rather
+     than by a `key` remount, because the button it sits on must never
+     remount — see the hook for why. */
+  .animate-round-log-seal {
+    animation: round-log-seal 220ms ease-out;
+  }
+
+  .round-log-ripple {
+    @apply pointer-events-none fixed z-40 overflow-visible;
+  }
+
+  .round-log-ripple-wave {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 100%;
+    height: 100%;
+    border-radius: 9999px;
+    /* Soft ring band: transparent core → success green → fade to clear. */
+    background: radial-gradient(
+      circle,
+      transparent 0%,
+      transparent 42%,
+      rgb(90 158 82 / 0.55) 52%,
+      rgb(90 158 82 / 0.28) 62%,
+      rgb(90 158 82 / 0.1) 72%,
+      transparent 82%
+    );
+    box-shadow: 0 0 22px rgb(90 158 82 / 0.4);
+    animation: round-log-ripple-wave 780ms cubic-bezier(0.12, 0.7, 0.2, 1) forwards;
+    will-change: transform, opacity;
+  }
+
+  .round-log-ripple-wave:nth-child(2) {
+    animation-delay: 95ms;
+    background: radial-gradient(
+      circle,
+      transparent 0%,
+      transparent 46%,
+      rgb(90 158 82 / 0.4) 56%,
+      rgb(90 158 82 / 0.18) 66%,
+      transparent 78%
+    );
+  }
+
+  .round-log-ripple-wave:nth-child(3) {
+    animation-delay: 190ms;
+    background: radial-gradient(
+      circle,
+      transparent 0%,
+      transparent 50%,
+      rgb(90 158 82 / 0.28) 60%,
+      rgb(90 158 82 / 0.1) 70%,
+      transparent 82%
+    );
+  }
+
+  .animate-round-log-flash {
+    animation: round-log-flash 550ms ease-out forwards;
+  }
+
+  @keyframes round-log-seal {
+    0% {
+      transform: scale(1);
+      filter: brightness(1);
+    }
+    35% {
+      transform: scale(0.93);
+      filter: brightness(1.15);
+    }
+    100% {
+      transform: scale(1);
+      filter: brightness(1);
+    }
+  }
+
+  @keyframes round-log-ripple-wave {
+    0% {
+      opacity: 0.95;
+      transform: translate(-50%, -50%) scale(0.55);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(3.6);
+    }
+  }
+
+  @keyframes round-log-flash {
+    /* Same glow recipe as the "Realtime: connected" text below it: a fixed
+       brand-green shadow (not a theme token — light and dark share it) under
+       a text colour that does follow the theme. */
+    0% {
+      color: var(--color-success-text);
+      text-shadow:
+        0 0 8px rgb(90 158 82 / 0.95),
+        0 0 18px rgb(90 158 82 / 0.55);
+    }
+    100% {
+      color: var(--color-accent);
+      text-shadow: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-round-log-seal,
+    .round-log-ripple-wave,
+    .animate-round-log-flash {
+      animation: none;
+    }
+  }
+
   .card {
     @apply rounded-card border border-border bg-surface shadow-card;
   }

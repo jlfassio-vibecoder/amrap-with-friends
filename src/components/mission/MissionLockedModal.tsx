@@ -70,6 +70,9 @@ export function MissionLockedModal({ workout, onDismiss }: MissionLockedModalPro
         >
           Cleared hot!
         </button>
+        <p className="hidden text-xs tracking-wide text-muted lg:block">
+          Use spacebar to <span className="font-semibold text-secondary">LOG ROUNDS</span>
+        </p>
       </div>
     </div>
   );

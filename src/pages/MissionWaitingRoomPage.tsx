@@ -36,6 +36,7 @@ import { LogMissedRound } from '@/components/mission/LogMissedRound';
 import { MissionPacingGauge } from '@/components/mission/MissionPacingGauge';
 import { PreMissionScalingPicker } from '@/components/mission/PreMissionScalingPicker';
 import { BenchmarkDesignateControl } from '@/components/mission/BenchmarkDesignateControl';
+import { RoundLogRippleBurst } from '@/components/mission/RoundLogRippleBurst';
 import { GhostPicker } from '@/components/GhostPicker';
 import { SafetyNoticeModal } from '@/components/safety/SafetyNoticeModal';
 import { useMissionSafetyNotices } from '@/components/safety/useMissionSafetyNotices';
@@ -44,6 +45,7 @@ import { WalkthroughCompleteModal } from '@/components/walkthrough/WalkthroughCo
 import { useRallyPointWalkthrough } from '@/components/walkthrough/useRallyPointWalkthrough';
 import { useGhostPacer } from '@/hooks/useGhostPacer';
 import { useMissionLockedModal } from '@/hooks/useMissionLockedModal';
+import { useRoundLogPulse } from '@/hooks/useRoundLogPulse';
 import { useTacticalAudio } from '@/hooks/useTacticalAudio';
 import { useRallyPointForceNav } from '@/hooks/useRallyPointForceNav';
 import {
@@ -70,6 +72,7 @@ import {
 import { nextChainedMissionName } from '@/lib/mission/nextChainedMissionName';
 import { canPassRallyPointCommand } from '@/lib/rallyPoint/canPassRallyPointCommand';
 import { shouldHandleLogRoundHotkey } from '@/lib/mission/logRoundHotkey';
+import { LOG_ROUND_COOLDOWN_ALERT, canLogRound } from '@/lib/mission/logRoundCooldown';
 import {
   hideMobileLiveChrome,
   formatMobileLiveScoreLabel,
@@ -704,6 +707,8 @@ function LiveMissionView({
     isPaused: live.isPaused,
     workDurationSec: live.workDurationSec,
   });
+  const roundLogPulse = useRoundLogPulse();
+  const lastLogRoundAtMsRef = useRef<number | null>(null);
   const claim = useParticipantClaim(missionId);
   const selfLeaderboardEntry = live.leaderboard.find((entry) => entry.isSelf) ?? null;
   const selfBaseScore = selfLeaderboardEntry?.baseScore ?? 0;
@@ -837,7 +842,14 @@ function LiveMissionView({
   const denseMobileLiveWorkout = shouldDenseMobileLiveWorkout(live.phase, live.workout.length);
 
   function handleLogRound() {
+    const nowMs = Date.now();
+    if (!canLogRound(lastLogRoundAtMsRef.current, nowMs)) {
+      window.alert(LOG_ROUND_COOLDOWN_ALERT);
+      return;
+    }
+    lastLogRoundAtMsRef.current = nowMs;
     playRoundLogged();
+    roundLogPulse.pulse();
     void live.logRound();
   }
 
@@ -1339,9 +1351,10 @@ function LiveMissionView({
                   </p>
                 ) : live.phase !== 'waiting' ? (
                   <p
+                    key={roundLogPulse.pulseKey}
                     className={`text-display tabular-nums text-accent lg:text-7xl xl:text-8xl ${
                       compactMobileLive ? 'text-7xl' : 'text-5xl'
-                    }`}
+                    } ${roundLogPulse.pulseKey > 0 ? 'animate-round-log-flash' : ''}`}
                   >
                     {formatTime(live.timeLeftSec)}
                   </p>
@@ -1509,13 +1522,20 @@ function LiveMissionView({
                   </button>
                 )}
                 {showLogRound && (
-                  <button
-                    type="button"
-                    className="btn-success px-3 py-1.5 text-sm max-lg:w-full max-lg:py-5 max-lg:text-xl lg:px-6 lg:py-3 lg:text-base"
-                    onClick={handleLogRound}
-                  >
-                    Log round
-                  </button>
+                  <span className="relative inline-flex max-lg:w-full">
+                    <button
+                      ref={roundLogPulse.buttonRef}
+                      type="button"
+                      className="btn-success w-full px-3 py-1.5 text-sm max-lg:py-5 max-lg:text-xl lg:w-auto lg:px-6 lg:py-3 lg:text-base"
+                      onClick={handleLogRound}
+                    >
+                      Log round
+                    </button>
+                    <RoundLogRippleBurst
+                      pulseKey={roundLogPulse.pulseKey}
+                      buttonRef={roundLogPulse.buttonRef}
+                    />
+                  </span>
                 )}
                 {showEndPractice && (
                   <button
@@ -1535,6 +1555,12 @@ function LiveMissionView({
                     repsPerRound={live.repsPerRound}
                     preview={live.previewMissedRound}
                     onConfirm={(reps) => {
+                      const nowMs = Date.now();
+                      if (!canLogRound(lastLogRoundAtMsRef.current, nowMs)) {
+                        window.alert(LOG_ROUND_COOLDOWN_ALERT);
+                        return;
+                      }
+                      lastLogRoundAtMsRef.current = nowMs;
                       playRoundLogged();
                       void live.logMissedRound(reps);
                     }}

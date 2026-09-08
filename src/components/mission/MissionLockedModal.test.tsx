@@ -44,6 +44,22 @@ describe('MissionLockedModal', () => {
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 
+  it('shows the spacebar hint below Cleared hot, hidden until lg', () => {
+    render(<MissionLockedModal workout={sampleWorkout} onDismiss={vi.fn()} />);
+    const hint = screen.getByText((_, element) => {
+      return (
+        element?.tagName === 'P' &&
+        (element.textContent ?? '').includes('Use spacebar to LOG ROUNDS')
+      );
+    });
+    const button = screen.getByRole('button', { name: /cleared hot/i });
+    expect(Boolean(button.compareDocumentPosition(hint) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(
+      true
+    );
+    expect(hint.className).toMatch(/\bhidden\b/);
+    expect(hint.className).toMatch(/\blg:block\b/);
+  });
+
   it('is a labelled dialog', () => {
     render(<MissionLockedModal workout={sampleWorkout} onDismiss={vi.fn()} />);
     const dialog = screen.getByRole('dialog');
