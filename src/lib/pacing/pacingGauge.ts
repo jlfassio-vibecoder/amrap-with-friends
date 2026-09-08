@@ -53,8 +53,10 @@ export const MAX_RATIO = 1.25;
  * first round's duration. Returns null before round one is logged, and for a
  * zero-length first split, which would make every later ratio infinite.
  */
-export function benchmarkFromSplits(roundSplitsSec: readonly number[]): number | null {
-  const first = roundSplitsSec[0];
+export function benchmarkFromSplits(
+  roundSplitsSec: readonly number[] | null | undefined
+): number | null {
+  const first = Array.isArray(roundSplitsSec) ? roundSplitsSec[0] : undefined;
   if (typeof first !== 'number' || !Number.isFinite(first) || first <= 0) {
     return null;
   }
@@ -73,16 +75,24 @@ export function zoneForRatio(ratio: number): PacingZone {
 
 export function computePacingGaugeState(input: {
   /** Cumulative elapsed-at-round seconds, oldest first. */
-  roundSplitsSec: readonly number[];
+  roundSplitsSec: readonly number[] | null | undefined;
   /** Mission elapsed seconds — the same clock the athlete is reading. */
   elapsedSec: number;
 }): PacingGaugeState {
-  const benchmarkSec = benchmarkFromSplits(input.roundSplitsSec);
-  const lastSplit = input.roundSplitsSec[input.roundSplitsSec.length - 1] ?? 0;
+  // Tolerates a missing or malformed feed rather than throwing. This renders
+  // beside the clock, Start and Log round; a throw here unmounts all of them,
+  // so the gauge degrades to "no benchmark yet" instead of taking the mission
+  // with it. The boundary around it is the second line of defence, not the
+  // excuse for skipping this one.
+  const splits = Array.isArray(input.roundSplitsSec) ? input.roundSplitsSec : [];
+  const elapsedSec = Number.isFinite(input.elapsedSec) ? input.elapsedSec : 0;
+
+  const benchmarkSec = benchmarkFromSplits(splits);
+  const lastSplit = splits[splits.length - 1] ?? 0;
   // Never negative: a joiner's round can arrive over realtime a tick before
   // their clock catches up, which would otherwise read as a round that started
   // in the future.
-  const roundElapsedSec = Math.max(0, input.elapsedSec - lastSplit);
+  const roundElapsedSec = Math.max(0, elapsedSec - lastSplit);
 
   if (benchmarkSec === null) {
     return {

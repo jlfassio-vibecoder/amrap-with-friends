@@ -9,7 +9,7 @@ import {
 } from '@/lib/pacing/pacingGauge';
 
 interface PacingGaugeProps {
-  roundSplitsSec: readonly number[];
+  roundSplitsSec: readonly number[] | null | undefined;
   elapsedSec: number;
   /** A paused clock must not keep sweeping the needle. */
   isPaused?: boolean;

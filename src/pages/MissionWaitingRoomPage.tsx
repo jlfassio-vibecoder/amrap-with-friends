@@ -35,6 +35,7 @@ import { LogMissedRound } from '@/components/mission/LogMissedRound';
 import { PreMissionScalingPicker } from '@/components/mission/PreMissionScalingPicker';
 import { BenchmarkDesignateControl } from '@/components/mission/BenchmarkDesignateControl';
 import { PacingGauge } from '@/components/mission/PacingGauge';
+import { MissionWidgetBoundary } from '@/components/mission/MissionWidgetBoundary';
 import { GhostPicker } from '@/components/GhostPicker';
 import { SafetyNoticeModal } from '@/components/safety/SafetyNoticeModal';
 import { useMissionSafetyNotices } from '@/components/safety/useMissionSafetyNotices';
@@ -1394,12 +1395,14 @@ function LiveMissionView({
                   </>
                 ) : null}
                 {live.phase === 'work' && pacingGaugeEnabled ? (
-                  <PacingGauge
-                    roundSplitsSec={live.roundSplitsSec}
-                    elapsedSec={live.elapsedSec}
-                    isPaused={live.isPaused}
-                    className="pt-1"
-                  />
+                  <MissionWidgetBoundary name="PacingGauge">
+                    <PacingGauge
+                      roundSplitsSec={live.roundSplitsSec}
+                      elapsedSec={live.elapsedSec}
+                      isPaused={live.isPaused}
+                      className="pt-1"
+                    />
+                  </MissionWidgetBoundary>
                 ) : null}
                 {live.phase === 'work' ? (
                   <label className="flex cursor-pointer items-center justify-center gap-2 text-xs text-muted">
