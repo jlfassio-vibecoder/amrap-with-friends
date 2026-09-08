@@ -88,4 +88,27 @@ describe('ParticipantsPanel', () => {
     expect(screen.getByText('Justin (you)')).toBeTruthy();
     expect(screen.getByText('1')).toBeTruthy();
   });
+
+  it('shows the reps actually done once finished, not finalScore', () => {
+    // baseScore and finalScore deliberately differ (a P.V.I./Domain
+    // multiplier applied) — the leaderboard row must show the 200 reps this
+    // athlete performed, never the adjusted 230.
+    const entry = {
+      ...leaderboardEntry(SELF_ID, 'Justin', 10),
+      baseScore: 200,
+      finalScore: 230,
+    };
+
+    render(
+      <ParticipantsPanel
+        leaderboard={[entry]}
+        presence={[]}
+        selfParticipantId={SELF_ID}
+        phase="finished"
+      />
+    );
+
+    expect(screen.getByText('200 reps')).toBeTruthy();
+    expect(screen.queryByText('230 reps')).toBeNull();
+  });
 });

@@ -138,6 +138,7 @@ export function MissionScorecard({
           partialReps={pacingData?.partialReps}
           roundSplits={pacingData?.roundSplits}
           durationMinutes={durationMinutes}
+          repsPerRound={entry.repsPerRound}
           showPacingChart
         />
 
