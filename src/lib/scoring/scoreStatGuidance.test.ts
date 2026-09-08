@@ -29,12 +29,18 @@ describe('getScoreStatGuidance', () => {
 
   describe('the band tables', () => {
     it('reads the multiplier table straight from getPviMultiplier, not a hand-copied value', () => {
+      // Shape, not today's pinned numbers: the test below already re-derives
+      // the exact values from getPviMultiplier, so a deliberate ceiling or
+      // multiplier change fails one test for the real reason instead of two
+      // for the same one. This one only guards the table's row count and
+      // that each cell still looks like a percent-range label and a
+      // multiplier value.
       const rows = getScoreStatGuidance('pviMultiplier').table?.rows ?? [];
       expect(rows).toHaveLength(4);
-      expect(rows[0]).toEqual({ label: 'Under 10%', value: '× 1.15' });
-      expect(rows[1]).toEqual({ label: '10–19%', value: '× 1' });
-      expect(rows[2]).toEqual({ label: '20–29%', value: '× 0.95' });
-      expect(rows[3]).toEqual({ label: '30% and up', value: '× 0.85' });
+      for (const row of rows) {
+        expect(row.label).toMatch(/^(Under \d+%|\d+–\d+%|\d+% and up)$/);
+        expect(row.value).toMatch(/^× \d+(\.\d+)?$/);
+      }
     });
 
     it('reads the classification table straight from getPviMultiplier too', () => {

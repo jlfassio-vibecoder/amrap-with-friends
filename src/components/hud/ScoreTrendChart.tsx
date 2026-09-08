@@ -19,6 +19,17 @@ function formatWeekLabel(weekStartIso: string): string {
   return new Date(weekStartIso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+/**
+ * A y-axis tick value, to one decimal, without a forced trailing zero.
+ * `Math.round` alone collapses the midline into the same label as an
+ * adjacent tick whenever the ceiling is small (ceiling 1 → midline 0.5
+ * rounds to "1", the same as the top tick) — two gridlines that read the
+ * same number.
+ */
+function formatTickValue(value: number): string {
+  return value.toLocaleString(undefined, { maximumFractionDigits: 1 });
+}
+
 /** A bar rounded on its top two corners, square at the baseline — never a plain rect. */
 function roundedTopBarPath(x: number, y: number, width: number, height: number): string {
   const radius = Math.min(4, width / 2, height);
@@ -137,7 +148,7 @@ export function ScoreTrendChart({ weeks }: ScoreTrendChartProps) {
                     dominantBaseline="middle"
                     className="fill-muted text-[8px] tabular-nums"
                   >
-                    {Math.round(value).toLocaleString()}
+                    {formatTickValue(value)}
                   </text>
                 </g>
               );

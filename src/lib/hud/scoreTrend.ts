@@ -52,6 +52,16 @@ function startOfLocalWeek(date: Date): Date {
  * Only missions with a locked `finalScore` count, matching every other score
  * display on this HUD (`formatMyMissionScoreDisplay`, the My missions list) —
  * an in-progress or abandoned mission has no final score to add.
+ *
+ * **Known drift, not yet fixed:** this buckets on `scheduledAt ?? createdAt`
+ * because that is all `my_missions()` currently returns. `hud_telemetry()`'s
+ * weekMinutes/weekPviAverage instead bucket on
+ * `coalesce(psr.locked_at, psr.updated_at)` — lock time, not schedule/create
+ * time. A mission scheduled or started in one local week but not finished and
+ * locked until the next lands in different weeks on this card versus the
+ * Weekly baseline card above it. Closing that gap means exposing
+ * `locked_at`/`updated_at` from `my_missions()`, which is a migration this
+ * change does not make.
  */
 export function buildScoreTrend(
   entries: readonly MyMissionEntry[],

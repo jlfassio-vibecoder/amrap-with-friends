@@ -7,6 +7,11 @@ afterEach(() => {
   cleanup();
 });
 
+// weekStart carries a local time-of-day (T12:00:00, no 'Z'), not a bare
+// date, matching what buildScoreTrend actually emits (a full ISO string from
+// Date#toISOString()). A bare "YYYY-MM-DD" parses as UTC midnight, which
+// `formatWeekLabel`'s toLocaleDateString can shift onto the wrong local day
+// depending on the machine's timezone — fixture noise, not a real scenario.
 function week(weekStart: string, overrides: Partial<ScoreTrendWeek> = {}): ScoreTrendWeek {
   return {
     weekStart,
@@ -20,7 +25,11 @@ function week(weekStart: string, overrides: Partial<ScoreTrendWeek> = {}): Score
 
 describe('ScoreTrendChart', () => {
   it('shows an empty-history message and no chart when nothing is logged', () => {
-    const weeks = [week('2026-08-24'), week('2026-08-31'), week('2026-09-07')];
+    const weeks = [
+      week('2026-08-24T12:00:00'),
+      week('2026-08-31T12:00:00'),
+      week('2026-09-07T12:00:00'),
+    ];
     render(<ScoreTrendChart weeks={weeks} />);
 
     expect(screen.getByText(/No locked missions yet/)).toBeTruthy();
@@ -30,13 +39,13 @@ describe('ScoreTrendChart', () => {
 
   it('headlines the current (last) week’s score', () => {
     const weeks = [
-      week('2026-08-31', {
+      week('2026-08-31T12:00:00', {
         totalScore: 200,
         totalMinutes: 20,
         missionCount: 1,
         scorePerMinute: 10,
       }),
-      week('2026-09-07', {
+      week('2026-09-07T12:00:00', {
         totalScore: 260,
         totalMinutes: 20,
         missionCount: 1,
@@ -53,7 +62,7 @@ describe('ScoreTrendChart', () => {
 
   it('omits the delta with only one week of history', () => {
     const weeks = [
-      week('2026-09-07', {
+      week('2026-09-07T12:00:00', {
         totalScore: 260,
         totalMinutes: 20,
         missionCount: 1,
@@ -67,8 +76,13 @@ describe('ScoreTrendChart', () => {
 
   it('calls out an intensity shift when minutes held flat but score moved', () => {
     const weeks = [
-      week('2026-08-31', { totalScore: 200, totalMinutes: 40, missionCount: 2, scorePerMinute: 5 }),
-      week('2026-09-07', {
+      week('2026-08-31T12:00:00', {
+        totalScore: 200,
+        totalMinutes: 40,
+        missionCount: 2,
+        scorePerMinute: 5,
+      }),
+      week('2026-09-07T12:00:00', {
         totalScore: 260,
         totalMinutes: 41,
         missionCount: 2,
@@ -82,8 +96,13 @@ describe('ScoreTrendChart', () => {
 
   it('does not call out an intensity shift when minutes moved too', () => {
     const weeks = [
-      week('2026-08-31', { totalScore: 200, totalMinutes: 40, missionCount: 2, scorePerMinute: 5 }),
-      week('2026-09-07', {
+      week('2026-08-31T12:00:00', {
+        totalScore: 200,
+        totalMinutes: 40,
+        missionCount: 2,
+        scorePerMinute: 5,
+      }),
+      week('2026-09-07T12:00:00', {
         totalScore: 260,
         totalMinutes: 60,
         missionCount: 3,
@@ -97,13 +116,13 @@ describe('ScoreTrendChart', () => {
 
   it('lists every week in the table, oldest first, with score, minutes, and score/min', () => {
     const weeks = [
-      week('2026-08-31', {
+      week('2026-08-31T12:00:00', {
         totalScore: 200,
         totalMinutes: 20,
         missionCount: 1,
         scorePerMinute: 10,
       }),
-      week('2026-09-07', {
+      week('2026-09-07T12:00:00', {
         totalScore: 260,
         totalMinutes: 20,
         missionCount: 1,
@@ -121,8 +140,8 @@ describe('ScoreTrendChart', () => {
 
   it('shows an em dash rather than a number for a week with no minutes logged', () => {
     const weeks = [
-      week('2026-09-07', { totalScore: 0, totalMinutes: 0, missionCount: 0 }),
-      week('2026-09-14', {
+      week('2026-09-07T12:00:00', { totalScore: 0, totalMinutes: 0, missionCount: 0 }),
+      week('2026-09-14T12:00:00', {
         totalScore: 100,
         totalMinutes: 10,
         missionCount: 1,
@@ -138,8 +157,8 @@ describe('ScoreTrendChart', () => {
 
   it('draws one bar per week with a score, and no bar for a zero week', () => {
     const weeks = [
-      week('2026-08-31', { totalScore: 0, totalMinutes: 0, missionCount: 0 }),
-      week('2026-09-07', {
+      week('2026-08-31T12:00:00', { totalScore: 0, totalMinutes: 0, missionCount: 0 }),
+      week('2026-09-07T12:00:00', {
         totalScore: 200,
         totalMinutes: 20,
         missionCount: 1,
@@ -149,5 +168,20 @@ describe('ScoreTrendChart', () => {
     const { container } = render(<ScoreTrendChart weeks={weeks} />);
 
     expect(container.querySelectorAll('svg path')).toHaveLength(1);
+  });
+
+  it('gives every gridline tick a distinct label even at a ceiling of 1', () => {
+    // A single week with a score of 1 forces niceCeiling to its floor: 1.
+    // Gridlines land at 0, 0.5, and 1 — Math.round(0.5) would collapse the
+    // midline into the same "1" as the top tick.
+    const weeks = [week('2026-09-07T12:00:00', { totalScore: 1, missionCount: 1 })];
+    const { container } = render(<ScoreTrendChart weeks={weeks} />);
+
+    // Gridlines render first, before any per-week label, so the first three
+    // <text> nodes in document order are the 0 / mid / ceiling ticks.
+    const tickLabels = [...container.querySelectorAll('svg text')]
+      .slice(0, 3)
+      .map((el) => el.textContent);
+    expect(tickLabels).toEqual(['0', '0.5', '1']);
   });
 });
