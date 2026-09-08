@@ -380,6 +380,13 @@ describe('parseHudTelemetryPayload — week history', () => {
     expect(parsed?.weeks).toEqual([]);
   });
 
+  it('drops weeks when missions is not an array', () => {
+    const bad = { ...week, missions: { not: 'a list' } };
+    const parsed = parseHudTelemetryPayload({ ...basePayload, weeks: [bad] });
+    expect(parsed).not.toBeNull();
+    expect(parsed?.weeks).toEqual([]);
+  });
+
   it('treats a missing weeks key as no history, keeping the rest of the payload', () => {
     const parsed = parseHudTelemetryPayload(basePayload);
     expect(parsed).not.toBeNull();

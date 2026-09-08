@@ -53,7 +53,11 @@ describe('WeekDetailPanel', () => {
   it('heads the panel with the week span and its headline figures', () => {
     render(<WeekDetailPanel {...props()} />);
 
-    expect(screen.getByText('Sep 7 – Sep 13')).toBeTruthy();
+    const monday = new Date(2026, 8, 7);
+    const sunday = new Date(2026, 8, 13);
+    const format = (date: Date) =>
+      date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    expect(screen.getByText(`${format(monday)} – ${format(sunday)}`)).toBeTruthy();
     expect(screen.getByText('60')).toBeTruthy();
     expect(screen.getByText('700')).toBeTruthy();
     expect(screen.getByText('6.4%')).toBeTruthy();

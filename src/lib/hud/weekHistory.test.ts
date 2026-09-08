@@ -89,7 +89,12 @@ describe('formatWeekRangeLabel', () => {
     // Built from a local-midnight instant so the label is timezone-stable
     // for the machine running it, the way the RPC sends weekStart.
     const monday = new Date(2026, 8, 7);
-    expect(formatWeekRangeLabel(monday.toISOString())).toBe('Sep 7 – Sep 13');
+    const sunday = new Date(2026, 8, 13);
+    const format = (date: Date) =>
+      date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    expect(formatWeekRangeLabel(monday.toISOString())).toBe(
+      `${format(monday)} – ${format(sunday)}`
+    );
   });
 
   it('degrades rather than throwing on an unparseable instant', () => {

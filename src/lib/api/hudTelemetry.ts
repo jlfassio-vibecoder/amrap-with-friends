@@ -334,15 +334,20 @@ function readHistoryWeek(value: unknown): HudHistoryWeek | null {
   }
 
   const rawMissions = row.missions;
+  // SQL always emits an array (coalesced to []). Anything else is payload drift
+  // — fail the week so readHistoryWeeks drops the whole window rather than
+  // rendering missionCount without missions.
+  if (!Array.isArray(rawMissions)) {
+    return null;
+  }
+
   const missions: HudWeekMission[] = [];
-  if (Array.isArray(rawMissions)) {
-    for (const item of rawMissions) {
-      const mission = readWeekMission(item);
-      if (mission === null) {
-        return null;
-      }
-      missions.push(mission);
+  for (const item of rawMissions) {
+    const mission = readWeekMission(item);
+    if (mission === null) {
+      return null;
     }
+    missions.push(mission);
   }
 
   return {
