@@ -1,9 +1,9 @@
-import type { MyMissionEntry } from '@/lib/api/myMissions';
+import type { HudHistoryWeek } from '@/lib/hud/types';
 
 export interface ScoreTrendWeek {
-  /** Monday 00:00 local time for this bucket, ISO string. */
+  /** Monday 00:00 local time for this bucket, as an instant. */
   weekStart: string;
-  /** Sum of finalScore across locked missions dated in this week. */
+  /** Sum of finalScore across the week's locked missions. */
   totalScore: number;
   /** Sum of durationMinutes across those same missions. */
   totalMinutes: number;
@@ -19,102 +19,25 @@ export interface ScoreTrendSummary {
   scoreChangePercent: number | null;
 }
 
-function pad2(n: number): string {
-  return n.toString().padStart(2, '0');
-}
-
-/** `YYYY-MM-DD` in local time — never `toISOString()`, which shifts to UTC and can land on the wrong local day. */
-function localDateKey(date: Date): string {
-  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
-}
-
 /**
- * Midnight local time on the Monday of `date`'s week — the same "since
- * Monday" week `WeeklyBaselineBar` already uses, kept local so a mission
- * logged at 11pm Sunday and one at 1am Monday land in different weeks by the
- * athlete's own clock, not the server's.
- */
-function startOfLocalWeek(date: Date): Date {
-  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const day = start.getDay(); // 0 = Sunday .. 6 = Saturday
-  const daysSinceMonday = day === 0 ? 6 : day - 1;
-  start.setDate(start.getDate() - daysSinceMonday);
-  return start;
-}
-
-/**
- * Buckets locked missions into `weekCount` consecutive local weeks ending at
- * `now`'s week, oldest first — the shape a bar chart reads left to right as
- * time moving forward. Weeks with no missions still appear, at zero: a gap is
- * exactly as real a data point as a bar, and the athlete's attrition grid
- * elsewhere on this HUD makes the same choice for the same reason.
+ * The chart's view of the weeks `hud_telemetry` already returns.
  *
- * Only missions with a locked `finalScore` count, matching every other score
- * display on this HUD (`formatMyMissionScoreDisplay`, the My missions list) —
- * an in-progress or abandoned mission has no final score to add.
- *
- * **Known drift, not yet fixed:** this buckets on `scheduledAt ?? createdAt`
- * because that is all `my_missions()` currently returns. `hud_telemetry()`'s
- * weekMinutes/weekPviAverage instead bucket on
- * `coalesce(psr.locked_at, psr.updated_at)` — lock time, not schedule/create
- * time. A mission scheduled or started in one local week but not finished and
- * locked until the next lands in different weeks on this card versus the
- * Weekly baseline card above it. Closing that gap means exposing
- * `locked_at`/`updated_at` from `my_missions()`, which is a migration this
- * change does not make.
+ * This used to bucket `my_missions()` rows client-side on
+ * `scheduledAt ?? createdAt`, which put a mission scheduled in one week but
+ * finished in the next into a different week than the Weekly baseline card —
+ * the drift Bugbot caught on the score-trend PR. The server now sends the
+ * weeks it has always computed, bucketed on lock time, so both cards read the
+ * same buckets by construction and there is no date arithmetic left here to
+ * disagree with.
  */
-export function buildScoreTrend(
-  entries: readonly MyMissionEntry[],
-  weekCount: number,
-  now: Date = new Date()
-): ScoreTrendWeek[] {
-  const currentWeekStart = startOfLocalWeek(now);
-
-  const buckets = new Map<
-    string,
-    { weekStart: Date; totalScore: number; totalMinutes: number; missionCount: number }
-  >();
-
-  for (let i = weekCount - 1; i >= 0; i -= 1) {
-    const weekStart = new Date(currentWeekStart);
-    weekStart.setDate(weekStart.getDate() - i * 7);
-    buckets.set(localDateKey(weekStart), {
-      weekStart,
-      totalScore: 0,
-      totalMinutes: 0,
-      missionCount: 0,
-    });
-  }
-
-  for (const entry of entries) {
-    if (entry.finalScore === null) {
-      continue;
-    }
-    const when = new Date(entry.scheduledAt ?? entry.createdAt);
-    if (Number.isNaN(when.getTime())) {
-      continue;
-    }
-    const bucket = buckets.get(localDateKey(startOfLocalWeek(when)));
-    if (!bucket) {
-      continue; // Outside the window this trend covers.
-    }
-    bucket.totalScore += entry.finalScore;
-    bucket.totalMinutes += entry.durationMinutes;
-    bucket.missionCount += 1;
-  }
-
-  return [...buckets.values()]
-    .sort((a, b) => a.weekStart.getTime() - b.weekStart.getTime())
-    .map((bucket) => ({
-      weekStart: bucket.weekStart.toISOString(),
-      totalScore: bucket.totalScore,
-      totalMinutes: bucket.totalMinutes,
-      missionCount: bucket.missionCount,
-      scorePerMinute:
-        bucket.totalMinutes > 0
-          ? Math.round((bucket.totalScore / bucket.totalMinutes) * 10) / 10
-          : null,
-    }));
+export function scoreTrendFromHistory(weeks: readonly HudHistoryWeek[]): ScoreTrendWeek[] {
+  return weeks.map((week) => ({
+    weekStart: week.weekStart,
+    totalScore: week.score,
+    totalMinutes: week.minutes,
+    missionCount: week.missionCount,
+    scorePerMinute: week.minutes > 0 ? Math.round((week.score / week.minutes) * 10) / 10 : null,
+  }));
 }
 
 /** The most recent week plus its change from the one before, for the headline figure. */

@@ -14,20 +14,21 @@ import { OvertrainingWarningCard } from '@/components/hud/OvertrainingWarningCar
 import { PhysicalActivityList } from '@/components/hud/PhysicalActivityList';
 import { PhysicalActivityLogForm } from '@/components/hud/PhysicalActivityLogForm';
 import { ScoreTrendChart } from '@/components/hud/ScoreTrendChart';
+import { WeekDetailPanel } from '@/components/hud/WeekDetailPanel';
 import { WeeklyBaselineBar } from '@/components/hud/WeeklyBaselineBar';
 import { summarizePhysicalActivityWindow } from '@/lib/hud/activityWindowSummary';
 import { evaluateOvertrainingRisk } from '@/lib/hud/evaluateOvertrainingRisk';
 import { useBenchmarkProgress } from '@/hooks/useBenchmarkProgress';
 import { hasAthleteBodyMetrics } from '@/lib/api/athleteProfile';
 import { quotasFromProfile } from '@/lib/hud/classificationQuotas';
+import { scoreTrendFromHistory } from '@/lib/hud/scoreTrend';
+import { hasInspectableHistory, isCurrentWeek, stepWeekIndex, weekAt } from '@/lib/hud/weekHistory';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
-import { useHudScoreTrend } from '@/hooks/useHudScoreTrend';
 import { useHudTelemetry } from '@/hooks/useHudTelemetry';
 import { usePhysicalActivityLog } from '@/hooks/usePhysicalActivityLog';
 
 export default function HUDPage() {
   const { telemetry, error, loading, isAuthenticated, isAuthLoading } = useHudTelemetry();
-  const scoreTrend = useHudScoreTrend();
   const { profile, loading: profileLoading } = useAthleteProfile();
   const quotas = quotasFromProfile(profile);
   const showTelemetry = !loading && !profileLoading && isAuthenticated && telemetry;
@@ -42,6 +43,14 @@ export default function HUDPage() {
   const [nowMs] = useState(() => Date.now());
   const showOvertrainingWarning =
     overtrainingRisk !== null && overtrainingRisk.riskLevel !== 'normal';
+
+  // The one piece of the HUD that travels in time. Null means "nothing
+  // inspected", which is a different state from "the current week" — the
+  // live cards above never move either way.
+  const historyWeeks = telemetry?.weeks ?? [];
+  const [selectedWeekIndex, setSelectedWeekIndex] = useState<number | null>(null);
+  const selectedWeek = weekAt(historyWeeks, selectedWeekIndex);
+  const canInspectHistory = hasInspectableHistory(historyWeeks);
 
   return (
     <main className="min-h-screen bg-page">
@@ -136,7 +145,9 @@ export default function HUDPage() {
               score depending on pacing and reps, which a minutes-only view
               cannot show. A progress surface, same as the panel below it.
             */}
-            {scoreTrend.weeks ? <ScoreTrendChart weeks={scoreTrend.weeks} /> : null}
+            {historyWeeks.length > 0 ? (
+              <ScoreTrendChart weeks={scoreTrendFromHistory(historyWeeks)} />
+            ) : null}
 
             {/*
               Below the load cards and above the domain matrix: this is a
@@ -153,7 +164,37 @@ export default function HUDPage() {
               />
             )}
 
-            <AttritionGrid attrition={telemetry.attrition} weekEndsAt={telemetry.weekEndsAt} />
+            {/*
+              The strip and the panel are one control: the twelve cells were
+              already a row of weeks, so they become the way into a week
+              rather than the page growing a separate stepper.
+            */}
+            <AttritionGrid
+              attrition={telemetry.attrition}
+              weekEndsAt={telemetry.weekEndsAt}
+              weeks={historyWeeks}
+              selectedIndex={selectedWeekIndex}
+              onSelect={canInspectHistory ? setSelectedWeekIndex : undefined}
+            />
+
+            {selectedWeek !== null && selectedWeekIndex !== null ? (
+              <WeekDetailPanel
+                week={selectedWeek}
+                isCurrent={isCurrentWeek(historyWeeks, selectedWeekIndex)}
+                baselineMinutes={quotas.civilianMinutes}
+                canStepOlder={selectedWeekIndex > 0}
+                canStepNewer={selectedWeekIndex < historyWeeks.length - 1}
+                onStepOlder={() =>
+                  setSelectedWeekIndex(stepWeekIndex(historyWeeks, selectedWeekIndex, -1))
+                }
+                onStepNewer={() =>
+                  setSelectedWeekIndex(stepWeekIndex(historyWeeks, selectedWeekIndex, 1))
+                }
+                onJumpToCurrent={() => setSelectedWeekIndex(historyWeeks.length - 1)}
+                onClose={() => setSelectedWeekIndex(null)}
+              />
+            ) : null}
+
             <DomainMatrixChart domainMinutes30d={telemetry.domainMinutes30d} />
           </div>
         ) : null}

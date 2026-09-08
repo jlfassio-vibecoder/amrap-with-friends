@@ -57,6 +57,31 @@ export type HudWeekPviMission = {
   lockedAt: string;
 };
 
+/** A mission inside a history week — same shape as a PVI row, but pacing may be null. */
+export type HudWeekMission = Omit<HudWeekPviMission, 'pvi'> & {
+  /** Null when score_breakdown has no computable PVI — still a locked mission. */
+  pvi: number | null;
+  finalScore: number | null;
+};
+
+/**
+ * One of the 12 local weeks `hud_telemetry` walks, kept whole rather than
+ * reduced to a single bit. `weeks[0]` is the oldest, `weeks[11]` the current
+ * week — the attrition strip reverses that for display (newest first).
+ */
+export type HudHistoryWeek = {
+  /** Monday 00:00 local time for this week, as an instant. */
+  weekStart: string;
+  minutes: number;
+  /** Minutes met this athlete's Civilian quota — still drives accent vs muted fill. */
+  compliant: boolean;
+  missionCount: number;
+  /** Accumulated final score across the week's locked missions. */
+  score: number;
+  pviAverage: number | null;
+  missions: HudWeekMission[];
+};
+
 export interface HUDTelemetryPayload {
   weekMinutes: number;
   weekPviAverage: number | null;
@@ -65,6 +90,8 @@ export interface HUDTelemetryPayload {
   weekEndsAt: string;
   lastLockedAt: string | null;
   attrition: boolean[];
+  /** Empty when the server predates the week-history migration; the HUD degrades to the read-only grid. */
+  weeks: HudHistoryWeek[];
   domainMinutes30d: HudDomainMinutes;
   classification: HudClassification;
   activity7d: HudActivity7d;

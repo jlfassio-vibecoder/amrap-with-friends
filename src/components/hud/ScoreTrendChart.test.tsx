@@ -184,4 +184,34 @@ describe('ScoreTrendChart', () => {
       .map((el) => el.textContent);
     expect(tickLabels).toEqual(['0', '0.5', '1']);
   });
+
+  it('thins the date labels at twelve weeks so they cannot collide', () => {
+    // Twelve bands are ~27px wide; a short-date label is wider than that, so
+    // only every other one is drawn — counted back from the current week, so
+    // that one is always labelled.
+    const weeks = Array.from({ length: 12 }, (_, index) =>
+      week(new Date(2026, 5, 1 + index * 7).toISOString(), {
+        totalScore: 100 + index,
+        totalMinutes: 20,
+        missionCount: 1,
+        scorePerMinute: 5,
+      })
+    );
+    const { container } = render(<ScoreTrendChart weeks={weeks} />);
+
+    // Derive expected labels the same way the chart does — do not hard-code an
+    // English month name that fails under a non-en locale.
+    const formatLabel = (iso: string) =>
+      new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const expectedDates = new Set(weeks.map((row) => formatLabel(row.weekStart)));
+
+    // 3 gridline ticks + 1 direct label on the current bar + the date labels.
+    const dateLabels = [...container.querySelectorAll('svg text')].filter((el) =>
+      expectedDates.has(el.textContent ?? '')
+    );
+    expect(dateLabels).toHaveLength(6);
+    expect(dateLabels[dateLabels.length - 1].textContent).toBe(
+      formatLabel(weeks[weeks.length - 1]!.weekStart)
+    );
+  });
 });
