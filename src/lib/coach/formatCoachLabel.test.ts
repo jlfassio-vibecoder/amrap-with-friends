@@ -28,17 +28,39 @@ describe('formatCoachLabel', () => {
     expect(formatCoachLabel('host')).toBe('Host');
     expect(formatCoachLabel('running')).toBe('Running');
   });
+
+  it('uppercases acronyms rather than title-casing them', () => {
+    expect(formatCoachLabel('mission_id_copied')).toBe('Mission ID copied');
+    expect(formatCoachLabel('featured_wod_viewed')).toBe('Featured WOD viewed');
+    expect(formatCoachLabel('rpc_call')).toBe('RPC call');
+    expect(formatCoachLabel('id')).toBe('ID');
+  });
 });
 
 describe('formatCoachEventLabel', () => {
   it('appends formatted RPC name for rpc_call events', () => {
     expect(
       formatCoachEventLabel('rpc_call', { rpc_name: 'upsert_athlete_profile', ok: true })
-    ).toBe('Rpc call · Upsert athlete profile');
+    ).toBe('RPC call · Upsert athlete profile');
   });
 
-  it('returns formatted event name for non-rpc events', () => {
+  it('appends the discriminating prop for other repeated event names', () => {
+    expect(formatCoachEventLabel('auth_sign_up_failed', { reason: 'duplicate' })).toBe(
+      'Auth sign up failed · Duplicate'
+    );
+    expect(formatCoachEventLabel('realtime_status', { status: 'timed_out' })).toBe(
+      'Realtime status · Timed out'
+    );
+    expect(formatCoachEventLabel('audio_unlock_result', { state: 'suspended' })).toBe(
+      'Audio unlock result · Suspended'
+    );
+  });
+
+  it('returns the bare event name when the discriminating prop is absent or blank', () => {
     expect(formatCoachEventLabel('intake_submitted', {})).toBe('Intake submitted');
+    expect(formatCoachEventLabel('auth_sign_up_failed', {})).toBe('Auth sign up failed');
+    expect(formatCoachEventLabel('rpc_call', { rpc_name: '  ' })).toBe('RPC call');
+    expect(formatCoachEventLabel('realtime_status', { status: 3 })).toBe('Realtime status');
   });
 });
 
@@ -67,7 +89,7 @@ describe('formatCoachProps', () => {
     });
     expect(formatted).toBe(
       JSON.stringify({
-        'Mission id': 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        'Mission ID': 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
         'Error message': 'Something went wrong. Please try again.',
       })
     );

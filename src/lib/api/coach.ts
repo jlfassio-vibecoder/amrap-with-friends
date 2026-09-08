@@ -84,12 +84,70 @@ export interface CoachRealtimeReliabilityRow {
   p50SubscribeLatencyMs: number | null;
 }
 
+export const COACH_DASHBOARD_WINDOWS = ['7d', '30d', '90d', 'all'] as const;
+
+export type CoachDashboardWindow = (typeof COACH_DASHBOARD_WINDOWS)[number];
+
+export function coachDashboardWindowLabel(window: CoachDashboardWindow): string {
+  switch (window) {
+    case '7d':
+      return 'Last 7 days';
+    case '30d':
+      return 'Last 30 days';
+    case '90d':
+      return 'Last 90 days';
+    default:
+      return 'All time';
+  }
+}
+
+export interface CoachSignupFunnelRow {
+  method: string;
+  attempts: number;
+  /** Null for google: the OAuth redirect loses the link between an attempt and the sign-in it produces. */
+  completions: number | null;
+  awaitingConfirmation: number | null;
+  failures: number;
+  completionRatePct: number | null;
+}
+
+export interface CoachAuthFailureRow {
+  stage: string;
+  reason: string;
+  failureCount: number;
+  pctOfFailures: number | null;
+}
+
+export interface CoachCampaignFunnel {
+  campaignsCreated: number;
+  campaignsInFlight: number;
+  campaignsConcluded: number;
+  campaignsStarted: number;
+  campaignsReachedHalfway: number;
+  campaignsFinished: number;
+  finishRatePct: number | null;
+  occurrenceAdherencePct: number | null;
+}
+
+export interface CoachCampaignLengthRow {
+  weekCount: number;
+  campaigns: number;
+  campaignsFinished: number;
+  occurrenceAdherencePct: number | null;
+}
+
 export interface CoachDashboard {
+  /** Echoed back by the RPC, so the rendered numbers always name the window they came from. */
+  window: CoachDashboardWindow;
   topStrip: CoachTopStrip;
   claimFunnel: CoachClaimFunnel;
   intakeFunnel: CoachIntakeFunnel;
   rallyConversion: CoachRallyConversion;
   missionAbandonment: CoachMissionAbandonment;
+  signupFunnel: CoachSignupFunnelRow[];
+  authFailureReasons: CoachAuthFailureRow[];
+  campaignFunnel: CoachCampaignFunnel;
+  campaignLengthAdherence: CoachCampaignLengthRow[];
   templatePerformance: CoachTemplatePerformanceRow[];
   hostVsJoinerRetention: CoachHostVsJoinerRow[];
   audioUnlockRate: CoachAudioUnlockRow[];
@@ -324,6 +382,48 @@ function parseMissionAbandonment(row: Record<string, unknown>): CoachMissionAban
     missionsFinished: num(row, 'missions_finished'),
     missionsWithAbandonmentEvent: num(row, 'missions_with_abandonment_event'),
     abandonmentRatePct: numOrNull(row, 'abandonment_rate_pct'),
+  };
+}
+
+function parseSignupFunnelRow(row: Record<string, unknown>): CoachSignupFunnelRow {
+  return {
+    method: str(row, 'method'),
+    attempts: num(row, 'attempts'),
+    completions: numOrNull(row, 'completions'),
+    awaitingConfirmation: numOrNull(row, 'awaiting_confirmation'),
+    failures: num(row, 'failures'),
+    completionRatePct: numOrNull(row, 'completion_rate_pct'),
+  };
+}
+
+function parseAuthFailureRow(row: Record<string, unknown>): CoachAuthFailureRow {
+  return {
+    stage: str(row, 'stage'),
+    reason: str(row, 'reason'),
+    failureCount: num(row, 'failure_count'),
+    pctOfFailures: numOrNull(row, 'pct_of_failures'),
+  };
+}
+
+function parseCampaignFunnel(row: Record<string, unknown>): CoachCampaignFunnel {
+  return {
+    campaignsCreated: num(row, 'campaigns_created'),
+    campaignsInFlight: num(row, 'campaigns_in_flight'),
+    campaignsConcluded: num(row, 'campaigns_concluded'),
+    campaignsStarted: num(row, 'campaigns_started'),
+    campaignsReachedHalfway: num(row, 'campaigns_reached_halfway'),
+    campaignsFinished: num(row, 'campaigns_finished'),
+    finishRatePct: numOrNull(row, 'finish_rate_pct'),
+    occurrenceAdherencePct: numOrNull(row, 'occurrence_adherence_pct'),
+  };
+}
+
+function parseCampaignLengthRow(row: Record<string, unknown>): CoachCampaignLengthRow {
+  return {
+    weekCount: num(row, 'week_count'),
+    campaigns: num(row, 'campaigns'),
+    campaignsFinished: num(row, 'campaigns_finished'),
+    occurrenceAdherencePct: numOrNull(row, 'occurrence_adherence_pct'),
   };
 }
 
@@ -683,11 +783,17 @@ export async function fetchCoachUserDetail(userId: string): Promise<{
   };
 }
 
-export async function fetchCoachDashboard(): Promise<{
+function parseWindow(value: unknown): CoachDashboardWindow {
+  return COACH_DASHBOARD_WINDOWS.includes(value as CoachDashboardWindow)
+    ? (value as CoachDashboardWindow)
+    : 'all';
+}
+
+export async function fetchCoachDashboard(window: CoachDashboardWindow = 'all'): Promise<{
   data: CoachDashboard | null;
   error: CoachApiError | null;
 }> {
-  const { data, error } = await callRpc('coach_dashboard');
+  const { data, error } = await callRpc('coach_dashboard', { p_window: window });
 
   if (error) {
     return { data: null, error: { message: mapCoachError(error.message) } };
@@ -700,11 +806,16 @@ export async function fetchCoachDashboard(): Promise<{
 
   return {
     data: {
+      window: parseWindow(raw.window),
       topStrip: parseTopStrip(asRecord(raw.topStrip)),
       claimFunnel: parseClaimFunnel(asRecord(raw.claimFunnel)),
       intakeFunnel: parseIntakeFunnel(asRecord(raw.intakeFunnel)),
       rallyConversion: parseRallyConversion(asRecord(raw.rallyConversion)),
       missionAbandonment: parseMissionAbandonment(asRecord(raw.missionAbandonment)),
+      signupFunnel: asArray(raw.signupFunnel).map(parseSignupFunnelRow),
+      authFailureReasons: asArray(raw.authFailureReasons).map(parseAuthFailureRow),
+      campaignFunnel: parseCampaignFunnel(asRecord(raw.campaignFunnel)),
+      campaignLengthAdherence: asArray(raw.campaignLengthAdherence).map(parseCampaignLengthRow),
       templatePerformance: asArray(raw.templatePerformance).map(parseTemplateRow),
       hostVsJoinerRetention: asArray(raw.hostVsJoinerRetention).map(parseHostVsJoinerRow),
       audioUnlockRate: asArray(raw.audioUnlockRate).map(parseAudioUnlockRow),

@@ -68,6 +68,40 @@ describe('fetchCoachDashboard', () => {
           missions_with_abandonment_event: 2,
           abandonment_rate_pct: 10,
         },
+        signupFunnel: [
+          {
+            method: 'password',
+            attempts: 20,
+            completions: 14,
+            awaiting_confirmation: 5,
+            failures: 6,
+            completion_rate_pct: 70,
+          },
+          {
+            method: 'google',
+            attempts: 8,
+            completions: null,
+            awaiting_confirmation: null,
+            failures: 1,
+            completion_rate_pct: null,
+          },
+        ],
+        authFailureReasons: [
+          { stage: 'sign_up', reason: 'duplicate', failure_count: 4, pct_of_failures: 57.14 },
+        ],
+        campaignFunnel: {
+          campaigns_created: 12,
+          campaigns_in_flight: 5,
+          campaigns_concluded: 7,
+          campaigns_started: 6,
+          campaigns_reached_halfway: 4,
+          campaigns_finished: 2,
+          finish_rate_pct: 28.57,
+          occurrence_adherence_pct: 61.9,
+        },
+        campaignLengthAdherence: [
+          { week_count: 8, campaigns: 3, campaigns_finished: 1, occurrence_adherence_pct: 55 },
+        ],
         templatePerformance: [
           {
             template_id: 'blood-shunt-5',
@@ -116,13 +150,57 @@ describe('fetchCoachDashboard', () => {
 
     const result = await fetchCoachDashboard();
 
-    expect(callRpcMock).toHaveBeenCalledWith('coach_dashboard');
+    expect(callRpcMock).toHaveBeenCalledWith('coach_dashboard', { p_window: 'all' });
     expect(result.error).toBeNull();
     expect(result.data?.topStrip.missionsCreated7d).toBe(3);
     expect(result.data?.topStrip.guestBrowsers7d).toBe(2);
     expect(result.data?.topStrip.uniqueAnonIds).toBe(5);
     expect(result.data?.claimFunnel.completionRatePct).toBe(40);
     expect(result.data?.templatePerformance[0]?.templateId).toBe('blood-shunt-5');
+    expect(result.data?.signupFunnel[0]?.completions).toBe(14);
+    expect(result.data?.authFailureReasons[0]?.reason).toBe('duplicate');
+    expect(result.data?.campaignFunnel.campaignsInFlight).toBe(5);
+    expect(result.data?.campaignLengthAdherence[0]?.weekCount).toBe(8);
+  });
+
+  it('keeps an unobservable google completion null rather than zero', async () => {
+    // A 0 here would read as "nobody ever completes Google sign-up"; the OAuth
+    // redirect simply means the completion cannot be attributed to the attempt.
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        topStrip: {},
+        claimFunnel: {},
+        intakeFunnel: {},
+        rallyConversion: {},
+        missionAbandonment: {},
+        signupFunnel: [
+          {
+            method: 'google',
+            attempts: 8,
+            completions: null,
+            awaiting_confirmation: null,
+            failures: 1,
+            completion_rate_pct: null,
+          },
+        ],
+        authFailureReasons: [],
+        campaignFunnel: {},
+        campaignLengthAdherence: [],
+        templatePerformance: [],
+        hostVsJoinerRetention: [],
+        audioUnlockRate: [],
+        rpcReliability: [],
+        realtimeReliability: [],
+      },
+      error: null,
+    });
+
+    const result = await fetchCoachDashboard();
+
+    expect(result.data?.signupFunnel[0]?.completions).toBeNull();
+    expect(result.data?.signupFunnel[0]?.completionRatePct).toBeNull();
+    expect(result.data?.signupFunnel[0]?.failures).toBe(1);
   });
 
   it('treats a missing guestBrowsers7d key as zero (old RPC)', async () => {
@@ -157,6 +235,67 @@ describe('fetchCoachDashboard', () => {
     expect(result.error).toBeNull();
     expect(result.data?.topStrip.guestBrowsers7d).toBe(0);
     expect(result.data?.topStrip.uniqueAnonIds).toBe(5);
+    expect(result.data?.signupFunnel).toEqual([]);
+    expect(result.data?.campaignFunnel.campaignsCreated).toBe(0);
+    expect(result.data?.campaignLengthAdherence).toEqual([]);
+  });
+
+  it('sends the requested window and echoes back the one the RPC used', async () => {
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        window: '30d',
+        topStrip: {},
+        claimFunnel: {},
+        intakeFunnel: {},
+        rallyConversion: {},
+        missionAbandonment: {},
+        signupFunnel: [],
+        authFailureReasons: [],
+        campaignFunnel: {},
+        campaignLengthAdherence: [],
+        templatePerformance: [],
+        hostVsJoinerRetention: [],
+        audioUnlockRate: [],
+        rpcReliability: [],
+        realtimeReliability: [],
+      },
+      error: null,
+    });
+
+    const result = await fetchCoachDashboard('30d');
+
+    expect(callRpcMock).toHaveBeenCalledWith('coach_dashboard', { p_window: '30d' });
+    expect(result.data?.window).toBe('30d');
+  });
+
+  it('falls back to all time when the RPC echoes an unknown window', async () => {
+    // An older deployed RPC returns no window key at all; the label must not
+    // claim a scope the numbers were not computed with.
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        topStrip: {},
+        claimFunnel: {},
+        intakeFunnel: {},
+        rallyConversion: {},
+        missionAbandonment: {},
+        signupFunnel: [],
+        authFailureReasons: [],
+        campaignFunnel: {},
+        campaignLengthAdherence: [],
+        templatePerformance: [],
+        hostVsJoinerRetention: [],
+        audioUnlockRate: [],
+        rpcReliability: [],
+        realtimeReliability: [],
+      },
+      error: null,
+    });
+
+    const result = await fetchCoachDashboard('90d');
+
+    expect(result.data?.window).toBe('all');
   });
 
   it('maps Not authorized errors', async () => {
