@@ -4,6 +4,7 @@ import {
   type TimeDomain,
   type WorkoutTemplate,
 } from '@/data/workoutTemplates';
+import type { FitnessSearchGoalId } from '@/data/fitnessSearchGoals';
 import { brandNameForDomain, guidanceForDomain } from '@/data/timeDomainGuidance';
 import type { CampaignTrack, CampaignWeekCount } from '@/lib/campaign';
 import { MAX_CHAIN_LENGTH } from '@/lib/mission/chainRest';
@@ -15,6 +16,8 @@ export type ChainMissionPreset = {
   templateIds: string[];
   /** Time domain(s) this pack trains — drives Sprint / Crucible / Grind / Marathon labels. */
   domains: readonly TimeDomain[];
+  /** Fitness search goals this pack supports — drives Plan hub Goal/Focus filters. */
+  searchGoals: readonly FitnessSearchGoalId[];
 };
 
 export type CampaignMissionPreset = {
@@ -27,6 +30,8 @@ export type CampaignMissionPreset = {
   missionsPerWeek: number;
   /** Time domain(s) this pack trains — drives Sprint / Crucible / Grind / Marathon labels. */
   domains: readonly TimeDomain[];
+  /** Fitness search goals this pack supports — drives Plan hub Goal/Focus filters. */
+  searchGoals: readonly FitnessSearchGoalId[];
 };
 
 /** Curated multi-workout launches for the Plan hub. */
@@ -38,6 +43,7 @@ export const CHAIN_MISSION_PRESETS: readonly ChainMissionPreset[] = [
     blurb: 'Three 5-minute Blood Shunt sprints with short rests between.',
     templateIds: ['the-piston', 'shock-and-awe', 'the-pendulum'],
     domains: [5],
+    searchGoals: ['weight-loss', 'cardio-stamina'],
   },
   {
     id: 'sprint-shunt-double',
@@ -45,6 +51,7 @@ export const CHAIN_MISSION_PRESETS: readonly ChainMissionPreset[] = [
     blurb: 'Two 5-minute Blood Shunt finishers — flood then override.',
     templateIds: ['flash-flood', 'system-override'],
     domains: [5],
+    searchGoals: ['weight-loss', 'cardio-stamina'],
   },
   {
     id: 'sprint-engine-double',
@@ -52,6 +59,7 @@ export const CHAIN_MISSION_PRESETS: readonly ChainMissionPreset[] = [
     blurb: 'Two 5-minute Engine Room bursts for quick aerobic spikes.',
     templateIds: ['the-gas-pedal', 'redline'],
     domains: [5],
+    searchGoals: ['weight-loss', 'cardio-stamina'],
   },
   {
     id: 'sprint-trap-double',
@@ -59,6 +67,7 @@ export const CHAIN_MISSION_PRESETS: readonly ChainMissionPreset[] = [
     blurb: 'Two 5-minute Localized Trap pieces for local muscle burn.',
     templateIds: ['the-acid-bath', 'deltoid-demise'],
     domains: [5],
+    searchGoals: ['muscle-building', 'strength-power'],
   },
   // Crucible (10)
   {
@@ -67,6 +76,7 @@ export const CHAIN_MISSION_PRESETS: readonly ChainMissionPreset[] = [
     blurb: 'Two 10-minute Blood Shunt AMRAPs — valve then hemodynamics.',
     templateIds: ['the-valve', 'the-hemodynamic'],
     domains: [10],
+    searchGoals: ['weight-loss', 'cardio-stamina'],
   },
   {
     id: 'crucible-shunt-triple',
@@ -74,6 +84,7 @@ export const CHAIN_MISSION_PRESETS: readonly ChainMissionPreset[] = [
     blurb: 'Three 10-minute Blood Shunt pieces for peak cardio density.',
     templateIds: ['arterial-shift', 'the-regulator', 'high-tide'],
     domains: [10],
+    searchGoals: ['weight-loss', 'cardio-stamina'],
   },
   {
     id: 'crucible-engine-double',
@@ -81,6 +92,7 @@ export const CHAIN_MISSION_PRESETS: readonly ChainMissionPreset[] = [
     blurb: 'Two 10-minute Engine Room pieces at peak calorie-burn pace.',
     templateIds: ['the-locomotive', 'steady-state'],
     domains: [10],
+    searchGoals: ['weight-loss', 'cardio-stamina'],
   },
   {
     id: 'crucible-midline-double',
@@ -88,6 +100,7 @@ export const CHAIN_MISSION_PRESETS: readonly ChainMissionPreset[] = [
     blurb: 'Two 10-minute Midline Tension pieces for brace and control.',
     templateIds: ['the-iron-cross', 'static-lock'],
     domains: [10],
+    searchGoals: ['abs-spot'],
   },
   // Grind (15)
   {
@@ -96,6 +109,7 @@ export const CHAIN_MISSION_PRESETS: readonly ChainMissionPreset[] = [
     blurb: 'Two 15-minute Engine Room pieces for aerobic volume.',
     templateIds: ['the-pacesetter', 'steady-altitude'],
     domains: [15],
+    searchGoals: ['cardio-stamina', 'weight-loss'],
   },
   {
     id: 'grind-shunt-double',
@@ -103,6 +117,7 @@ export const CHAIN_MISSION_PRESETS: readonly ChainMissionPreset[] = [
     blurb: 'Two 15-minute Blood Shunt pieces — circulation under fatigue.',
     templateIds: ['the-long-haul', 'deep-circulation'],
     domains: [15],
+    searchGoals: ['cardio-stamina', 'weight-loss'],
   },
   {
     id: 'grind-engine-triple',
@@ -110,6 +125,7 @@ export const CHAIN_MISSION_PRESETS: readonly ChainMissionPreset[] = [
     blurb: 'Three 15-minute Engine Room pieces for pacing and stamina.',
     templateIds: ['the-rhythmic-grind', 'aerobic-threshold', 'the-cadence'],
     domains: [15],
+    searchGoals: ['cardio-stamina'],
   },
   {
     id: 'grind-trap-double',
@@ -117,6 +133,7 @@ export const CHAIN_MISSION_PRESETS: readonly ChainMissionPreset[] = [
     blurb: 'Two 15-minute Localized Trap pieces for sustained local stress.',
     templateIds: ['the-trinity', 'the-apex'],
     domains: [15],
+    searchGoals: ['muscle-building', 'strength-power'],
   },
   // Marathon (20)
   {
@@ -125,6 +142,7 @@ export const CHAIN_MISSION_PRESETS: readonly ChainMissionPreset[] = [
     blurb: 'Two 20-minute Aerobic Matrix pieces for total session work.',
     templateIds: ['the-pacer', 'the-horizon'],
     domains: [20],
+    searchGoals: ['weight-loss', 'cardio-stamina'],
   },
   {
     id: 'marathon-cascade-double',
@@ -132,6 +150,7 @@ export const CHAIN_MISSION_PRESETS: readonly ChainMissionPreset[] = [
     blurb: 'Two 20-minute Four-Point Cascade pieces for long-range output.',
     templateIds: ['the-baseline', 'tactical-shift'],
     domains: [20],
+    searchGoals: ['cardio-stamina', 'weight-loss'],
   },
   {
     id: 'marathon-armor-double',
@@ -139,6 +158,7 @@ export const CHAIN_MISSION_PRESETS: readonly ChainMissionPreset[] = [
     blurb: 'Two 20-minute Armor Protocol pieces for durable heart stamina.',
     templateIds: ['the-stronghold', 'iron-will'],
     domains: [20],
+    searchGoals: ['muscle-building', 'strength-power', 'cardio-stamina'],
   },
   {
     id: 'marathon-matrix-triple',
@@ -146,6 +166,7 @@ export const CHAIN_MISSION_PRESETS: readonly ChainMissionPreset[] = [
     blurb: 'Three 20-minute Aerobic Matrix pieces — a true endurance chain.',
     templateIds: ['the-four-horsemen', 'the-long-slog', 'the-gridlock'],
     domains: [20],
+    searchGoals: ['cardio-stamina', 'weight-loss'],
   },
 ];
 
@@ -160,6 +181,7 @@ export const CAMPAIGN_MISSION_PRESETS: readonly CampaignMissionPreset[] = [
     tracks: [{ durationMinutes: 5, category: 'blood-shunt' }],
     missionsPerWeek: 3,
     domains: [5],
+    searchGoals: ['weight-loss', 'cardio-stamina'],
   },
   {
     id: 'sprint-engine-4',
@@ -169,6 +191,7 @@ export const CAMPAIGN_MISSION_PRESETS: readonly CampaignMissionPreset[] = [
     tracks: [{ durationMinutes: 5, category: 'engine-room' }],
     missionsPerWeek: 3,
     domains: [5],
+    searchGoals: ['weight-loss', 'cardio-stamina'],
   },
   {
     id: 'sprint-shunt-6',
@@ -178,6 +201,7 @@ export const CAMPAIGN_MISSION_PRESETS: readonly CampaignMissionPreset[] = [
     tracks: [{ durationMinutes: 5, category: 'blood-shunt' }],
     missionsPerWeek: 3,
     domains: [5],
+    searchGoals: ['weight-loss', 'cardio-stamina'],
   },
   {
     id: 'sprint-trap-2',
@@ -187,6 +211,7 @@ export const CAMPAIGN_MISSION_PRESETS: readonly CampaignMissionPreset[] = [
     tracks: [{ durationMinutes: 5, category: 'localized-trap' }],
     missionsPerWeek: 3,
     domains: [5],
+    searchGoals: ['muscle-building', 'strength-power'],
   },
   // Crucible (10)
   {
@@ -197,6 +222,7 @@ export const CAMPAIGN_MISSION_PRESETS: readonly CampaignMissionPreset[] = [
     tracks: [{ durationMinutes: 10, category: 'blood-shunt' }],
     missionsPerWeek: 3,
     domains: [10],
+    searchGoals: ['weight-loss', 'cardio-stamina'],
   },
   {
     id: 'crucible-shunt-8',
@@ -206,6 +232,7 @@ export const CAMPAIGN_MISSION_PRESETS: readonly CampaignMissionPreset[] = [
     tracks: [{ durationMinutes: 10, category: 'blood-shunt' }],
     missionsPerWeek: 3,
     domains: [10],
+    searchGoals: ['weight-loss', 'cardio-stamina'],
   },
   {
     id: 'crucible-engine-6',
@@ -215,6 +242,7 @@ export const CAMPAIGN_MISSION_PRESETS: readonly CampaignMissionPreset[] = [
     tracks: [{ durationMinutes: 10, category: 'engine-room' }],
     missionsPerWeek: 3,
     domains: [10],
+    searchGoals: ['weight-loss', 'cardio-stamina'],
   },
   {
     id: 'crucible-midline-4',
@@ -224,6 +252,7 @@ export const CAMPAIGN_MISSION_PRESETS: readonly CampaignMissionPreset[] = [
     tracks: [{ durationMinutes: 10, category: 'midline-tension' }],
     missionsPerWeek: 3,
     domains: [10],
+    searchGoals: ['abs-spot'],
   },
   // Grind (15)
   {
@@ -234,6 +263,7 @@ export const CAMPAIGN_MISSION_PRESETS: readonly CampaignMissionPreset[] = [
     tracks: [{ durationMinutes: 15, category: 'engine-room' }],
     missionsPerWeek: 3,
     domains: [15],
+    searchGoals: ['cardio-stamina', 'weight-loss'],
   },
   {
     id: 'grind-engine-8',
@@ -243,6 +273,7 @@ export const CAMPAIGN_MISSION_PRESETS: readonly CampaignMissionPreset[] = [
     tracks: [{ durationMinutes: 15, category: 'engine-room' }],
     missionsPerWeek: 3,
     domains: [15],
+    searchGoals: ['cardio-stamina'],
   },
   {
     id: 'grind-shunt-4',
@@ -252,6 +283,7 @@ export const CAMPAIGN_MISSION_PRESETS: readonly CampaignMissionPreset[] = [
     tracks: [{ durationMinutes: 15, category: 'blood-shunt' }],
     missionsPerWeek: 3,
     domains: [15],
+    searchGoals: ['cardio-stamina', 'weight-loss'],
   },
   {
     id: 'grind-trap-6',
@@ -261,6 +293,7 @@ export const CAMPAIGN_MISSION_PRESETS: readonly CampaignMissionPreset[] = [
     tracks: [{ durationMinutes: 15, category: 'localized-trap' }],
     missionsPerWeek: 3,
     domains: [15],
+    searchGoals: ['muscle-building', 'strength-power'],
   },
   // Marathon (20)
   {
@@ -271,6 +304,7 @@ export const CAMPAIGN_MISSION_PRESETS: readonly CampaignMissionPreset[] = [
     tracks: [{ durationMinutes: 20, category: 'aerobic-matrix' }],
     missionsPerWeek: 3,
     domains: [20],
+    searchGoals: ['weight-loss', 'cardio-stamina'],
   },
   {
     id: 'marathon-cascade-6',
@@ -280,6 +314,7 @@ export const CAMPAIGN_MISSION_PRESETS: readonly CampaignMissionPreset[] = [
     tracks: [{ durationMinutes: 20, category: 'four-point-cascade' }],
     missionsPerWeek: 3,
     domains: [20],
+    searchGoals: ['cardio-stamina', 'weight-loss'],
   },
   {
     id: 'marathon-armor-4',
@@ -289,6 +324,7 @@ export const CAMPAIGN_MISSION_PRESETS: readonly CampaignMissionPreset[] = [
     tracks: [{ durationMinutes: 20, category: 'armor-protocol' }],
     missionsPerWeek: 3,
     domains: [20],
+    searchGoals: ['muscle-building', 'strength-power', 'cardio-stamina'],
   },
   {
     id: 'marathon-matrix-12',
@@ -298,6 +334,7 @@ export const CAMPAIGN_MISSION_PRESETS: readonly CampaignMissionPreset[] = [
     tracks: [{ durationMinutes: 20, category: 'aerobic-matrix' }],
     missionsPerWeek: 3,
     domains: [20],
+    searchGoals: ['cardio-stamina', 'weight-loss'],
   },
 ];
 

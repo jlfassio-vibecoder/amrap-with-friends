@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
+import {
+  FITNESS_SEARCH_GOALS,
+  FITNESS_SEARCH_TOPS,
+  presetMatchesGoalFilter,
+} from '@/data/fitnessSearchGoals';
 import { brandNameForDomain } from '@/data/timeDomainGuidance';
 import { MAX_CHAIN_LENGTH } from '@/lib/mission/chainRest';
 import {
@@ -9,6 +14,8 @@ import {
   presetCategoryLabel,
   resolveChainPresetTemplates,
 } from './planMissionPresets';
+
+const KNOWN_GOAL_IDS = new Set(FITNESS_SEARCH_GOALS.map((goal) => goal.id));
 
 describe('planMissionPresets', () => {
   it('resolves every chain preset against the workout library', () => {
@@ -41,6 +48,31 @@ describe('planMissionPresets', () => {
       expect(preset.domains).toEqual([
         ...new Set(preset.tracks.map((track) => track.durationMinutes)),
       ]);
+    }
+  });
+
+  it('tags every preset with known search goals', () => {
+    for (const preset of [...CHAIN_MISSION_PRESETS, ...CAMPAIGN_MISSION_PRESETS]) {
+      expect(preset.searchGoals.length).toBeGreaterThanOrEqual(1);
+      expect(preset.searchGoals.every((goal) => KNOWN_GOAL_IDS.has(goal))).toBe(true);
+    }
+  });
+
+  it('covers each searchable top with at least one chain and campaign except mobility', () => {
+    for (const top of FITNESS_SEARCH_TOPS) {
+      if (top.id === 'flexibility') {
+        continue;
+      }
+      expect(
+        CHAIN_MISSION_PRESETS.some((preset) =>
+          presetMatchesGoalFilter(preset.searchGoals, top.id, 'all')
+        )
+      ).toBe(true);
+      expect(
+        CAMPAIGN_MISSION_PRESETS.some((preset) =>
+          presetMatchesGoalFilter(preset.searchGoals, top.id, 'all')
+        )
+      ).toBe(true);
     }
   });
 

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@/contexts/ThemeProvider';
 import { CAMPAIGN_MISSION_PRESETS, CHAIN_MISSION_PRESETS } from '@/data/planMissionPresets';
@@ -81,7 +81,7 @@ afterEach(() => {
 });
 
 describe('PlanMissionPage', () => {
-  it('renders path cards and every preset', () => {
+  it('defaults to mission chains and toggles to campaigns', () => {
     renderPage();
 
     expect(screen.getByRole('link', { name: 'Plan mission' }).getAttribute('href')).toBe('/create');
@@ -89,19 +89,75 @@ describe('PlanMissionPage', () => {
       '/campaign/new'
     );
 
+    expect(screen.getByRole('tab', { name: 'Mission chains' }).getAttribute('aria-selected')).toBe(
+      'true'
+    );
+    expect(screen.getByRole('heading', { name: 'Ready-made mission chains' })).toBeTruthy();
     for (const preset of CHAIN_MISSION_PRESETS) {
       expect(screen.getByText(preset.name)).toBeTruthy();
     }
+    expect(screen.getAllByRole('button', { name: 'Launch' })).toHaveLength(16);
+    expect(screen.queryByRole('button', { name: 'Start' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Campaigns' }));
+
+    expect(screen.getByRole('heading', { name: 'Ready-made campaigns' })).toBeTruthy();
     for (const preset of CAMPAIGN_MISSION_PRESETS) {
       expect(screen.getByText(preset.name)).toBeTruthy();
     }
-    expect(screen.getAllByText('Sprint').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Crucible').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Grind').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Marathon').length).toBeGreaterThanOrEqual(1);
-    expect(screen.queryByText('Crucible + Grind')).toBeNull();
-    expect(screen.getAllByRole('button', { name: 'Launch' })).toHaveLength(16);
     expect(screen.getAllByRole('button', { name: 'Start' })).toHaveLength(16);
+    expect(screen.queryByRole('button', { name: 'Launch' })).toBeNull();
+  });
+
+  it('filters chains by goal and focus without changing the campaigns tab filter', () => {
+    renderPage();
+
+    const allLaunchCount = screen.getAllByRole('button', { name: 'Launch' }).length;
+    expect(allLaunchCount).toBe(16);
+
+    const goalTabs = screen.getByRole('tablist', { name: 'Fitness goal' });
+    fireEvent.click(within(goalTabs).getByRole('tab', { name: 'Weight Loss & Fat Burning' }));
+
+    const weightLossLaunchCount = screen.getAllByRole('button', { name: 'Launch' }).length;
+    expect(weightLossLaunchCount).toBeGreaterThan(0);
+    expect(weightLossLaunchCount).toBeLessThan(16);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Campaigns' }));
+    expect(screen.getAllByRole('button', { name: 'Start' })).toHaveLength(16);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Mission chains' }));
+    expect(screen.getAllByRole('button', { name: 'Launch' })).toHaveLength(weightLossLaunchCount);
+
+    fireEvent.click(
+      within(screen.getByRole('tablist', { name: 'Fitness goal' })).getByRole('tab', {
+        name: 'Muscle Building & Toning',
+      })
+    );
+    const focusTabs = screen.getByRole('tablist', { name: 'Fitness focus' });
+    expect(within(focusTabs).getByRole('tab', { name: 'Abs & Spot Targets' })).toBeTruthy();
+    fireEvent.click(within(focusTabs).getByRole('tab', { name: 'Abs & Spot Targets' }));
+
+    expect(screen.getByText('Iron lock')).toBeTruthy();
+    expect(screen.queryByText('Sprint triple')).toBeNull();
+    expect(screen.getAllByRole('button', { name: 'Launch' }).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('shows empty copy for mobility focus', () => {
+    renderPage();
+
+    fireEvent.click(
+      within(screen.getByRole('tablist', { name: 'Fitness goal' })).getByRole('tab', {
+        name: 'Flexibility & Posture',
+      })
+    );
+    fireEvent.click(
+      within(screen.getByRole('tablist', { name: 'Fitness focus' })).getByRole('tab', {
+        name: 'Mobility & Posture',
+      })
+    );
+
+    expect(screen.getByText('No ready-made packs for this goal yet.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Launch' })).toBeNull();
   });
 
   it('launches a chain preset into the first mission', async () => {
@@ -119,6 +175,7 @@ describe('PlanMissionPage', () => {
   it('starts a campaign preset', async () => {
     renderPage();
 
+    fireEvent.click(screen.getByRole('tab', { name: 'Campaigns' }));
     fireEvent.click(screen.getAllByRole('button', { name: 'Start' })[0]!);
 
     await waitFor(() => {

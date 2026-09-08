@@ -3,6 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AppLink } from '@/components/AppLink';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import {
+  FITNESS_SEARCH_TOPS,
+  presetMatchesGoalFilter,
+  subsForTop,
+  type FitnessSearchGoalFilter,
+  type FitnessSearchTopFilter,
+} from '@/data/fitnessSearchGoals';
+import {
   CAMPAIGN_MISSION_PRESETS,
   CHAIN_MISSION_PRESETS,
   groupPresetsByCategory,
@@ -29,12 +36,113 @@ import { appendTemplatesToChainDraft } from '@/lib/mission/chainDraft';
 import { HOST_ACTIVE_MISSION_LIMIT } from '@/lib/mission/rallySchedule';
 import { domainForCap } from '@/lib/timeDomains';
 
+type ReadyMadeTab = 'chains' | 'campaigns';
+
+type GoalFilterState = {
+  top: FitnessSearchTopFilter;
+  sub: FitnessSearchGoalFilter;
+};
+
+function readyMadeTabClass(selected: boolean): string {
+  return selected
+    ? 'flex-1 rounded-full bg-accent px-3 py-2 text-sm font-semibold text-on-accent'
+    : 'flex-1 rounded-full px-3 py-2 text-sm font-semibold text-secondary hover:text-ink';
+}
+
+function filterChipClass(selected: boolean): string {
+  return selected
+    ? 'rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-on-accent'
+    : 'rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-secondary hover:text-ink';
+}
+
+function GoalFocusFilters({
+  top,
+  sub,
+  onTopChange,
+  onSubChange,
+}: {
+  top: FitnessSearchTopFilter;
+  sub: FitnessSearchGoalFilter;
+  onTopChange: (value: FitnessSearchTopFilter) => void;
+  onSubChange: (value: FitnessSearchGoalFilter) => void;
+}) {
+  const focusOptions = top === 'all' ? [] : subsForTop(top);
+
+  return (
+    <div className="space-y-3">
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-secondary">Goal</p>
+        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Fitness goal">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={top === 'all'}
+            className={filterChipClass(top === 'all')}
+            onClick={() => onTopChange('all')}
+          >
+            All
+          </button>
+          {FITNESS_SEARCH_TOPS.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              role="tab"
+              aria-selected={top === entry.id}
+              className={filterChipClass(top === entry.id)}
+              onClick={() => onTopChange(entry.id)}
+            >
+              {entry.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {focusOptions.length > 0 ? (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-secondary">Focus</p>
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Fitness focus">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={sub === 'all'}
+              className={filterChipClass(sub === 'all')}
+              onClick={() => onSubChange('all')}
+            >
+              All
+            </button>
+            {focusOptions.map((goal) => (
+              <button
+                key={goal.id}
+                type="button"
+                role="tab"
+                aria-selected={sub === goal.id}
+                className={filterChipClass(sub === goal.id)}
+                onClick={() => onSubChange(goal.id)}
+              >
+                {goal.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function PlanMissionPage() {
   const navigate = useNavigate();
   const { profile } = useAthleteProfile();
   const [activeCount, setActiveCount] = useState<number | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [readyMadeTab, setReadyMadeTab] = useState<ReadyMadeTab>('chains');
+  const [chainGoalFilter, setChainGoalFilter] = useState<GoalFilterState>({
+    top: 'all',
+    sub: 'all',
+  });
+  const [campaignGoalFilter, setCampaignGoalFilter] = useState<GoalFilterState>({
+    top: 'all',
+    sub: 'all',
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -51,6 +159,32 @@ export default function PlanMissionPage() {
 
   const capReached = (activeCount ?? 0) >= HOST_ACTIVE_MISSION_LIMIT;
   const nickname = profile?.nickname?.trim() ?? '';
+
+  const activeGoalFilter = readyMadeTab === 'chains' ? chainGoalFilter : campaignGoalFilter;
+
+  function setActiveTop(top: FitnessSearchTopFilter) {
+    const next = { top, sub: 'all' as const };
+    if (readyMadeTab === 'chains') {
+      setChainGoalFilter(next);
+    } else {
+      setCampaignGoalFilter(next);
+    }
+  }
+
+  function setActiveSub(sub: FitnessSearchGoalFilter) {
+    if (readyMadeTab === 'chains') {
+      setChainGoalFilter((current) => ({ ...current, sub }));
+    } else {
+      setCampaignGoalFilter((current) => ({ ...current, sub }));
+    }
+  }
+
+  const visibleChains = CHAIN_MISSION_PRESETS.filter((preset) =>
+    presetMatchesGoalFilter(preset.searchGoals, chainGoalFilter.top, chainGoalFilter.sub)
+  );
+  const visibleCampaigns = CAMPAIGN_MISSION_PRESETS.filter((preset) =>
+    presetMatchesGoalFilter(preset.searchGoals, campaignGoalFilter.top, campaignGoalFilter.sub)
+  );
 
   async function launchChain(preset: ChainMissionPreset) {
     setError(null);
@@ -217,97 +351,154 @@ export default function PlanMissionPage() {
         </div>
       </section>
 
-      <section className="space-y-4" aria-labelledby="ready-chains-heading">
-        <div>
-          <h2 id="ready-chains-heading" className="text-lg font-semibold text-ink">
-            Ready-made mission chains
-          </h2>
-          <p className="text-sm text-secondary">
-            Pre-built multi-workout packs, grouped by time domain. Launch opens the first mission
-            and queues the rest.
-          </p>
-        </div>
-        {groupPresetsByCategory(CHAIN_MISSION_PRESETS).map(({ label, presets }) => (
-          <div key={label.key} className="space-y-2">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-accent">
-                {label.brandName}
-              </p>
-              <p className="text-sm text-secondary">{label.tagline}</p>
-            </div>
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {presets.map((preset) => {
-                const templates = resolveChainPresetTemplates(preset);
-                const busy = busyId === preset.id;
-                return (
-                  <li key={preset.id} className="card flex flex-col gap-3 p-5">
-                    <div className="flex-1 space-y-1">
-                      <p className="font-semibold text-ink">{preset.name}</p>
-                      <p className="text-sm text-secondary">{preset.blurb}</p>
-                      <p className="text-xs text-muted">
-                        {templates.map((template) => template.name).join(' → ')}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      className="btn-primary w-full"
-                      disabled={busy || busyId !== null || capReached}
-                      onClick={() => void launchChain(preset)}
-                    >
-                      {busy ? 'Launching…' : 'Launch'}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
-      </section>
+      <div
+        className="inline-flex w-full rounded-full border border-border bg-page p-1"
+        role="tablist"
+        aria-label="Ready-made packs"
+      >
+        <button
+          type="button"
+          role="tab"
+          id="ready-made-tab-chains"
+          aria-controls="ready-made-panel-chains"
+          aria-selected={readyMadeTab === 'chains'}
+          className={readyMadeTabClass(readyMadeTab === 'chains')}
+          onClick={() => setReadyMadeTab('chains')}
+        >
+          Mission chains
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id="ready-made-tab-campaigns"
+          aria-controls="ready-made-panel-campaigns"
+          aria-selected={readyMadeTab === 'campaigns'}
+          className={readyMadeTabClass(readyMadeTab === 'campaigns')}
+          onClick={() => setReadyMadeTab('campaigns')}
+        >
+          Campaigns
+        </button>
+      </div>
 
-      <section className="space-y-4" aria-labelledby="ready-campaigns-heading">
-        <div>
-          <h2 id="ready-campaigns-heading" className="text-lg font-semibold text-ink">
-            Ready-made campaigns
-          </h2>
-          <p className="text-sm text-secondary">
-            Start a full schedule from a curated shape, grouped by time domain. You can rename and
-            invite after it lands.
-          </p>
-        </div>
-        {groupPresetsByCategory(CAMPAIGN_MISSION_PRESETS).map(({ label, presets }) => (
-          <div key={label.key} className="space-y-2">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-accent">
-                {label.brandName}
-              </p>
-              <p className="text-sm text-secondary">{label.tagline}</p>
-            </div>
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {presets.map((preset) => {
-                const busy = busyId === preset.id;
-                const shape = formatCampaignShape(preset.weekCount, preset.missionsPerWeek);
-                return (
-                  <li key={preset.id} className="card flex flex-col gap-3 p-5">
-                    <div className="flex-1 space-y-1">
-                      <p className="font-semibold text-ink">{preset.name}</p>
-                      <p className="text-sm text-secondary">{preset.goal}</p>
-                      <p className="text-xs text-muted">{shape}</p>
-                    </div>
-                    <button
-                      type="button"
-                      className="btn-primary w-full"
-                      disabled={busy || busyId !== null}
-                      onClick={() => void startCampaign(preset)}
-                    >
-                      {busy ? 'Starting…' : 'Start'}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+      {readyMadeTab === 'chains' ? (
+        <section
+          id="ready-made-panel-chains"
+          role="tabpanel"
+          aria-labelledby="ready-made-tab-chains"
+          className="space-y-4"
+        >
+          <div>
+            <h2 className="text-lg font-semibold text-ink">Ready-made mission chains</h2>
+            <p className="text-sm text-secondary">
+              Pre-built multi-workout packs, grouped by time domain. Launch opens the first mission
+              and queues the rest.
+            </p>
           </div>
-        ))}
-      </section>
+          <GoalFocusFilters
+            top={activeGoalFilter.top}
+            sub={activeGoalFilter.sub}
+            onTopChange={setActiveTop}
+            onSubChange={setActiveSub}
+          />
+          {visibleChains.length === 0 ? (
+            <p className="text-sm text-secondary">No ready-made packs for this goal yet.</p>
+          ) : (
+            groupPresetsByCategory(visibleChains).map(({ label, presets }) => (
+              <div key={label.key} className="space-y-2">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-accent">
+                    {label.brandName}
+                  </p>
+                  <p className="text-sm text-secondary">{label.tagline}</p>
+                </div>
+                <ul className="grid gap-3 sm:grid-cols-2">
+                  {presets.map((preset) => {
+                    const templates = resolveChainPresetTemplates(preset);
+                    const busy = busyId === preset.id;
+                    return (
+                      <li key={preset.id} className="card flex flex-col gap-3 p-5">
+                        <div className="flex-1 space-y-1">
+                          <p className="font-semibold text-ink">{preset.name}</p>
+                          <p className="text-sm text-secondary">{preset.blurb}</p>
+                          <p className="text-xs text-muted">
+                            {templates.map((template) => template.name).join(' → ')}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn-primary w-full"
+                          disabled={busy || busyId !== null || capReached}
+                          onClick={() => void launchChain(preset)}
+                        >
+                          {busy ? 'Launching…' : 'Launch'}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))
+          )}
+        </section>
+      ) : (
+        <section
+          id="ready-made-panel-campaigns"
+          role="tabpanel"
+          aria-labelledby="ready-made-tab-campaigns"
+          className="space-y-4"
+        >
+          <div>
+            <h2 className="text-lg font-semibold text-ink">Ready-made campaigns</h2>
+            <p className="text-sm text-secondary">
+              Start a full schedule from a curated shape, grouped by time domain. You can rename and
+              invite after it lands.
+            </p>
+          </div>
+          <GoalFocusFilters
+            top={activeGoalFilter.top}
+            sub={activeGoalFilter.sub}
+            onTopChange={setActiveTop}
+            onSubChange={setActiveSub}
+          />
+          {visibleCampaigns.length === 0 ? (
+            <p className="text-sm text-secondary">No ready-made packs for this goal yet.</p>
+          ) : (
+            groupPresetsByCategory(visibleCampaigns).map(({ label, presets }) => (
+              <div key={label.key} className="space-y-2">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-accent">
+                    {label.brandName}
+                  </p>
+                  <p className="text-sm text-secondary">{label.tagline}</p>
+                </div>
+                <ul className="grid gap-3 sm:grid-cols-2">
+                  {presets.map((preset) => {
+                    const busy = busyId === preset.id;
+                    const shape = formatCampaignShape(preset.weekCount, preset.missionsPerWeek);
+                    return (
+                      <li key={preset.id} className="card flex flex-col gap-3 p-5">
+                        <div className="flex-1 space-y-1">
+                          <p className="font-semibold text-ink">{preset.name}</p>
+                          <p className="text-sm text-secondary">{preset.goal}</p>
+                          <p className="text-xs text-muted">{shape}</p>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn-primary w-full"
+                          disabled={busy || busyId !== null}
+                          onClick={() => void startCampaign(preset)}
+                        >
+                          {busy ? 'Starting…' : 'Start'}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))
+          )}
+        </section>
+      )}
     </NarrowPageLayout>
   );
 }
