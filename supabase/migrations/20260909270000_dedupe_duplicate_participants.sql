@@ -17,16 +17,19 @@
 --     they started in.
 --   * Never a host row. join_mission only ever inserts joiners, so a duplicate
 --     host is not a thing this bug can create.
+--   * For a guest, only when a row with the same name in that mission DID
+--     record work. A guest is matched on nickname alone, so a pair that both
+--     finished with nothing recorded could be two different athletes who picked
+--     the same name rather than one athlete in two tabs — that pair is left
+--     alone. A sibling with work is what makes the empty row a second tab.
 --
 -- Where two rows for one athlete BOTH carry work — they logged some rounds in
 -- one tab and some in the other — the score is genuinely split and merging it
 -- is a scoring decision, not a cleanup. Those are left alone and counted in a
 -- NOTICE at the end so they can be looked at by hand.
 --
--- Guests are matched on mission + case-insensitive nickname, which is the only
--- signal they leave. Two different athletes sharing a name in one mission, who
--- both finished with nothing recorded, would collapse to one row. Both are
--- no-shows on a finished mission's roster, so nothing that counts is lost.
+-- Signed-in athletes group by account, so a duplicate there is certain and the
+-- sibling-with-work condition does not apply to them.
 --
 -- Re-running is a no-op: the second pass finds no empty duplicates.
 
@@ -36,6 +39,7 @@ WITH candidates AS (
     p.mission_id,
     p.role,
     p.joined_at,
+    p.user_id IS NULL AS is_guest,
     -- Signed-in athletes group by account; guests only have their name.
     coalesce(p.user_id::text, 'guest:' || lower(btrim(p.nickname))) AS identity_key,
     (
@@ -57,6 +61,9 @@ ranked AS (
   SELECT
     c.*,
     count(*) OVER (PARTITION BY c.mission_id, c.identity_key) AS group_size,
+    -- Ranking puts an active row first, so this is the keeper's activity.
+    bool_or(c.has_activity) OVER (PARTITION BY c.mission_id, c.identity_key)
+      AS group_has_activity,
     row_number() OVER (
       PARTITION BY c.mission_id, c.identity_key
       ORDER BY (c.role = 'host') DESC, c.has_activity DESC, c.joined_at ASC, c.id ASC
@@ -69,7 +76,8 @@ WHERE p.id = r.id
   AND r.group_size > 1
   AND r.keep_rank > 1
   AND NOT r.has_activity
-  AND r.role <> 'host';
+  AND r.role <> 'host'
+  AND (NOT r.is_guest OR r.group_has_activity);
 
 DO $$
 DECLARE
