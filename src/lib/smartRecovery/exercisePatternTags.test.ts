@@ -3,8 +3,8 @@ import { isMovementPattern } from '@/lib/smartRecovery/movementPatterns';
 import { EXERCISE_PATTERN_TAGS } from './exercisePatternTags';
 
 describe('exercisePatternTags', () => {
-  it('defines tags for all 73 exercises', () => {
-    expect(Object.keys(EXERCISE_PATTERN_TAGS).length).toBe(73);
+  it('defines tags for all 77 exercises', () => {
+    expect(Object.keys(EXERCISE_PATTERN_TAGS).length).toBe(77);
   });
 
   it('assigns at least one valid pattern per exercise id', () => {

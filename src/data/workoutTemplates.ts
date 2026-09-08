@@ -270,6 +270,59 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     tacticalNote: 'Pure explosive power. Land soft on the jumps, rigid body on the push-ups.',
   },
   {
+    id: 'the-ripcord',
+    name: 'The Ripcord',
+    durationMinutes: 5,
+    category: 'blood-shunt',
+    intensityTier: 3,
+    movements: [
+      { name: 'Skater Jumps (Total)', reps: 12 },
+      { name: 'Back Widow', reps: 10 },
+    ],
+    tacticalNote:
+      'Lateral power dumps blood into the legs, then the widows yank it into the upper back. Punch the floor with the elbows — do not crunch.',
+  },
+  {
+    id: 'reverse-flow',
+    name: 'Reverse Flow',
+    durationMinutes: 5,
+    category: 'blood-shunt',
+    intensityTier: 3,
+    movements: [
+      { name: 'Broad Jumps (Turn and repeat)', reps: 8 },
+      { name: 'W-Press Ups', reps: 10 },
+    ],
+    tacticalNote:
+      'Horizontal jump into a structural mid-back press. Soft landings, elbows pinned to the ribs on the W.',
+  },
+  {
+    id: 'dorsal-spike',
+    name: 'Dorsal Spike',
+    durationMinutes: 5,
+    category: 'blood-shunt',
+    intensityTier: 3,
+    movements: [
+      { name: 'Fast Air Squats', reps: 15 },
+      { name: 'Superman Pull-downs', reps: 15 },
+    ],
+    tacticalNote:
+      'Fast squats flood the quads, then pull-downs load the lats. Create artificial tension — do not wave the arms.',
+  },
+  {
+    id: 'flash-point',
+    name: 'Flash Point',
+    durationMinutes: 5,
+    category: 'blood-shunt',
+    intensityTier: 4,
+    movements: [
+      { name: 'Burpees', reps: 5 },
+      { name: 'W-Press Ups', reps: 8 },
+      { name: 'Jump Squats', reps: 10 },
+    ],
+    tacticalNote:
+      'Pure anaerobic sprint — low reps so you never stop moving. Redline immediately and hold unbroken.',
+  },
+  {
     id: 'the-valve',
     name: 'The Valve',
     durationMinutes: 10,
@@ -410,6 +463,48 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       'Constant up-and-down motion. The calf raises trap blood in the extreme lower leg before forcing it back to the chest.',
   },
   {
+    id: 'the-rip-tide',
+    name: 'The Rip Tide',
+    durationMinutes: 10,
+    category: 'blood-shunt',
+    intensityTier: 3,
+    movements: [
+      { name: 'Jumping Jacks', reps: 30 },
+      { name: 'Back Widow', reps: 12 },
+      { name: 'Air Squats', reps: 15 },
+    ],
+    tacticalNote:
+      'Jacks and squats keep the blood moving; the widows yank it into the upper back. Punch the floor — do not crunch.',
+  },
+  {
+    id: 'backdraft',
+    name: 'Backdraft',
+    durationMinutes: 10,
+    category: 'blood-shunt',
+    intensityTier: 3,
+    movements: [
+      { name: 'Double-Tap Jumps (Penguin Taps)', reps: 30 },
+      { name: 'T-Press Ups', reps: 10 },
+      { name: 'Reverse Lunges (Total)', reps: 16 },
+    ],
+    tacticalNote:
+      'Fast penguin taps into a short-range rear-delt press, then lunges to finish the shunt. Soft landings; arms stay heavy on the T.',
+  },
+  {
+    id: 'aero-dorsal',
+    name: 'Aero-Dorsal',
+    durationMinutes: 10,
+    category: 'blood-shunt',
+    intensityTier: 3,
+    movements: [
+      { name: 'High Knees (Total)', reps: 30 },
+      { name: 'W-Press Ups', reps: 12 },
+      { name: 'Skater Jumps (Total)', reps: 20 },
+    ],
+    tacticalNote:
+      'Turnover floods the legs, the W loads the mid-back, skaters keep the shunt alive. Elbows pinned to the ribs.',
+  },
+  {
     id: 'the-long-haul',
     name: 'The Long Haul',
     durationMinutes: 15,
@@ -420,8 +515,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Pike Push-ups', reps: 10 },
       { name: 'Jumping Jacks', reps: 40 },
     ],
-    tacticalNote:
-      'A pure aerobic triplet. Settle into a conversational pace immediately.',
+    tacticalNote: 'A pure aerobic triplet. Settle into a conversational pace immediately.',
   },
   {
     id: 'deep-circulation',
@@ -434,8 +528,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Hand-Release Push-ups', reps: 12 },
       { name: 'Sprawls', reps: 20 },
     ],
-    tacticalNote:
-      'The sprawls will spike the heart rate; recover your breath during the lunges.',
+    tacticalNote: 'The sprawls will spike the heart rate; recover your breath during the lunges.',
   },
   {
     id: 'the-piston-grind',
@@ -448,8 +541,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Dive-Bomber Push-ups', reps: 10 },
       { name: 'Mountain Climbers', reps: 30 },
     ],
-    tacticalNote:
-      'Slow, heavy tension on the floor before a rapid core flush.',
+    tacticalNote: 'Slow, heavy tension on the floor before a rapid core flush.',
   },
   {
     id: 'sustained-pressure',
@@ -462,8 +554,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Wide Push-ups', reps: 12 },
       { name: 'High Knees', reps: 30 },
     ],
-    tacticalNote:
-      'Manage your breathing on the surrenders. Keep the chest completely open.',
+    tacticalNote: 'Manage your breathing on the surrenders. Keep the chest completely open.',
   },
   {
     id: 'the-marathon-shunt',
@@ -476,8 +567,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Commando Planks', reps: 16 },
       { name: 'Skater Jumps', reps: 30 },
     ],
-    tacticalNote:
-      'Constant elevation changes. Do not rush the commando planks.',
+    tacticalNote: 'Constant elevation changes. Do not rush the commando planks.',
   },
   {
     id: 'aerobic-shift',
@@ -490,8 +580,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'T-Push-ups', reps: 10 },
       { name: 'Double-Tap Jumps', reps: 40 },
     ],
-    tacticalNote:
-      'Rotational pressing prevents early shoulder fatigue in this long domain.',
+    tacticalNote: 'Rotational pressing prevents early shoulder fatigue in this long domain.',
   },
   {
     id: 'the-steady-state',
@@ -504,8 +593,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Diamond Push-ups', reps: 10 },
       { name: 'Down-Ups', reps: 20 },
     ],
-    tacticalNote:
-      'Triceps will fatigue late. Break the push-ups into two sets of 5 early on.',
+    tacticalNote: 'Triceps will fatigue late. Break the push-ups into two sets of 5 early on.',
   },
   {
     id: 'arterial-endurance',
@@ -518,8 +606,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Plank Shoulder Taps', reps: 16 },
       { name: 'Butt Kicks', reps: 40 },
     ],
-    tacticalNote:
-      'High time-under-tension. Keep the crawling deliberate and flat-backed.',
+    tacticalNote: 'High time-under-tension. Keep the crawling deliberate and flat-backed.',
   },
   {
     id: 'the-metronome-endurance',
@@ -532,8 +619,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Standard Push-ups', reps: 10 },
       { name: 'Jumping Jacks', reps: 40 },
     ],
-    tacticalNote:
-      'Isolate the glutes, then use the jacks to flush the entire system.',
+    tacticalNote: 'Isolate the glutes, then use the jacks to flush the entire system.',
   },
   {
     id: 'system-flush',
@@ -548,6 +634,63 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     ],
     tacticalNote:
       'The shoulders will bear the brunt here. Stay stacked perfectly over your wrists.',
+  },
+  {
+    id: 'arterial-pull',
+    name: 'Arterial Pull',
+    durationMinutes: 15,
+    category: 'blood-shunt',
+    intensityTier: 3,
+    movements: [
+      { name: 'Alternating Lunges (Total)', reps: 20 },
+      { name: 'Back Widow', reps: 12 },
+      { name: 'Double-Tap Jumps', reps: 40 },
+    ],
+    tacticalNote:
+      'Lunges and taps keep the blood in the legs; the widows yank it into the upper back. Punch the floor — do not crunch.',
+  },
+  {
+    id: 'dorsal-tow',
+    name: 'Dorsal Tow',
+    durationMinutes: 15,
+    category: 'blood-shunt',
+    intensityTier: 3,
+    movements: [
+      { name: 'Burpees', reps: 8 },
+      { name: 'W-Press Ups', reps: 12 },
+      { name: 'High Knees', reps: 30 },
+    ],
+    tacticalNote:
+      'Burpees spike the system, the W loads the mid-back, high knees keep the shunt alive. Elbows pinned to the ribs.',
+  },
+  {
+    id: 'venous-return',
+    name: 'Venous Return',
+    durationMinutes: 15,
+    category: 'blood-shunt',
+    intensityTier: 3,
+    movements: [
+      { name: 'Reverse Lunges (Total)', reps: 20 },
+      { name: 'T-Press Ups', reps: 12 },
+      { name: 'Mountain Climbers', reps: 30 },
+    ],
+    tacticalNote:
+      'Posterior lunge into a rear-delt press, climbers as the flush. Soft knees on the lunges; arms stay heavy on the T.',
+  },
+  {
+    id: 'shock-front',
+    name: 'Shock Front',
+    durationMinutes: 15,
+    category: 'blood-shunt',
+    intensityTier: 4,
+    movements: [
+      { name: 'Combat Sprawls', reps: 12 },
+      { name: 'Diamond Push-ups', reps: 10 },
+      { name: 'W-Press Ups', reps: 12 },
+      { name: 'Broad Jumps', reps: 8 },
+    ],
+    tacticalNote:
+      'Fifteen minutes at I4 — sprawls and broad jumps carry the metabolic load while diamonds and Ws hold structural tension. Do not soft-pedal the presses.',
   },
   {
     id: 'the-acid-bath',
@@ -632,8 +775,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Sphinx Push-ups (Forearm to hand)', reps: 6 },
       { name: 'Floor Dips', reps: 12 },
     ],
-    tacticalNote:
-      'Triceps will fail suddenly. Keep the hands under the shoulders, not out wide.',
+    tacticalNote: 'Triceps will fail suddenly. Keep the hands under the shoulders, not out wide.',
   },
   {
     id: 'posterior-panic',
@@ -689,8 +831,51 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Pogo Jumps', reps: 20 },
       { name: 'Fast Calf Raises', reps: 20 },
     ],
+    tacticalNote: 'Legs stay perfectly straight on the pogos; bounce strictly from the ankles.',
+  },
+  {
+    id: 'dorsal-demise',
+    name: 'Dorsal Demise',
+    focus: 'Back',
+    durationMinutes: 5,
+    category: 'localized-trap',
+    intensityTier: 3,
+    movements: [
+      { name: 'Superman Pull-downs', reps: 15 },
+      { name: 'Reverse Snow Angels', reps: 15 },
+      { name: 'Glute Bridge Walkouts', reps: 10 },
+    ],
     tacticalNote:
-      'Legs stay perfectly straight on the pogos; bounce strictly from the ankles.',
+      'Stack pull, sweep, and hinge until the posterior chain fails. No resting the chest between snow-angel sweeps.',
+  },
+  {
+    id: 'the-scapular-trap',
+    name: 'The Scapular Trap',
+    focus: 'Upper/Mid Back',
+    durationMinutes: 5,
+    category: 'localized-trap',
+    intensityTier: 3,
+    movements: [
+      { name: 'T-Press Ups', reps: 12 },
+      { name: 'Supine Floor Scapular Shrugs', reps: 15 },
+    ],
+    tacticalNote:
+      'Short-range presses into micro-shrugs. Keep the arms locked — if the elbows bend, the triceps stole the work.',
+  },
+  {
+    id: 'rhomboid-ruin',
+    name: 'Rhomboid Ruin',
+    focus: 'Mid Back',
+    durationMinutes: 5,
+    category: 'localized-trap',
+    intensityTier: 3,
+    movements: [
+      { name: 'Back Widow', reps: 10 },
+      { name: 'Supermans', reps: 15 },
+      { name: 'W-Press Ups', reps: 10 },
+    ],
+    tacticalNote:
+      'Three angles on the same mid-back burn. Pause at the top of every Superman; punch the floor on the widows.',
   },
   {
     id: 'the-see-saw-push-pull',
@@ -716,8 +901,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Pike Push-ups', reps: 10 },
       { name: 'Glute Bridges', reps: 20 },
     ],
-    tacticalNote:
-      'Heavy shoulder pressing directly paired with heavy hamstring/glute hinging.',
+    tacticalNote: 'Heavy shoulder pressing directly paired with heavy hamstring/glute hinging.',
   },
   {
     id: 'equilibrium',
@@ -755,8 +939,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Diamond Push-ups', reps: 10 },
       { name: 'Single-Leg Glute Bridges (Total)', reps: 16 },
     ],
-    tacticalNote:
-      'Triceps isolate the front; single-leg bridges violently isolate the back.',
+    tacticalNote: 'Triceps isolate the front; single-leg bridges violently isolate the back.',
   },
   {
     id: 'the-fulcrum',
@@ -768,8 +951,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Wide Push-ups', reps: 12 },
       { name: 'Alternating Bird-Dogs', reps: 16 },
     ],
-    tacticalNote:
-      'A heavy chest press followed by slow, deliberate posterior anti-rotation.',
+    tacticalNote: 'A heavy chest press followed by slow, deliberate posterior anti-rotation.',
   },
   {
     id: 'posterior-strike',
@@ -781,8 +963,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Sphinx Push-ups', reps: 10 },
       { name: 'Glute Bridge Walkouts', reps: 10 },
     ],
-    tacticalNote:
-      'Walk the heels out away from the hips on the bridges to torch the hamstrings.',
+    tacticalNote: 'Walk the heels out away from the hips on the bridges to torch the hamstrings.',
   },
   {
     id: 'anterior-retreat',
@@ -824,6 +1005,60 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       'Reach the arms straight forward during the plank to engage the lats and upper back.',
   },
   {
+    id: 'the-lever',
+    name: 'The Lever',
+    durationMinutes: 10,
+    category: 'localized-trap',
+    intensityTier: 3,
+    movements: [
+      { name: 'Standard Push-ups', reps: 12 },
+      { name: 'Back Widow', reps: 12 },
+    ],
+    tacticalNote:
+      'Equal push and floor-press. Chest to the deck on the push-ups; punch the floor on the widows.',
+  },
+  {
+    id: 'counter-strike',
+    name: 'Counter-Strike',
+    durationMinutes: 10,
+    category: 'localized-trap',
+    intensityTier: 3,
+    movements: [
+      { name: 'Dive-Bomber Push-ups', reps: 10 },
+      { name: 'T-Press Ups', reps: 12 },
+    ],
+    tacticalNote:
+      'Anterior dive-bombers into a rear-delt T-press. Smooth dive; do not crane the neck to fake height on the T.',
+  },
+  {
+    id: 'the-yoke',
+    name: 'The Yoke',
+    durationMinutes: 10,
+    category: 'localized-trap',
+    intensityTier: 3,
+    movements: [
+      { name: 'Hand-Release Push-ups', reps: 10 },
+      { name: 'Supine Floor Scapular Shrugs', reps: 15 },
+      { name: 'Air Squats', reps: 15 },
+    ],
+    tacticalNote:
+      'Heavy chest press into micro-shrugs, squats as the flush. Arms locked on the shrugs or the triceps steal the work.',
+  },
+  {
+    id: 'the-anvil',
+    name: 'The Anvil',
+    durationMinutes: 10,
+    category: 'localized-trap',
+    intensityTier: 4,
+    movements: [
+      { name: 'Hand-Release Push-ups', reps: 10 },
+      { name: 'Tuck Jumps', reps: 10 },
+      { name: 'Back Widow', reps: 10 },
+    ],
+    tacticalNote:
+      'Explosive tuck jumps between a dead-stop press and a floor pull — local fatigue arrives fast. Punch the widows; do not crunch them.',
+  },
+  {
     id: 'the-trinity',
     name: 'The Trinity',
     durationMinutes: 15,
@@ -834,8 +1069,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Hand-Release Push-ups', reps: 10 },
       { name: 'V-Ups', reps: 15 },
     ],
-    tacticalNote:
-      'The gold standard. Distributes the load evenly across all three regions.',
+    tacticalNote: 'The gold standard. Distributes the load evenly across all three regions.',
   },
   {
     id: 'the-fulcrum-systemic-shift',
@@ -848,8 +1082,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Pike Push-ups', reps: 10 },
       { name: 'Russian Twists', reps: 20 },
     ],
-    tacticalNote:
-      'Heavy shoulder isolation followed immediately by rotational core control.',
+    tacticalNote: 'Heavy shoulder isolation followed immediately by rotational core control.',
   },
   {
     id: 'global-warning',
@@ -862,8 +1095,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Commando Planks', reps: 12 },
       { name: 'Dead Bugs', reps: 16 },
     ],
-    tacticalNote:
-      'The dead bugs require immense concentration after the plyometric leg demand.',
+    tacticalNote: 'The dead bugs require immense concentration after the plyometric leg demand.',
   },
   {
     id: 'the-apex',
@@ -932,8 +1164,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Standard Push-ups', reps: 10 },
       { name: 'Strict Sit-ups', reps: 15 },
     ],
-    tacticalNote:
-      'A classic mechanical grinder. Do not use momentum to swing up on the sit-ups.',
+    tacticalNote: 'A classic mechanical grinder. Do not use momentum to swing up on the sit-ups.',
   },
   {
     id: 'the-equalizer',
@@ -946,8 +1177,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Alternating Lunges', reps: 20 },
       { name: 'Plank Knee-to-Elbows', reps: 16 },
     ],
-    tacticalNote:
-      'Getting off the floor is the tax here. Use the lunges to steady your breathing.',
+    tacticalNote: 'Getting off the floor is the tax here. Use the lunges to steady your breathing.',
   },
   {
     id: 'the-spire',
@@ -962,6 +1192,48 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     ],
     tacticalNote:
       'Protects the heavy quad/hamstring musculature but aggressively torches the extremities.',
+  },
+  {
+    id: 'the-scapular-axis',
+    name: 'The Scapular Axis',
+    durationMinutes: 15,
+    category: 'localized-trap',
+    intensityTier: 3,
+    movements: [
+      { name: 'Fast Air Squats', reps: 20 },
+      { name: 'Back Widow', reps: 12 },
+      { name: 'Strict Sit-Ups', reps: 15 },
+    ],
+    tacticalNote:
+      'Legs, posterior press, anterior flexion — keep shifting planes. Punch the floor on the widows; roll up one vertebra at a time on the sit-ups.',
+  },
+  {
+    id: 'global-retraction',
+    name: 'Global Retraction',
+    durationMinutes: 15,
+    category: 'localized-trap',
+    intensityTier: 3,
+    movements: [
+      { name: 'Jump Squats', reps: 15 },
+      { name: 'Supine Floor Scapular Shrugs', reps: 15 },
+      { name: 'Dead Bugs', reps: 16 },
+    ],
+    tacticalNote:
+      'Explosive squats into micro-shrugs into anti-extension. Arms locked on the shrugs or the triceps steal the work.',
+  },
+  {
+    id: 'the-posterior-triad',
+    name: 'The Posterior Triad',
+    durationMinutes: 15,
+    category: 'localized-trap',
+    intensityTier: 3,
+    movements: [
+      { name: 'Wide Push-ups', reps: 12 },
+      { name: 'W-Press Ups', reps: 12 },
+      { name: 'V-Ups', reps: 15 },
+    ],
+    tacticalNote:
+      'Anterior push, mid-back press, hip flexion. Chest to the deck on the wides; elbows glued to the ribs on the W.',
   },
   {
     id: 'the-gas-pedal',
@@ -1096,6 +1368,45 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       'A cascading rep scheme that flows beautifully. Use the 15 jacks as your active recovery.',
   },
   {
+    id: 'posterior-turbine',
+    name: 'Posterior Turbine',
+    durationMinutes: 5,
+    category: 'engine-room',
+    intensityTier: 3,
+    movements: [
+      { name: 'Sprawls', reps: 10 },
+      { name: 'Back Widow', reps: 12 },
+    ],
+    tacticalNote:
+      'Floor transitions keep the lungs hot while the widows load the rhomboids. Hips stay anchored on the press.',
+  },
+  {
+    id: 'the-draft',
+    name: 'The Draft',
+    durationMinutes: 5,
+    category: 'engine-room',
+    intensityTier: 3,
+    movements: [
+      { name: 'High Knees (Total)', reps: 30 },
+      { name: 'T-Press Ups', reps: 10 },
+    ],
+    tacticalNote:
+      'Turnover into a short-range rear-delt press. Knees break the waistline; do not crane the neck to fake height on the T.',
+  },
+  {
+    id: 'aft-engine',
+    name: 'Aft Engine',
+    durationMinutes: 5,
+    category: 'engine-room',
+    intensityTier: 3,
+    movements: [
+      { name: 'Half-Burpees (Plank to squat stance)', reps: 15 },
+      { name: 'Reverse Snow Angels', reps: 15 },
+    ],
+    tacticalNote:
+      'Plank-to-stand keeps the heart rate pinned, then snow angels torch the upper back. Knuckles scrape the ceiling — arms stay straight.',
+  },
+  {
     id: 'the-locomotive',
     name: 'The Locomotive',
     durationMinutes: 10,
@@ -1105,8 +1416,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Down-Ups', reps: 10 },
       { name: 'Air Squats', reps: 20 },
     ],
-    tacticalNote:
-      'Find a breathing rhythm on the squats to recover from the floor transitions.',
+    tacticalNote: 'Find a breathing rhythm on the squats to recover from the floor transitions.',
   },
   {
     id: 'steady-state',
@@ -1118,8 +1428,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Sprawls', reps: 12 },
       { name: 'Mountain Climbers', reps: 24 },
     ],
-    tacticalNote:
-      'Keep the hips low. Lock the plank instantly when kicking back.',
+    tacticalNote: 'Keep the hips low. Lock the plank instantly when kicking back.',
   },
   {
     id: 'the-pacing-trap',
@@ -1131,8 +1440,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Burpees', reps: 8 },
       { name: 'Alternating Lunges', reps: 16 },
     ],
-    tacticalNote:
-      'Lunges must be strict. Do not bounce the trailing knee off the floor.',
+    tacticalNote: 'Lunges must be strict. Do not bounce the trailing knee off the floor.',
   },
   {
     id: 'aerobic-flush',
@@ -1144,8 +1452,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Air Squats', reps: 15 },
       { name: 'Jumping Jacks', reps: 30 },
     ],
-    tacticalNote:
-      'A pure cardiovascular flush. Move continuously without breaking.',
+    tacticalNote: 'A pure cardiovascular flush. Move continuously without breaking.',
   },
   {
     id: 'the-treadmill',
@@ -1157,8 +1464,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Half-Burpees', reps: 10 },
       { name: 'Skater Jumps (Total)', reps: 20 },
     ],
-    tacticalNote:
-      'Lateral bounding paired with horizontal piston action. Keep the chest proud.',
+    tacticalNote: 'Lateral bounding paired with horizontal piston action. Keep the chest proud.',
   },
   {
     id: 'rhythmic-fire',
@@ -1170,8 +1476,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Combat Sprawls', reps: 10 },
       { name: 'Jumping Jacks', reps: 20 },
     ],
-    tacticalNote:
-      'Use the jumping jacks strictly to control your breathing before the next drop.',
+    tacticalNote: 'Use the jumping jacks strictly to control your breathing before the next drop.',
   },
   {
     id: 'the-long-stride',
@@ -1183,8 +1488,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Reverse Lunges', reps: 16 },
       { name: 'Mountain Climbers', reps: 30 },
     ],
-    tacticalNote:
-      'Heavy quad demand followed by rapid hip flexion. Stay stacked over the wrists.',
+    tacticalNote: 'Heavy quad demand followed by rapid hip flexion. Stay stacked over the wrists.',
   },
   {
     id: 'the-cruiser',
@@ -1197,8 +1501,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Air Squats', reps: 15 },
       { name: 'Butt Kicks', reps: 30 },
     ],
-    tacticalNote:
-      'A triplet designed to keep the legs moving while distributing the fatigue.',
+    tacticalNote: 'A triplet designed to keep the legs moving while distributing the fatigue.',
   },
   {
     id: 'constant-current',
@@ -1210,8 +1513,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Sprawls', reps: 12 },
       { name: 'Cross-Body Mountain Climbers', reps: 24 },
     ],
-    tacticalNote:
-      'Rotational core engagement while heavily taxing the lungs.',
+    tacticalNote: 'Rotational core engagement while heavily taxing the lungs.',
   },
   {
     id: 'the-oscillator',
@@ -1227,6 +1529,48 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       'Explode on the knees, but pace the down-ups to avoid central nervous system burnout.',
   },
   {
+    id: 'the-oarsman',
+    name: 'The Oarsman',
+    durationMinutes: 10,
+    category: 'engine-room',
+    intensityTier: 3,
+    movements: [
+      { name: 'Down-Ups', reps: 10 },
+      { name: 'Back Widow', reps: 10 },
+      { name: 'Mountain Climbers (Total)', reps: 20 },
+    ],
+    tacticalNote:
+      'Floor transitions keep the lungs hot while widows load the rhomboids. Climbers are the active flush — hips level.',
+  },
+  {
+    id: 'steady-traction',
+    name: 'Steady Traction',
+    durationMinutes: 10,
+    category: 'engine-room',
+    intensityTier: 3,
+    movements: [
+      { name: 'Combat Sprawls', reps: 10 },
+      { name: 'W-Press Ups', reps: 12 },
+      { name: 'Butt Kicks (Total)', reps: 30 },
+    ],
+    tacticalNote:
+      'Sprawls and butt kicks hold the engine; the W is the structural pull. Elbows glued to the ribs on every press.',
+  },
+  {
+    id: 'the-rowers-pace',
+    name: "The Rower's Pace",
+    durationMinutes: 10,
+    category: 'engine-room',
+    intensityTier: 3,
+    movements: [
+      { name: 'Burpees', reps: 5 },
+      { name: 'T-Press Ups', reps: 10 },
+      { name: 'Jumping Jacks', reps: 30 },
+    ],
+    tacticalNote:
+      'Small burpee dose, then a rear-delt press, recover on the jacks. Find a conversational cadence by round two.',
+  },
+  {
     id: 'the-pacesetter',
     name: 'The Pacesetter',
     durationMinutes: 15,
@@ -1237,8 +1581,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Air Squats', reps: 20 },
       { name: 'Mountain Climbers', reps: 30 },
     ],
-    tacticalNote:
-      'Find your breathing rhythm on the squats. Lock the plank tight on the sprawls.',
+    tacticalNote: 'Find your breathing rhythm on the squats. Lock the plank tight on the sprawls.',
   },
   {
     id: 'steady-altitude',
@@ -1307,8 +1650,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Air Squats', reps: 20 },
       { name: 'Cross-Body Mountain Climbers', reps: 30 },
     ],
-    tacticalNote:
-      'Heavy hip-hinge demand. Do not let the lower back sag during the half-burpees.',
+    tacticalNote: 'Heavy hip-hinge demand. Do not let the lower back sag during the half-burpees.',
   },
   {
     id: 'endurance-protocol',
@@ -1365,6 +1707,62 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     ],
     tacticalNote:
       'The ultimate test of consistency. If your round times vary by more than 10 seconds, you are failing the pace.',
+  },
+  {
+    id: 'the-rowers-engine',
+    name: "The Rower's Engine",
+    durationMinutes: 15,
+    category: 'engine-room',
+    intensityTier: 3,
+    movements: [
+      { name: 'Combat Sprawls', reps: 10 },
+      { name: 'Back Widow', reps: 15 },
+      { name: 'Jumping Jacks', reps: 30 },
+    ],
+    tacticalNote:
+      'Sprawls keep the lungs hot; widows are active recovery that still loads the rhomboids. Soft landings, elbows punching the floor.',
+  },
+  {
+    id: 'steady-draft',
+    name: 'Steady Draft',
+    durationMinutes: 15,
+    category: 'engine-room',
+    intensityTier: 3,
+    movements: [
+      { name: 'Half-Burpees', reps: 10 },
+      { name: 'T-Press Ups', reps: 12 },
+      { name: 'Cross-Body Mountain Climbers', reps: 30 },
+    ],
+    tacticalNote:
+      'Plank-to-stand into a short-range rear-delt press, then climbers hold the engine. Do not crane the neck on the T.',
+  },
+  {
+    id: 'endurance-tow',
+    name: 'Endurance Tow',
+    durationMinutes: 15,
+    category: 'engine-room',
+    intensityTier: 3,
+    movements: [
+      { name: 'Down-Ups', reps: 12 },
+      { name: 'W-Press Ups', reps: 12 },
+      { name: 'Butt Kicks', reps: 30 },
+    ],
+    tacticalNote:
+      'Floor transitions and butt kicks carry the pace; the W is the structural pause. Elbows pinned every press.',
+  },
+  {
+    id: 'the-washout',
+    name: 'The Washout',
+    durationMinutes: 15,
+    category: 'engine-room',
+    intensityTier: 2,
+    movements: [
+      { name: 'Air Squats', reps: 20 },
+      { name: 'Reverse Snow Angels', reps: 15 },
+      { name: 'High Knees (Total)', reps: 30 },
+    ],
+    tacticalNote:
+      'Zone-2 endurance flush — clear yesterday’s lactate without chasing the redline. Soft landings; controlled angels.',
   },
   {
     id: 'the-folding-knife',
@@ -1497,6 +1895,59 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       'Remember the posterior core. Lift the chest and thighs off the floor simultaneously, squeezing the lower back.',
   },
   {
+    id: 'the-arch',
+    name: 'The Arch',
+    durationMinutes: 5,
+    category: 'midline-tension',
+    intensityTier: 3,
+    movements: [
+      { name: 'Hollow Hold', reps: 15, unit: 'sec' },
+      { name: 'Alternating Bird-Dogs', reps: 16 },
+    ],
+    tacticalNote:
+      'Anterior hollow into posterior reach. Crush the lower back into the floor on the hollow; keep the hips level on the bird-dogs.',
+  },
+  {
+    id: 'the-bowstring',
+    name: 'The Bowstring',
+    durationMinutes: 5,
+    category: 'midline-tension',
+    intensityTier: 3,
+    movements: [
+      { name: 'V-Ups', reps: 10 },
+      { name: 'W-Press Ups', reps: 12 },
+    ],
+    tacticalNote:
+      'Flex hard on the V-ups, then press the mid-back into the floor. Legs locked on the V; elbows glued to the ribs on the W.',
+  },
+  {
+    id: 'spinal-coil',
+    name: 'Spinal Coil',
+    durationMinutes: 5,
+    category: 'midline-tension',
+    intensityTier: 3,
+    movements: [
+      { name: 'Bicycle Crunches', reps: 20 },
+      { name: 'Back Widow', reps: 10 },
+    ],
+    tacticalNote:
+      'Rotate from the sternum on the bicycles, then flip to a floor press for the posterior. Do not turn the widows into sit-ups.',
+  },
+  {
+    id: 'tactical-down-regulate',
+    name: 'Tactical Down-Regulate',
+    durationMinutes: 5,
+    category: 'midline-tension',
+    intensityTier: 2,
+    movements: [
+      { name: 'Air Squats (Slow)', reps: 15 },
+      { name: 'Supine Floor Scapular Shrugs', reps: 15 },
+      { name: 'Glute Bridges', reps: 15 },
+    ],
+    tacticalNote:
+      'Active recovery — controlled breathing and strict contractions, no heart-rate spike. Arms locked on the shrugs; squeeze the bridges at the top.',
+  },
+  {
     id: 'the-iron-cross',
     name: 'The Iron Cross',
     durationMinutes: 10,
@@ -1549,8 +2000,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Jump Squats', reps: 10 },
       { name: 'Butt Kicks', reps: 30 },
     ],
-    tacticalNote:
-      'Widen your stance on the taps to physically prevent your hips from swaying.',
+    tacticalNote: 'Widen your stance on the taps to physically prevent your hips from swaying.',
   },
   {
     id: 'the-anchor',
@@ -1577,8 +2027,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Fast Air Squats', reps: 15 },
       { name: 'Mountain Climbers', reps: 30 },
     ],
-    tacticalNote:
-      'Move with agonizing slowness on the dead bugs to maximize time under tension.',
+    tacticalNote: 'Move with agonizing slowness on the dead bugs to maximize time under tension.',
   },
   {
     id: 'the-bridge',
@@ -1605,8 +2054,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Reverse Lunges', reps: 16 },
       { name: 'Skater Jumps', reps: 20 },
     ],
-    tacticalNote:
-      'Pure balance and structural alignment. Do not rush the bird-dogs; reach long.',
+    tacticalNote: 'Pure balance and structural alignment. Do not rush the bird-dogs; reach long.',
   },
   {
     id: 'tension-grid',
@@ -1637,6 +2085,62 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       'Lock the plank instantly on the sprawls so your fatigued lower back does not hyperextend.',
   },
   {
+    id: 'iron-scapula',
+    name: 'Iron Scapula',
+    durationMinutes: 10,
+    category: 'midline-tension',
+    intensityTier: 3,
+    movements: [
+      { name: 'Supine Floor Scapular Shrugs', reps: 15 },
+      { name: 'Dead Bugs', reps: 12 },
+      { name: 'Back Widow', reps: 10 },
+    ],
+    tacticalNote:
+      'Isolation into anti-extension into floor press. Arms locked on the shrugs; crush the lower back on the dead bugs.',
+  },
+  {
+    id: 'the-truss',
+    name: 'The Truss',
+    durationMinutes: 10,
+    category: 'midline-tension',
+    intensityTier: 3,
+    movements: [
+      { name: 'Plank Hold', reps: 20, unit: 'sec' },
+      { name: 'W-Press Ups', reps: 12 },
+      { name: 'Air Squats (Slow)', reps: 15 },
+    ],
+    tacticalNote:
+      'Isometric plank into a mid-back press, then slow squats with no bounce. Elbows pinned; control every inch of the squat.',
+  },
+  {
+    id: 'spinal-lock',
+    name: 'Spinal Lock',
+    durationMinutes: 10,
+    category: 'midline-tension',
+    intensityTier: 3,
+    movements: [
+      { name: 'Hollow Hold', reps: 20, unit: 'sec' },
+      { name: 'T-Press Ups', reps: 10 },
+      { name: 'Glute Bridges', reps: 15 },
+    ],
+    tacticalNote:
+      'Anterior hollow into rear-delt press into a hinge. Pin the lumbar on the hollow; squeeze the glutes hard at the top of every bridge.',
+  },
+  {
+    id: 'active-sonar',
+    name: 'Active Sonar',
+    durationMinutes: 10,
+    category: 'midline-tension',
+    intensityTier: 2,
+    movements: [
+      { name: 'Alternating Bird-Dogs', reps: 16 },
+      { name: 'T-Press Ups', reps: 12 },
+      { name: 'Dead Bugs (Slow)', reps: 16 },
+    ],
+    tacticalNote:
+      'Structural flush — continuous low-intensity core and posterior work. Reach long on the bird-dogs; arms stay heavy on the T.',
+  },
+  {
     id: 'the-monolith',
     name: 'The Monolith',
     durationMinutes: 15,
@@ -1661,8 +2165,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Reverse Lunges', reps: 16 },
       { name: 'Mountain Climbers', reps: 30 },
     ],
-    tacticalNote:
-      'Move with agonizing precision on the bird-dogs. Do not let the hips wobble.',
+    tacticalNote: 'Move with agonizing precision on the bird-dogs. Do not let the hips wobble.',
   },
   {
     id: 'static-equilibrium',
@@ -1777,6 +2280,48 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       'High rotational demand on both the floor and the press. Keep your eyes locked on your hands during the T-Push-ups.',
   },
   {
+    id: 'iron-scapula-grind',
+    name: 'Iron Scapula Grind',
+    durationMinutes: 15,
+    category: 'midline-tension',
+    intensityTier: 3,
+    movements: [
+      { name: 'Hollow Hold', reps: 20, unit: 'sec' },
+      { name: 'Supine Floor Scapular Shrugs', reps: 15 },
+      { name: 'Alternating Lunges', reps: 20 },
+    ],
+    tacticalNote:
+      'Anterior hollow into micro-shrugs into lunges. Crush the lumbar on the hollow; arms locked on the shrugs.',
+  },
+  {
+    id: 'dorsal-span',
+    name: 'Dorsal Span',
+    durationMinutes: 15,
+    category: 'midline-tension',
+    intensityTier: 3,
+    movements: [
+      { name: 'Strict Sit-Ups', reps: 15 },
+      { name: 'Back Widow', reps: 12 },
+      { name: 'Combat Sprawls', reps: 15 },
+    ],
+    tacticalNote:
+      'Flex, floor-press, then sprawl without momentum. Roll up clean on the sit-ups; punch the floor on the widows.',
+  },
+  {
+    id: 'the-suspended-yoke',
+    name: 'The Suspended Yoke',
+    durationMinutes: 15,
+    category: 'midline-tension',
+    intensityTier: 3,
+    movements: [
+      { name: 'Plank Hold', reps: 20, unit: 'sec' },
+      { name: 'T-Press Ups', reps: 12 },
+      { name: 'Glute Bridges', reps: 15 },
+    ],
+    tacticalNote:
+      'Isometric plank into a rear-delt press into a hinge. Squeeze the glutes hard at the top of every bridge.',
+  },
+  {
     id: 'the-four-horsemen',
     name: 'The Four Horsemen',
     durationMinutes: 20,
@@ -1848,8 +2393,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Russian Twists', reps: 15 },
       { name: 'Skater Jumps', reps: 30 },
     ],
-    tacticalNote:
-      'Rotational demands at every station. Breathe deeply during the T-Push-ups.',
+    tacticalNote: 'Rotational demands at every station. Breathe deeply during the T-Push-ups.',
   },
   {
     id: 'the-slow-burn',
@@ -1893,8 +2437,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Plank Jacks', reps: 15 },
       { name: 'Jumping Jacks', reps: 30 },
     ],
-    tacticalNote:
-      'High time-under-tension on the shoulders. Shake the arms out during the lunges.',
+    tacticalNote: 'High time-under-tension on the shoulders. Shake the arms out during the lunges.',
   },
   {
     id: 'the-centurion',
@@ -1908,8 +2451,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Fast Calf Raises', reps: 20 },
       { name: 'High Knees', reps: 40 },
     ],
-    tacticalNote:
-      'Saves the large leg muscles but destroys the calves and midline.',
+    tacticalNote: 'Saves the large leg muscles but destroys the calves and midline.',
   },
   {
     id: 'the-sentinel',
@@ -1925,6 +2467,51 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     ],
     tacticalNote:
       'Attacks the posterior chain heavily. Squeeze the glutes aggressively on the Supermans.',
+  },
+  {
+    id: 'the-long-tow',
+    name: 'The Long Tow',
+    durationMinutes: 20,
+    category: 'aerobic-matrix',
+    intensityTier: 2,
+    movements: [
+      { name: 'T-Press Ups', reps: 12 },
+      { name: 'Air Squats', reps: 24 },
+      { name: 'V-Ups', reps: 15 },
+      { name: 'High Knees', reps: 40 },
+    ],
+    tacticalNote:
+      'Steady four-piece matrix with a rear-delt opener. Conversational pace; arms stay heavy on the T.',
+  },
+  {
+    id: 'dorsal-engine',
+    name: 'Dorsal Engine',
+    durationMinutes: 20,
+    category: 'aerobic-matrix',
+    intensityTier: 2,
+    movements: [
+      { name: 'Back Widow', reps: 12 },
+      { name: 'Alternating Lunges', reps: 20 },
+      { name: 'Push-ups', reps: 10 },
+      { name: 'Jumping Jacks', reps: 30 },
+    ],
+    tacticalNote:
+      'Floor-press into lunges, push, and jacks for a balanced metabolic draw. Punch the floor — do not crunch the widows.',
+  },
+  {
+    id: 'the-steady-rower',
+    name: 'The Steady Rower',
+    durationMinutes: 20,
+    category: 'aerobic-matrix',
+    intensityTier: 2,
+    movements: [
+      { name: 'Combat Sprawls', reps: 10 },
+      { name: 'W-Press Ups', reps: 12 },
+      { name: 'Glute Bridges', reps: 20 },
+      { name: 'Mountain Climbers', reps: 30 },
+    ],
+    tacticalNote:
+      'Sprawls and climbers carry the engine; the W and bridges keep the posterior chain honest. Elbows pinned to the ribs.',
   },
   {
     id: 'the-baseline',
@@ -1953,8 +2540,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Reverse Lunges', reps: 20 },
       { name: 'Plank Shoulder Taps', reps: 10 },
     ],
-    tacticalNote:
-      'Vertical engine, vertical press, heavy leg tension, and rigid anti-rotation.',
+    tacticalNote: 'Vertical engine, vertical press, heavy leg tension, and rigid anti-rotation.',
   },
   {
     id: 'the-vanguard',
@@ -2077,6 +2663,51 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       'The heart rate will spike violently on the sprawls and jumps; control your breathing on the floor.',
   },
   {
+    id: 'scapular-shift',
+    name: 'Scapular Shift',
+    durationMinutes: 20,
+    category: 'four-point-cascade',
+    intensityTier: 4,
+    movements: [
+      { name: 'Skater Jumps', reps: 20 },
+      { name: 'Back Widow', reps: 12 },
+      { name: 'Wide Push-ups', reps: 10 },
+      { name: 'Strict Sit-Ups', reps: 15 },
+    ],
+    tacticalNote:
+      'Lateral hops into a dead-stop floor press while the heart is redlining. Punch the widows; do not rush the wide push.',
+  },
+  {
+    id: 'the-cross-draft',
+    name: 'The Cross-Draft',
+    durationMinutes: 20,
+    category: 'four-point-cascade',
+    intensityTier: 4,
+    movements: [
+      { name: 'Cross-Body Climbers', reps: 20 },
+      { name: 'T-Press Ups', reps: 12 },
+      { name: 'Jump Squats', reps: 15 },
+      { name: 'Dead Bugs', reps: 16 },
+    ],
+    tacticalNote:
+      'Aggressive cascade turnover with a rear-delt dead stop mid-round. Arms stay heavy on the T; breathe through the bugs.',
+  },
+  {
+    id: 'posterior-vanguard',
+    name: 'Posterior Vanguard',
+    durationMinutes: 20,
+    category: 'four-point-cascade',
+    intensityTier: 4,
+    movements: [
+      { name: 'Down-Ups', reps: 15 },
+      { name: 'Supine Floor Scapular Shrugs', reps: 15 },
+      { name: 'Reverse Lunges', reps: 20 },
+      { name: 'Double-Tap Jumps', reps: 20 },
+    ],
+    tacticalNote:
+      'Down-ups spike the clock; shrugs force a floor-generated pull before lunges and taps finish the cascade.',
+  },
+  {
     id: 'the-phalanx',
     name: 'The Phalanx',
     durationMinutes: 20,
@@ -2118,8 +2749,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'V-Ups', reps: 15 },
       { name: 'High Knees', reps: 20 },
     ],
-    tacticalNote:
-      'Actively push the floor away during the plank to protract the shoulder blades.',
+    tacticalNote: 'Actively push the floor away during the plank to protract the shoulder blades.',
   },
   {
     id: 'the-stronghold',
@@ -2148,8 +2778,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Dive-Bomber Push-ups', reps: 10 },
       { name: 'Mountain Climbers', reps: 20 },
     ],
-    tacticalNote:
-      'Pure anti-rotation followed immediately by heavy sagittal plane movement.',
+    tacticalNote: 'Pure anti-rotation followed immediately by heavy sagittal plane movement.',
   },
   {
     id: 'the-fortress',
@@ -2227,6 +2856,51 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       'The bottom hold taxes the quads before slow dead bugs reset the spine. Stay rigid through the push-ups so the jacks do not collapse your posture.',
   },
   {
+    id: 'the-iron-yoke',
+    name: 'The Iron Yoke',
+    durationMinutes: 20,
+    category: 'armor-protocol',
+    intensityTier: 5,
+    movements: [
+      { name: 'Hollow Hold', reps: 20, unit: 'sec' },
+      { name: 'Back Widow', reps: 12 },
+      { name: 'Combat Sprawls', reps: 15 },
+      { name: 'Fast Calf Raises', reps: 20 },
+    ],
+    tacticalNote:
+      'Hollow into widows before sprawls and calves finish the armor grind. Brace hard — do not dump the hollow early.',
+  },
+  {
+    id: 'dorsal-barricade',
+    name: 'Dorsal Barricade',
+    durationMinutes: 20,
+    category: 'armor-protocol',
+    intensityTier: 4,
+    movements: [
+      { name: 'Glute Bridge Hold', reps: 20, unit: 'sec' },
+      { name: 'W-Press Ups', reps: 12 },
+      { name: 'Diamond Push-ups', reps: 10 },
+      { name: 'Jumping Jacks', reps: 30 },
+    ],
+    tacticalNote:
+      'Bridge hold opens the round; W-press and diamonds load the upper back before the jacks reopen the engine.',
+  },
+  {
+    id: 'the-suspended-scapula',
+    name: 'The Suspended Scapula',
+    durationMinutes: 20,
+    category: 'armor-protocol',
+    intensityTier: 4,
+    movements: [
+      { name: 'High Plank Hold', reps: 20, unit: 'sec' },
+      { name: 'T-Press Ups', reps: 12 },
+      { name: 'Air Squats', reps: 20 },
+      { name: 'Mountain Climbers', reps: 20 },
+    ],
+    tacticalNote:
+      'High plank into a rear-delt press, then squats and climbers keep the armor clock honest. Elbows locked on the T.',
+  },
+  {
     id: 'first-contact',
     name: 'First Contact',
     durationMinutes: 10,
@@ -2237,8 +2911,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Strict Sit-Ups', reps: 15 },
       { name: 'Push-Ups', reps: 10 },
     ],
-    tacticalNote:
-      'Establish your baseline pace in the first round and hold it. No heroics.',
+    tacticalNote: 'Establish your baseline pace in the first round and hold it. No heroics.',
   },
   {
     id: 'the-undertow',
@@ -2251,7 +2924,6 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: 'Broad Jumps', reps: 10 },
       { name: 'Hand-Release Push-Ups', reps: 12 },
     ],
-    tacticalNote:
-      'Pace is survival. The deck-to-jump cycle will find your ceiling by round three.',
+    tacticalNote: 'Pace is survival. The deck-to-jump cycle will find your ceiling by round three.',
   },
 ];

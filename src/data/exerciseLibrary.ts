@@ -1083,6 +1083,68 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     photos: sequencePhotos('reverse-snow-angels'),
   }),
   libEntry({
+    id: 'back-widow',
+    name: 'Back Widow',
+    setupAndExecution: [
+      'Lie flat on your back with your knees bent and feet flat on the floor. Position your upper arms at a 45-degree angle from your torso with your elbows bent and forearms pointing up. Drive your elbows forcefully down into the floor to lift your upper back and shoulders completely off the ground. Squeeze your shoulder blades together at the peak, then lower with control.',
+    ],
+    commonMistakes: [
+      'Turning the lift into a crunch so the lower back and hips leave the floor.',
+      'Leaving the shoulder blades open at the top instead of finishing the squeeze.',
+    ],
+    coachingCue:
+      '"Punch the floor with your elbows." Pinch a coin between your shoulder blades at the top.',
+    amrapTip:
+      'Do not turn this into a core crunch. Your lower back and glutes must stay anchored to the floor. The only reason your torso lifts is because your lats and rhomboids are pressing the earth away.',
+    photos: sequencePhotos('back-widow'),
+  }),
+  libEntry({
+    id: 'w-press-ups',
+    name: 'W-Press Ups',
+    setupAndExecution: [
+      'Lie flat on your back and place your arms on the floor in a W shape — elbows bent and tucked close to your ribs, hands pointing upward. Brace your core to keep your lumbar spine neutral. Drive your elbows and the backs of your arms straight down into the floor to pop your chest up and elevate your upper back off the mat. Hold the top tension for one second before returning to the floor.',
+    ],
+    commonMistakes: [
+      'Arching the lower back until the hips leave the floor to fake extra range.',
+      'Flaring the elbows away from the ribs and losing mid-back isolation.',
+    ],
+    coachingCue: '"Pin your elbows to your ribs." Drive your triceps through the mat.',
+    amrapTip:
+      'Avoid excessively arching your lower back to cheat the range of motion. If your hips pop off the floor, you are losing the isolation in your mid-back. Keep your neck relaxed and look straight up.',
+    photos: sequencePhotos('w-press-ups'),
+  }),
+  libEntry({
+    id: 't-press-ups',
+    name: 'T-Press Ups',
+    setupAndExecution: [
+      'Lie flat on your back with your legs extended or knees bent. Extend your arms straight out to your sides to form a T against the floor, palms facing the ceiling. Keeping your arms completely straight, drive the backs of your shoulders, elbows, and wrists down into the floor. Lift your upper torso off the ground using only the tension from your rear deltoids and upper back.',
+    ],
+    commonMistakes: [
+      'Craning the neck to force the chest higher than the rear delts can drive.',
+      'Bending the elbows so the press becomes a shove instead of a straight-arm drive.',
+    ],
+    coachingCue: '"Make your arms heavy." Crush the floor with the backs of your hands.',
+    amrapTip:
+      'The range of motion on this is naturally very short. Do not force your chest higher by straining your neck. Focus entirely on the squeeze in the back of your shoulders.',
+    photos: sequencePhotos('t-press-ups'),
+  }),
+  libEntry({
+    id: 'supine-floor-scapular-shrugs',
+    name: 'Supine Floor Scapular Shrugs',
+    setupAndExecution: [
+      'Lie flat on your back with your arms completely straight down by your sides, palms facing up. Without bending your elbows, press the backs of your shoulders and arms into the ground. Retract your shoulder blades and depress them toward your hips to lift your chest slightly forward. Release the tension and let your shoulders flatten back out against the mat.',
+    ],
+    commonMistakes: [
+      'Bending the elbows so the triceps steal the work from the scapula.',
+      'Turning a micro-shrug into a big torso lift by thrusting the chest.',
+    ],
+    coachingCue:
+      '"Slide your shoulder blades into your back pockets." Press the floor away with straight arms.',
+    amrapTip:
+      'This is a micro-movement. Your torso will barely leave the floor. If your elbows bend, your triceps are taking over the work. Keep the arms locked and force the scapula to do the job.',
+    photos: sequencePhotos('supine-floor-scapular-shrugs'),
+  }),
+  libEntry({
     id: 'superman-hold',
     name: 'Superman Hold',
     setupAndExecution: [

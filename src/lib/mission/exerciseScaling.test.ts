@@ -69,6 +69,8 @@ describe('the ladder data', () => {
       'squat--box',
       'squat--partial',
       'squat--supported',
+      'supine-back--hold',
+      'supine-back--partial',
     ]);
   });
 
