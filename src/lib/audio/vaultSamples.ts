@@ -12,6 +12,9 @@ export function resetVaultSamplesForTests(): void {
   for (const key of Object.keys(buffers) as VaultSampleId[]) {
     delete buffers[key];
   }
+  for (const key of Object.keys(activeSources) as VaultSampleId[]) {
+    delete activeSources[key];
+  }
   loadPromise = null;
 }
 
@@ -49,19 +52,37 @@ export function preloadVaultSamples(context: AudioContext): Promise<void> {
   return loadPromise;
 }
 
+/** The source currently playing for each singleton cue, so it can be cut off. */
+const activeSources: Partial<Record<VaultSampleId, AudioBufferSourceNode>> = {};
+
 /**
  * Play a preloaded vault sample.
+ *
+ * `singleton` stops whatever that cue is already playing first. A round-log cue
+ * on a 45-second round can still be sounding when the next round is logged, and
+ * two overlapping copies of the same sample read as a stutter rather than as
+ * two taps.
+ *
  * @returns true if playback started, false if the sample is not ready.
  */
 export function playVaultSample(
   context: AudioContext,
   id: VaultSampleId,
-  options?: { peakGain?: number }
+  options?: { peakGain?: number; singleton?: boolean }
 ): boolean {
   const buffer = buffers[id];
   if (!buffer) {
     void preloadVaultSamples(context);
     return false;
+  }
+
+  if (options?.singleton) {
+    try {
+      activeSources[id]?.stop();
+    } catch {
+      // A source that already ended throws on stop; nothing to cut off.
+    }
+    delete activeSources[id];
   }
 
   const source = context.createBufferSource();
@@ -71,6 +92,15 @@ export function playVaultSample(
   source.connect(gain);
   gain.connect(context.destination);
   source.start(context.currentTime);
+
+  if (options?.singleton) {
+    activeSources[id] = source;
+    source.onended = () => {
+      if (activeSources[id] === source) {
+        delete activeSources[id];
+      }
+    };
+  }
   return true;
 }
 

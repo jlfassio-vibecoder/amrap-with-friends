@@ -250,13 +250,23 @@ export function playGo(): void {
   });
 }
 
-/** Round-log vault sample; synth bolt-action fallback if not loaded yet. */
+/**
+ * Round-log cue: the mission-start vault sample, by product decision.
+ *
+ * Deliberately not `roundLog`, which is the sample the file name suggests and
+ * which this played until asked otherwise. The asset stays in the manifest —
+ * switching back is one word — but nothing plays it today.
+ *
+ * `singleton` because this sample is long enough to still be sounding when a
+ * fast round is logged, and two overlapping copies read as a stutter rather
+ * than as two taps. Synth bolt-action fallback if the sample is not loaded.
+ */
 export function playRoundLogged(): void {
   const context = audioContext;
   if (!context) {
     return;
   }
-  if (playVaultSample(context, 'roundLog')) {
+  if (playVaultSample(context, 'missionStart', { singleton: true })) {
     return;
   }
   for (const offset of [0, 0.06] as const) {

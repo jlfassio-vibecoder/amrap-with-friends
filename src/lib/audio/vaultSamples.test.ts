@@ -22,12 +22,14 @@ function createFakeContext() {
     createBufferSource() {
       const source = {
         buffer: null as { length: number } | null,
+        onended: null as (() => void) | null,
         connect: vi.fn(),
         start: vi.fn(() => {
           if (source.buffer) {
             started.push({ bufferLength: source.buffer.length });
           }
         }),
+        stop: vi.fn(),
       };
       return source;
     },
@@ -80,5 +82,80 @@ describe('vaultSamples', () => {
   it('playVaultSample returns false before preload finishes', () => {
     const context = createFakeContext();
     expect(playVaultSample(context as unknown as AudioContext, 'missionStart')).toBe(false);
+  });
+});
+
+describe('a singleton cue cuts off its own previous playback', () => {
+  beforeEach(() => {
+    resetVaultSamplesForTests();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => ({
+        ok: true,
+        status: 200,
+        arrayBuffer: async () => new ArrayBuffer(url.includes('round-log') ? 100 : 600),
+      }))
+    );
+  });
+
+  afterEach(() => {
+    resetVaultSamplesForTests();
+    vi.unstubAllGlobals();
+  });
+
+  it('stops the sounding source before starting the next', async () => {
+    // The round-log cue is long enough to still be playing when a fast round
+    // is logged; two overlapping copies read as a stutter, not two taps.
+    const context = createFakeContext();
+    const sources: Array<{ stop: ReturnType<typeof vi.fn> }> = [];
+    const create = context.createBufferSource.bind(context);
+    context.createBufferSource = () => {
+      const source = create();
+      sources.push(source);
+      return source;
+    };
+
+    await preloadVaultSamples(context as unknown as AudioContext);
+    playVaultSample(context as unknown as AudioContext, 'missionStart', { singleton: true });
+    playVaultSample(context as unknown as AudioContext, 'missionStart', { singleton: true });
+
+    expect(sources).toHaveLength(2);
+    expect(sources[0].stop).toHaveBeenCalled();
+    expect(sources[1].stop).not.toHaveBeenCalled();
+  });
+
+  it('leaves overlapping playback alone when not a singleton', async () => {
+    const context = createFakeContext();
+    const sources: Array<{ stop: ReturnType<typeof vi.fn> }> = [];
+    const create = context.createBufferSource.bind(context);
+    context.createBufferSource = () => {
+      const source = create();
+      sources.push(source);
+      return source;
+    };
+
+    await preloadVaultSamples(context as unknown as AudioContext);
+    playVaultSample(context as unknown as AudioContext, 'missionStart');
+    playVaultSample(context as unknown as AudioContext, 'missionStart');
+
+    expect(sources[0].stop).not.toHaveBeenCalled();
+  });
+
+  it('survives stopping a source that already ended', async () => {
+    const context = createFakeContext();
+    const create = context.createBufferSource.bind(context);
+    context.createBufferSource = () => {
+      const source = create();
+      source.stop = vi.fn(() => {
+        throw new Error('InvalidStateError');
+      });
+      return source;
+    };
+
+    await preloadVaultSamples(context as unknown as AudioContext);
+    playVaultSample(context as unknown as AudioContext, 'missionStart', { singleton: true });
+    expect(() =>
+      playVaultSample(context as unknown as AudioContext, 'missionStart', { singleton: true })
+    ).not.toThrow();
   });
 });
