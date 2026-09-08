@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { formatModifiedBadge } from '@/lib/mission/modifiedMovements';
 import { formatVariantBadge } from '@/lib/mission/exerciseScaling';
 import { AppLink } from '@/components/AppLink';
@@ -11,6 +11,8 @@ import { MyCampaignsPanel } from '@/components/campaign/MyCampaignsPanel';
 import { ScalingProgressionPanel } from '@/components/mission/ScalingProgressionPanel';
 import { CheckInProgressionPanel } from '@/components/mission/CheckInProgressionPanel';
 import { MyMissionCheckIn } from '@/components/mission/MyMissionCheckIn';
+import { fetchMyBenchmarks, retireBenchmark, type AthleteBenchmark } from '@/lib/api/benchmarks';
+import { benchmarkForMission } from '@/lib/benchmark/matchBenchmark';
 import {
   canDeleteMyMission,
   deleteIncompleteMission,
@@ -111,12 +113,17 @@ function MyMissionCard({
   deletingMissionId,
   onDelete,
   onViewBreakdown,
+  benchmark,
+  onRetireBenchmark,
   expandControl,
 }: {
   entry: MyMissionEntry;
   deletingMissionId: string | null;
   onDelete: (entry: MyMissionEntry) => void;
   onViewBreakdown: (entry: MyMissionEntry) => void;
+  /** The benchmark this workout and clock belong to, live or retired. */
+  benchmark?: AthleteBenchmark | null;
+  onRetireBenchmark?: (benchmarkId: string) => void;
   expandControl?: {
     expanded: boolean;
     missionCount: number;
@@ -143,6 +150,28 @@ function MyMissionCard({
         ) : null}
         {entry.isFeatured ? ' · Featured' : ''}
       </p>
+      {benchmark ? (
+        <p className="flex flex-wrap items-center gap-2">
+          <span
+            className={
+              benchmark.retiredAt === null
+                ? 'rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-on-accent'
+                : 'rounded-full border border-border px-2 py-0.5 text-xs text-secondary'
+            }
+          >
+            {benchmark.retiredAt === null ? 'Benchmark' : 'Benchmark · retired'}
+          </span>
+          {benchmark.retiredAt === null && onRetireBenchmark ? (
+            <button
+              type="button"
+              className="link-accent text-xs"
+              onClick={() => onRetireBenchmark(benchmark.id)}
+            >
+              Retire
+            </button>
+          ) : null}
+        </p>
+      ) : null}
       <div className="flex flex-wrap items-center gap-3">
         <Link className="btn-teal" to={`/mission/${entry.missionId}`}>
           View mission
@@ -204,11 +233,43 @@ export default function MyMissionsPage() {
   const [breakdownEntry, setBreakdownEntry] = useState<MyMissionEntry | null>(null);
   const [deletingMissionId, setDeletingMissionId] = useState<string | null>(null);
   const [expandedRallyPointIds, setExpandedRallyPointIds] = useState<Set<string>>(() => new Set());
+  const [benchmarks, setBenchmarks] = useState<AthleteBenchmark[]>([]);
 
   const listItems = useMemo(
     () => groupMyMissionsByRallyPoint(entries, chainsByRallyPointId),
     [entries, chainsByRallyPointId]
   );
+
+  const loadBenchmarks = useCallback(async () => {
+    const result = await fetchMyBenchmarks();
+    if (!result.error) {
+      setBenchmarks(result.data ?? []);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isAuthLoading || !isAuthenticated) {
+      return;
+    }
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) {
+        void loadBenchmarks();
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthLoading, isAuthenticated, loadBenchmarks]);
+
+  async function handleRetireBenchmark(benchmarkId: string) {
+    const result = await retireBenchmark(benchmarkId);
+    if (result.error) {
+      setError(result.error.message);
+      return;
+    }
+    await loadBenchmarks();
+  }
 
   useEffect(() => {
     if (isAuthLoading || !isAuthenticated || !user) {
@@ -366,6 +427,8 @@ export default function MyMissionsPage() {
                     deletingMissionId={deletingMissionId}
                     onDelete={(entry) => void handleDelete(entry)}
                     onViewBreakdown={setBreakdownEntry}
+                    benchmark={benchmarkForMission(item.entry, benchmarks)}
+                    onRetireBenchmark={(id) => void handleRetireBenchmark(id)}
                   />
                 </li>
               );
@@ -379,6 +442,8 @@ export default function MyMissionsPage() {
                   deletingMissionId={deletingMissionId}
                   onDelete={(entry) => void handleDelete(entry)}
                   onViewBreakdown={setBreakdownEntry}
+                  benchmark={benchmarkForMission(item.parent, benchmarks)}
+                  onRetireBenchmark={(id) => void handleRetireBenchmark(id)}
                   expandControl={{
                     expanded,
                     missionCount: item.chainLength,
@@ -396,6 +461,8 @@ export default function MyMissionsPage() {
                             deletingMissionId={deletingMissionId}
                             onDelete={(entry) => void handleDelete(entry)}
                             onViewBreakdown={setBreakdownEntry}
+                            benchmark={benchmarkForMission(child.entry, benchmarks)}
+                            onRetireBenchmark={(id) => void handleRetireBenchmark(id)}
                           />
                         </li>
                       ) : (

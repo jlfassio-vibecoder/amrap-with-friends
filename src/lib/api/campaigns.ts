@@ -34,6 +34,19 @@ export interface CampaignSummary {
   /** Occurrences the signed-in athlete has a usable live or makeup score for. */
   completedMissions: number;
   memberCount: number;
+  /**
+   * The campaign's schedule in order — enough for `campaignBenchmarkSlots` to
+   * work out which domain this campaign is testing in, using the same
+   * `deriveCampaignRoles` the detail page uses. Empty on an older server.
+   */
+  schedule: CampaignScheduleEntry[];
+}
+
+/** One scheduled slot, carrying only what role derivation and the clock need. */
+export interface CampaignScheduleEntry {
+  weekNumber: number;
+  templateId: string | null;
+  durationMinutes: number;
 }
 
 export interface CampaignOccurrenceEntry {
@@ -186,7 +199,22 @@ function parseSummary(raw: unknown): CampaignSummary | null {
     totalMissions: readNumber(row.total_missions),
     completedMissions: readNumber(row.completed_missions),
     memberCount: readNumber(row.member_count),
+    schedule: parseSchedule(row.schedule),
   };
+}
+
+function parseSchedule(raw: unknown): CampaignScheduleEntry[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return raw.map((entry) => {
+    const row = readRecord(entry);
+    return {
+      weekNumber: readNumber(row.week_number),
+      templateId: readString(row.template_id),
+      durationMinutes: readNumber(row.duration_minutes),
+    };
+  });
 }
 
 function parseOccurrence(raw: unknown): CampaignOccurrenceEntry | null {

@@ -1,7 +1,7 @@
 # Plan: benchmarks an athlete designates for themselves
 
 **Branch:** `feature/personal-benchmarks` (proposed)
-**Status:** Design. Nothing built.
+**Status:** Phase 1 shipped. Phases 2–4 open.
 **Last updated:** 2026-09-09
 
 ---
@@ -278,9 +278,10 @@ the mission, before running it.
 
 ## Delivery
 
-**Phase 1 — designate and badge.** Table, RPCs, the checkbox in Create mission
-and on the rally point before start, the pill on My missions. Pure
-`benchmarkCap.ts` / `benchmarkStatus.ts` in `src/lib/` with tests. No HUD yet.
+**Phase 1 — designate and badge. ✅ Shipped.** Table, RPCs, the control on the
+rally point before start, the pill and Retire on My missions, and the pure cap
+rules in `src/lib/benchmark/`. Designation on the Create form was dropped from
+scope — see "Where designation happens" below.
 
 **Phase 2 — attempts and retest.** Derive attempts by version key, the due
 calculation, the Retest shortcut with template and cap locked and the ghost
@@ -294,14 +295,58 @@ through the same row component, and count a campaign benchmark in the card.
 Deliberately last: it is the only phase that touches shipped campaign surfaces,
 and it is worth nothing until phases 1–3 exist.
 
-### Open questions for Justin
+### Settled
 
-1. **Should a campaign benchmark occupy one of the three slots?** It is a real
-   test on a real cadence, so counting it is honest — but an athlete in a
-   campaign would find their personal slots quietly reduced to two. My
-   recommendation: **count it, and say so on the card**, because the cost is
-   real either way and hiding it does not make it smaller.
-2. **Coach workouts as benchmarks?** `template_id` covers `coach:<uuid>`
-   already. The risk is that a coach edits the workout underneath a stored
-   benchmark, which is precisely what `benchmarkFingerprints.ts` exists to
-   prevent for library benchmarks. Suggest **library templates only in v1**.
+1. **A campaign benchmark occupies one of the three.** Decided. An athlete in a
+   campaign has two personal slots, and the UI names the campaign holding the
+   third rather than leaving them to wonder where it went.
+2. **Library templates only.** Decided. A coach can edit their own workout
+   underneath a stored benchmark, and nothing fingerprints a coach workout the
+   way `benchmarkFingerprints.ts` covers the campaign benchmarks. Refused in the
+   RPC and in `isBenchmarkableTemplate`.
+
+---
+
+## Phase 1, as shipped
+
+`athlete_benchmarks`, the three RPCs, the designate control on the rally point,
+and the pill on My missions. No HUD, no attempts, no retest — those are phases 2
+and 3.
+
+### Where the cap is enforced, and why in two places
+
+The database enforces what must hold whatever the client does: **one personal
+benchmark per domain** (a partial unique index, not just a check — two
+concurrent designates both pass a SELECT-then-INSERT), **three personal at
+most**, and **library templates only**.
+
+It deliberately does not know about campaign benchmarks. `deriveCampaignRoles`
+is not "the first occurrence": it also requires the schedule to end by repeating
+its opening workout, and bails when there are more repeats than any campaign
+length schedules. A second copy of that in plpgsql would drift the first time
+either changed — and drift silently, since the only symptom is a cap that admits
+one benchmark too many. So `my_campaigns` now ships the raw ordered schedule and
+`campaignBenchmarkSlots.ts` decides, using the same function the campaign detail
+page uses.
+
+**Over-designating costs the athlete training, not integrity.** That is the
+right thing to enforce in the cheaper place. `benchmarkCap.contract.test.ts`
+pins the numbers the two halves do share — the limit, the four domains, the legal
+clocks, the coach-workout refusal, the unique index and the grants.
+
+### Where designation happens
+
+On the rally point, before start — not on the Create form. By then the workout
+and the clock are settled and the athlete's modification plan is on the same
+screen, so the version the benchmark records is the version they are about to
+perform. Asking on Create would be asking before any of that is known.
+
+It is personal, not per mission: a joiner designates for themselves, and the
+host does not designate for the squad.
+
+### The badge covers runs from before the designation
+
+`benchmarkForMission` matches on workout and clock, so every run of a benchmark
+workout wears the pill, including ones from before it was designated. Same call
+the attempt derivation makes: what you scored on that workout at that clock is
+the measurement, whether or not a button was pressed first.

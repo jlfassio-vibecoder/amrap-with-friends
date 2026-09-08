@@ -33,6 +33,7 @@ import { ArmedRallyPointControls } from '@/components/mission/ArmedRallyPointCon
 import { HostRallyPointSteps } from '@/components/mission/HostRallyPointSteps';
 import { LogMissedRound } from '@/components/mission/LogMissedRound';
 import { PreMissionScalingPicker } from '@/components/mission/PreMissionScalingPicker';
+import { BenchmarkDesignateControl } from '@/components/mission/BenchmarkDesignateControl';
 import { GhostPicker } from '@/components/GhostPicker';
 import { SafetyNoticeModal } from '@/components/safety/SafetyNoticeModal';
 import { useMissionSafetyNotices } from '@/components/safety/useMissionSafetyNotices';
@@ -1602,6 +1603,13 @@ function LiveMissionView({
                     workout={live.workout}
                     variants={scalingPlan}
                     onChange={handleScalingPlanChange}
+                  />
+                ) : null}
+                {live.phase === 'waiting' && !live.isPractice ? (
+                  <BenchmarkDesignateControl
+                    templateId={live.templateId}
+                    durationMinutes={live.workDurationSec / 60}
+                    versionKey={scalingVersionKey}
                   />
                 ) : null}
               </section>
