@@ -23,8 +23,8 @@ interface AmqapFlowPickerProps {
 
 function chipClassName(selected: boolean): string {
   return selected
-    ? 'rounded-full bg-accent py-2 pl-4 pr-2 text-sm font-semibold text-on-accent'
-    : 'hover:border-accent/40 rounded-full border border-border bg-surface py-2 pl-4 pr-2 text-sm font-semibold text-ink';
+    ? 'rounded-full bg-accent pr-2 text-sm font-semibold text-on-accent'
+    : 'hover:border-accent/40 rounded-full border border-border bg-surface pr-2 text-sm font-semibold text-ink';
 }
 
 export function AmqapFlowPicker({
@@ -69,7 +69,7 @@ export function AmqapFlowPicker({
               >
                 <button
                   type="button"
-                  className="bg-transparent text-inherit"
+                  className="bg-transparent py-2 pl-4 text-inherit"
                   onClick={() => onDurationChange(duration)}
                 >
                   {duration} min
@@ -103,7 +103,7 @@ export function AmqapFlowPicker({
               >
                 <button
                   type="button"
-                  className="bg-transparent text-inherit"
+                  className="bg-transparent py-2 pl-4 text-inherit"
                   onClick={() => onFlowChange(category.id)}
                 >
                   {category.label}
