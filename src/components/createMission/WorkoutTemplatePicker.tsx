@@ -184,8 +184,8 @@ export function WorkoutTemplatePicker({
                   className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold leading-none hover:opacity-80 ${
                     selected ? 'bg-on-accent text-accent' : 'bg-accent text-on-accent'
                   }`}
-                  aria-label={`What's ${category.label}?`}
-                  title={`Learn what the ${category.label} style is for`}
+                  aria-label={`What's ${label}?`}
+                  title={`Learn what the ${label} style is for`}
                   onClick={() => setInfoCategory(category.id)}
                 >
                   ?

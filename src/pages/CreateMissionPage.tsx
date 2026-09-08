@@ -234,15 +234,46 @@ export default function CreateMissionPage() {
     if (!smartRecovery.enabled) {
       return;
     }
-    setSelectedTemplateIds((current) => {
-      const next = current.filter((id) => !smartRecovery.locks.has(id));
-      return next.length === current.length ? current : next;
+
+    const nextIds = selectedTemplateIds.filter((id) => !smartRecovery.locks.has(id));
+    if (nextIds.length !== selectedTemplateIds.length) {
+      const firstId = nextIds[0];
+      const first = firstId
+        ? (WORKOUT_TEMPLATES.find((entry) => entry.id === firstId) ?? null)
+        : null;
+      if (first) {
+        applyLibraryTemplate(first);
+      }
+      setSelectedTemplateIds(nextIds);
+      return;
+    }
+
+    setMissionChainDraft((currentChain) => {
+      const nextChain = reconcileChainDraft(
+        currentChain.filter((item) => !smartRecovery.locks.has(item.templateId)),
+        templatesInSelectionOrder(nextIds, WORKOUT_TEMPLATES),
+        durationMinutes,
+        selectedDomain
+      );
+      if (
+        nextChain.length === currentChain.length &&
+        nextChain.every(
+          (item, index) =>
+            item.id === currentChain[index]?.id &&
+            item.templateId === currentChain[index]?.templateId
+        )
+      ) {
+        return currentChain;
+      }
+      return nextChain;
     });
-    setMissionChainDraft((current) => {
-      const next = current.filter((item) => !smartRecovery.locks.has(item.templateId));
-      return next.length === current.length ? current : next;
-    });
-  }, [smartRecovery.enabled, smartRecovery.locks]);
+  }, [
+    smartRecovery.enabled,
+    smartRecovery.locks,
+    selectedTemplateIds,
+    durationMinutes,
+    selectedDomain,
+  ]);
 
   useEffect(() => {
     if (!smartRecovery.enabled || !selectedCoachWorkout) {
@@ -277,6 +308,9 @@ export default function CreateMissionPage() {
   }, [workoutText, workoutSource, selectedTemplate, selectedCoachWorkout]);
 
   function handleDurationChange(domain: TimeDomain) {
+    if (domain === selectedDomain) {
+      return;
+    }
     setSelectedDomain(domain);
     setDurationMinutes(defaultCapForDomain(domain));
     setSelectedTemplateIds([]);
@@ -397,7 +431,20 @@ export default function CreateMissionPage() {
       return;
     }
 
-    if (isAuthenticated && selectedTemplateIds.length >= MAX_CHAIN_LENGTH) {
+    // Guests launch one workout; keep the pressed card exclusive so Launch
+    // matches the visible selection.
+    if (!isAuthenticated) {
+      applyLibraryTemplate(template);
+      const applied = applyTemplate(template);
+      commitLibrarySelection(
+        [template.id],
+        applied.durationMinutes,
+        domainForCap(applied.durationMinutes) ?? selectedDomain
+      );
+      return;
+    }
+
+    if (selectedTemplateIds.length >= MAX_CHAIN_LENGTH) {
       return;
     }
 
@@ -518,7 +565,7 @@ export default function CreateMissionPage() {
           selectedDomain
         )
       : missionChain;
-    const launchingFromChain = chainForLaunch.length >= 1;
+    const launchingFromChain = chainForLaunch.length >= 2;
 
     if (
       workoutSource === 'library' &&
@@ -901,7 +948,7 @@ export default function CreateMissionPage() {
                     />
                   ) : null
                 }
-                hideSelectedWorkoutPreview={missionChain.length >= 2}
+                hidePageTimeCap={missionChain.length >= 2}
                 chainedWorkoutCount={missionChain.length}
                 loading={loading}
                 onNicknameChange={setNickname}

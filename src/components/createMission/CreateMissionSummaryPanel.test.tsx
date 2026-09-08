@@ -78,7 +78,7 @@ describe('CreateMissionSummaryPanel', () => {
         chainedWorkoutCount={3}
         scheduleMode="now"
         capReached={false}
-        hideSelectedWorkoutPreview
+        hidePageTimeCap
       />
     );
 

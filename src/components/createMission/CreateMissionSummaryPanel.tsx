@@ -37,7 +37,7 @@ interface CreateMissionSummaryPanelProps {
   /** When 2+, the preview heading is "First workout of N workouts". */
   chainedWorkoutCount?: number;
   /** When true, hide the page-level time cap — per-row chips own that job. */
-  hideSelectedWorkoutPreview?: boolean;
+  hidePageTimeCap?: boolean;
   loading: boolean;
   onNicknameChange: (value: string) => void;
   /** Changes the time domain, and with it the canonical clock. */
@@ -87,7 +87,7 @@ export function CreateMissionSummaryPanel({
   unsignedHint = null,
   chainBuilder = null,
   chainedWorkoutCount = 0,
-  hideSelectedWorkoutPreview = false,
+  hidePageTimeCap = false,
   loading,
   onNicknameChange,
   durationLockedNote = null,
@@ -138,7 +138,7 @@ export function CreateMissionSummaryPanel({
             {durationMinutes} min — set by selected workout
           </p>
         </SummaryField>
-      ) : hideSelectedWorkoutPreview ? null : (
+      ) : hidePageTimeCap ? null : (
         <div className="space-y-3">
           {templateSelected ? null : (
             <SummaryField label="Time domain">
