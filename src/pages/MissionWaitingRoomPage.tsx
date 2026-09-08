@@ -32,6 +32,7 @@ import { EditRallyScheduleForm } from '@/components/mission/EditRallyScheduleFor
 import { ArmedRallyPointControls } from '@/components/mission/ArmedRallyPointControls';
 import { HostRallyPointSteps } from '@/components/mission/HostRallyPointSteps';
 import { LogMissedRound } from '@/components/mission/LogMissedRound';
+import { MissionPacingGauge } from '@/components/mission/MissionPacingGauge';
 import { PreMissionScalingPicker } from '@/components/mission/PreMissionScalingPicker';
 import { BenchmarkDesignateControl } from '@/components/mission/BenchmarkDesignateControl';
 import { GhostPicker } from '@/components/GhostPicker';
@@ -1537,6 +1538,18 @@ function LiveMissionView({
                   />
                 </section>
               ) : null}
+
+              {/* Its own section, after the actions — never inside the clock
+                  block. The gauge owns its preference, its placement and its
+                  failure; this mount is the whole of its contact with the
+                  mission, and deleting it removes the feature. */}
+              <MissionPacingGauge
+                phase={live.phase}
+                roundSplitsSec={live.roundSplitsSec}
+                elapsedSec={live.elapsedSec}
+                isPaused={live.isPaused}
+                isPractice={live.isPractice}
+              />
 
               {live.isPractice && live.practiceRounds.length > 0 ? (
                 <section className="rounded-card border border-border bg-page p-4 text-left">

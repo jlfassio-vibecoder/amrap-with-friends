@@ -42,6 +42,8 @@ export interface UseLiveAmrapMissionReturn {
   phase: LiveMissionPhase;
   timeLeftSec: number;
   elapsedSec: number;
+  /** Cumulative elapsed-at-round seconds for this athlete, oldest first. */
+  roundSplitsSec: number[];
   isPaused: boolean;
   workDurationSec: number;
   setupDurationSec: number;
@@ -437,6 +439,18 @@ export function useLiveAmrapMission(
   }, [channel.rounds, participantId, segmentIndex]);
 
   const myRoundCount = myRounds.length;
+
+  /**
+   * Every round boundary this athlete has logged, in mission-elapsed seconds.
+   *
+   * The first entry is round one's duration, which the pacing gauge takes as
+   * its benchmark; the last is where the round in progress began.
+   */
+  const roundSplitsSec = useMemo(() => {
+    return isPractice
+      ? timer.rounds.map((round) => round.elapsedSecAtRound)
+      : myRounds.map((round) => round.elapsed_sec_at_round);
+  }, [isPractice, timer.rounds, myRounds]);
 
   /** Where the last logged round landed — the floor a correction interpolates from. */
   const lastLoggedElapsedSec = useMemo(() => {
@@ -836,6 +850,7 @@ export function useLiveAmrapMission(
     phase: displayPhase,
     timeLeftSec: displayTimeLeftSec,
     elapsedSec: displayElapsedSec,
+    roundSplitsSec,
     isPaused: displayIsPaused,
     workDurationSec: effectiveWorkDurationSec,
     setupDurationSec,
