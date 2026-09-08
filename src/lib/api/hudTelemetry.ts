@@ -252,22 +252,53 @@ function readWeekPviMissions(value: unknown): HudWeekPviMission[] {
 }
 
 function readWeekMission(value: unknown): HudWeekMission | null {
-  const base = readWeekPviMission(value);
-  if (base === null) {
+  if (!value || typeof value !== 'object') {
     return null;
   }
 
   const row = value as Record<string, unknown>;
+  const missionId = readString(row.missionId);
+  const durationMinutes = readNonNegativeInt(row.durationMinutes);
+  const lockedAt = readString(row.lockedAt);
+  const templateRaw = row.templateId;
+
+  // History missions include locked workouts whose PVI is JSON null — a normal
+  // ScoreBreakdown value when pacing cannot be computed. Do not reuse
+  // readWeekPviMission, which requires a numeric pvi for the weekly PVI card.
+  let pvi: number | null;
+  if (row.pvi === null || row.pvi === undefined) {
+    pvi = null;
+  } else {
+    pvi = readNumber(row.pvi);
+    if (pvi === null) {
+      return null;
+    }
+  }
+
+  if (missionId === null || durationMinutes === null || lockedAt === null) {
+    return null;
+  }
+
+  let templateId: string | null;
+  if (templateRaw === null || templateRaw === undefined) {
+    templateId = null;
+  } else {
+    templateId = readString(templateRaw);
+    if (templateId === null) {
+      return null;
+    }
+  }
+
   const rawScore = row.finalScore;
   if (rawScore === null || rawScore === undefined) {
-    return { ...base, finalScore: null };
+    return { missionId, pvi, durationMinutes, templateId, lockedAt, finalScore: null };
   }
 
   const finalScore = readNumber(rawScore);
   if (finalScore === null) {
     return null;
   }
-  return { ...base, finalScore };
+  return { missionId, pvi, durationMinutes, templateId, lockedAt, finalScore };
 }
 
 function readHistoryWeek(value: unknown): HudHistoryWeek | null {

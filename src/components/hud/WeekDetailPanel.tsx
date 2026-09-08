@@ -148,7 +148,9 @@ export function WeekDetailPanel({
                 <span className="shrink-0 tabular-nums text-secondary">
                   {mission.durationMinutes} min
                 </span>
-                <span className="shrink-0 tabular-nums text-secondary">{mission.pvi}%</span>
+                <span className="shrink-0 tabular-nums text-secondary">
+                  {mission.pvi === null ? 'N/A' : `${mission.pvi}%`}
+                </span>
                 <span className="shrink-0 font-semibold tabular-nums text-ink">
                   {mission.finalScore === null ? '—' : mission.finalScore}
                 </span>

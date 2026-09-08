@@ -96,12 +96,27 @@ describe('AttritionGrid', () => {
     );
 
     const withData = screen.getByLabelText(/deficient, 1 mission$/);
-    expect(withData.className).toContain('bg-accent');
+    expect(withData.className).toContain('bg-muted');
     expect(withData.className).not.toContain('bg-transparent');
 
     const empty = screen.getAllByLabelText(/deficient, 0 missions$/);
     expect(empty).toHaveLength(11);
     expect(empty[0]!.className).toContain('bg-transparent');
+  });
+
+  it('keeps compliant weeks with missions on the accent fill', () => {
+    const counts = Array.from({ length: 12 }, () => 3);
+    render(
+      <AttritionGrid
+        attrition={Array.from({ length: 12 }, () => true)}
+        weekEndsAt="2026-08-25T07:00:00.000Z"
+        weeks={historyWeeks(counts)}
+        selectedIndex={null}
+        onSelect={vi.fn()}
+      />
+    );
+
+    expect(screen.getAllByRole('button')[0]!.className).toContain('bg-accent');
   });
 
   it('marks only the selected week as pressed', () => {

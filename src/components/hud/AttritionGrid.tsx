@@ -35,11 +35,14 @@ function weekStartForDataIndex(weekEndsAt: string, dataIndex: number): Date {
 const CELL_BASE = 'inline-block h-4 w-4 shrink-0';
 
 /**
- * Filled when the week has something to show. With per-week detail that means
- * locked missions; without it (pre-migration) the strip still paints compliance.
+ * Empty weeks stay outlined. Weeks with locked missions use the same accent /
+ * muted pair as WeekDetailPanel so the strip still reads compliant vs deficient.
  */
-function cellFill(hasActivity: boolean): string {
-  return hasActivity ? 'bg-accent' : 'border border-border bg-transparent';
+function cellFill(hasActivity: boolean, compliant: boolean): string {
+  if (!hasActivity) {
+    return 'border border-border bg-transparent';
+  }
+  return compliant ? 'bg-accent' : 'bg-muted';
 }
 
 /**
@@ -90,7 +93,7 @@ export function AttritionGrid({
             return (
               <span
                 key={`week-${dataIndex}`}
-                className={`${CELL_BASE} ${cellFill(hasActivity)}`}
+                className={`${CELL_BASE} ${cellFill(hasActivity, compliant)}`}
                 aria-label={label}
               />
             );
@@ -102,7 +105,7 @@ export function AttritionGrid({
               type="button"
               // The ring sits outside the cell so a selected week reads as
               // picked without changing the activity fill the strip reports.
-              className={`${CELL_BASE} ${cellFill(hasActivity)} hover:ring-2 hover:ring-secondary ${
+              className={`${CELL_BASE} ${cellFill(hasActivity, compliant)} hover:ring-2 hover:ring-secondary ${
                 selectedIndex === dataIndex ? 'ring-2 ring-ink ring-offset-1' : ''
               }`}
               aria-label={label}

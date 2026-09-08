@@ -291,7 +291,7 @@ describe('parseHudTelemetryPayload', () => {
 /**
  * The `weeks` array is the client's half of the week-history migration
  * contract. These pin the exact jsonb the SQL builds — object keys, the
- * timestamptz `weekStart`, and the nullable `pviAverage`/`finalScore` — so a
+ * timestamptz `weekStart`, and the nullable `pviAverage`/`finalScore`/`pvi` — so a
  * drift between the migration and this parser fails here rather than showing
  * an athlete an empty history panel with no error.
  */
@@ -363,6 +363,14 @@ describe('parseHudTelemetryPayload — week history', () => {
     const noScore = { ...week, missions: [{ ...week.missions[0], finalScore: null }] };
     const parsed = parseHudTelemetryPayload({ ...basePayload, weeks: [noScore] });
     expect(parsed?.weeks[0].missions[0].finalScore).toBeNull();
+  });
+
+  it('accepts a mission whose pvi is null without wiping weeks', () => {
+    const noPvi = { ...week, missions: [{ ...week.missions[0], pvi: null }] };
+    const parsed = parseHudTelemetryPayload({ ...basePayload, weeks: [noPvi] });
+    expect(parsed?.weeks).toHaveLength(1);
+    expect(parsed?.weeks[0].missions[0].pvi).toBeNull();
+    expect(parsed?.weeks[0].missions[0].finalScore).toBe(236);
   });
 
   it('drops the whole array on a malformed week rather than rendering a half-week', () => {
