@@ -64,8 +64,8 @@ export type HudWeekMission = HudWeekPviMission & {
 
 /**
  * One of the 12 local weeks `hud_telemetry` walks, kept whole rather than
- * reduced to the compliant/deficient bit the attrition strip draws.
- * `weeks[0]` is the oldest, `weeks[11]` the current week.
+ * reduced to a single bit. `weeks[0]` is the oldest, `weeks[11]` the current
+ * week — the attrition strip reverses that for display (newest first).
  */
 export type HudHistoryWeek = {
   /** Monday 00:00 local time for this week, as an instant. */

@@ -25,26 +25,33 @@ function formatWeekOf(date: Date): string {
   return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
 }
 
-function weekStartForIndex(weekEndsAt: string, index: number): Date {
+/** `dataIndex` 0 is oldest, 11 is current — same order as `attrition` / `weeks`. */
+function weekStartForDataIndex(weekEndsAt: string, dataIndex: number): Date {
   const currentStart = currentWeekStartDate(weekEndsAt);
-  const offsetWeeks = 11 - index;
+  const offsetWeeks = 11 - dataIndex;
   return new Date(currentStart.getTime() - offsetWeeks * 7 * 24 * 60 * 60 * 1000);
 }
 
 const CELL_BASE = 'inline-block h-4 w-4 shrink-0';
 
-function cellFill(compliant: boolean): string {
-  return compliant ? 'bg-accent' : 'border border-border bg-transparent';
+/**
+ * Filled when the week has something to show. With per-week detail that means
+ * locked missions; without it (pre-migration) the strip still paints compliance.
+ */
+function cellFill(hasActivity: boolean): string {
+  return hasActivity ? 'bg-accent' : 'border border-border bg-transparent';
 }
 
 /**
- * Twelve weeks of compliance, and — once the server sends per-week detail —
+ * Twelve weeks of history, and — once the server sends per-week detail —
  * the HUD's way into any one of them.
  *
- * The strip was already a row of weeks, so it becomes the navigator rather
- * than the page growing a separate stepper: the affordance is the data.
- * Without `weeks` (a server behind the migration) it renders exactly as it
- * always did, inert.
+ * Drawn newest-first so the current week is the first cell an athlete reads.
+ * Selection still uses the data index (`weeks[0]` oldest … `weeks[11]` current)
+ * so the detail panel and steppers stay aligned with the RPC.
+ *
+ * Without `weeks` (a server behind the migration) it renders inert, still
+ * newest-first, with the old compliant fill.
  */
 export function AttritionGrid({
   attrition,
@@ -60,26 +67,30 @@ export function AttritionGrid({
   }
 
   const selectable = onSelect !== undefined && weeks.length === cells.length;
+  // Newest on the left: walk data indexes from current → oldest.
+  const displayOrder = cells.map((_, dataIndex) => dataIndex).reverse();
 
   return (
     <section className="card space-y-3 p-4" aria-label="12-week attrition">
       <p className="text-xs font-medium uppercase tracking-wide text-muted">12-week attrition</p>
       <div className="flex items-center justify-between gap-1">
-        {cells.map((compliant, index) => {
-          const week = weeks[index];
+        {displayOrder.map((dataIndex) => {
+          const compliant = cells[dataIndex]!;
+          const week = weeks[dataIndex];
+          const hasActivity = week ? week.missionCount > 0 : compliant;
           const label = week
             ? `Week of ${formatWeekRangeLabel(week.weekStart)}: ${
                 compliant ? 'compliant' : 'deficient'
               }, ${week.missionCount === 1 ? '1 mission' : `${week.missionCount} missions`}`
-            : `Week of ${formatWeekOf(weekStartForIndex(weekEndsAt, index))}: ${
+            : `Week of ${formatWeekOf(weekStartForDataIndex(weekEndsAt, dataIndex))}: ${
                 compliant ? 'compliant' : 'deficient'
               }`;
 
           if (!selectable) {
             return (
               <span
-                key={`week-${index}`}
-                className={`${CELL_BASE} ${cellFill(compliant)}`}
+                key={`week-${dataIndex}`}
+                className={`${CELL_BASE} ${cellFill(hasActivity)}`}
                 aria-label={label}
               />
             );
@@ -87,17 +98,16 @@ export function AttritionGrid({
 
           return (
             <button
-              key={`week-${index}`}
+              key={`week-${dataIndex}`}
               type="button"
               // The ring sits outside the cell so a selected week reads as
-              // picked without changing the compliant/deficient fill that the
-              // strip is actually reporting.
-              className={`${CELL_BASE} ${cellFill(compliant)} hover:ring-2 hover:ring-secondary ${
-                selectedIndex === index ? 'ring-2 ring-ink ring-offset-1' : ''
+              // picked without changing the activity fill the strip reports.
+              className={`${CELL_BASE} ${cellFill(hasActivity)} hover:ring-2 hover:ring-secondary ${
+                selectedIndex === dataIndex ? 'ring-2 ring-ink ring-offset-1' : ''
               }`}
               aria-label={label}
-              aria-pressed={selectedIndex === index}
-              onClick={() => onSelect(index)}
+              aria-pressed={selectedIndex === dataIndex}
+              onClick={() => onSelect(dataIndex)}
             />
           );
         })}
