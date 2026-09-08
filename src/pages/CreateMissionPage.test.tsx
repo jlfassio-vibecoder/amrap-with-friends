@@ -110,6 +110,9 @@ vi.mock('@/components/createMission/WorkoutTemplatePicker', () => ({
       <button type="button" onClick={() => onTemplateSelect(WORKOUT_TEMPLATES[0]!)}>
         Pick workout
       </button>
+      <button type="button" onClick={() => onTemplateSelect(WORKOUT_TEMPLATES[1]!)}>
+        Pick second workout
+      </button>
       <button type="button" onClick={() => onDurationChange(20)}>
         Pick Long domain
       </button>
@@ -209,9 +212,7 @@ describe('CreateMissionPage Launch identity', () => {
   it('persists a stamped chain when launching two or more missions', async () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Pick workout' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Add to chain' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Pick workout' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Add to chain' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pick second workout' }));
     fireEvent.change(screen.getByPlaceholderText('Host nickname'), {
       target: { value: 'Morning Grind' },
     });
@@ -241,6 +242,17 @@ describe('CreateMissionPage Launch identity', () => {
     await waitFor(() => {
       expect(navigateMock).toHaveBeenCalledWith('/mission/m1');
     });
+  });
+
+  it('lists selected library workouts on the chain in click order', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Pick workout' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pick second workout' }));
+
+    expect(screen.getByText(`1. ${WORKOUT_TEMPLATES[0]!.name}`)).toBeTruthy();
+    expect(screen.getByText(`2. ${WORKOUT_TEMPLATES[1]!.name}`)).toBeTruthy();
+    expect(screen.getByText('First workout of 2 workouts')).toBeTruthy();
+    expect(screen.getAllByText(WORKOUT_TEMPLATES[0]!.name).length).toBeGreaterThan(0);
   });
 
   it('opens the identity overlay for a signed-in incomplete profile', async () => {

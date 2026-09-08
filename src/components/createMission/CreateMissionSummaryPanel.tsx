@@ -34,7 +34,9 @@ interface CreateMissionSummaryPanelProps {
   unsignedHint?: string | null;
   /** Mission chain builder slot (library Create only). */
   chainBuilder?: ReactNode;
-  /** When true, hide the single-template preview — the chain list owns that job. */
+  /** When 2+, the preview heading is "First workout of N workouts". */
+  chainedWorkoutCount?: number;
+  /** When true, hide the page-level time cap — per-row chips own that job. */
   hideSelectedWorkoutPreview?: boolean;
   loading: boolean;
   onNicknameChange: (value: string) => void;
@@ -84,6 +86,7 @@ export function CreateMissionSummaryPanel({
   errorAction = null,
   unsignedHint = null,
   chainBuilder = null,
+  chainedWorkoutCount = 0,
   hideSelectedWorkoutPreview = false,
   loading,
   onNicknameChange,
@@ -100,8 +103,7 @@ export function CreateMissionSummaryPanel({
   // default, not a cage.
   const durationLockedByCoachWorkout = workoutSource === 'coach' && selectedCoachWorkout !== null;
   const templateSelected = workoutSource === 'library' && selectedTemplate !== null;
-  const showSingleTemplatePreview =
-    workoutSource === 'library' && selectedTemplate !== null && !hideSelectedWorkoutPreview;
+  const showSingleTemplatePreview = workoutSource === 'library' && selectedTemplate !== null;
   const submitDisabled = loading || capReached;
   const submitLabel = loading
     ? 'Creating…'
@@ -166,7 +168,11 @@ export function CreateMissionSummaryPanel({
 
       {showSingleTemplatePreview ? (
         <div className="space-y-2">
-          <p className="text-sm font-semibold">Selected workout</p>
+          <p className="text-sm font-semibold">
+            {chainedWorkoutCount >= 2
+              ? `First workout of ${chainedWorkoutCount} workouts`
+              : 'Selected workout'}
+          </p>
           <div className="space-y-2 rounded-card border border-border bg-page p-4">
             <p className="text-display text-base text-ink">{selectedTemplate.name}</p>
             <ul className="space-y-1 text-sm text-ink">

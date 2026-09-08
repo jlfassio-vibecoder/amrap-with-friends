@@ -1,5 +1,6 @@
 import { afterEach, describe, it, expect } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { useState } from 'react';
 import { WorkoutTemplatePicker } from './WorkoutTemplatePicker';
 
 afterEach(() => {
@@ -11,7 +12,7 @@ function renderPicker(overrides: Partial<Parameters<typeof WorkoutTemplatePicker
     <WorkoutTemplatePicker
       durationMinutes={5}
       selectedCategory="blood-shunt"
-      selectedTemplateId={null}
+      selectedTemplateIds={[]}
       smartRecoveryEnabled={false}
       onSmartRecoveryEnabledChange={() => undefined}
       recoveryLocks={new Map()}
@@ -21,6 +22,32 @@ function renderPicker(overrides: Partial<Parameters<typeof WorkoutTemplatePicker
       onCategoryChange={() => undefined}
       onTemplateSelect={() => undefined}
       {...overrides}
+    />
+  );
+}
+
+function MultiSelectHost() {
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([]);
+
+  return (
+    <WorkoutTemplatePicker
+      durationMinutes={5}
+      selectedCategory="blood-shunt"
+      selectedTemplateIds={selectedTemplateIds}
+      smartRecoveryEnabled={false}
+      onSmartRecoveryEnabledChange={() => undefined}
+      recoveryLocks={new Map()}
+      smartRecoveryActive={false}
+      isAuthenticated
+      onDurationChange={() => undefined}
+      onCategoryChange={() => undefined}
+      onTemplateSelect={(template) => {
+        setSelectedTemplateIds((current) =>
+          current.includes(template.id)
+            ? current.filter((id) => id !== template.id)
+            : [...current, template.id]
+        );
+      }}
     />
   );
 }
@@ -67,5 +94,18 @@ describe('WorkoutTemplatePicker', () => {
     expect(screen.getByText('The Shield')).toBeTruthy();
     expect(screen.getByText('The Trench')).toBeTruthy();
     expect(screen.queryByText('The Phalanx')).toBeNull();
+  });
+
+  it('keeps several cards pressed', () => {
+    render(<MultiSelectHost />);
+
+    const piston = screen.getByRole('button', { name: /The Piston/ });
+    const shock = screen.getByRole('button', { name: /Shock & Awe/ });
+
+    fireEvent.click(piston);
+    fireEvent.click(shock);
+
+    expect(piston.getAttribute('aria-pressed')).toBe('true');
+    expect(shock.getAttribute('aria-pressed')).toBe('true');
   });
 });

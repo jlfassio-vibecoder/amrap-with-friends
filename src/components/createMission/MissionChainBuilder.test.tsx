@@ -31,9 +31,7 @@ describe('MissionChainBuilder', () => {
     render(
       <MissionChainBuilder
         items={items}
-        canAdd={false}
         isAuthenticated
-        onAdd={() => undefined}
         onMoveUp={() => undefined}
         onMoveDown={() => undefined}
         onRemove={() => undefined}
@@ -45,14 +43,11 @@ describe('MissionChainBuilder', () => {
     expect(screen.getByText(/A mission this long is best left until last/i)).toBeTruthy();
   });
 
-  it('disables Add to chain when canAdd is false and calls onAdd when enabled', () => {
-    const onAdd = vi.fn();
-    const { rerender } = render(
+  it('tells the host to add from the library when empty', () => {
+    render(
       <MissionChainBuilder
         items={[]}
-        canAdd={false}
         isAuthenticated
-        onAdd={onAdd}
         onMoveUp={() => undefined}
         onMoveDown={() => undefined}
         onRemove={() => undefined}
@@ -60,16 +55,15 @@ describe('MissionChainBuilder', () => {
       />
     );
 
-    expect(screen.getByRole('button', { name: 'Add to chain' }).hasAttribute('disabled')).toBe(
-      true
-    );
+    expect(screen.getByText(/Select missions in the library/i)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Add to chain' })).toBeNull();
+  });
 
-    rerender(
+  it('tells guests to sign in when empty', () => {
+    render(
       <MissionChainBuilder
         items={[]}
-        canAdd
-        isAuthenticated
-        onAdd={onAdd}
+        isAuthenticated={false}
         onMoveUp={() => undefined}
         onMoveDown={() => undefined}
         onRemove={() => undefined}
@@ -77,8 +71,7 @@ describe('MissionChainBuilder', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add to chain' }));
-    expect(onAdd).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Sign in to chain missions.')).toBeTruthy();
   });
 
   it('reorders and removes via the row controls', () => {
@@ -93,9 +86,7 @@ describe('MissionChainBuilder', () => {
     render(
       <MissionChainBuilder
         items={items}
-        canAdd={false}
         isAuthenticated
-        onAdd={() => undefined}
         onMoveUp={onMoveUp}
         onMoveDown={onMoveDown}
         onRemove={onRemove}
@@ -111,23 +102,5 @@ describe('MissionChainBuilder', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Remove Alpha' }));
     expect(onRemove).toHaveBeenCalledWith(0);
-  });
-
-  it('shows the sign-in hint for guests', () => {
-    render(
-      <MissionChainBuilder
-        items={[]}
-        canAdd={false}
-        isAuthenticated={false}
-        onAdd={() => undefined}
-        onMoveUp={() => undefined}
-        onMoveDown={() => undefined}
-        onRemove={() => undefined}
-        onCapChange={() => undefined}
-      />
-    );
-
-    expect(screen.getByText('Sign in to chain missions')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Add to chain' })).toBeNull();
   });
 });

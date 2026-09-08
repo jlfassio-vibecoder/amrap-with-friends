@@ -21,7 +21,7 @@ import {
 import { WorkoutTemplatePicker } from '@/components/createMission/WorkoutTemplatePicker';
 import { RetestBanner } from '@/components/createMission/RetestBanner';
 import { CoachWodPicker } from '@/components/createMission/CoachWodPicker';
-import { exercisesToWorkoutText, templateToExercises } from '@/lib/workout/templateToExercises';
+import { exercisesToWorkoutText } from '@/lib/workout/templateToExercises';
 import type { PublishedCoachWorkout } from '@/lib/api/coachWod';
 import {
   TIME_DOMAINS,
@@ -60,7 +60,12 @@ import {
   rallyLocalDateTimeToIso,
   type RallyDay,
 } from '@/lib/mission/rallySchedule';
-import { createChainDraftId, type ChainDraftItem } from '@/lib/mission/chainDraft';
+import {
+  appendTemplatesToChainDraft,
+  reconcileChainDraft,
+  templatesInSelectionOrder,
+  type ChainDraftItem,
+} from '@/lib/mission/chainDraft';
 import { MAX_CHAIN_LENGTH } from '@/lib/mission/chainRest';
 
 // Copilot suggestion ignored: keep a local type to avoid coupling CreateMissionPage to IntakePage routing internals.
@@ -74,6 +79,17 @@ function isWorkoutCategory(value: string): value is WorkoutCategory {
 
 function isTimeDomain(value: number): value is TimeDomain {
   return (TIME_DOMAINS as number[]).includes(value);
+}
+
+function moveItem<T>(items: readonly T[], index: number, offset: -1 | 1): T[] {
+  const to = index + offset;
+  if (to < 0 || to >= items.length) {
+    return [...items];
+  }
+  const next = [...items];
+  const [row] = next.splice(index, 1);
+  next.splice(to, 0, row);
+  return next;
 }
 
 export default function CreateMissionPage() {
@@ -101,7 +117,7 @@ export default function CreateMissionPage() {
   /** The library bucket the picker filters by — never the clock. */
   const [selectedDomain, setSelectedDomain] = useState<TimeDomain>(5);
   const [selectedCategory, setSelectedCategory] = useState<WorkoutCategory>('blood-shunt');
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([]);
   const [selectedCoachWorkout, setSelectedCoachWorkout] = useState<PublishedCoachWorkout | null>(
     null
   );
@@ -184,7 +200,7 @@ export default function CreateMissionPage() {
       if (resolvedDuration !== undefined) {
         setSelectedDomain(resolvedDuration);
         setDurationMinutes(defaultCapForDomain(resolvedDuration));
-        setSelectedTemplateId(null);
+        setSelectedTemplateIds([]);
       }
       setSelectedCategory(category);
       return;
@@ -192,7 +208,7 @@ export default function CreateMissionPage() {
 
     if (duration !== null) {
       setDurationMinutes(duration);
-      setSelectedTemplateId(null);
+      setSelectedTemplateIds([]);
       const nextCategory = firstAvailableCategoryForDuration(
         WORKOUT_CATEGORIES,
         duration,
@@ -208,20 +224,25 @@ export default function CreateMissionPage() {
 
   const capReached = (activeCount ?? 0) >= HOST_ACTIVE_MISSION_LIMIT;
 
+  const focusTemplateId = selectedTemplateIds[0] ?? null;
   const selectedTemplate = useMemo(
-    () => WORKOUT_TEMPLATES.find((template) => template.id === selectedTemplateId) ?? null,
-    [selectedTemplateId]
+    () => WORKOUT_TEMPLATES.find((template) => template.id === focusTemplateId) ?? null,
+    [focusTemplateId]
   );
 
   useEffect(() => {
-    if (
-      smartRecovery.enabled &&
-      selectedTemplateId &&
-      smartRecovery.locks.has(selectedTemplateId)
-    ) {
-      setSelectedTemplateId(null);
+    if (!smartRecovery.enabled) {
+      return;
     }
-  }, [smartRecovery.enabled, smartRecovery.locks, selectedTemplateId]);
+    setSelectedTemplateIds((current) => {
+      const next = current.filter((id) => !smartRecovery.locks.has(id));
+      return next.length === current.length ? current : next;
+    });
+    setMissionChainDraft((current) => {
+      const next = current.filter((item) => !smartRecovery.locks.has(item.templateId));
+      return next.length === current.length ? current : next;
+    });
+  }, [smartRecovery.enabled, smartRecovery.locks]);
 
   useEffect(() => {
     if (!smartRecovery.enabled || !selectedCoachWorkout) {
@@ -247,18 +268,19 @@ export default function CreateMissionPage() {
           ? selectedCoachWorkout.intensityTier
           : CUSTOM_WORKOUT_INTENSITY_TIER;
     const templateId =
-      workoutSource === 'library' && selectedTemplateId
-        ? selectedTemplateId
+      workoutSource === 'library' && selectedTemplate
+        ? selectedTemplate.id
         : workoutSource === 'coach' && selectedCoachWorkout
           ? `coach:${selectedCoachWorkout.id}`
           : null;
     return { movements, intensityTier, templateId };
-  }, [workoutText, workoutSource, selectedTemplate, selectedCoachWorkout, selectedTemplateId]);
+  }, [workoutText, workoutSource, selectedTemplate, selectedCoachWorkout]);
 
   function handleDurationChange(domain: TimeDomain) {
     setSelectedDomain(domain);
     setDurationMinutes(defaultCapForDomain(domain));
-    setSelectedTemplateId(null);
+    setSelectedTemplateIds([]);
+    setMissionChainDraft([]);
 
     const nextCategory = firstAvailableCategoryForDuration(
       WORKOUT_CATEGORIES,
@@ -297,7 +319,7 @@ export default function CreateMissionPage() {
         }
         setWorkoutSource('library');
         setRetest(match);
-        setSelectedTemplateId(template.id);
+        setSelectedTemplateIds([template.id]);
         setSelectedDomain(domainForCap(match.durationMinutes) ?? match.timeDomain);
         // The benchmark's stored clock, not the template's default: the athlete
         // may have benchmarked at 12 minutes in the 15-minute domain, and a
@@ -323,12 +345,11 @@ export default function CreateMissionPage() {
     }
   }
 
-  function handleTemplateSelect(template: WorkoutTemplate) {
+  function applyLibraryTemplate(template: WorkoutTemplate) {
     const applied = applyTemplate(template);
     setDurationMinutes(applied.durationMinutes);
     setSelectedDomain(domainForCap(applied.durationMinutes) ?? selectedDomain);
     setWorkoutText(applied.workoutText);
-    setSelectedTemplateId(template.id);
     if (template.category) {
       setSelectedCategory(template.category);
     }
@@ -340,77 +361,133 @@ export default function CreateMissionPage() {
     });
   }
 
+  function commitLibrarySelection(nextIds: string[], clock: MissionTimeCap, domain: TimeDomain) {
+    setSelectedTemplateIds(nextIds);
+    if (!isAuthenticated) {
+      setMissionChainDraft([]);
+      return;
+    }
+    setMissionChainDraft((current) =>
+      reconcileChainDraft(
+        current,
+        templatesInSelectionOrder(nextIds, WORKOUT_TEMPLATES),
+        clock,
+        domain
+      )
+    );
+  }
+
+  function handleTemplateSelect(template: WorkoutTemplate) {
+    const alreadySelected = selectedTemplateIds.includes(template.id);
+    if (alreadySelected) {
+      const remaining = selectedTemplateIds.filter((id) => id !== template.id);
+      const firstId = remaining[0];
+      const first = firstId
+        ? (WORKOUT_TEMPLATES.find((entry) => entry.id === firstId) ?? null)
+        : null;
+      if (first) {
+        applyLibraryTemplate(first);
+      }
+      const applied = first ? applyTemplate(first) : null;
+      commitLibrarySelection(
+        remaining,
+        applied?.durationMinutes ?? durationMinutes,
+        applied ? (domainForCap(applied.durationMinutes) ?? selectedDomain) : selectedDomain
+      );
+      return;
+    }
+
+    if (isAuthenticated && selectedTemplateIds.length >= MAX_CHAIN_LENGTH) {
+      return;
+    }
+
+    const isFirst = selectedTemplateIds.length === 0;
+    if (isFirst) {
+      applyLibraryTemplate(template);
+    }
+    const applied = applyTemplate(template);
+    const clock = isFirst ? applied.durationMinutes : durationMinutes;
+    const domain = isFirst
+      ? (domainForCap(applied.durationMinutes) ?? selectedDomain)
+      : selectedDomain;
+    commitLibrarySelection([...selectedTemplateIds, template.id], clock, domain);
+  }
+
   function handleWorkoutTextChange(value: string) {
     setWorkoutText(value);
-    setSelectedTemplateId(null);
+    setSelectedTemplateIds([]);
+    setMissionChainDraft([]);
   }
 
   function handleWorkoutSourceChange(source: WorkoutSource) {
     setWorkoutSource(source);
     if (source !== 'library') {
       setMissionChainDraft([]);
-    }
-    if (source === 'custom') {
-      setSelectedTemplateId(null);
+      setSelectedTemplateIds([]);
     }
     if (source !== 'coach') {
       setSelectedCoachWorkout(null);
     }
   }
 
-  function handleAddToChain() {
-    if (!isAuthenticated || !selectedTemplate || missionChain.length >= MAX_CHAIN_LENGTH) {
-      return;
-    }
-
-    setMissionChainDraft((current) => [
-      ...current,
-      {
-        id: createChainDraftId(),
-        name: selectedTemplate.name,
-        durationMinutes,
-        intensityTier: selectedTemplate.intensityTier,
-        templateId: selectedTemplate.id,
-        templateCap: selectedTemplate.durationMinutes,
-        workout: templateToExercises(selectedTemplate),
-      },
-    ]);
-    setSelectedTemplateId(null);
-    setError(null);
-  }
-
   function handleChainMoveUp(index: number) {
     if (index <= 0) {
       return;
     }
-    setMissionChainDraft((current) => {
-      const next = [...current];
-      const [row] = next.splice(index, 1);
-      next.splice(index - 1, 0, row);
-      return next;
-    });
+    setMissionChainDraft((current) => moveItem(current, index, -1));
+    setSelectedTemplateIds((current) => moveItem(current, index, -1));
+    if (index === 1) {
+      const nextFirst = missionChain[index];
+      const template = nextFirst
+        ? WORKOUT_TEMPLATES.find((entry) => entry.id === nextFirst.templateId)
+        : undefined;
+      if (template) {
+        applyLibraryTemplate(template);
+      }
+    }
   }
 
   function handleChainMoveDown(index: number) {
-    setMissionChainDraft((current) => {
-      if (index >= current.length - 1) {
-        return current;
+    if (index >= missionChain.length - 1) {
+      return;
+    }
+    setMissionChainDraft((current) => moveItem(current, index, 1));
+    setSelectedTemplateIds((current) => moveItem(current, index, 1));
+    if (index === 0) {
+      const nextFirst = missionChain[1];
+      const template = nextFirst
+        ? WORKOUT_TEMPLATES.find((entry) => entry.id === nextFirst.templateId)
+        : undefined;
+      if (template) {
+        applyLibraryTemplate(template);
       }
-      const next = [...current];
-      const [row] = next.splice(index, 1);
-      next.splice(index + 1, 0, row);
-      return next;
-    });
+    }
   }
 
   function handleChainRemove(index: number) {
-    setMissionChainDraft((current) => current.filter((_, i) => i !== index));
+    const remainingIds = selectedTemplateIds.filter((_, i) => i !== index);
+    const nextFirstId = remainingIds[0];
+    const template = nextFirstId
+      ? WORKOUT_TEMPLATES.find((entry) => entry.id === nextFirstId)
+      : undefined;
+    if (template) {
+      applyLibraryTemplate(template);
+    }
+    const applied = template ? applyTemplate(template) : null;
+    commitLibrarySelection(
+      remainingIds,
+      applied?.durationMinutes ?? durationMinutes,
+      applied ? (domainForCap(applied.durationMinutes) ?? selectedDomain) : selectedDomain
+    );
   }
 
   function handleChainCapChange(index: number, cap: MissionTimeCap) {
     setMissionChainDraft((current) =>
       current.map((item, i) => (i === index ? { ...item, durationMinutes: cap } : item))
     );
+    if (index === 0) {
+      setDurationMinutes(cap);
+    }
   }
 
   function handleCoachWorkoutSelect(workout: PublishedCoachWorkout) {
@@ -428,11 +505,25 @@ export default function CreateMissionPage() {
     setError(null);
 
     const launchTemplate = template ?? guidedLaunchTemplateRef.current ?? undefined;
-    const launchingFromChain = missionChain.length >= 1;
+    const shouldAutoAdd =
+      isAuthenticated &&
+      workoutSource === 'library' &&
+      missionChain.length === 0 &&
+      selectedTemplateIds.length >= 2;
+    const chainForLaunch = shouldAutoAdd
+      ? appendTemplatesToChainDraft(
+          [],
+          templatesInSelectionOrder(selectedTemplateIds, WORKOUT_TEMPLATES),
+          durationMinutes,
+          selectedDomain
+        )
+      : missionChain;
+    const launchingFromChain = chainForLaunch.length >= 1;
 
     if (
       workoutSource === 'library' &&
       !launchingFromChain &&
+      selectedTemplateIds.length === 0 &&
       !selectedTemplate &&
       !launchTemplate
     ) {
@@ -456,6 +547,13 @@ export default function CreateMissionPage() {
       return;
     }
 
+    function commitAutoAddAndIgnite(overrides: { template?: WorkoutTemplate; nickname?: string }) {
+      if (shouldAutoAdd) {
+        setMissionChainDraft(chainForLaunch);
+      }
+      void igniteMission(true, { ...overrides, chain: chainForLaunch });
+    }
+
     if (!isAuthenticated) {
       if (scheduleMode === 'rally') {
         submitAfterAuthRef.current = true;
@@ -472,7 +570,7 @@ export default function CreateMissionPage() {
         return;
       }
 
-      void igniteMission(true, {
+      commitAutoAddAndIgnite({
         template: launchTemplate,
         nickname: hostNick,
       });
@@ -485,7 +583,7 @@ export default function CreateMissionPage() {
     }
 
     ensureThen((accepted) => {
-      void igniteMission(true, {
+      commitAutoAddAndIgnite({
         template: launchTemplate ?? guidedLaunchTemplateRef.current ?? undefined,
         nickname: accepted?.nickname,
       });
@@ -499,7 +597,7 @@ export default function CreateMissionPage() {
 
   async function igniteMission(
     retryAllowed = true,
-    overrides?: { template?: WorkoutTemplate; nickname?: string }
+    overrides?: { template?: WorkoutTemplate; nickname?: string; chain?: ChainDraftItem[] }
   ) {
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     let scheduledAt: string | undefined;
@@ -533,8 +631,9 @@ export default function CreateMissionPage() {
     setLoading(true);
 
     try {
-      const useChain = isAuthenticated && missionChain.length >= 1;
-      const firstChainItem = useChain ? missionChain[0] : null;
+      const chain = overrides?.chain ?? missionChain;
+      const useChain = isAuthenticated && chain.length >= 2;
+      const firstChainItem = useChain ? chain[0] : null;
 
       const workout = firstChainItem
         ? firstChainItem.workout
@@ -552,8 +651,8 @@ export default function CreateMissionPage() {
         ? firstChainItem.templateId
         : launchTemplate
           ? launchTemplate.id
-          : workoutSource === 'library' && selectedTemplateId
-            ? selectedTemplateId
+          : workoutSource === 'library' && selectedTemplate
+            ? selectedTemplate.id
             : workoutSource === 'coach' && selectedCoachWorkout
               ? `coach:${selectedCoachWorkout.id}`
               : undefined;
@@ -583,6 +682,7 @@ export default function CreateMissionPage() {
             void igniteMission(false, {
               template: launchTemplate,
               nickname: accepted?.nickname ?? overrides?.nickname,
+              chain,
             });
           });
           return;
@@ -598,10 +698,10 @@ export default function CreateMissionPage() {
           'rallyPointId' in created && typeof created.rallyPointId === 'string'
             ? created.rallyPointId
             : null;
-        if (isAuthenticated && missionChain.length >= 2 && rallyPointId) {
+        if (isAuthenticated && chain.length >= 2 && rallyPointId) {
           const chainResult = await persistMissionChain({
             rallyPointId,
-            items: missionChain.map((item, index) => ({
+            items: chain.map((item, index) => ({
               durationMinutes: item.durationMinutes,
               workout: item.workout,
               templateId: item.templateId,
@@ -736,7 +836,7 @@ export default function CreateMissionPage() {
                   <WorkoutTemplatePicker
                     durationMinutes={selectedDomain}
                     selectedCategory={selectedCategory}
-                    selectedTemplateId={selectedTemplateId}
+                    selectedTemplateIds={selectedTemplateIds}
                     classification={telemetry?.classification ?? null}
                     perceivedClassification={profile?.perceivedClassification ?? null}
                     quotas={quotas}
@@ -793,13 +893,7 @@ export default function CreateMissionPage() {
                   workoutSource === 'library' ? (
                     <MissionChainBuilder
                       items={missionChain}
-                      canAdd={
-                        isAuthenticated &&
-                        selectedTemplate !== null &&
-                        missionChain.length < MAX_CHAIN_LENGTH
-                      }
                       isAuthenticated={isAuthenticated}
-                      onAdd={handleAddToChain}
                       onMoveUp={handleChainMoveUp}
                       onMoveDown={handleChainMoveDown}
                       onRemove={handleChainRemove}
@@ -807,12 +901,18 @@ export default function CreateMissionPage() {
                     />
                   ) : null
                 }
-                hideSelectedWorkoutPreview={missionChain.length >= 1}
+                hideSelectedWorkoutPreview={missionChain.length >= 2}
+                chainedWorkoutCount={missionChain.length}
                 loading={loading}
                 onNicknameChange={setNickname}
                 durationLockedNote={retest ? 'set by your benchmark' : null}
                 onDurationChange={handleSummaryDurationChange}
-                onCapChange={setDurationMinutes}
+                onCapChange={(cap) => {
+                  setDurationMinutes(cap);
+                  setMissionChainDraft((current) =>
+                    current.length === 1 ? [{ ...current[0]!, durationMinutes: cap }] : current
+                  );
+                }}
                 onScheduleModeChange={setScheduleMode}
                 onRallyDayChange={setRallyDay}
                 onRallyTimeChange={setRallyTime}

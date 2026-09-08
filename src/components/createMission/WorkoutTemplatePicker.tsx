@@ -28,7 +28,7 @@ const INTENSITY_OPTIONS: Array<IntensityTier | null> = [null, 1, 2, 3, 4, 5];
 interface WorkoutTemplatePickerProps {
   durationMinutes: TimeDomain;
   selectedCategory: WorkoutCategory;
-  selectedTemplateId: string | null;
+  selectedTemplateIds: string[];
   classification?: HudClassification | null;
   perceivedClassification?: ClassificationRank | null;
   quotas?: ClassificationQuotas;
@@ -47,7 +47,7 @@ interface WorkoutTemplatePickerProps {
 export function WorkoutTemplatePicker({
   durationMinutes,
   selectedCategory,
-  selectedTemplateId,
+  selectedTemplateIds,
   classification = null,
   perceivedClassification = null,
   quotas,
@@ -229,7 +229,7 @@ export function WorkoutTemplatePicker({
               <WorkoutTemplateCard
                 key={template.id}
                 template={template}
-                selected={selectedTemplateId === template.id}
+                selected={selectedTemplateIds.includes(template.id)}
                 classification={classification}
                 perceivedClassification={perceivedClassification}
                 quotas={quotas}

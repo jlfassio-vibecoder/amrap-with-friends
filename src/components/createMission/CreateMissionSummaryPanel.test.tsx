@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { CreateMissionSummaryPanel } from './CreateMissionSummaryPanel';
+import { WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
 
 afterEach(() => {
   cleanup();
@@ -66,5 +67,22 @@ describe('CreateMissionSummaryPanel', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: 'Schedule rally point' }));
     expect(onScheduleModeChange).toHaveBeenCalledWith('rally');
+  });
+
+  it('labels the preview as the first of a chain', () => {
+    render(
+      <CreateMissionSummaryPanel
+        {...baseProps}
+        workoutSource="library"
+        selectedTemplate={WORKOUT_TEMPLATES[0]!}
+        chainedWorkoutCount={3}
+        scheduleMode="now"
+        capReached={false}
+        hideSelectedWorkoutPreview
+      />
+    );
+
+    expect(screen.getByText('First workout of 3 workouts')).toBeTruthy();
+    expect(screen.queryByText('Selected workout')).toBeNull();
   });
 });
