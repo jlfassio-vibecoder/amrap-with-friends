@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useId, useState } from 'react';
 import {
   designateBenchmark,
   fetchBenchmarkOverview,
@@ -38,6 +38,7 @@ export function BenchmarkDesignateControl({
   movementVariants = {},
 }: BenchmarkDesignateControlProps) {
   const { isAuthenticated, isAuthLoading } = useAmrapAuth();
+  const designateTipId = useId();
   const [mine, setMine] = useState<AthleteBenchmark[]>([]);
   const [campaignSlots, setCampaignSlots] = useState<BenchmarkSlot[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -182,17 +183,24 @@ export function BenchmarkDesignateControl({
 
   return (
     <div className="space-y-1">
-      <button
-        type="button"
-        className="btn-outline w-full text-sm"
-        disabled={busy}
-        onClick={() => void handleDesignate()}
-      >
-        {busy ? 'Saving…' : 'Make this a benchmark'}
-      </button>
-      <p className="text-xs text-muted">
-        A workout you come back to and run again, to see what changed. Does not affect your score.
-      </p>
+      <span className="group relative block w-full">
+        <button
+          type="button"
+          className="btn-outline w-full text-sm"
+          disabled={busy}
+          aria-describedby={designateTipId}
+          onClick={() => void handleDesignate()}
+        >
+          {busy ? 'Saving…' : 'Make this a benchmark mission'}
+        </button>
+        <span
+          id={designateTipId}
+          role="tooltip"
+          className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 w-max max-w-[18rem] -translate-x-1/2 rounded-card border border-border bg-surface px-2.5 py-1.5 text-left text-xs leading-snug text-secondary opacity-0 shadow-card transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
+        >
+          A workout you come back to and run again, to see what changed. Does not affect your score.
+        </span>
+      </span>
       {error ? <p className="text-error text-xs">{error}</p> : null}
     </div>
   );
