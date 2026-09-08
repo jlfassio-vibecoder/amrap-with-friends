@@ -13,6 +13,7 @@ import { OutsideActivitySummaryCard } from '@/components/hud/OutsideActivitySumm
 import { OvertrainingWarningCard } from '@/components/hud/OvertrainingWarningCard';
 import { PhysicalActivityList } from '@/components/hud/PhysicalActivityList';
 import { PhysicalActivityLogForm } from '@/components/hud/PhysicalActivityLogForm';
+import { ScoreTrendChart } from '@/components/hud/ScoreTrendChart';
 import { WeeklyBaselineBar } from '@/components/hud/WeeklyBaselineBar';
 import { summarizePhysicalActivityWindow } from '@/lib/hud/activityWindowSummary';
 import { evaluateOvertrainingRisk } from '@/lib/hud/evaluateOvertrainingRisk';
@@ -20,11 +21,13 @@ import { useBenchmarkProgress } from '@/hooks/useBenchmarkProgress';
 import { hasAthleteBodyMetrics } from '@/lib/api/athleteProfile';
 import { quotasFromProfile } from '@/lib/hud/classificationQuotas';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
+import { useHudScoreTrend } from '@/hooks/useHudScoreTrend';
 import { useHudTelemetry } from '@/hooks/useHudTelemetry';
 import { usePhysicalActivityLog } from '@/hooks/usePhysicalActivityLog';
 
 export default function HUDPage() {
   const { telemetry, error, loading, isAuthenticated, isAuthLoading } = useHudTelemetry();
+  const scoreTrend = useHudScoreTrend();
   const { profile, loading: profileLoading } = useAthleteProfile();
   const quotas = quotasFromProfile(profile);
   const showTelemetry = !loading && !profileLoading && isAuthenticated && telemetry;
@@ -126,6 +129,14 @@ export default function HUDPage() {
                 baselineMinutes={quotas.civilianMinutes}
               />
             </div>
+
+            {/*
+              Minutes above measures volume; this measures what that volume was
+              worth — the same weekly minutes can carry a rising or falling
+              score depending on pacing and reps, which a minutes-only view
+              cannot show. A progress surface, same as the panel below it.
+            */}
+            {scoreTrend.weeks ? <ScoreTrendChart weeks={scoreTrend.weeks} /> : null}
 
             {/*
               Below the load cards and above the domain matrix: this is a

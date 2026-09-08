@@ -1,4 +1,4 @@
-import type { MyMissionEntry } from '@/lib/api/myMissions';
+import { getMyMissionRepsPerRound, type MyMissionEntry } from '@/lib/api/myMissions';
 import { resolvePacingData } from '@/lib/scoring/resolvePacingData';
 import { ScoreBreakdownDisplay } from '@/components/ScoreBreakdownDisplay';
 
@@ -54,6 +54,7 @@ export function MyMissionScoreBreakdownModal({
           partialReps={pacingData?.partialReps}
           roundSplits={pacingData?.roundSplits}
           durationMinutes={entry.durationMinutes}
+          repsPerRound={getMyMissionRepsPerRound(entry)}
           showPacingChart
         />
       </div>

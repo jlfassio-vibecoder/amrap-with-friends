@@ -5,6 +5,7 @@ import {
 } from '@/lib/scoring/getPacingDurations';
 import { getPviMultiplier } from '@/lib/scoring/getPviMultiplier';
 import { formatSplitDuration } from '@/lib/missionSync/computeParticipantSplits';
+import { ScoreStatInfoTrigger } from '@/components/scoring/ScoreStatInfoTrigger';
 
 interface PacingBarChartProps {
   roundSplits: number[];
@@ -55,9 +56,10 @@ export function PacingBarChart({ roundSplits, durationMinutes, pvi }: PacingBarC
       <div className="space-y-1">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+            <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted">
               P.V.I. variance
-            </p>
+              <ScoreStatInfoTrigger statId="pviVariance" />
+            </div>
             <p className="text-display text-lg tabular-nums text-ink">
               {pvi === null ? 'N/A' : `${pvi}%`}
             </p>
@@ -69,9 +71,10 @@ export function PacingBarChart({ roundSplits, durationMinutes, pvi }: PacingBarC
             </p>
           </div>
         </div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-accent">
+        <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-accent">
           {pviTier.classification}
-        </p>
+          <ScoreStatInfoTrigger statId="pacingClassification" />
+        </div>
         <p className="text-sm leading-snug text-secondary">{pviTier.verdict}</p>
       </div>
 

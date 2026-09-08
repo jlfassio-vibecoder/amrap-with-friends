@@ -713,10 +713,13 @@ function LiveMissionView({
   const claim = useParticipantClaim(missionId);
   const selfLeaderboardEntry = live.leaderboard.find((entry) => entry.isSelf) ?? null;
   const selfBaseScore = selfLeaderboardEntry?.baseScore ?? 0;
-  const selfLiveScore =
-    live.phase === 'finished' ? (selfLeaderboardEntry?.finalScore ?? selfBaseScore) : selfBaseScore;
+  // Always the raw reps/rounds this athlete did — never finalScore, which is
+  // baseScore adjusted by P.V.I. and Domain and is worth more or less than
+  // the actual reps performed. Showing that number next to the word "reps"
+  // once the mission finishes used to claim the athlete did more (or fewer)
+  // reps than they actually did.
   const selfScoreLabel = formatMobileLiveScoreLabel(
-    selfLiveScore,
+    selfBaseScore,
     live.repsPerRound,
     live.myRoundCount
   );

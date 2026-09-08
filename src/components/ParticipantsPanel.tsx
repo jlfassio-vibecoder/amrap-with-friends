@@ -39,9 +39,13 @@ function formatRosterScore(
     return `${entry.pvi}% · ${formatMultiplier(entry.pviMultiplier)}`;
   }
 
-  const score = phase === 'finished' ? entry.finalScore : entry.baseScore;
+  // Always baseScore, never finalScore: finalScore is baseScore adjusted by
+  // P.V.I. and Domain, and is worth more or less than the reps the athlete
+  // actually did. It ranks the "Absolute" sort (compareAbsoluteRoster reads
+  // finalScore directly), but the number shown next to "reps" here must stay
+  // the real rep count or it reads as a different — wrong — workout result.
   const unit = entry.repsPerRound > 0 ? 'reps' : 'rounds';
-  const value = entry.repsPerRound > 0 ? score : entry.roundCount;
+  const value = entry.repsPerRound > 0 ? entry.baseScore : entry.roundCount;
   return `${value} ${unit}`;
 }
 

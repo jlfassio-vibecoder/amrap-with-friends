@@ -98,11 +98,21 @@ export function isMyMissionScoreScorable(entry: MyMissionEntry): boolean {
   }
 }
 
-export function formatMyMissionScoreDisplay(entry: MyMissionEntry): string {
-  if (entry.finalScore !== null) {
-    return `${entry.finalScore} reps`;
+/** 0 for a workout `computeRepsPerRound` cannot total — a round-based mission. */
+export function getMyMissionRepsPerRound(entry: MyMissionEntry): number {
+  try {
+    return computeRepsPerRound(entry.workout);
+  } catch {
+    return 0;
   }
+}
 
+export function formatMyMissionScoreDisplay(entry: MyMissionEntry): string {
+  // Always the reps (or rounds) actually done — never entry.finalScore, which
+  // is baseScore adjusted by P.V.I. and Domain and reads as a different total
+  // than what the athlete performed. That used to be the value shown here
+  // for every finished mission, reps-countable or not, unconditionally
+  // labelled "reps" even for a round-based workout.
   if (!isMyMissionScoreScorable(entry)) {
     return `${entry.roundCount} rounds`;
   }

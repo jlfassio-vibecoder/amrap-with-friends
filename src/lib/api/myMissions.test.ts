@@ -134,6 +134,21 @@ describe('myMissions helpers', () => {
     expect(formatMyMissionScoreDisplay(entry)).toBe('4 rounds');
   });
 
+  it('formatMyMissionScoreDisplay shows the reps actually done, not finalScore', () => {
+    // 40 reps/round (20 + 20) × 4 rounds + 15 partial = 175. finalScore is
+    // deliberately a different number — baseScore adjusted by P.V.I. and
+    // Domain is not the same quantity as reps performed, and this must not
+    // be shown next to the word "reps".
+    const entry = baseEntry({
+      state: 'finished',
+      roundCount: 4,
+      partialReps: 15,
+      finalScore: 302,
+    });
+
+    expect(formatMyMissionScoreDisplay(entry)).toBe('175 reps');
+  });
+
   it('formatMyMissionExerciseLine includes target and unit', () => {
     expect(formatMyMissionExerciseLine({ name: 'T-Push-ups', target: 10, unit: 'reps' })).toBe(
       'T-Push-ups — 10 reps'
@@ -147,7 +162,13 @@ describe('myMissions helpers', () => {
       createdAt: '2026-08-31T18:00:00.000Z',
       durationMinutes: 10,
       state: 'finished',
-      finalScore: 424,
+      // 42 reps/round (10 + 12 + 20) × 10 rounds + 4 partial = 424 — the
+      // share text must show this computed rep count, not a finalScore that
+      // happens to differ from it (a P.V.I./Domain multiplier would make
+      // finalScore a different number than the reps actually performed).
+      roundCount: 10,
+      partialReps: 4,
+      finalScore: 487,
       workout: [
         { name: 'T-Push-ups', target: 10, unit: 'reps' },
         { name: 'Strict Sit-ups', target: 12, unit: 'reps' },
