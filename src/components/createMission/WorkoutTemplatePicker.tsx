@@ -129,32 +129,38 @@ export function WorkoutTemplatePicker({
           {visibleCategories.map((category) => {
             const available = isCategoryAvailable(category, durationMinutes, WORKOUT_TEMPLATES);
             const selected = selectedCategory === category.id;
+            const label = categoryDisplayForDuration(category, durationMinutes).label;
 
             return (
-              <div key={category.id} className="flex items-center gap-1">
+              <div
+                key={category.id}
+                className={`inline-flex items-center gap-1.5 ${
+                  selected
+                    ? 'rounded-full bg-accent py-2 pl-4 pr-2 text-sm font-semibold text-on-accent'
+                    : available
+                      ? 'hover:border-accent/40 rounded-full border border-border bg-surface py-2 pl-4 pr-2 text-sm font-semibold text-ink'
+                      : 'rounded-full border border-border bg-surface py-2 pl-4 pr-2 text-sm font-semibold text-muted opacity-60'
+                }`}
+              >
                 <button
                   type="button"
                   disabled={!available || searching}
-                  className={chipClassName(selected, available)}
+                  className="bg-transparent text-inherit disabled:opacity-60"
                   onClick={() => onCategoryChange(category.id)}
                 >
-                  {categoryDisplayForDuration(category, durationMinutes).label}
+                  {label}
                   {!available ? <span className="ml-1 text-xs uppercase">Soon</span> : null}
                 </button>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1.5 text-xs font-semibold text-secondary hover:border-accent hover:bg-accent-tint hover:text-ink"
+                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold leading-none hover:opacity-80 ${
+                    selected ? 'bg-on-accent text-accent' : 'bg-accent text-on-accent'
+                  }`}
                   aria-label={`What's ${category.label}?`}
                   title={`Learn what the ${category.label} style is for`}
                   onClick={() => setInfoCategory(category.id)}
                 >
-                  <span
-                    className="flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] font-bold leading-none text-on-accent"
-                    aria-hidden="true"
-                  >
-                    ?
-                  </span>
-                  Guide
+                  ?
                 </button>
               </div>
             );

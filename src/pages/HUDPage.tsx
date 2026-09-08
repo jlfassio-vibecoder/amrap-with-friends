@@ -61,7 +61,7 @@ export default function HUDPage() {
             className="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
             to="/create"
           >
-            Create mission
+            Plan mission
           </Link>
           <Link
             className="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"

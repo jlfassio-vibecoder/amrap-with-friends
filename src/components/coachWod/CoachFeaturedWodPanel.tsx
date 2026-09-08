@@ -529,7 +529,7 @@ export function CoachFeaturedWodPanel() {
 
       <p className="text-xs text-secondary">
         Only one featured WOD can be live app-wide at a time. It publishes to the landing page and
-        Create mission; the coach starts the AMRAP from the rally point.
+        Plan mission; the coach starts the AMRAP from the rally point.
       </p>
 
       {error ? <p className="text-error text-sm">{error}</p> : null}

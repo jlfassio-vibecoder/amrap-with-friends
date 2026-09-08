@@ -436,12 +436,12 @@ export default function CreateMissionPage() {
       !selectedTemplate &&
       !launchTemplate
     ) {
-      setError('Select a workout from the library before creating a mission.');
+      setError('Select a workout from the library before planning a mission.');
       return;
     }
 
     if (workoutSource === 'coach' && !selectedCoachWorkout) {
-      setError('Select a coach workout before creating a mission.');
+      setError('Select a coach workout before planning a mission.');
       return;
     }
 
@@ -664,7 +664,7 @@ export default function CreateMissionPage() {
 
   return (
     <main className="min-h-screen bg-page lg:flex lg:flex-col">
-      <AppHeader title="Create mission" subtitle="Start a new AMRAP" />
+      <AppHeader title="Plan mission" subtitle="Start a new AMRAP" />
 
       <div className="flex-1 px-6 pb-6 pt-0 lg:px-8 lg:py-10">
         <div className="mx-auto w-full max-w-7xl space-y-6">
@@ -673,7 +673,7 @@ export default function CreateMissionPage() {
           </p>
 
           <div className="hidden space-y-2 lg:block">
-            <h1 className="text-display text-5xl text-ink">Create mission</h1>
+            <h1 className="text-display text-5xl text-ink">Plan mission</h1>
             <p className="text-sm text-secondary">
               Start an AMRAP mission and invite friends to join.
             </p>

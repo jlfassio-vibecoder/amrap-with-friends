@@ -202,7 +202,7 @@ export function CoachWorkoutForm({
         {publishError ? <p className="text-error text-sm">{publishError}</p> : null}
         {status === 'published' ? (
           <p className="text-xs text-secondary">
-            Visible to every signed-in user in Create Mission → Coach WODs.
+            Visible to every signed-in user in Plan mission → Coach WODs.
           </p>
         ) : null}
 

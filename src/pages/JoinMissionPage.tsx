@@ -313,7 +313,7 @@ export default function JoinMissionPage() {
 
       <p className="text-center text-sm">
         <Link className="link-accent" to="/create">
-          Create a new mission
+          Plan a new mission
         </Link>
       </p>
     </NarrowPageLayout>

@@ -406,7 +406,7 @@ describe('CreateMissionPage Guided Ignition', () => {
     });
   });
 
-  it('skip closes the overlay without creating a mission', () => {
+  it('skip closes the overlay without planning a mission', () => {
     renderPage();
 
     fireEvent.click(screen.getByRole('button', { name: /Skip and browse/ }));

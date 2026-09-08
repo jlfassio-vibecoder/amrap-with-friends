@@ -387,7 +387,7 @@ export default function MyMissionsPage() {
 
       <div className="flex flex-wrap items-center gap-3">
         <Link className="btn-primary" to="/create">
-          Create mission
+          Plan mission
         </Link>
         <Link className="btn-primary" to="/campaign/new">
           New campaign

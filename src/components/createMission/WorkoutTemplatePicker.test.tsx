@@ -26,6 +26,16 @@ function renderPicker(overrides: Partial<Parameters<typeof WorkoutTemplatePicker
 }
 
 describe('WorkoutTemplatePicker', () => {
+  it('puts an icon-only style guide control inside each category chip', () => {
+    renderPicker();
+
+    expect(screen.queryByText('Guide')).toBeNull();
+    const bloodShuntInfo = screen.getByRole('button', { name: "What's Blood Shunt?" });
+    expect(bloodShuntInfo.textContent).toBe('?');
+    fireEvent.click(bloodShuntInfo);
+    expect(screen.getByRole('dialog')).toBeTruthy();
+  });
+
   it('disables time domain and category chips while searching', () => {
     renderPicker();
 

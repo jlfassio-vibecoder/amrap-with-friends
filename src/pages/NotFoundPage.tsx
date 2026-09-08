@@ -19,7 +19,7 @@ function NotFoundPage() {
           Back to the home page
         </AppLink>
         <Link className="link-accent" to="/create">
-          Create a mission
+          Plan a mission
         </Link>
       </div>
     </NarrowPageLayout>

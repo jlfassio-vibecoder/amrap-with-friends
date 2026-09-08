@@ -203,7 +203,7 @@ export const CONTENT_ROUTES: RouteSeo[] = [
 export const APP_ROUTES: RouteSeo[] = [
   {
     path: '/create',
-    title: 'Create an AMRAP mission — AMRAP With Friends',
+    title: 'Plan an AMRAP mission — AMRAP With Friends',
     description:
       'Build an AMRAP workout, pick the time domain, and get a rally link to share. Everyone runs the same synced countdown, wherever they are training.',
     index: true,
