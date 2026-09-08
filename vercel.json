@@ -8,6 +8,10 @@
       "destination": "/_app-shell"
     },
     {
+      "source": "/plan-mission",
+      "destination": "/_app-shell"
+    },
+    {
       "source": "/join",
       "destination": "/_app-shell"
     },

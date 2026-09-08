@@ -7,6 +7,7 @@ import { RequireCoach } from '@/components/RequireCoach';
 import { useSeo } from '@/hooks/useSeo';
 
 const CreateMissionPage = lazy(() => import('./pages/CreateMissionPage'));
+const PlanMissionPage = lazy(() => import('./pages/PlanMissionPage'));
 const JoinMissionPage = lazy(() => import('./pages/JoinMissionPage'));
 const MissionWaitingRoomPage = lazy(() => import('./pages/MissionWaitingRoomPage'));
 const RallyPointPage = lazy(() => import('./pages/RallyPointPage'));
@@ -43,6 +44,19 @@ function App() {
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/create" element={<CreateMissionPage />} />
+          <Route
+            path="/plan-mission"
+            element={
+              <RequireIntake
+                guestMode="sign-in"
+                gateTitle="Plan"
+                gateMessage="Sign in and set up your profile to launch ready-made chains and campaigns. You can still plan a single mission as a guest from Plan mission."
+                gateAllowsGuest={false}
+              >
+                <PlanMissionPage />
+              </RequireIntake>
+            }
+          />
           <Route path="/join" element={<JoinMissionPage />} />
           <Route path="/rally-point/:rallyPointId" element={<RallyPointPage />} />
           {/* Public: the invite preview is what convinces someone to sign up,

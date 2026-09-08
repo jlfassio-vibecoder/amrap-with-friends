@@ -208,6 +208,7 @@ export const APP_ROUTES: RouteSeo[] = [
       'Build an AMRAP workout, pick the time domain, and get a rally link to share. Everyone runs the same synced countdown, wherever they are training.',
     index: true,
   },
+  { path: '/plan-mission', title: 'Plan', description: '', index: false },
   {
     path: '/join',
     title: 'Join an AMRAP mission — AMRAP With Friends',
