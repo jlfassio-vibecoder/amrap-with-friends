@@ -46,6 +46,15 @@
    * chart size (OKLCH chroma 0.07) and avatar ochre falls under 3:1 on the
    * light surface. Light and dark are separate steps, not an automatic flip.
    */
+  /* Pacing gauge zones. Their own steps, not the categorical chart hues:
+     status colour is a reserved role and must not double as "series 4".
+     Validated light and dark separately (OKLCH band, chroma, CVD ΔE, WCAG) —
+     the amber's sub-3:1 contrast is relieved by the readout and zone name the
+     gauge always shows, so the colour is never carrying the meaning alone. */
+  --color-pace-optimal: #5a9e52;
+  --color-pace-warning: #e0a81e;
+  --color-pace-overtime: #e64a2e;
+
   --color-chart-1: #db3834;
   --color-chart-2: #189694;
   --color-chart-3: #cc8317;
@@ -92,6 +101,15 @@
 
   --color-on-accent: #fffdf8;
   --color-scrim: rgb(0 0 0 / 0.5);
+
+  /* Dark is chosen, not flipped. Holding the light steps here fails outright:
+     the dark lightness band forces amber and the brand red together, where
+     deuteranopia collapses them to ΔE 0.5 — warning and overtime become the
+     same colour for the readers who most need them apart. Green moves toward
+     teal and overtime toward crimson to buy that separation back. */
+  --color-pace-optimal: #3da882;
+  --color-pace-warning: #b8891a;
+  --color-pace-overtime: #e35070;
 
   --color-avatar-coral: #e64a2e;
   --color-avatar-sage: #5a9e52;

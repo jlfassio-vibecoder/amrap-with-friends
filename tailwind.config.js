@@ -48,6 +48,11 @@ export default {
           plum: 'var(--color-avatar-plum)',
           teal: 'var(--color-avatar-teal)',
         },
+        pace: {
+          optimal: 'var(--color-pace-optimal)',
+          warning: 'var(--color-pace-warning)',
+          overtime: 'var(--color-pace-overtime)',
+        },
         chart: {
           1: 'var(--color-chart-1)',
           2: 'var(--color-chart-2)',

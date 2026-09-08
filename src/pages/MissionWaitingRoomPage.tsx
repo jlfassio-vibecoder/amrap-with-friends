@@ -34,6 +34,7 @@ import { HostRallyPointSteps } from '@/components/mission/HostRallyPointSteps';
 import { LogMissedRound } from '@/components/mission/LogMissedRound';
 import { PreMissionScalingPicker } from '@/components/mission/PreMissionScalingPicker';
 import { BenchmarkDesignateControl } from '@/components/mission/BenchmarkDesignateControl';
+import { PacingGauge } from '@/components/mission/PacingGauge';
 import { GhostPicker } from '@/components/GhostPicker';
 import { SafetyNoticeModal } from '@/components/safety/SafetyNoticeModal';
 import { useMissionSafetyNotices } from '@/components/safety/useMissionSafetyNotices';
@@ -80,6 +81,7 @@ import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
 import { formatVariantBadge, type MovementVariantSelection } from '@/lib/mission/exerciseScaling';
 import { versionKeyFor } from '@/lib/mission/movementVersion';
 import { shouldShowPacerPicker } from '@/lib/mission/shouldShowPacerPicker';
+import { readPacingGaugeEnabled, writePacingGaugeEnabled } from '@/lib/pacing/pacingGaugePrefs';
 import { clearScalingPlan, readScalingPlan, writeScalingPlan } from '@/lib/mission/scalingPlan';
 import {
   getStoredRallyPointIdForMission,
@@ -460,6 +462,7 @@ function LiveMissionView({
   // A modification chosen before the clock starts. Seeds the end-of-mission checklist;
   // the checklist is still the only thing that writes a result.
   const [scalingPlan, setScalingPlan] = useState<MovementVariantSelection>({});
+  const [pacingGaugeEnabled, setPacingGaugeEnabled] = useState(() => readPacingGaugeEnabled());
   const [scorecardDismissed, setScorecardDismissed] = useState(false);
   const [missionLoadingDismissed, setMissionLoadingDismissed] = useState(false);
   const [authOpenForSave, setAuthOpenForSave] = useState(false);
@@ -1389,6 +1392,28 @@ function LiveMissionView({
                       Elapsed: {formatTime(live.elapsedSec)}
                     </p>
                   </>
+                ) : null}
+                {live.phase === 'work' && pacingGaugeEnabled ? (
+                  <PacingGauge
+                    roundSplitsSec={live.roundSplitsSec}
+                    elapsedSec={live.elapsedSec}
+                    isPaused={live.isPaused}
+                    className="pt-1"
+                  />
+                ) : null}
+                {live.phase === 'work' ? (
+                  <label className="flex cursor-pointer items-center justify-center gap-2 text-xs text-muted">
+                    <input
+                      type="checkbox"
+                      className="h-3.5 w-3.5 accent-[var(--color-accent)]"
+                      checked={pacingGaugeEnabled}
+                      onChange={(event) => {
+                        setPacingGaugeEnabled(event.target.checked);
+                        writePacingGaugeEnabled(event.target.checked);
+                      }}
+                    />
+                    Pacing gauge
+                  </label>
                 ) : null}
                 <p className={`text-xs text-muted ${compactMobileLive ? 'max-lg:hidden' : ''}`}>
                   Realtime:{' '}
