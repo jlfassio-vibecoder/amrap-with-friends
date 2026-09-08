@@ -43,8 +43,8 @@ WITH candidates AS (
     -- Signed-in athletes group by account; guests only have their name.
     coalesce(p.user_id::text, 'guest:' || lower(btrim(p.nickname))) AS identity_key,
     (
-      p.final_score IS NOT NULL
-      OR EXISTS (SELECT 1 FROM public.rounds r WHERE r.participant_id = p.id)
+      -- Scores live on participant_segment_results, not participants.
+      EXISTS (SELECT 1 FROM public.rounds r WHERE r.participant_id = p.id)
       OR EXISTS (
         SELECT 1 FROM public.participant_segment_results sr WHERE sr.participant_id = p.id
       )
@@ -93,7 +93,12 @@ BEGIN
     JOIN public.missions m ON m.id = p.mission_id
     WHERE m.state = 'finished'
       AND (
-        p.final_score IS NOT NULL
+        EXISTS (
+          SELECT 1
+          FROM public.participant_segment_results psr
+          WHERE psr.participant_id = p.id
+            AND psr.final_score IS NOT NULL
+        )
         OR EXISTS (SELECT 1 FROM public.rounds r WHERE r.participant_id = p.id)
       )
     GROUP BY 1, 2
