@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CoachDataTable } from '@/components/coach/CoachDataTable';
+import { CoachJourneyPanel } from '@/components/coach/CoachJourneyPanel';
 import {
   fetchCoachAnonSummary,
   fetchCoachRecentEvents,
@@ -157,6 +158,8 @@ export function CoachAnonDossierCard({ anonId, onDismiss }: CoachAnonDossierCard
               ]}
             />
           ) : null}
+
+          {!isPresenceOnly ? <CoachJourneyPanel key={`journey-${anonId}`} anonId={anonId} /> : null}
         </>
       ) : null}
     </div>

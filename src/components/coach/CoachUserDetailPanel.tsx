@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CoachDataTable } from '@/components/coach/CoachDataTable';
 import { CoachEventsExplorer } from '@/components/coach/CoachEventsExplorer';
+import { CoachJourneyPanel } from '@/components/coach/CoachJourneyPanel';
 import { CoachStatGrid } from '@/components/coach/CoachStatGrid';
 import { OvertrainingWarningCard } from '@/components/hud/OvertrainingWarningCard';
 import { fetchCoachUserDetail, type CoachUserDetail } from '@/lib/api/coach';
@@ -132,6 +133,8 @@ export function CoachUserDetailPanel({ userId }: { userId: string }) {
         <h3 className="text-sm font-semibold uppercase tracking-wide text-secondary">
           Support: recent activity
         </h3>
+        <CoachJourneyPanel key={`journey-${userId}`} userId={userId} />
+
         <CoachEventsExplorer key={userId} userId={userId} />
       </section>
     </div>
