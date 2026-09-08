@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ThemeProvider } from '@/contexts/ThemeProvider';
 import JoinMissionPage from './JoinMissionPage';
+import { persistMissionIdentity } from '@/lib/missionIdentity';
 import { MISSION_LOCKED_OR_INVALID, MISSION_RALLY_DEPARTED } from '@/lib/api/missions';
 
 const joinMissionMock = vi.fn();
@@ -65,6 +66,8 @@ afterEach(() => {
   authState.isAuthenticated = false;
   authState.isAuthLoading = false;
   authState.user = null;
+  localStorage.clear();
+  sessionStorage.clear();
 });
 
 function renderJoin(path: string) {
@@ -108,6 +111,45 @@ describe('JoinMissionPage deep link', () => {
       });
     });
     expect(await screen.findByText('At the rally point')).toBeTruthy();
+  });
+
+  it('reuses a guest seat instead of joining again from a second tab', async () => {
+    persistMissionIdentity(MISSION_ID, {
+      participantId: 'p1',
+      nickname: 'Ghost',
+      claimToken: 'c1',
+    });
+    // A second tab has no per-tab state of its own.
+    sessionStorage.clear();
+
+    renderJoin(`/join?m=${MISSION_ID}`);
+
+    fireEvent.change(screen.getByLabelText(/Your name/i), {
+      target: { value: 'Ghost' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Join mission/i }));
+
+    expect(await screen.findByText('At the rally point')).toBeTruthy();
+    expect(joinMissionMock).not.toHaveBeenCalled();
+  });
+
+  it('reuses a guest host seat, which has a host token and no claim token', async () => {
+    persistMissionIdentity(MISSION_ID, {
+      participantId: 'host-1',
+      nickname: 'Coach',
+      hostToken: 'host-token',
+    });
+    sessionStorage.clear();
+
+    renderJoin(`/join?m=${MISSION_ID}`);
+
+    fireEvent.change(screen.getByLabelText(/Your name/i), {
+      target: { value: 'Coach' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Join mission/i }));
+
+    expect(await screen.findByText('At the rally point')).toBeTruthy();
+    expect(joinMissionMock).not.toHaveBeenCalled();
   });
 
   it('auto-joins authenticated users with email local-part', async () => {
