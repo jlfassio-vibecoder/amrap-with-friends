@@ -20,6 +20,7 @@ import {
   callsignFromEmail,
   getStoredClaimToken,
   getStoredHostToken,
+  getStoredNickname,
   getStoredParticipantId,
 } from '@/lib/missionIdentity';
 import { getSupabaseConfigError } from '@/lib/supabase';
@@ -97,12 +98,18 @@ export default function JoinMissionPage() {
       // seat in this mission. Guests have no auth.uid(), so join_mission would
       // insert a second participant — a duplicate on the roster and the
       // leaderboard. Walk straight into the mission with the identity we hold.
+      // Require the entered name to match the stored seat so a second person on
+      // the same device can still join under a different callsign.
       const heldParticipantId = getStoredParticipantId(targetMissionId.trim());
+      const heldNickname = getStoredNickname(targetMissionId.trim());
       // A guest host holds a host token instead of a claim token — their rows
       // are created without a claim_token_hash — so either proves the seat.
       const heldSeatProof =
         getStoredClaimToken(targetMissionId.trim()) ?? getStoredHostToken(targetMissionId.trim());
-      if (!isAuthenticated && heldParticipantId && heldSeatProof) {
+      const callsignMatchesHeld =
+        heldNickname !== null &&
+        heldNickname.trim().toLowerCase() === callsign.trim().toLowerCase();
+      if (!isAuthenticated && heldParticipantId && heldSeatProof && callsignMatchesHeld) {
         track(
           'mission_joined',
           { deep_link: deep, auth: false, resumed: true },

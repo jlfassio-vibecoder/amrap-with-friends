@@ -133,6 +133,33 @@ describe('JoinMissionPage deep link', () => {
     expect(joinMissionMock).not.toHaveBeenCalled();
   });
 
+  it('does not reclaim a guest seat when the entered name differs', async () => {
+    persistMissionIdentity(MISSION_ID, {
+      participantId: 'p1',
+      nickname: 'Ghost',
+      claimToken: 'c1',
+    });
+    sessionStorage.clear();
+    joinMissionMock.mockResolvedValue({
+      data: { participantId: 'p2', claimToken: 'c2' },
+      error: null,
+    });
+
+    renderJoin(`/join?m=${MISSION_ID}`);
+
+    fireEvent.change(screen.getByLabelText(/Your name/i), {
+      target: { value: 'Other' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Join mission/i }));
+
+    await waitFor(() => {
+      expect(joinMissionMock).toHaveBeenCalledWith({
+        missionId: MISSION_ID,
+        nickname: 'Other',
+      });
+    });
+  });
+
   it('reuses a guest host seat, which has a host token and no claim token', async () => {
     persistMissionIdentity(MISSION_ID, {
       participantId: 'host-1',

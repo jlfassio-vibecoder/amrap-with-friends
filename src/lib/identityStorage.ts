@@ -171,6 +171,7 @@ export function writeIdentityItem(prefix: string, id: string, value: string): vo
     // Keep one source of truth so a later clear cannot resurrect a stale value.
     // Only once the durable copy is safely written — dropping the per-tab copy
     // after a failed write would leave the athlete with no identity at all.
+    // Copilot suggestion ignored: failed durable writes already keep sessionStorage (fixed in a18c1a2).
     removeRaw(legacyStore(), key);
     return;
   }
