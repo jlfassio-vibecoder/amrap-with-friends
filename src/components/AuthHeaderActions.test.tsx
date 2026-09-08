@@ -63,8 +63,12 @@ describe('AuthHeaderActions', () => {
 
     const menu = screen.getByRole('dialog', { name: 'Menu' });
     expect(within(menu).getByRole('link', { name: 'HUD' })).toBeTruthy();
+    expect(within(menu).getByRole('link', { name: 'Plan' })).toBeTruthy();
     expect(within(menu).getByRole('link', { name: 'Squad' })).toBeTruthy();
     expect(within(menu).getByRole('link', { name: 'My missions' })).toBeTruthy();
+    expect(within(menu).getByRole('link', { name: 'Plan' }).getAttribute('href')).toBe(
+      '/plan-mission'
+    );
     expect(within(menu).getByRole('button', { name: 'Sign out' })).toBeTruthy();
   });
 

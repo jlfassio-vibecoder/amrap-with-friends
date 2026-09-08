@@ -125,6 +125,9 @@ export function AuthHeaderActions({ tone = 'default' }: { tone?: HeaderTone }) {
         <Link className={linkClass} to="/hud" onClick={closeMenu}>
           HUD
         </Link>
+        <Link className={linkClass} to="/plan-mission" onClick={closeMenu}>
+          Plan
+        </Link>
         <Link className={linkClass} to="/squad" onClick={closeMenu}>
           Squad
         </Link>
