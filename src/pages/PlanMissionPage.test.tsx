@@ -172,6 +172,18 @@ describe('PlanMissionPage', () => {
     });
   });
 
+  it('shows why Launch is disabled when the active-mission cap is reached', async () => {
+    fetchHostActiveMissionCountMock.mockResolvedValue({ data: 3, error: null });
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('You already have 3 active missions.')).toBeTruthy();
+    });
+    expect((screen.getAllByRole('button', { name: 'Launch' })[0] as HTMLButtonElement).disabled).toBe(
+      true
+    );
+  });
+
   it('starts a campaign preset', async () => {
     renderPage();
 

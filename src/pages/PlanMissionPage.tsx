@@ -322,6 +322,12 @@ export default function PlanMissionPage() {
         builders stay one step away when you want to customize.
       </p>
 
+      {capReached ? (
+        <p className="alert-error text-sm" role="status">
+          You already have {HOST_ACTIVE_MISSION_LIMIT} active missions.
+        </p>
+      ) : null}
+
       {error ? (
         <p className="text-error text-sm" role="alert">
           {error}
@@ -331,6 +337,7 @@ export default function PlanMissionPage() {
       <section className="grid gap-4 sm:grid-cols-2" aria-label="How to plan">
         <div className="card space-y-3 p-5">
           <h2 className="text-lg font-semibold text-ink">Mission</h2>
+          {/* Copilot suggestion ignored: “session” wording already replaced with mission/friends copy. */}
           <p className="text-sm text-secondary">
             Pick a workout or chain a few, then go live or schedule a rally point. Best when you
             want to launch a solo mission or train with friends.

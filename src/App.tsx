@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { AppLink } from '@/components/AppLink';
 import { GlobalPresenceBroadcaster } from '@/components/GlobalPresenceBroadcaster';
 import { PasswordRecoveryRedirect } from '@/components/PasswordRecoveryRedirect';
 import { RequireIntake } from '@/components/RequireIntake';
@@ -50,8 +51,16 @@ function App() {
               <RequireIntake
                 guestMode="sign-in"
                 gateTitle="Plan"
-                gateMessage="Sign in and set up your profile to launch ready-made chains and campaigns. You can still plan a single mission as a guest from Plan mission."
+                gateMessage="Sign in and set up your profile to launch ready-made chains and campaigns."
                 gateAllowsGuest={false}
+                signedOutPreview={
+                  <p className="text-sm text-secondary">
+                    Prefer to plan one mission without an account?{' '}
+                    <AppLink className="link-accent" to="/create">
+                      Plan mission
+                    </AppLink>
+                  </p>
+                }
               >
                 <PlanMissionPage />
               </RequireIntake>
