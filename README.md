@@ -1,6 +1,8 @@
 # AMRAP With Friends
 
-AMRAP With Friends is a standalone web app for running social AMRAP (As Many Rounds As Possible) AMRAP missions with friends in real time. This repository is a from-scratch rebuild focused on a single, self-contained experience—create or join a mission, sync the timer, and track rounds together.
+AMRAP With Friends is a standalone web app for running social AMRAP (As Many Rounds As Possible) missions with friends in real time. This repository is a from-scratch rebuild focused on a single, self-contained experience—plan or join a mission, sync the timer, and track rounds together.
+
+Plan mission (`/create`) also offers **AMQAP** — as many quality rounds as possible. That is a continuous mobility flow (I1, 10 or 15 minutes), not a metabolic race. See [AMQAP quality flows](#amqap-quality-flows).
 
 ## Local development
 
@@ -15,14 +17,15 @@ The dev server runs at [http://localhost:5173](http://localhost:5173).
 
 ### Other scripts
 
-| Command                       | Description                                                                |
-| ----------------------------- | -------------------------------------------------------------------------- |
-| `npm run build`               | Type-check and production build                                            |
-| `npm run lint`                | ESLint                                                                     |
-| `npm run typecheck`           | TypeScript project references build                                        |
-| `npm run test`                | Vitest (single run)                                                        |
-| `npm run format`              | Prettier                                                                   |
-| `npm run seed:exercise-media` | Manual: seed empty `exercise-media/{id}/.keep` folders in Supabase Storage |
+| Command                                          | Description                                                                          |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| `npm run build`                                  | Type-check and production build                                                      |
+| `npm run lint`                                   | ESLint                                                                               |
+| `npm run typecheck`                              | TypeScript project references build                                                  |
+| `npm run test`                                   | Vitest (single run)                                                                  |
+| `npm run format`                                 | Prettier                                                                             |
+| `npm run seed:exercise-media`                    | Manual: seed empty `exercise-media/{id}/.keep` folders in Supabase Storage           |
+| `npx tsx scripts/sync-exercise-media-folders.ts` | Compare the library + AMQAP catalog to the bucket and seed only missing folders      |
 
 ### Seed exercise-media folders (manual)
 
@@ -31,9 +34,32 @@ When you add exercises to [`src/data/exerciseLibrary.ts`](src/data/exerciseLibra
 1. Put `SUPABASE_SERVICE_ROLE_KEY` in `.env` (never prefix with `VITE_`).
 2. Run `npm run seed:exercise-media` once from your machine.
 
-The script reads `EXERCISE_LIBRARY` directly and upserts `${id}/.keep` placeholders. It is **not** part of the app runtime or CI — re-run only when new exercise ids appear.
+`npm run seed:exercise-media` reads `EXERCISE_LIBRARY` and upserts `${id}/.keep` placeholders. Prefer `npx tsx scripts/sync-exercise-media-folders.ts` when you only want folders that are missing (it also walks AMQAP flows). Neither script is part of the app runtime or CI — re-run when new exercise ids appear.
 
-Upload sequence stills as **`{exerciseId}/sequence.jpeg`** or **`{exerciseId}/sequence.png`** in the `exercise-media` bucket (Gemini → `.jpeg`, ChatGPT → `.png`). The library defaults to `.jpeg`; the info modal falls back across `.jpeg` / `.png` / `.jpg` if the first path 404s.
+Upload sequence stills as **`{exerciseId}/sequence.jpeg`** or **`{exerciseId}/sequence.png`** in the `exercise-media` bucket (Gemini → `.jpeg`, ChatGPT → `.png`). The library defaults to `.jpeg`; the info modal falls back across `.jpeg` / `.png` / `.jpg` if the first path 404s. AMQAP movements have folders in the bucket; stills are not required for How-to copy to ship.
+
+## AMQAP quality flows
+
+AMQAP is a **continuous mobility protocol**, not a library category. Putting I1 recovery into [`WORKOUT_TEMPLATES`](src/data/workoutTemplates.ts) would mix it into the race picker, show 5/20 “Soon” chips, and publish Astro movement pages for templates that are not in the metabolic catalog. The flows live in their own module and launch as a normal mission (existing clock and rounds). Time-in-Flow scoring and a live “move slowly” engine are not in this pass.
+
+| Piece | Where |
+| ----- | ----- |
+| Science and execution rules | [`docs/workouts/mobility-amrap-scientific-investigation.md`](docs/workouts/mobility-amrap-scientific-investigation.md) |
+| Catalog (5 families × 10 and 15 min) | [`src/data/amqapFlows.ts`](src/data/amqapFlows.ts) |
+| Plan mission picker | [`src/components/createMission/AmqapFlowPicker.tsx`](src/components/createMission/AmqapFlowPicker.tsx) |
+| How-to write-ups | [`src/data/exerciseLibrary.ts`](src/data/exerciseLibrary.ts) (ids such as `pigeon-pose`, `90-90-hip-transitions`) |
+| Scaling (prop / smaller range) | [`src/data/exerciseScaling.ts`](src/data/exerciseScaling.ts) — `MOBILITY_LADDER` |
+
+What ships today:
+
+- **AMQAP** source chip on Plan mission, next to Custom, Choose from library, and Coach WODs. The picker heading spells out the acronym.
+- **10 min and 15 min only.** Switching to AMQAP snaps the clock to 10 if the current cap is not already 10 or 15, then locks the summary to that canonical minute (no 7–9 / 12–14).
+- **Five flow families:** Foundational, Hip control, Spinal articulation, Posterior chain, Deep hip. No intensity filter, name search, Smart Recovery, or mission chain on this source.
+- **Quality-round doses** on each card — reps, per-side counts, or breath-length holds. The same pass is used at 10 and 15 minutes; the clock is the container, not a volume target.
+- **How to** on every movement, using the same modal as the race library (setup, mistakes, cue, quality-pass tip).
+- **Scaling** named as “Use a prop” and “Smaller range” so a tight hip can still finish the flow without inventing a bounce-for-volume option.
+
+Intensity is I1. Launch still uses `create_mission` workout jsonb. These ids are not added to `featuredWorkouts` or the SEO content pages.
 
 ## Supabase migrations
 
