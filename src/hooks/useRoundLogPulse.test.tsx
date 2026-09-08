@@ -57,4 +57,30 @@ describe('useRoundLogPulse', () => {
     expect(button.classList.contains('animate-round-log-seal')).toBe(true);
     expect(screen.getByRole('button')).toBe(button);
   });
+
+  it('clears pulseKey and the seal class on reset', () => {
+    function ResetHost() {
+      const { buttonRef, pulseKey, pulse, reset } = useRoundLogPulse();
+      return (
+        <div>
+          <button ref={buttonRef} type="button" onClick={pulse}>
+            Log round
+          </button>
+          <button type="button" onClick={reset}>
+            Reset
+          </button>
+          <p data-testid="pulse-key">{pulseKey}</p>
+        </div>
+      );
+    }
+
+    render(<ResetHost />);
+    const [logButton, resetButton] = screen.getAllByRole('button');
+    fireEvent.click(logButton);
+    expect(screen.getByTestId('pulse-key').textContent).toBe('1');
+    expect(logButton.classList.contains('animate-round-log-seal')).toBe(true);
+    fireEvent.click(resetButton);
+    expect(screen.getByTestId('pulse-key').textContent).toBe('0');
+    expect(logButton.classList.contains('animate-round-log-seal')).toBe(false);
+  });
 });

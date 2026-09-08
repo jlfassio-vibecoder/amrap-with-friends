@@ -709,6 +709,7 @@ function LiveMissionView({
   });
   const roundLogPulse = useRoundLogPulse();
   const lastLogRoundAtMsRef = useRef<number | null>(null);
+  const [logRoundHint, setLogRoundHint] = useState<string | null>(null);
   const claim = useParticipantClaim(missionId);
   const selfLeaderboardEntry = live.leaderboard.find((entry) => entry.isSelf) ?? null;
   const selfBaseScore = selfLeaderboardEntry?.baseScore ?? 0;
@@ -844,13 +845,21 @@ function LiveMissionView({
   function handleLogRound() {
     const nowMs = Date.now();
     if (!canLogRound(lastLogRoundAtMsRef.current, nowMs)) {
-      window.alert(LOG_ROUND_COOLDOWN_ALERT);
+      setLogRoundHint(LOG_ROUND_COOLDOWN_ALERT);
       return;
     }
+    const previousStamp = lastLogRoundAtMsRef.current;
+    // Stamp before the await so a double-press during flight cannot bank two.
     lastLogRoundAtMsRef.current = nowMs;
-    playRoundLogged();
-    roundLogPulse.pulse();
-    void live.logRound();
+    setLogRoundHint(null);
+    void live.logRound().then((ok) => {
+      if (!ok) {
+        lastLogRoundAtMsRef.current = previousStamp;
+        return;
+      }
+      playRoundLogged();
+      roundLogPulse.pulse();
+    });
   }
 
   const handleLogRoundRef = useRef(handleLogRound);
@@ -858,6 +867,8 @@ function LiveMissionView({
 
   useEffect(() => {
     if (!showLogRound) {
+      roundLogPulse.reset();
+      setLogRoundHint(null);
       return;
     }
     function onKeyDown(event: KeyboardEvent) {
@@ -1537,6 +1548,11 @@ function LiveMissionView({
                     />
                   </span>
                 )}
+                {showLogRound && logRoundHint ? (
+                  <p className="w-full text-center text-sm text-secondary" role="status">
+                    {logRoundHint}
+                  </p>
+                ) : null}
                 {showEndPractice && (
                   <button
                     type="button"
@@ -1557,12 +1573,20 @@ function LiveMissionView({
                     onConfirm={(reps) => {
                       const nowMs = Date.now();
                       if (!canLogRound(lastLogRoundAtMsRef.current, nowMs)) {
-                        window.alert(LOG_ROUND_COOLDOWN_ALERT);
+                        setLogRoundHint(LOG_ROUND_COOLDOWN_ALERT);
                         return;
                       }
+                      const previousStamp = lastLogRoundAtMsRef.current;
                       lastLogRoundAtMsRef.current = nowMs;
-                      playRoundLogged();
-                      void live.logMissedRound(reps);
+                      setLogRoundHint(null);
+                      void live.logMissedRound(reps).then((ok) => {
+                        if (!ok) {
+                          lastLogRoundAtMsRef.current = previousStamp;
+                          return;
+                        }
+                        playRoundLogged();
+                        roundLogPulse.pulse();
+                      });
                     }}
                   />
                 </section>

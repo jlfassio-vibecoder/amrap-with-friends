@@ -60,6 +60,18 @@ describe('MissionLockedModal', () => {
     expect(hint.className).toMatch(/\blg:block\b/);
   });
 
+  it('calls onDismiss when Escape is pressed', () => {
+    const onDismiss = vi.fn();
+    render(<MissionLockedModal workout={sampleWorkout} onDismiss={onDismiss} />);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('autofocuses the Cleared hot button', () => {
+    render(<MissionLockedModal workout={sampleWorkout} onDismiss={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /cleared hot/i })).toBe(document.activeElement);
+  });
+
   it('is a labelled dialog', () => {
     render(<MissionLockedModal workout={sampleWorkout} onDismiss={vi.fn()} />);
     const dialog = screen.getByRole('dialog');

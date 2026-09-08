@@ -13,6 +13,11 @@ export interface UseRoundLogPulseReturn {
   pulseKey: number;
   /** Call once per logged round, from the same place `playRoundLogged()` fires. */
   pulse: () => void;
+  /**
+   * Clears pulse state when Log round leaves the tree (pause, finish, rematch)
+   * so a later remount cannot replay ripples/flash from a stale key.
+   */
+  reset: () => void;
 }
 
 /**
@@ -50,5 +55,10 @@ export function useRoundLogPulse(): UseRoundLogPulseReturn {
     el.classList.add(SEAL_CLASS);
   }, []);
 
-  return { buttonRef, pulseKey, pulse };
+  const reset = useCallback(() => {
+    setPulseKey(0);
+    buttonRef.current?.classList.remove(SEAL_CLASS);
+  }, []);
+
+  return { buttonRef, pulseKey, pulse, reset };
 }

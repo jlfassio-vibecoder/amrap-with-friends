@@ -31,6 +31,8 @@ describe('vault samples are reachable where the player looks for them', () => {
     // Serve in dev, off for build. Either half alone reintroduces a bug:
     // always-off kills the sounds locally, always-on duplicates public/ into
     // dist-app and lets the SPA build shadow Astro's copy.
-    expect(config).toMatch(/publicDir:\s*command === 'serve' \? 'public' : false/);
+    expect(config).toMatch(
+      /publicDir:\s*(?:command\s*===\s*['"]serve['"]\s*\?\s*['"]public['"]\s*:\s*false|command\s*===\s*['"]build['"]\s*\?\s*false\s*:\s*['"]public['"])/
+    );
   });
 });

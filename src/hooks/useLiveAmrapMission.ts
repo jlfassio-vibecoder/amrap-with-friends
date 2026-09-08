@@ -77,10 +77,10 @@ export interface UseLiveAmrapMissionReturn {
   pause: () => Promise<void>;
   resume: () => Promise<void>;
   finish: () => Promise<void>;
-  logRound: () => Promise<void>;
+  logRound: () => Promise<boolean>;
   /** What a missed-log correction would do, for the confirm step. Never commits. */
   previewMissedRound: (repsIntoNextRound: number) => MissedRoundEstimate;
-  logMissedRound: (repsIntoNextRound: number) => Promise<void>;
+  logMissedRound: (repsIntoNextRound: number) => Promise<boolean>;
   /** False when the workout has no countable reps, so no correction can be inferred. */
   canLogMissedRound: boolean;
   /** Rounds this athlete has logged in the current segment. */
@@ -667,9 +667,9 @@ export function useLiveAmrapMission(
   );
 
   const logMissedRoundAction = useCallback(
-    async (repsIntoNextRound: number) => {
+    async (repsIntoNextRound: number): Promise<boolean> => {
       if (displayPhase !== 'work' || displayIsPaused) {
-        return;
+        return false;
       }
 
       const estimate = computeMissedRoundElapsedSec({
@@ -684,16 +684,16 @@ export function useLiveAmrapMission(
           elapsedSecOverride: estimate.elapsedSecAtRound,
           missedLogReps: repsIntoNextRound,
         });
-        return;
+        return true;
       }
 
       if (!participantId) {
-        return;
+        return false;
       }
 
       const tokenForRpc = claimToken ?? '';
       if (!tokenForRpc && !isAuthenticated) {
-        return;
+        return false;
       }
 
       const result = await logRound({
@@ -708,9 +708,13 @@ export function useLiveAmrapMission(
 
       if (result.error) {
         setSyncError(result.error.message);
-      } else if (result.data?.ok === false && result.data.reason !== 'duplicate_round') {
-        setSyncError(`Could not log the missed round: ${result.data.reason}`);
+        return false;
       }
+      if (result.data?.ok === false && result.data.reason !== 'duplicate_round') {
+        setSyncError(`Could not log the missed round: ${result.data.reason}`);
+        return false;
+      }
+      return true;
     },
     [
       displayPhase,
@@ -729,23 +733,23 @@ export function useLiveAmrapMission(
     ]
   );
 
-  const logRoundAction = useCallback(async () => {
+  const logRoundAction = useCallback(async (): Promise<boolean> => {
     if (displayPhase !== 'work' || displayIsPaused) {
-      return;
+      return false;
     }
 
     if (isPractice) {
       timer.logRound();
-      return;
+      return true;
     }
 
     if (!participantId) {
-      return;
+      return false;
     }
 
     const tokenForRpc = claimToken ?? '';
     if (!tokenForRpc && !isAuthenticated) {
-      return;
+      return false;
     }
 
     const elapsedSecAtRound = elapsedSecNow();
@@ -761,9 +765,13 @@ export function useLiveAmrapMission(
 
     if (result.error) {
       setSyncError(result.error.message);
-    } else if (result.data?.ok === false && result.data.reason !== 'duplicate_round') {
-      setSyncError(`Could not log round: ${result.data.reason}`);
+      return false;
     }
+    if (result.data?.ok === false && result.data.reason !== 'duplicate_round') {
+      setSyncError(`Could not log round: ${result.data.reason}`);
+      return false;
+    }
+    return true;
   }, [
     displayPhase,
     displayIsPaused,

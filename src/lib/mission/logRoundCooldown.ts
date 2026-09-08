@@ -1,5 +1,5 @@
 /** Minimum gap between Log round taps so a double-press cannot bank two rounds. */
-export const LOG_ROUND_COOLDOWN_MS = 10_000;
+export const LOG_ROUND_COOLDOWN_MS = 1_000;
 
 export const LOG_ROUND_COOLDOWN_ALERT = 'Round logged, continue next round';
 

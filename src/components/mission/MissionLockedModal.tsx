@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useEffect, useId } from 'react';
 
 export interface MissionLockedExercise {
   name: string;
@@ -33,6 +33,17 @@ function formatExerciseLabel(exercise: MissionLockedExercise): string {
 export function MissionLockedModal({ workout, onDismiss }: MissionLockedModalProps) {
   const titleId = useId();
 
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        onDismiss();
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onDismiss]);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-scrim p-4"
@@ -66,6 +77,7 @@ export function MissionLockedModal({ workout, onDismiss }: MissionLockedModalPro
         <button
           type="button"
           className="btn-primary w-full text-sm uppercase tracking-widest"
+          autoFocus
           onClick={onDismiss}
         >
           Cleared hot!
