@@ -35,7 +35,6 @@ import { LogMissedRound } from '@/components/mission/LogMissedRound';
 import { PreMissionScalingPicker } from '@/components/mission/PreMissionScalingPicker';
 import { BenchmarkDesignateControl } from '@/components/mission/BenchmarkDesignateControl';
 import { PacingGauge } from '@/components/mission/PacingGauge';
-import { useAudioPriming } from '@/hooks/useAudioPriming';
 import { GhostPicker } from '@/components/GhostPicker';
 import { SafetyNoticeModal } from '@/components/safety/SafetyNoticeModal';
 import { useMissionSafetyNotices } from '@/components/safety/useMissionSafetyNotices';
@@ -704,11 +703,6 @@ function LiveMissionView({
     isPaused: live.isPaused,
     workDurationSec: live.workDurationSec,
   });
-  // Decode the vault samples on the first tap anywhere in the mission view, so
-  // the 200KB mission-start cue is ready before the Start tap needs it rather
-  // than beginning to download at the moment it should already be sounding.
-  useAudioPriming(unlockAudio, !live.isPractice);
-
   const claim = useParticipantClaim(missionId);
   const selfLeaderboardEntry = live.leaderboard.find((entry) => entry.isSelf) ?? null;
   const selfBaseScore = selfLeaderboardEntry?.baseScore ?? 0;
@@ -1416,6 +1410,12 @@ function LiveMissionView({
                       onChange={(event) => {
                         setPacingGaugeEnabled(event.target.checked);
                         writePacingGaugeEnabled(event.target.checked);
+                        // Hand focus back. shouldHandleLogRoundHotkey treats any
+                        // focused INPUT as a typing target, so leaving this
+                        // checkbox focused silently disables the Space hotkey
+                        // for the rest of the mission — Space would toggle the
+                        // gauge instead of logging a round.
+                        event.target.blur();
                       }}
                     />
                     Pacing gauge

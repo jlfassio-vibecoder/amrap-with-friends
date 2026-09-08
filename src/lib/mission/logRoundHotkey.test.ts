@@ -59,3 +59,19 @@ describe('shouldHandleLogRoundHotkey', () => {
     expect(shouldHandleLogRoundHotkey(event({ target: button }))).toBe(true);
   });
 });
+
+describe('a focused control silently disables the hotkey', () => {
+  it('ignores Space while a checkbox has focus', () => {
+    // The live view carries a "Pacing gauge" checkbox. Tapping it leaves it
+    // focused, and from then on Space toggles the gauge instead of logging a
+    // round — no round, no sound, no error. The view must blur it after
+    // toggling; this pins why.
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    expect(shouldHandleLogRoundHotkey(event({ target: checkbox }))).toBe(false);
+  });
+
+  it('handles Space again once focus returns to the page', () => {
+    expect(shouldHandleLogRoundHotkey(event({ target: document.body }))).toBe(true);
+  });
+});
