@@ -28,12 +28,15 @@ import { GhostPacerStrip } from '@/components/GhostPacerStrip';
 import { CopyInviteLink } from '@/components/mission/CopyInviteLink';
 import { DaisyChainCta } from '@/components/mission/DaisyChainCta';
 import { MissionLoadingModal } from '@/components/mission/MissionLoadingModal';
+import { MissionLockedModal } from '@/components/mission/MissionLockedModal';
 import { EditRallyScheduleForm } from '@/components/mission/EditRallyScheduleForm';
 import { ArmedRallyPointControls } from '@/components/mission/ArmedRallyPointControls';
 import { HostRallyPointSteps } from '@/components/mission/HostRallyPointSteps';
 import { LogMissedRound } from '@/components/mission/LogMissedRound';
+import { MissionPacingGauge } from '@/components/mission/MissionPacingGauge';
 import { PreMissionScalingPicker } from '@/components/mission/PreMissionScalingPicker';
 import { BenchmarkDesignateControl } from '@/components/mission/BenchmarkDesignateControl';
+import { RoundLogRippleBurst } from '@/components/mission/RoundLogRippleBurst';
 import { GhostPicker } from '@/components/GhostPicker';
 import { SafetyNoticeModal } from '@/components/safety/SafetyNoticeModal';
 import { useMissionSafetyNotices } from '@/components/safety/useMissionSafetyNotices';
@@ -41,6 +44,8 @@ import { CoachWalkthrough } from '@/components/walkthrough/CoachWalkthrough';
 import { WalkthroughCompleteModal } from '@/components/walkthrough/WalkthroughCompleteModal';
 import { useRallyPointWalkthrough } from '@/components/walkthrough/useRallyPointWalkthrough';
 import { useGhostPacer } from '@/hooks/useGhostPacer';
+import { useMissionLockedModal } from '@/hooks/useMissionLockedModal';
+import { useRoundLogPulse } from '@/hooks/useRoundLogPulse';
 import { useTacticalAudio } from '@/hooks/useTacticalAudio';
 import { useRallyPointForceNav } from '@/hooks/useRallyPointForceNav';
 import {
@@ -67,6 +72,7 @@ import {
 import { nextChainedMissionName } from '@/lib/mission/nextChainedMissionName';
 import { canPassRallyPointCommand } from '@/lib/rallyPoint/canPassRallyPointCommand';
 import { shouldHandleLogRoundHotkey } from '@/lib/mission/logRoundHotkey';
+import { LOG_ROUND_COOLDOWN_ALERT, canLogRound } from '@/lib/mission/logRoundCooldown';
 import {
   hideMobileLiveChrome,
   formatMobileLiveScoreLabel,
@@ -492,6 +498,7 @@ function LiveMissionView({
   );
   const live = useLiveAmrapMission(missionId, channel);
   const { isHost, start: startMission, phase: livePhase } = live;
+  const missionLockedModal = useMissionLockedModal(livePhase, live.isPractice);
 
   const rallyPointId =
     channel.mission?.rally_point_id ?? getStoredRallyPointIdForMission(missionId) ?? null;
@@ -700,6 +707,9 @@ function LiveMissionView({
     isPaused: live.isPaused,
     workDurationSec: live.workDurationSec,
   });
+  const roundLogPulse = useRoundLogPulse();
+  const lastLogRoundAtMsRef = useRef<number | null>(null);
+  const [logRoundHint, setLogRoundHint] = useState<string | null>(null);
   const claim = useParticipantClaim(missionId);
   const selfLeaderboardEntry = live.leaderboard.find((entry) => entry.isSelf) ?? null;
   const selfBaseScore = selfLeaderboardEntry?.baseScore ?? 0;
@@ -833,8 +843,23 @@ function LiveMissionView({
   const denseMobileLiveWorkout = shouldDenseMobileLiveWorkout(live.phase, live.workout.length);
 
   function handleLogRound() {
-    playRoundLogged();
-    void live.logRound();
+    const nowMs = Date.now();
+    if (!canLogRound(lastLogRoundAtMsRef.current, nowMs)) {
+      setLogRoundHint(LOG_ROUND_COOLDOWN_ALERT);
+      return;
+    }
+    const previousStamp = lastLogRoundAtMsRef.current;
+    // Stamp before the await so a double-press during flight cannot bank two.
+    lastLogRoundAtMsRef.current = nowMs;
+    setLogRoundHint(null);
+    void live.logRound().then((ok) => {
+      if (!ok) {
+        lastLogRoundAtMsRef.current = previousStamp;
+        return;
+      }
+      playRoundLogged();
+      roundLogPulse.pulse();
+    });
   }
 
   const handleLogRoundRef = useRef(handleLogRound);
@@ -842,6 +867,8 @@ function LiveMissionView({
 
   useEffect(() => {
     if (!showLogRound) {
+      roundLogPulse.reset();
+      setLogRoundHint(null);
       return;
     }
     function onKeyDown(event: KeyboardEvent) {
@@ -1335,9 +1362,10 @@ function LiveMissionView({
                   </p>
                 ) : live.phase !== 'waiting' ? (
                   <p
+                    key={roundLogPulse.pulseKey}
                     className={`text-display tabular-nums text-accent lg:text-7xl xl:text-8xl ${
                       compactMobileLive ? 'text-7xl' : 'text-5xl'
-                    }`}
+                    } ${roundLogPulse.pulseKey > 0 ? 'animate-round-log-flash' : ''}`}
                   >
                     {formatTime(live.timeLeftSec)}
                   </p>
@@ -1505,14 +1533,26 @@ function LiveMissionView({
                   </button>
                 )}
                 {showLogRound && (
-                  <button
-                    type="button"
-                    className="btn-success px-3 py-1.5 text-sm max-lg:w-full max-lg:py-5 max-lg:text-xl lg:px-6 lg:py-3 lg:text-base"
-                    onClick={handleLogRound}
-                  >
-                    Log round
-                  </button>
+                  <span className="relative inline-flex max-lg:w-full">
+                    <button
+                      ref={roundLogPulse.buttonRef}
+                      type="button"
+                      className="btn-success w-full px-3 py-1.5 text-sm max-lg:py-5 max-lg:text-xl lg:w-auto lg:px-6 lg:py-3 lg:text-base"
+                      onClick={handleLogRound}
+                    >
+                      Log round
+                    </button>
+                    <RoundLogRippleBurst
+                      pulseKey={roundLogPulse.pulseKey}
+                      buttonRef={roundLogPulse.buttonRef}
+                    />
+                  </span>
                 )}
+                {showLogRound && logRoundHint ? (
+                  <p className="w-full text-center text-sm text-secondary" role="status">
+                    {logRoundHint}
+                  </p>
+                ) : null}
                 {showEndPractice && (
                   <button
                     type="button"
@@ -1531,12 +1571,38 @@ function LiveMissionView({
                     repsPerRound={live.repsPerRound}
                     preview={live.previewMissedRound}
                     onConfirm={(reps) => {
-                      playRoundLogged();
-                      void live.logMissedRound(reps);
+                      const nowMs = Date.now();
+                      if (!canLogRound(lastLogRoundAtMsRef.current, nowMs)) {
+                        setLogRoundHint(LOG_ROUND_COOLDOWN_ALERT);
+                        return;
+                      }
+                      const previousStamp = lastLogRoundAtMsRef.current;
+                      lastLogRoundAtMsRef.current = nowMs;
+                      setLogRoundHint(null);
+                      void live.logMissedRound(reps).then((ok) => {
+                        if (!ok) {
+                          lastLogRoundAtMsRef.current = previousStamp;
+                          return;
+                        }
+                        playRoundLogged();
+                        roundLogPulse.pulse();
+                      });
                     }}
                   />
                 </section>
               ) : null}
+
+              {/* Its own section, after the actions — never inside the clock
+                  block. The gauge owns its preference, its placement and its
+                  failure; this mount is the whole of its contact with the
+                  mission, and deleting it removes the feature. */}
+              <MissionPacingGauge
+                phase={live.phase}
+                roundSplitsSec={live.roundSplitsSec}
+                elapsedSec={live.elapsedSec}
+                isPaused={live.isPaused}
+                isPractice={live.isPractice}
+              />
 
               {live.isPractice && live.practiceRounds.length > 0 ? (
                 <section className="rounded-card border border-border bg-page p-4 text-left">
@@ -1790,6 +1856,10 @@ function LiveMissionView({
       ) : null}
 
       {showMissionLoadingModal ? <MissionLoadingModal onConfirm={dismissMissionLoading} /> : null}
+
+      {missionLockedModal.visible ? (
+        <MissionLockedModal workout={live.workout} onDismiss={missionLockedModal.dismiss} />
+      ) : null}
 
       {authOpenForSave ? <AuthModal onClose={handleAuthCloseForSave} /> : null}
 
