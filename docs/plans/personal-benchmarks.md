@@ -1,7 +1,7 @@
 # Plan: benchmarks an athlete designates for themselves
 
 **Branch:** `feature/personal-benchmarks` (proposed)
-**Status:** Phase 1 shipped. Phases 2–4 open.
+**Status:** Phases 1–2 shipped. Phases 3–4 open.
 **Last updated:** 2026-09-09
 
 ---
@@ -283,9 +283,10 @@ rally point before start, the pill and Retire on My missions, and the pure cap
 rules in `src/lib/benchmark/`. Designation on the Create form was dropped from
 scope — see "Where designation happens" below.
 
-**Phase 2 — attempts and retest.** Derive attempts by version key, the due
-calculation, the Retest shortcut with template and cap locked and the ghost
-pre-selected.
+**Phase 2 — attempts and retest. ✅ Shipped.** Attempts derived by version key,
+the due calculation, the Benchmarks panel on My missions, and the Retest
+shortcut at `/create?benchmark=<id>` with the workout and clock replaced rather
+than pre-filled.
 
 **Phase 3 — the HUD card.** The three rows, the version note, the readiness
 note.
@@ -333,6 +334,30 @@ page uses.
 right thing to enforce in the cheaper place. `benchmarkCap.contract.test.ts`
 pins the numbers the two halves do share — the limit, the four domains, the legal
 clocks, the coach-workout refusal, the unique index and the grants.
+
+### Phase 2 notes
+
+**A benchmark stores the modification, not only its fingerprint.**
+`version_key` stays the thing attempts are matched on, but it is one-way: names
+are joined with `|` and `#`, so a movement name containing either cannot be
+recovered, and `movementVersion.ts` deliberately never tries. Without the
+selection itself a retest would default to "as programmed", so an athlete who
+benchmarked on knee push-ups would silently retest on full ones and the
+comparison the feature exists for would be wrong by default.
+`movement_variants` is written at designation and read only to seed a retest, so
+the two can never disagree about what an attempt is.
+
+**Off-version runs are excluded but not hidden.** A run of the benchmark
+workout performed a different way is not an attempt — it is not comparable — but
+it is not discarded either. The panel says "1 other run of this workout was
+performed differently, so it is not in the series", because someone whose retest
+looks overdue when they have in fact done the workout deserves to know why it
+did not count.
+
+**The retest replaces the picker rather than pre-filling it.** A pre-filled
+picker is one stray tap away from silently measuring nothing. There is still an
+exit — "Start a different mission instead" — because locking without one turns a
+wrong tap into a trap.
 
 ### Where designation happens
 

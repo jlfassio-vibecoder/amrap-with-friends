@@ -11,6 +11,11 @@ const migration = readFileSync(
   join(root, 'supabase/migrations/20260909210000_athlete_benchmarks.sql'),
   'utf8'
 );
+/** designate_benchmark was re-created here when it gained the variants column. */
+const variantsMigration = readFileSync(
+  join(root, 'supabase/migrations/20260909230000_benchmark_movement_variants.sql'),
+  'utf8'
+);
 
 /**
  * The cap exists twice: in TypeScript, where the UI decides whether to offer
@@ -70,8 +75,27 @@ describe('the SQL floor matches the TypeScript cap', () => {
   });
 
   it('refuses a coach workout, the same rule isBenchmarkableTemplate applies', () => {
-    expect(migration).toContain("IF v_template LIKE 'coach:%' THEN");
-    expect(migration).toContain("'reason', 'coach_workout'");
+    // Asserted on the live definition, which moved when the function was
+    // re-created to take the variants — the original body is now history.
+    expect(variantsMigration).toContain("IF v_template LIKE 'coach:%' THEN");
+    expect(variantsMigration).toContain("'reason', 'coach_workout'");
+  });
+
+  it('keeps the limit when designate_benchmark is re-created', () => {
+    const limit = /IF v_active >= (\d+) THEN/.exec(variantsMigration);
+    expect(limit, 'the re-created function lost its at_limit guard').not.toBeNull();
+    expect(Number(limit![1])).toBe(MAX_ACTIVE_BENCHMARKS);
+  });
+
+  it('drops the old signature rather than leaving an ambiguous overload', () => {
+    // Two overloads differing only in a defaulted trailing argument make every
+    // call ambiguous, and Postgres raises at call time, not at migrate time.
+    expect(variantsMigration).toContain(
+      'DROP FUNCTION IF EXISTS public.designate_benchmark(text, int, int, text);'
+    );
+    expect(variantsMigration).toContain(
+      'GRANT EXECUTE ON FUNCTION public.designate_benchmark(text, int, int, text, jsonb) TO authenticated;'
+    );
   });
 
   it('enforces one live benchmark per domain in an index, not only in a check', () => {

@@ -26,6 +26,7 @@ const ROW = {
   duration_minutes: 10,
   time_domain: 10,
   version_key: '',
+  movement_variants: {},
   designated_at: '2026-01-01T10:00:00.000Z',
   retired_at: null,
 };
@@ -45,8 +46,43 @@ describe('designateBenchmark', () => {
       p_duration_minutes: 10,
       p_time_domain: 10,
       p_version_key: '',
+      p_movement_variants: {},
     });
     expect(result.data?.id).toBe('b1');
+  });
+
+  it('stores the modification itself, not only its fingerprint', () => {
+    // version_key is what attempts are matched on, but it is a one-way
+    // fingerprint. Seeding a retest needs the selection back.
+    rpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        benchmark: {
+          ...ROW,
+          version_key: 'Diamond Push-ups#push-up--knees',
+          movement_variants: { 'Diamond Push-ups': 'push-up--knees' },
+        },
+      },
+      error: null,
+    } as never);
+
+    return designateBenchmark({
+      templateId: 'the-valve',
+      durationMinutes: 10,
+      timeDomain: 10,
+      versionKey: 'Diamond Push-ups#push-up--knees',
+      movementVariants: { 'Diamond Push-ups': 'push-up--knees' },
+    }).then((result) => {
+      expect(rpcMock).toHaveBeenCalledWith(
+        'designate_benchmark',
+        expect.objectContaining({
+          p_movement_variants: { 'Diamond Push-ups': 'push-up--knees' },
+        })
+      );
+      expect(result.data?.movementVariants).toEqual({
+        'Diamond Push-ups': 'push-up--knees',
+      });
+    });
   });
 
   it('says what to do about a full slate rather than just failing', async () => {

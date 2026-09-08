@@ -13,6 +13,7 @@ import { CheckInProgressionPanel } from '@/components/mission/CheckInProgression
 import { MyMissionCheckIn } from '@/components/mission/MyMissionCheckIn';
 import { fetchMyBenchmarks, retireBenchmark, type AthleteBenchmark } from '@/lib/api/benchmarks';
 import { benchmarkForMission } from '@/lib/benchmark/matchBenchmark';
+import { BenchmarkProgressPanel } from '@/components/mission/BenchmarkProgressPanel';
 import {
   canDeleteMyMission,
   deleteIncompleteMission,
@@ -234,6 +235,9 @@ export default function MyMissionsPage() {
   const [deletingMissionId, setDeletingMissionId] = useState<string | null>(null);
   const [expandedRallyPointIds, setExpandedRallyPointIds] = useState<Set<string>>(() => new Set());
   const [benchmarks, setBenchmarks] = useState<AthleteBenchmark[]>([]);
+  // Read once per mount: a due date must not move because something else
+  // re-rendered the page.
+  const [nowMs] = useState(() => Date.now());
 
   const listItems = useMemo(
     () => groupMyMissionsByRallyPoint(entries, chainsByRallyPointId),
@@ -397,6 +401,8 @@ export default function MyMissionsPage() {
       <AssignedWorkoutsPanel />
 
       <MyCampaignsPanel showCreateCta={false} />
+
+      <BenchmarkProgressPanel benchmarks={benchmarks} missions={entries} now={nowMs} />
 
       <ScalingProgressionPanel entries={entries} />
 

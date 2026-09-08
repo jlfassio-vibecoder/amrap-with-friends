@@ -8,6 +8,7 @@ const base: AthleteBenchmark = {
   durationMinutes: 10,
   timeDomain: 10,
   versionKey: '',
+  movementVariants: {},
   designatedAt: '2026-01-01T10:00:00.000Z',
   retiredAt: null,
 };

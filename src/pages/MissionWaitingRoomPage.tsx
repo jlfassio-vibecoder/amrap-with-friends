@@ -1610,6 +1610,7 @@ function LiveMissionView({
                     templateId={live.templateId}
                     durationMinutes={live.workDurationSec / 60}
                     versionKey={scalingVersionKey}
+                    movementVariants={scalingPlan}
                   />
                 ) : null}
               </section>

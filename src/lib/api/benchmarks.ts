@@ -1,6 +1,10 @@
 import { callRpc } from '@/lib/api/callRpc';
 import type { TimeDomain } from '@/data/workoutTemplates';
 import type { BenchmarkSlot } from '@/lib/benchmark/benchmarkCap';
+import {
+  readMovementVariants,
+  type MovementVariantSelection,
+} from '@/lib/mission/exerciseScaling';
 
 export interface AthleteBenchmark {
   id: string;
@@ -9,6 +13,14 @@ export interface AthleteBenchmark {
   timeDomain: TimeDomain;
   /** '' means the benchmark is the workout as programmed. */
   versionKey: string;
+  /**
+   * The modification itself, kept so a retest can pre-select it.
+   *
+   * `versionKey` stays the thing attempts are matched on — this is only ever
+   * read to seed a retest, because the key is a one-way fingerprint and cannot
+   * be turned back into a selection.
+   */
+  movementVariants: MovementVariantSelection;
   designatedAt: string;
   /** Non-null once retired: keeps its history, stops holding a slot. */
   retiredAt: string | null;
@@ -56,6 +68,7 @@ export function parseAthleteBenchmark(raw: unknown): AthleteBenchmark | null {
     durationMinutes,
     timeDomain,
     versionKey: typeof row.version_key === 'string' ? row.version_key : '',
+    movementVariants: readMovementVariants(row.movement_variants),
     designatedAt,
     retiredAt: readString(row.retired_at),
   };
@@ -107,12 +120,14 @@ export async function designateBenchmark(input: {
   durationMinutes: number;
   timeDomain: TimeDomain;
   versionKey?: string;
+  movementVariants?: MovementVariantSelection;
 }): Promise<{ data: AthleteBenchmark | null; error: BenchmarkApiError | null }> {
   const { data, error } = await callRpc('designate_benchmark', {
     p_template_id: input.templateId,
     p_duration_minutes: input.durationMinutes,
     p_time_domain: input.timeDomain,
     p_version_key: input.versionKey ?? '',
+    p_movement_variants: input.movementVariants ?? {},
   });
 
   if (error) {

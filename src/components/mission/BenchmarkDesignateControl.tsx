@@ -10,12 +10,15 @@ import {
 import { campaignBenchmarkSlots } from '@/lib/benchmark/campaignBenchmarkSlots';
 import { canDesignateBenchmark, type BenchmarkSlot } from '@/lib/benchmark/benchmarkCap';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
+import type { MovementVariantSelection } from '@/lib/mission/exerciseScaling';
 
 interface BenchmarkDesignateControlProps {
   templateId: string | null;
   durationMinutes: number;
   /** From `versionKeyFor` — the version the athlete plans to perform. */
   versionKey?: string;
+  /** The same plan as a selection, so a retest can pre-select it. */
+  movementVariants?: MovementVariantSelection;
 }
 
 /**
@@ -33,6 +36,7 @@ export function BenchmarkDesignateControl({
   templateId,
   durationMinutes,
   versionKey = '',
+  movementVariants = {},
 }: BenchmarkDesignateControlProps) {
   const { isAuthenticated, isAuthLoading } = useAmrapAuth();
   const [mine, setMine] = useState<AthleteBenchmark[]>([]);
@@ -113,6 +117,7 @@ export function BenchmarkDesignateControl({
       durationMinutes,
       timeDomain: verdict.domain,
       versionKey,
+      movementVariants,
     });
     if (result.error) {
       setError(result.error.message);
