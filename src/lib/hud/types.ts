@@ -57,6 +57,29 @@ export type HudWeekPviMission = {
   lockedAt: string;
 };
 
+/** A mission inside a history week — `HudWeekPviMission` plus what it scored. */
+export type HudWeekMission = HudWeekPviMission & {
+  finalScore: number | null;
+};
+
+/**
+ * One of the 12 local weeks `hud_telemetry` walks, kept whole rather than
+ * reduced to the compliant/deficient bit the attrition strip draws.
+ * `weeks[0]` is the oldest, `weeks[11]` the current week.
+ */
+export type HudHistoryWeek = {
+  /** Monday 00:00 local time for this week, as an instant. */
+  weekStart: string;
+  minutes: number;
+  /** Minutes met this athlete's Civilian quota — the bit the attrition grid draws. */
+  compliant: boolean;
+  missionCount: number;
+  /** Accumulated final score across the week's locked missions. */
+  score: number;
+  pviAverage: number | null;
+  missions: HudWeekMission[];
+};
+
 export interface HUDTelemetryPayload {
   weekMinutes: number;
   weekPviAverage: number | null;
@@ -65,6 +88,8 @@ export interface HUDTelemetryPayload {
   weekEndsAt: string;
   lastLockedAt: string | null;
   attrition: boolean[];
+  /** Empty when the server predates the week-history migration; the HUD degrades to the read-only grid. */
+  weeks: HudHistoryWeek[];
   domainMinutes30d: HudDomainMinutes;
   classification: HudClassification;
   activity7d: HudActivity7d;
