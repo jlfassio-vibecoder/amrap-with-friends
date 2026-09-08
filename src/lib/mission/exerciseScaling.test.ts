@@ -59,6 +59,8 @@ describe('the ladder data', () => {
       'hinge--partial',
       'lunge--partial',
       'lunge--supported',
+      'mobility--smaller-range',
+      'mobility--supported',
       'plank--incline',
       'plank--knees',
       'plyo--low',
@@ -96,6 +98,13 @@ describe('scalingOptionsForMovement', () => {
   it('offers the knees for a push-up', () => {
     const labels = scalingOptionsForMovement('Diamond Push-ups').map((option) => option.label);
     expect(labels).toContain('From the knees');
+  });
+
+  it('offers a prop and a smaller range for AMQAP mobility', () => {
+    const labels = scalingOptionsForMovement('Pigeon Pose (20-Sec/side)').map(
+      (option) => option.label
+    );
+    expect(labels).toEqual(['Use a prop', 'Smaller range']);
   });
 
   it('leads with the option nearest the standard movement', () => {

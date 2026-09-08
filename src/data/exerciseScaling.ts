@@ -177,6 +177,19 @@ const DIP_LADDER: ScalingOption[] = [
   },
 ];
 
+const MOBILITY_LADDER: ScalingOption[] = [
+  {
+    id: 'mobility--supported',
+    label: 'Use a prop',
+    how: 'Hands on the floor, a block, or a wall so you can keep the shape without forcing the joint.',
+  },
+  {
+    id: 'mobility--smaller-range',
+    label: 'Smaller range',
+    how: 'Move only through the range you can control slowly. End range grows as the tissue warms.',
+  },
+];
+
 const SUPINE_BACK_LADDER: ScalingOption[] = [
   {
     id: 'supine-back--partial',
@@ -295,4 +308,20 @@ export const EXERCISE_SCALING: ScalingLadder[] = [
 
   // Arms.
   { exerciseId: 'floor-dips', options: DIP_LADDER },
+
+  // AMQAP quality flows — reduce range or add a prop, never bounce for volume.
+  { exerciseId: '90-90-hip-transitions', options: MOBILITY_LADDER },
+  { exerciseId: 'spiderman-lunge-with-thoracic-reach', options: MOBILITY_LADDER },
+  { exerciseId: 'downward-facing-dog-to-cobra', options: MOBILITY_LADDER },
+  { exerciseId: 'quadruped-hip-circles', options: MOBILITY_LADDER },
+  { exerciseId: 'low-lunge', options: MOBILITY_LADDER },
+  { exerciseId: 'half-moon-pose', options: MOBILITY_LADDER },
+  { exerciseId: 'prone-internal-rotation-windshield-wipers', options: MOBILITY_LADDER },
+  { exerciseId: 'cobra-pose', options: MOBILITY_LADDER },
+  { exerciseId: 'childs-pose', options: MOBILITY_LADDER },
+  { exerciseId: 'cat-and-cow', options: MOBILITY_LADDER },
+  { exerciseId: 'downward-facing-dog', options: MOBILITY_LADDER },
+  { exerciseId: 'camel-pose', options: MOBILITY_LADDER },
+  { exerciseId: 'pigeon-pose', options: MOBILITY_LADDER },
+  { exerciseId: '90-90-hip-internal-rotation-lift', options: MOBILITY_LADDER },
 ];
