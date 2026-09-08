@@ -89,4 +89,19 @@ describe('PacingGauge', () => {
     expect(container.innerHTML).not.toMatch(/#[0-9a-f]{6}/i);
     expect(container.innerHTML).toContain('--color-pace-overtime');
   });
+
+  it('draws every zone as a short arc so the green track stays continuous', () => {
+    // The optimal zone covers most of the dial. Treating "most of the dial" as
+    // SVG's large-arc flag sends the path the long way around the circle; the
+    // viewBox then clips it into two disconnected green stubs.
+    const { container } = render(<PacingGauge roundSplitsSec={[90]} elapsedSec={120} />);
+    const arcs = [...container.querySelectorAll('path')].map(
+      (path) => path.getAttribute('d') ?? ''
+    );
+    expect(arcs).toHaveLength(3);
+    for (const d of arcs) {
+      // A rx ry x-axis-rotation large-arc sweep x y — large-arc must be 0.
+      expect(d).toMatch(/A 46 46 0 0 1 /);
+    }
+  });
 });

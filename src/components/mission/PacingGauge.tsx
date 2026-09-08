@@ -34,19 +34,29 @@ const ZONE_NAME: Record<PacingZone, string> = {
   overtime: 'Overtime',
 };
 
-/** Ratio → a point on the arc. 0 is hard left, MAX_RATIO hard right. */
-function pointAt(ratio: number): { x: number; y: number } {
+/**
+ * Ratio → a point on the arc at the given radius (RADIUS by default). 0 is
+ * hard left, MAX_RATIO hard right. The optional radius lets marks drawn
+ * inside the track — the benchmark tick — share this same angle formula
+ * instead of re-deriving it.
+ */
+function pointAt(ratio: number, radius: number = RADIUS): { x: number; y: number } {
   const angle = Math.PI - (Math.min(ratio, MAX_RATIO) / MAX_RATIO) * Math.PI;
   return {
-    x: CENTRE_X + RADIUS * Math.cos(angle),
-    y: CENTRE_Y - RADIUS * Math.sin(angle),
+    x: CENTRE_X + radius * Math.cos(angle),
+    y: CENTRE_Y - radius * Math.sin(angle),
   };
 }
 
 function arcPath(fromRatio: number, toRatio: number): string {
   const start = pointAt(fromRatio);
   const end = pointAt(toRatio);
-  const large = (toRatio - fromRatio) / MAX_RATIO > 0.5 ? 1 : 0;
+  // Large-arc is about a full circle (≥180°), not "most of this gauge". The
+  // optimal zone is >50% of the dial but still well under 180° of a circle —
+  // treating dial-fraction as large-arc draws the long way around and breaks
+  // the green track into floating fragments.
+  const spanDegrees = ((toRatio - fromRatio) / MAX_RATIO) * SWEEP_DEGREES;
+  const large = spanDegrees > 180 ? 1 : 0;
   return `M ${start.x} ${start.y} A ${RADIUS} ${RADIUS} 0 ${large} 1 ${end.x} ${end.y}`;
 }
 
@@ -126,8 +136,8 @@ export function PacingGauge({
         <line
           x1={pointAt(1).x}
           y1={pointAt(1).y}
-          x2={CENTRE_X + (RADIUS - 11) * Math.cos(Math.PI - Math.PI / MAX_RATIO)}
-          y2={CENTRE_Y - (RADIUS - 11) * Math.sin(Math.PI - Math.PI / MAX_RATIO)}
+          x2={pointAt(1, RADIUS - 11).x}
+          y2={pointAt(1, RADIUS - 11).y}
           stroke="var(--color-ink)"
           strokeWidth={1.5}
           opacity={0.5}

@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { MissionWidgetBoundary } from '@/components/mission/MissionWidgetBoundary';
 import { PacingGauge } from '@/components/mission/PacingGauge';
 import { readPacingGaugeEnabled, writePacingGaugeEnabled } from '@/lib/pacing/pacingGaugePrefs';
+import type { LiveMissionPhase } from '@/lib/missionSync/types';
 
 interface MissionPacingGaugeProps {
-  phase: string;
+  phase: LiveMissionPhase;
   roundSplitsSec: readonly number[] | null | undefined;
   elapsedSec: number;
   isPaused: boolean;
@@ -55,6 +56,11 @@ export function MissionPacingGauge({
             onChange={(event) => {
               setEnabled(event.target.checked);
               writePacingGaugeEnabled(event.target.checked);
+              // Hand focus back. shouldHandleLogRoundHotkey treats any focused
+              // INPUT as a typing target, so leaving this checkbox focused
+              // silently disables Space for the rest of the mission once work
+              // begins — even though the toggle itself is gone from the live view.
+              event.target.blur();
             }}
           />
           Pacing gauge during the mission
@@ -63,7 +69,7 @@ export function MissionPacingGauge({
     );
   }
 
-  if (phase !== 'work' || !enabled) {
+  if (phase !== 'work' || !enabled || isPractice) {
     return null;
   }
 

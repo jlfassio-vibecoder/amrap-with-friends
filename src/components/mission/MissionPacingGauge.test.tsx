@@ -3,14 +3,22 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MissionPacingGauge } from '@/components/mission/MissionPacingGauge';
 import { shouldHandleLogRoundHotkey } from '@/lib/mission/logRoundHotkey';
 import { resetPacingGaugePrefs } from '@/lib/pacing/pacingGaugePrefs';
+import type { LiveMissionPhase } from '@/lib/missionSync/types';
 
 afterEach(cleanup);
 beforeEach(() => {
-  window.localStorage.clear();
+  try {
+    window.localStorage.clear();
+  } catch {
+    // Some runners expose window without a Storage implementation.
+  }
   resetPacingGaugePrefs();
 });
 
-function renderAt(phase: string, overrides: Partial<Parameters<typeof MissionPacingGauge>[0]> = {}) {
+function renderAt(
+  phase: LiveMissionPhase,
+  overrides: Partial<Parameters<typeof MissionPacingGauge>[0]> = {}
+) {
   return render(
     <MissionPacingGauge
       phase={phase}
@@ -34,11 +42,12 @@ describe('the gauge cannot disable the Log round hotkey', () => {
   });
 
   it('leaves Space logging rounds after the athlete uses the toggle', () => {
-    // Toggling happens in the rally point, so the focused element afterwards is
-    // a checkbox that no longer exists once the clock starts.
+    // Toggling happens in the rally point. Blur afterwards so a focused
+    // checkbox cannot silently disable Space once work begins.
     renderAt('waiting');
     const checkbox = screen.getByRole('checkbox');
     fireEvent.click(checkbox);
+    expect(document.activeElement).not.toBe(checkbox);
     cleanup();
 
     const { container } = renderAt('work');
@@ -75,8 +84,17 @@ describe('where the gauge appears', () => {
   });
 
   it('stays out of practice entirely', () => {
-    const { container } = renderAt('waiting', { isPractice: true });
-    expect(container.innerHTML).toBe('');
+    const waiting = renderAt('waiting', { isPractice: true });
+    expect(waiting.container.innerHTML).toBe('');
+    cleanup();
+
+    // The gap this pins: the toggle being hidden in 'waiting' says nothing
+    // about 'work', where the gauge itself renders. A practice round reaches
+    // phase 'work' just like a real mission does, and the preference defaults
+    // on, so without this check the gauge showed up during practice — exactly
+    // what this describe block claims doesn't happen.
+    const work = renderAt('work', { isPractice: true });
+    expect(work.container.innerHTML).toBe('');
   });
 
   it('honours the preference being switched off', () => {
