@@ -366,20 +366,35 @@ would occupy the wrong slot permanently with nothing able to notice.
 `20260909240000` checks the pair, and the contract test now runs the SQL arms
 against `domainForCap` over every legal clock.
 
-### Known costs, not defects
+### The fetch cost, since fixed
 
-**Extra fetches on two hot paths.** The designate control fetches benchmarks and
-campaigns on every rally-point load, for host and joiner alike; the HUD card
-adds benchmarks, missions and campaigns. That is the price of deriving attempts
-instead of storing them, and it is still the right trade — but it is three RPCs
-on the HUD and two on the waiting room, and worth revisiting if either gets
-slow.
+The card first cost three RPCs on the HUD and two on the rally point, on
+surfaces every athlete opens constantly. `benchmark_overview` makes it one of
+each.
 
-**A failed campaign fetch on first load frees a slot it should hold.** The
-control keeps previous slots when the campaign fetch fails, but on a first load
-there are none to keep, so the athlete could designate into a campaign-held
-domain. Soft by design — over-designating costs training, not integrity — but
-the code comment there claims more protection than it delivers.
+The round trips were the smaller half. `my_missions` returns every row's full
+workout jsonb, its score breakdown, its coach-workout join and two correlated
+chain-item counts — none of which an attempt needs — so the HUD was pulling an
+athlete's entire mission history in workout-sized rows to compute a handful of
+scores. `benchmark_overview` returns eight columns per scored mission, and only
+when asked: the rally point leaves the flag off, because it only needs to know
+whether this workout is already a benchmark and which slots are free.
+
+Deriving attempts rather than storing them is still the right trade. This makes
+it the cheap side of it.
+
+`my_campaigns` gave the schedule back at the same time. It was added in phase 1
+purely to feed this card, and once `benchmark_overview` returned live campaigns'
+schedules itself, `my_campaigns` was sending up to sixty occurrence rows per
+campaign to every caller of My campaigns with nothing reading them — the fetch
+cost moved rather than removed.
+
+**One defect fell out of the same change.** The designate control used to fetch
+benchmarks and campaigns separately and keep its previous campaign slots when
+that half failed — which on a first load meant no slots at all, so a failed
+campaign fetch let an athlete designate into a campaign-held domain. One call
+means one outcome: both halves now succeed or fail together, and the control
+can never think a domain is free because half the answer arrived.
 
 ### Phase 4 notes
 

@@ -93,7 +93,6 @@ function campaign(overrides: Partial<CampaignSummary> = {}): CampaignSummary {
     inviteCode: 'ABC123',
     totalMissions: 24,
     completedMissions: 2,
-    schedule: [],
     memberCount: 3,
     ...overrides,
   };

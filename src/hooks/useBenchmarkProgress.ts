@@ -1,62 +1,49 @@
 import { useCallback, useEffect, useState } from 'react';
-import { fetchMyBenchmarks, type AthleteBenchmark } from '@/lib/api/benchmarks';
-import { fetchMyMissions, type MyMissionEntry } from '@/lib/api/myMissions';
-import { fetchMyCampaigns } from '@/lib/api/campaigns';
+import {
+  fetchBenchmarkOverview,
+  type AthleteBenchmark,
+  type BenchmarkAttemptRow,
+} from '@/lib/api/benchmarks';
 import { campaignBenchmarkSlots } from '@/lib/benchmark/campaignBenchmarkSlots';
 import type { BenchmarkSlot } from '@/lib/benchmark/benchmarkCap';
 
 export interface BenchmarkProgressData {
   benchmarks: AthleteBenchmark[];
-  missions: MyMissionEntry[];
+  missions: BenchmarkAttemptRow[];
   campaignSlots: BenchmarkSlot[];
   loading: boolean;
 }
 
 /**
- * Everything the Benchmarks card needs, in one place.
+ * Everything the Benchmarks card needs, in one round trip.
  *
  * Attempts are derived from the athlete's own missions rather than stored, so
- * the card needs the mission list as well as the benchmarks — that is the cost
- * of not keeping an attempts table in step, and it is the cheaper side of the
- * trade.
+ * the card needs their mission history as well as their benchmarks — that is
+ * the cost of not keeping an attempts table in step. `benchmark_overview`
+ * makes it the cheap side of the trade: eight columns per scored mission
+ * rather than my_missions' workouts, breakdowns and chain counts, all in the
+ * same call as the benchmarks and the campaign schedules.
  *
- * A failure in any one of the three leaves that part empty rather than failing
- * the card: a benchmark with no mission list shows "no attempt yet", which is
- * wrong but harmless, while an error card in the middle of the HUD is neither.
+ * A failure leaves the card empty rather than erroring in the middle of the
+ * HUD, which is the right way round for a progress surface.
  */
 export function useBenchmarkProgress(enabled: boolean): BenchmarkProgressData {
   const [benchmarks, setBenchmarks] = useState<AthleteBenchmark[]>([]);
-  const [missions, setMissions] = useState<MyMissionEntry[]>([]);
+  const [missions, setMissions] = useState<BenchmarkAttemptRow[]>([]);
   const [campaignSlots, setCampaignSlots] = useState<BenchmarkSlot[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async (isStale: () => boolean) => {
-    const [benchmarkResult, missionResult, campaignResult] = await Promise.all([
-      fetchMyBenchmarks(),
-      fetchMyMissions(),
-      fetchMyCampaigns(),
-    ]);
+    const { data, error } = await fetchBenchmarkOverview(true);
 
     if (isStale()) {
       return;
     }
 
-    if (!benchmarkResult.error) {
-      setBenchmarks(benchmarkResult.data ?? []);
-    }
-    if (!missionResult.error) {
-      setMissions(missionResult.data ?? []);
-    }
-    if (!campaignResult.error) {
-      setCampaignSlots(
-        campaignBenchmarkSlots(
-          campaignResult.data.map((campaign) => ({
-            name: campaign.name,
-            status: campaign.status,
-            schedule: campaign.schedule,
-          }))
-        )
-      );
+    if (!error && data) {
+      setBenchmarks(data.benchmarks);
+      setMissions(data.attempts);
+      setCampaignSlots(campaignBenchmarkSlots(data.campaigns));
     }
     setLoading(false);
   }, []);

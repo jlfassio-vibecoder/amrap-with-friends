@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { supabase } from '@/lib/supabase';
 import {
   designateBenchmark,
+  fetchBenchmarkOverview,
   fetchMyBenchmarks,
   parseAthleteBenchmark,
   personalBenchmarkSlots,
@@ -181,5 +182,119 @@ describe('personalBenchmarkSlots', () => {
   it('holds nothing for a retired one', () => {
     const retired = parseAthleteBenchmark({ ...ROW, retired_at: '2026-03-01T10:00:00.000Z' });
     expect(personalBenchmarkSlots([retired!])).toEqual([]);
+  });
+});
+
+describe('fetchBenchmarkOverview', () => {
+  it('leaves attempts off by default, for the rally point', () => {
+    rpcMock.mockResolvedValue({
+      data: { ok: true, benchmarks: [ROW], campaigns: [], attempts: [] },
+      error: null,
+    } as never);
+
+    return fetchBenchmarkOverview().then((result) => {
+      expect(rpcMock).toHaveBeenCalledWith('benchmark_overview', {
+        p_include_attempts: false,
+      });
+      expect(result.data?.benchmarks).toHaveLength(1);
+      expect(result.data?.attempts).toEqual([]);
+    });
+  });
+
+  it('asks for attempts when the card needs a series', () => {
+    rpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        benchmarks: [],
+        campaigns: [],
+        attempts: [
+          {
+            mission_id: 'm1',
+            template_id: 'the-valve',
+            duration_minutes: 10,
+            created_at: '2026-01-01T10:00:00.000Z',
+            scheduled_at: null,
+            final_score: 142,
+            modified_movements: ['Diamond Push-ups'],
+            movement_variants: { 'Diamond Push-ups': 'push-up--knees' },
+          },
+        ],
+      },
+      error: null,
+    } as never);
+
+    return fetchBenchmarkOverview(true).then((result) => {
+      expect(rpcMock).toHaveBeenCalledWith('benchmark_overview', { p_include_attempts: true });
+      expect(result.data?.attempts[0]).toEqual({
+        missionId: 'm1',
+        templateId: 'the-valve',
+        durationMinutes: 10,
+        createdAt: '2026-01-01T10:00:00.000Z',
+        scheduledAt: null,
+        finalScore: 142,
+        modifiedMovements: ['Diamond Push-ups'],
+        movementVariants: { 'Diamond Push-ups': 'push-up--knees' },
+      });
+    });
+  });
+
+  it('returns campaign schedules raw, for deriveCampaignRoles to read', () => {
+    rpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        benchmarks: [],
+        campaigns: [
+          {
+            name: 'Winter',
+            status: 'active',
+            schedule: [
+              { week_number: 1, template_id: 'the-hemodynamic', duration_minutes: 10 },
+              { week_number: 2, template_id: null, duration_minutes: 10 },
+            ],
+          },
+        ],
+        attempts: [],
+      },
+      error: null,
+    } as never);
+
+    return fetchBenchmarkOverview().then((result) => {
+      expect(result.data?.campaigns[0]).toEqual({
+        name: 'Winter',
+        status: 'active',
+        schedule: [
+          { weekNumber: 1, templateId: 'the-hemodynamic', durationMinutes: 10 },
+          { weekNumber: 2, templateId: null, durationMinutes: 10 },
+        ],
+      });
+    });
+  });
+
+  it('drops a malformed row rather than failing the whole overview', () => {
+    rpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        benchmarks: [ROW, { id: 'broken' }],
+        campaigns: [{ status: 'active' }],
+        attempts: [{ mission_id: 'm1' }],
+      },
+      error: null,
+    } as never);
+
+    return fetchBenchmarkOverview(true).then((result) => {
+      expect(result.data?.benchmarks).toHaveLength(1);
+      expect(result.data?.campaigns).toEqual([]);
+      expect(result.data?.attempts).toEqual([]);
+    });
+  });
+
+  it('asks a signed-out athlete to sign in', () => {
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: { message: 'Authentication required' },
+    } as never);
+    return fetchBenchmarkOverview().then((result) => {
+      expect(result.error?.message).toBe('Sign in to keep benchmarks.');
+    });
   });
 });

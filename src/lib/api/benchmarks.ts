@@ -1,10 +1,9 @@
 import { callRpc } from '@/lib/api/callRpc';
 import type { TimeDomain } from '@/data/workoutTemplates';
 import type { BenchmarkSlot } from '@/lib/benchmark/benchmarkCap';
-import {
-  readMovementVariants,
-  type MovementVariantSelection,
-} from '@/lib/mission/exerciseScaling';
+import { readMovementVariants, type MovementVariantSelection } from '@/lib/mission/exerciseScaling';
+import { readModifiedMovements } from '@/lib/mission/modifiedMovements';
+import type { CampaignBenchmarkInput } from '@/lib/benchmark/campaignBenchmarkSlots';
 
 export interface AthleteBenchmark {
   id: string;
@@ -91,6 +90,119 @@ function authError(error: { message: string }): BenchmarkApiError | null {
   return error.message.includes('Authentication required')
     ? { message: 'Sign in to keep benchmarks.' }
     : null;
+}
+
+/**
+ * A scored mission of the caller's, in the eight columns an attempt needs.
+ *
+ * Structurally an `AttemptCandidate`, and deliberately not a `MyMissionEntry`:
+ * the card has no use for workouts, breakdowns or chain counts, and shipping
+ * them on every HUD load was the expensive half of deriving attempts.
+ */
+export interface BenchmarkAttemptRow {
+  missionId: string;
+  templateId: string | null;
+  durationMinutes: number;
+  createdAt: string;
+  scheduledAt: string | null;
+  finalScore: number | null;
+  modifiedMovements: string[];
+  movementVariants: MovementVariantSelection;
+}
+
+export interface BenchmarkOverview {
+  benchmarks: AthleteBenchmark[];
+  /** Live campaigns' raw schedules, for `campaignBenchmarkSlots`. */
+  campaigns: CampaignBenchmarkInput[];
+  /** Empty unless `includeAttempts` was asked for. */
+  attempts: BenchmarkAttemptRow[];
+}
+
+function parseAttemptRow(raw: unknown): BenchmarkAttemptRow | null {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+  const row = raw as Record<string, unknown>;
+  const missionId = readString(row.mission_id);
+  const durationMinutes = typeof row.duration_minutes === 'number' ? row.duration_minutes : null;
+  const createdAt = readString(row.created_at);
+  if (!missionId || durationMinutes === null || !createdAt) {
+    return null;
+  }
+  return {
+    missionId,
+    templateId: readString(row.template_id),
+    durationMinutes,
+    createdAt,
+    scheduledAt: readString(row.scheduled_at),
+    finalScore: typeof row.final_score === 'number' ? row.final_score : null,
+    modifiedMovements: readModifiedMovements(row.modified_movements),
+    movementVariants: readMovementVariants(row.movement_variants),
+  };
+}
+
+function parseCampaignSchedule(raw: unknown): CampaignBenchmarkInput | null {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+  const row = raw as Record<string, unknown>;
+  const name = readString(row.name);
+  const status = readString(row.status);
+  if (!name || !status) {
+    return null;
+  }
+  const schedule = Array.isArray(row.schedule) ? row.schedule : [];
+  return {
+    name,
+    status,
+    schedule: schedule.map((entry) => {
+      const slot = (entry ?? {}) as Record<string, unknown>;
+      return {
+        weekNumber: typeof slot.week_number === 'number' ? slot.week_number : 0,
+        templateId: readString(slot.template_id),
+        durationMinutes: typeof slot.duration_minutes === 'number' ? slot.duration_minutes : 0,
+      };
+    }),
+  };
+}
+
+/**
+ * Everything the Benchmarks card needs, in one round trip.
+ *
+ * `includeAttempts` is off by default because the rally point does not need
+ * them — it only asks whether this workout is already a benchmark and which
+ * slots are free — and attempts are the only part of the payload that grows
+ * with an athlete's history.
+ */
+export async function fetchBenchmarkOverview(
+  includeAttempts = false
+): Promise<{ data: BenchmarkOverview | null; error: BenchmarkApiError | null }> {
+  const { data, error } = await callRpc('benchmark_overview', {
+    p_include_attempts: includeAttempts,
+  });
+
+  if (error) {
+    return { data: null, error: authError(error) ?? { message: error.message } };
+  }
+
+  const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const readList = <T>(value: unknown, parse: (entry: unknown) => T | null): T[] =>
+    (Array.isArray(value) ? value : [])
+      .map((entry) => parse(entry))
+      .filter((entry): entry is T => entry !== null);
+
+  return {
+    data: {
+      benchmarks: readList(raw.benchmarks, parseAthleteBenchmark),
+      campaigns: readList(raw.campaigns, parseCampaignSchedule),
+      attempts: readList(raw.attempts, parseAttemptRow),
+    },
+    error: null,
+  };
 }
 
 export async function fetchMyBenchmarks(): Promise<{

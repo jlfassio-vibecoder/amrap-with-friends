@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { fetchMyCampaigns } from '@/lib/api/campaigns';
 import {
   designateBenchmark,
-  fetchMyBenchmarks,
+  fetchBenchmarkOverview,
   personalBenchmarkSlots,
   retireBenchmark,
   type AthleteBenchmark,
@@ -48,29 +47,23 @@ export function BenchmarkDesignateControl({
   const canLoad = !isAuthLoading && isAuthenticated && templateId !== null;
 
   const load = useCallback(async (isStale: () => boolean = () => false) => {
-    const [benchmarks, campaigns] = await Promise.all([fetchMyBenchmarks(), fetchMyCampaigns()]);
+    // Attempts are left off: this surface only asks whether the workout is
+    // already a benchmark and which slots are free, and attempts are the only
+    // part of the payload that grows with the athlete's history.
+    const { data, error: loadError } = await fetchBenchmarkOverview(false);
     if (isStale()) {
       return;
     }
-    if (benchmarks.error) {
-      setError(benchmarks.error.message);
+    if (loadError || !data) {
+      // One call means one outcome: benchmarks and campaign slots now succeed
+      // or fail together, so the control can never think a domain is free
+      // because half the answer arrived.
+      setError(loadError?.message ?? 'Something went wrong. Please try again.');
       setLoaded(true);
       return;
     }
-    setMine(benchmarks.data ?? []);
-    // A campaign failing to load must not silently free a slot it is holding,
-    // so an error here leaves the previous slots rather than clearing them.
-    if (!campaigns.error) {
-      setCampaignSlots(
-        campaignBenchmarkSlots(
-          campaigns.data.map((campaign) => ({
-            name: campaign.name,
-            status: campaign.status,
-            schedule: campaign.schedule,
-          }))
-        )
-      );
-    }
+    setMine(data.benchmarks);
+    setCampaignSlots(campaignBenchmarkSlots(data.campaigns));
     setLoaded(true);
   }, []);
 
