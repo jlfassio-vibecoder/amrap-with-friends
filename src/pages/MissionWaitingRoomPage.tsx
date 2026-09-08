@@ -28,6 +28,7 @@ import { GhostPacerStrip } from '@/components/GhostPacerStrip';
 import { CopyInviteLink } from '@/components/mission/CopyInviteLink';
 import { DaisyChainCta } from '@/components/mission/DaisyChainCta';
 import { MissionLoadingModal } from '@/components/mission/MissionLoadingModal';
+import { MissionLockedModal } from '@/components/mission/MissionLockedModal';
 import { EditRallyScheduleForm } from '@/components/mission/EditRallyScheduleForm';
 import { ArmedRallyPointControls } from '@/components/mission/ArmedRallyPointControls';
 import { HostRallyPointSteps } from '@/components/mission/HostRallyPointSteps';
@@ -42,6 +43,7 @@ import { CoachWalkthrough } from '@/components/walkthrough/CoachWalkthrough';
 import { WalkthroughCompleteModal } from '@/components/walkthrough/WalkthroughCompleteModal';
 import { useRallyPointWalkthrough } from '@/components/walkthrough/useRallyPointWalkthrough';
 import { useGhostPacer } from '@/hooks/useGhostPacer';
+import { useMissionLockedModal } from '@/hooks/useMissionLockedModal';
 import { useTacticalAudio } from '@/hooks/useTacticalAudio';
 import { useRallyPointForceNav } from '@/hooks/useRallyPointForceNav';
 import {
@@ -493,6 +495,7 @@ function LiveMissionView({
   );
   const live = useLiveAmrapMission(missionId, channel);
   const { isHost, start: startMission, phase: livePhase } = live;
+  const missionLockedModal = useMissionLockedModal(livePhase, live.isPractice);
 
   const rallyPointId =
     channel.mission?.rally_point_id ?? getStoredRallyPointIdForMission(missionId) ?? null;
@@ -1803,6 +1806,10 @@ function LiveMissionView({
       ) : null}
 
       {showMissionLoadingModal ? <MissionLoadingModal onConfirm={dismissMissionLoading} /> : null}
+
+      {missionLockedModal.visible ? (
+        <MissionLockedModal onDismiss={missionLockedModal.dismiss} />
+      ) : null}
 
       {authOpenForSave ? <AuthModal onClose={handleAuthCloseForSave} /> : null}
 
