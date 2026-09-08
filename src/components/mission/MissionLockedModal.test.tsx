@@ -4,27 +4,48 @@ import { MissionLockedModal } from '@/components/mission/MissionLockedModal';
 
 afterEach(cleanup);
 
+const sampleWorkout = [
+  { name: 'Air Squats', target: 10, unit: 'reps' },
+  { name: 'Hand-Release Push-ups', target: 10, unit: 'reps' },
+];
+
 describe('MissionLockedModal', () => {
-  it('shows the header, body copy and command button', () => {
-    render(<MissionLockedModal onDismiss={vi.fn()} />);
+  it('shows the header, body copy, exercises and command button', () => {
+    render(<MissionLockedModal workout={sampleWorkout} onDismiss={vi.fn()} />);
     expect(screen.getByRole('heading', { name: /mission locked/i })).toBeTruthy();
     expect(
       screen.getByText(
         "Systems are green to go. The squad has left the Rally Point. It's time to MOVE!"
       )
     ).toBeTruthy();
+    expect(screen.getByText('Air Squats — 10 reps')).toBeTruthy();
+    expect(screen.getByText('Hand-Release Push-ups — 10 reps')).toBeTruthy();
     expect(screen.getByRole('button', { name: /cleared hot/i })).toBeTruthy();
+  });
+
+  it('lists exercises above the Cleared hot button', () => {
+    render(<MissionLockedModal workout={sampleWorkout} onDismiss={vi.fn()} />);
+    const list = screen.getByRole('list');
+    const button = screen.getByRole('button', { name: /cleared hot/i });
+    expect(Boolean(list.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(
+      true
+    );
+  });
+
+  it('omits the list when the workout is empty', () => {
+    render(<MissionLockedModal workout={[]} onDismiss={vi.fn()} />);
+    expect(screen.queryByRole('list')).toBeNull();
   });
 
   it('calls onDismiss when the command button is tapped', () => {
     const onDismiss = vi.fn();
-    render(<MissionLockedModal onDismiss={onDismiss} />);
+    render(<MissionLockedModal workout={sampleWorkout} onDismiss={onDismiss} />);
     fireEvent.click(screen.getByRole('button', { name: /cleared hot/i }));
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 
   it('is a labelled dialog', () => {
-    render(<MissionLockedModal onDismiss={vi.fn()} />);
+    render(<MissionLockedModal workout={sampleWorkout} onDismiss={vi.fn()} />);
     const dialog = screen.getByRole('dialog');
     expect(dialog.getAttribute('aria-modal')).toBe('true');
     expect(dialog.getAttribute('aria-labelledby')).toBeTruthy();

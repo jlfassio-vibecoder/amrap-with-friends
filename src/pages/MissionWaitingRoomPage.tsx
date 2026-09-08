@@ -1808,7 +1808,7 @@ function LiveMissionView({
       {showMissionLoadingModal ? <MissionLoadingModal onConfirm={dismissMissionLoading} /> : null}
 
       {missionLockedModal.visible ? (
-        <MissionLockedModal onDismiss={missionLockedModal.dismiss} />
+        <MissionLockedModal workout={live.workout} onDismiss={missionLockedModal.dismiss} />
       ) : null}
 
       {authOpenForSave ? <AuthModal onClose={handleAuthCloseForSave} /> : null}
