@@ -1,17 +1,13 @@
 import { evaluateLoadImbalance } from '@/lib/hud/evaluateLoadImbalance';
 import type { HudCoreDomain, HudDomainMinutes } from '@/lib/hud/types';
+import { brandNameForDomain } from '@/data/timeDomainGuidance';
 import { formatCapRange } from '@/lib/timeDomains';
 
 interface DomainMatrixChartProps {
   domainMinutes30d: HudDomainMinutes;
 }
 
-const CORE_SEGMENTS: Array<{ domain: HudCoreDomain; label: string }> = [
-  { domain: 5, label: 'Sprint' },
-  { domain: 10, label: 'Crucible' },
-  { domain: 15, label: 'Grind' },
-  { domain: 20, label: 'Marathon' },
-];
+const CORE_DOMAINS: HudCoreDomain[] = [5, 10, 15, 20];
 
 const BAR_WIDTH = 360;
 const BAR_HEIGHT = 24;
@@ -21,15 +17,16 @@ export function DomainMatrixChart({ domainMinutes30d }: DomainMatrixChartProps) 
   const coreTotal =
     domainMinutes30d[5] + domainMinutes30d[10] + domainMinutes30d[15] + domainMinutes30d[20];
 
-  const segments = CORE_SEGMENTS.map(({ domain, label }, index) => {
+  const segments = CORE_DOMAINS.map((domain, index) => {
+    const label = brandNameForDomain(domain);
     const minutes = domainMinutes30d[domain];
     const width =
-      coreTotal > 0 ? (minutes / coreTotal) * BAR_WIDTH : BAR_WIDTH / CORE_SEGMENTS.length;
+      coreTotal > 0 ? (minutes / coreTotal) * BAR_WIDTH : BAR_WIDTH / CORE_DOMAINS.length;
 
-    const x = CORE_SEGMENTS.slice(0, index).reduce((sum, { domain: d }) => {
+    const x = CORE_DOMAINS.slice(0, index).reduce((sum, d) => {
       const prevMinutes = domainMinutes30d[d];
       const prevWidth =
-        coreTotal > 0 ? (prevMinutes / coreTotal) * BAR_WIDTH : BAR_WIDTH / CORE_SEGMENTS.length;
+        coreTotal > 0 ? (prevMinutes / coreTotal) * BAR_WIDTH : BAR_WIDTH / CORE_DOMAINS.length;
       return sum + prevWidth;
     }, 0);
 

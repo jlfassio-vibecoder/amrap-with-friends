@@ -18,7 +18,9 @@ import {
 } from '@/lib/workout/filterWorkoutTemplates';
 import { WorkoutTemplateCard } from '@/components/createMission/WorkoutTemplateCard';
 import { SmartRecoveryToggle } from '@/components/createMission/SmartRecoveryToggle';
+import { TimeDomainInfoModal } from '@/components/createMission/TimeDomainInfoModal';
 import { WorkoutStyleInfoModal } from '@/components/workoutStyle/WorkoutStyleInfoModal';
+import { guidanceForDomain } from '@/data/timeDomainGuidance';
 import type { ClassificationQuotas } from '@/lib/hud/classificationQuotas';
 import type { ClassificationRank, HudClassification } from '@/lib/hud/types';
 import type { TemplateRecoveryLock } from '@/lib/smartRecovery/computeRecoveryLocks';
@@ -63,9 +65,11 @@ export function WorkoutTemplatePicker({
   onTemplateSelect,
 }: WorkoutTemplatePickerProps) {
   const [infoCategory, setInfoCategory] = useState<WorkoutCategory | null>(null);
+  const [infoDomain, setInfoDomain] = useState<TimeDomain | null>(null);
   const [intensityTier, setIntensityTier] = useState<IntensityTier | null>(null);
   const [nameQuery, setNameQuery] = useState('');
   const searching = normalizeMissionNameQuery(nameQuery).length > 0;
+  const selectedDomainGuidance = guidanceForDomain(durationMinutes);
 
   const visibleTemplates = filterWorkoutTemplates(WORKOUT_TEMPLATES, {
     durationMinutes,
@@ -108,19 +112,43 @@ export function WorkoutTemplatePicker({
             const selected = durationMinutes === duration;
 
             return (
-              <button
+              <div
                 key={duration}
-                type="button"
-                disabled={!available || searching}
-                className={chipClassName(selected, available)}
-                onClick={() => onDurationChange(duration)}
+                className={`inline-flex items-center gap-1.5 ${
+                  selected
+                    ? 'rounded-full bg-accent py-2 pl-4 pr-2 text-sm font-semibold text-on-accent'
+                    : available
+                      ? 'hover:border-accent/40 rounded-full border border-border bg-surface py-2 pl-4 pr-2 text-sm font-semibold text-ink'
+                      : 'rounded-full border border-border bg-surface py-2 pl-4 pr-2 text-sm font-semibold text-muted opacity-60'
+                }`}
               >
-                {duration} min
-                {!available ? <span className="ml-1 text-xs uppercase">Soon</span> : null}
-              </button>
+                <button
+                  type="button"
+                  disabled={!available || searching}
+                  className="bg-transparent text-inherit disabled:opacity-60"
+                  onClick={() => onDurationChange(duration)}
+                >
+                  {duration} min
+                  {!available ? <span className="ml-1 text-xs uppercase">Soon</span> : null}
+                </button>
+                <button
+                  type="button"
+                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold leading-none hover:opacity-80 ${
+                    selected ? 'bg-on-accent text-accent' : 'bg-accent text-on-accent'
+                  }`}
+                  aria-label={`What's the ${duration} min domain?`}
+                  title={`Learn what the ${duration} min domain is for`}
+                  onClick={() => setInfoDomain(duration)}
+                >
+                  ?
+                </button>
+              </div>
             );
           })}
         </div>
+        {!searching ? (
+          <p className="text-sm text-secondary">{selectedDomainGuidance.tagline}</p>
+        ) : null}
       </div>
 
       <div className="space-y-2">
@@ -247,6 +275,14 @@ export function WorkoutTemplatePicker({
           </p>
         )}
       </div>
+
+      {infoDomain !== null ? (
+        <TimeDomainInfoModal
+          domain={infoDomain}
+          onClose={() => setInfoDomain(null)}
+          onBrowse={onDurationChange}
+        />
+      ) : null}
 
       {infoCategory ? (
         <WorkoutStyleInfoModal

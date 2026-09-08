@@ -1,4 +1,4 @@
-import { afterEach, describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { WorkoutTemplatePicker } from './WorkoutTemplatePicker';
@@ -61,6 +61,23 @@ describe('WorkoutTemplatePicker', () => {
     expect(bloodShuntInfo.textContent).toBe('?');
     fireEvent.click(bloodShuntInfo);
     expect(screen.getByRole('dialog')).toBeTruthy();
+  });
+
+  it('opens time-domain guidance from the chip ? and shows the selected tagline', () => {
+    const onDurationChange = vi.fn();
+    renderPicker({ onDurationChange });
+
+    expect(screen.getByText('All-out burst and local muscle burn')).toBeTruthy();
+
+    const domainInfo = screen.getByRole('button', { name: "What's the 10 min domain?" });
+    expect(domainInfo.textContent).toBe('?');
+    fireEvent.click(domainInfo);
+
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(screen.getByText('10 min domain')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Browse 10 min missions' }));
+    expect(onDurationChange).toHaveBeenCalledWith(10);
   });
 
   it('disables time domain and category chips while searching', () => {
