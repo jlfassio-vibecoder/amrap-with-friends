@@ -20,6 +20,15 @@ describe('referrerHost', () => {
     expect(referrerHost('https://forum.example.org/thread/123?user=bob')).toBe('forum.example.org');
   });
 
+  it("does not confuse our hostname appearing in someone else's query string", () => {
+    // Regression: a substring test against document.referrer filed this
+    // genuine organic arrival as internal navigation.
+    expect(referrerHost('https://www.google.com/search?q=amrapwithfriends.com')).toBe('google.com');
+    expect(referrerHost('https://www.google.com/search?q=amrapwithfriends.com')).not.toBe(
+      'amrapwithfriends.com'
+    );
+  });
+
   it('returns null for empty or unparseable referrers', () => {
     expect(referrerHost('')).toBeNull();
     expect(referrerHost('   ')).toBeNull();

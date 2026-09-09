@@ -3,6 +3,7 @@ import {
   isAttributable,
   persistAttribution,
   readStoredAttribution,
+  referrerHost,
 } from '@/lib/analytics/attribution';
 import { sendContentEvent } from '@/lib/analytics/contentBeacon';
 import { isAppRoute } from '@/lib/seo/routes';
@@ -44,11 +45,18 @@ export function initContentAnalytics(): void {
     }
   }
 
+  // Compared as parsed hosts, not as a substring: a referrer of
+  // https://google.com/search?q=amrapwithfriends.com contains our hostname in
+  // its query, and a substring test would file that genuine organic arrival as
+  // internal navigation.
+  const fromHost = referrerHost(document.referrer);
+  const selfHost = window.location.hostname.toLowerCase().replace(/^www\./, '');
+
   sendContentEvent('content_page_viewed', {
     path: window.location.pathname,
     // Whether they came from outside or from another of our own pages: it is
     // the difference between an entry point and a page people read second.
-    entry: !document.referrer.includes(window.location.hostname),
+    entry: fromHost !== selfHost,
   });
 
   // The conversion that matters: a click out of the content layer into the
