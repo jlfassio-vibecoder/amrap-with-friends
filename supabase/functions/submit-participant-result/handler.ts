@@ -231,21 +231,31 @@ export function computeLockedScore(
   durationMinutes: number,
   partialReps: number
 ): { repsPerRound: number; breakdown: ScoreBreakdown } | SubmitParticipantResultResponse {
-  let repsPerRound: number;
+  const roundCount = rounds.length;
+  const roundDurationsSec = deriveRoundDurationsSec(rounds);
 
+  let repsPerRound: number;
   try {
     repsPerRound = computeRepsPerRound(workout);
   } catch {
-    return { ok: false, reason: 'invalid_workout' };
+    // Name-only / unscorable prescriptions (some AMQAP text round-trips) still
+    // need a locked score_breakdown so HUD volume, lastLockedAt, and Active
+    // Recovery can count the finished mission. Score as completed rounds.
+    const baseScore = roundCount;
+    const breakdown = {
+      ...computeScoreBreakdown(roundDurationsSec, durationMinutes, 'finished', baseScore),
+      roundCount,
+      roundSplits: roundDurationsSec,
+    };
+    return { repsPerRound: 0, breakdown };
   }
 
-  if (partialReps >= repsPerRound) {
+  if (repsPerRound > 0 && partialReps >= repsPerRound) {
     return { ok: false, reason: 'partial_reps_too_high' };
   }
 
-  const roundCount = rounds.length;
-  const baseScore = computeBaseScore(roundCount, partialReps, repsPerRound);
-  const roundDurationsSec = deriveRoundDurationsSec(rounds);
+  const baseScore =
+    repsPerRound > 0 ? computeBaseScore(roundCount, partialReps, repsPerRound) : roundCount;
   const breakdown = {
     ...computeScoreBreakdown(roundDurationsSec, durationMinutes, 'finished', baseScore),
     roundCount,

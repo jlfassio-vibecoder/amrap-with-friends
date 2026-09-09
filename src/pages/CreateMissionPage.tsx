@@ -22,7 +22,11 @@ import { WorkoutTemplatePicker } from '@/components/createMission/WorkoutTemplat
 import { AmqapFlowPicker } from '@/components/createMission/AmqapFlowPicker';
 import { RetestBanner } from '@/components/createMission/RetestBanner';
 import { CoachWodPicker } from '@/components/createMission/CoachWodPicker';
-import { exercisesToWorkoutText } from '@/lib/workout/templateToExercises';
+import {
+  applyTemplate,
+  exercisesToWorkoutText,
+  templateToExercises,
+} from '@/lib/workout/templateToExercises';
 import type { PublishedCoachWorkout } from '@/lib/api/coachWod';
 import {
   AMQAP_FLOWS,
@@ -56,7 +60,6 @@ import { useSmartRecovery } from '@/hooks/useSmartRecovery';
 import { coachWorkoutLockId } from '@/lib/smartRecovery/deriveCoachWorkoutPatterns';
 import { firstAvailableCategoryForDuration } from '@/lib/workout/filterWorkoutTemplates';
 import { CUSTOM_WORKOUT_INTENSITY_TIER } from '@/lib/workout/resolveTemplateIntensity';
-import { applyTemplate } from '@/lib/workout/templateToExercises';
 import { parseWorkoutText } from '@/lib/workout/parseWorkoutLines';
 import { isIntakeRequiredMessage } from '@/lib/auth/profileNeedsIntake';
 import type { PasswordMode } from '@/components/AuthForm';
@@ -730,7 +733,11 @@ export default function CreateMissionPage() {
 
       const workout = firstChainItem
         ? firstChainItem.workout
-        : parseWorkoutText(missionWorkoutText);
+        : (workoutSource === 'library' || workoutSource === 'amqap') && selectedTemplate
+          ? templateToExercises(selectedTemplate)
+          : launchTemplate
+            ? templateToExercises(launchTemplate)
+            : parseWorkoutText(missionWorkoutText);
       const intensityTier = firstChainItem
         ? firstChainItem.intensityTier
         : launchTemplate
