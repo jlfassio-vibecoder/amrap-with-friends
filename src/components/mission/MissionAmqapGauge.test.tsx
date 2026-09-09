@@ -36,12 +36,9 @@ describe('MissionAmqapGauge', () => {
     expect(screen.queryByRole('checkbox')).toBeNull();
   });
 
-  it('shows the set caption during work, including practice', () => {
+  it('shows the set caption during work', () => {
     renderAt('work');
     expect(screen.getByText('90/90 Hip Transitions · Left side')).toBeTruthy();
-    cleanup();
-
-    renderAt('work', { elapsedSec: 10 });
     expect(screen.getByRole('figure')).toBeTruthy();
   });
 

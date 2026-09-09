@@ -1614,9 +1614,9 @@ function LiveMissionView({
               ) : null}
 
               {/* Its own section, after the actions — never inside the clock
-                  block. The gauge owns its preference, its placement and its
-                  failure; this mount is the whole of its contact with the
-                  mission, and deleting it removes the feature. */}
+                  block. The dial owns placement and failure isolation here;
+                  AMQAP row highlighting uses expandAmqapSets / amqapSetGauge
+                  separately on the workout list. */}
               {amqapFlow ? (
                 <MissionAmqapGauge
                   phase={live.phase}
