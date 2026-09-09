@@ -220,6 +220,46 @@ describe('the card actually shows the result', () => {
     expect(all).toContain('THE WORKOUT');
   });
 
+  it('darkens a band behind the round splits, over the bars themselves', () => {
+    // Regression: the only scrim was a gradient at fixed fractions of the card
+    // height, tuned for the story ratio. On the square card its lightest
+    // stretch fell across the chart, and since the bars are drawn a shade
+    // lighter than the near-black background, a bright photo inverted that and
+    // the bars stopped reading. Found by rendering a real card with a real
+    // photo on a sunlit lawn, not by a test.
+    const { ctx, rects } = recordingCtx();
+    drawFrame(ctx, frameAt(fullCard()), {
+      ...richOptions(),
+      photo: {} as unknown as CanvasImageSource,
+      photoWidth: 4032,
+      photoHeight: 3024,
+    });
+
+    // The three splits are the only rects sharing one width; the footer rule
+    // and the band are each on their own.
+    const byWidth = new Map<number, number[][]>();
+    for (const rect of rects.filter((entry) => entry[2]! < 1080)) {
+      byWidth.set(rect[2]!, [...(byWidth.get(rect[2]!) ?? []), rect]);
+    }
+    const bars = [...byWidth.values()].find((group) => group.length === 3);
+    expect(bars).toBeDefined();
+    const band = rects.find((rect) => rect[0] === 0 && rect[2] === 1080 && rect[3]! < 1920);
+    expect(band).toBeDefined();
+
+    const bandTop = band![1]!;
+    const bandBottom = bandTop + band![3]!;
+    for (const bar of bars!) {
+      expect(bar[1]!).toBeGreaterThanOrEqual(bandTop);
+      expect(bar[1]! + bar[3]!).toBeLessThanOrEqual(bandBottom);
+    }
+  });
+
+  it('draws no band when the card carries no photo', () => {
+    const { ctx, rects } = recordingCtx();
+    drawFrame(ctx, frameAt(fullCard()), richOptions());
+    expect(rects.some((rect) => rect[0] === 0 && rect[2] === 1080 && rect[3]! < 1920)).toBe(false);
+  });
+
   it('draws the round splits with their times', () => {
     const { ctx, texts } = recordingCtx();
     drawFrame(ctx, frameAt(fullCard()), richOptions());

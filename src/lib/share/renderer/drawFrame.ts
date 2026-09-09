@@ -6,7 +6,7 @@ import {
   type CardMovement,
   type RoundSplit,
 } from '@/lib/share/cardContent';
-import { coverRect, scrimStops } from '@/lib/share/photo';
+import { chartBandStops, coverRect, scrimStops } from '@/lib/share/photo';
 import {
   AWF_THEME,
   LAYOUTS,
@@ -293,11 +293,6 @@ function drawCardFrame(ctx: Ctx, frame: FrameState, options: DrawFrameOptions): 
   // from.
   const splits = options.splits ?? [];
   if (splits.length > 0 && options.layout !== 'landscape') {
-    ctx.fillStyle = theme.secondary;
-    ctx.font = font(32, 800);
-    ctx.fillText('ROUND SPLITS', left, y);
-    y += 52;
-
     const slowest = Math.max(...splits.map((split) => split.seconds), 1);
     // Sized from the space actually left rather than a constant: the first
     // version left roughly a third of the card empty beneath the chart. A
@@ -307,11 +302,33 @@ function drawCardFrame(ctx: Ctx, frame: FrameState, options: DrawFrameOptions): 
       options.variant !== 'amqap' && options.showBoard !== false
         ? Math.min(6, frame.bars.length) * 88 + 40
         : 0;
+    const labelY = y;
+    const chartTop = y + 52;
     const footerTop = height - spec.safeBottom - 40 - boardReserve;
     const chartHeight =
       options.layout === 'story'
-        ? Math.max(200, Math.min(620, footerTop - y - 90))
-        : Math.max(120, Math.min(300, footerTop - y - 90));
+        ? Math.max(200, Math.min(620, footerTop - chartTop - 90))
+        : Math.max(120, Math.min(300, footerTop - chartTop - 90));
+
+    // Behind the chart, before anything is drawn into it. The card-height
+    // gradient cannot know where this block landed; this one is placed from
+    // the rect that was just computed.
+    if (options.photo) {
+      const bandTop = labelY - 16;
+      const bandBottom = chartTop + chartHeight + 12 + 24 + 16;
+      const band = ctx.createLinearGradient(0, bandTop, 0, bandBottom);
+      for (const stop of chartBandStops()) {
+        band.addColorStop(stop.offset, `rgba(10, 9, 7, ${stop.alpha})`);
+      }
+      ctx.fillStyle = band;
+      ctx.fillRect(0, bandTop, width, bandBottom - bandTop);
+    }
+
+    ctx.fillStyle = theme.secondary;
+    ctx.font = font(32, 800);
+    ctx.fillText('ROUND SPLITS', left, labelY);
+    y = chartTop;
+
     const gap = 12;
     const barWidth = Math.max(
       8,
