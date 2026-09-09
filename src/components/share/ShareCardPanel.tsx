@@ -52,6 +52,10 @@ export function ShareCardPanel({
   // probing per render would run a feature test on every keystroke.
   const [encoderPath] = useState(() => detectEncoderPath(readCapabilities()));
   const [photo, setPhoto] = useState<ImageBitmap | null>(null);
+  // Bumped whenever the photo changes. Rendered blobs are cached by ratio and
+  // variant; without this in the key, adding a photo hands back the cached
+  // photo-less card and nothing appears to happen.
+  const [photoToken, setPhotoToken] = useState(0);
   const [photoError, setPhotoError] = useState<string | null>(null);
   // Off by default. A photo of a person going to a public URL should be a
   // decision somebody made, not one they failed to notice.
@@ -77,6 +81,7 @@ export function ShareCardPanel({
         previous?.close();
         return bitmap;
       });
+      setPhotoToken((previous) => previous + 1);
     } catch {
       setPhotoError('That photo could not be read.');
     }
@@ -87,6 +92,7 @@ export function ShareCardPanel({
       previous?.close();
       return null;
     });
+    setPhotoToken((previous) => previous + 1);
   }, []);
 
   useEffect(() => () => photo?.close(), [photo]);
@@ -99,6 +105,17 @@ export function ShareCardPanel({
 
   const effectiveVariant = resolveVariant(data, variant);
   const blobRef = useRef<Map<string, Blob>>(new Map());
+
+  // Every cached blob was drawn with the photo that was set at the time, so a
+  // change invalidates all of them at once.
+  useEffect(() => {
+    blobRef.current.clear();
+  }, [photoToken]);
+
+  const cacheKey = useCallback(
+    (ratio: ShareLayout) => `${ratio}:${effectiveVariant}:${photoToken}`,
+    [effectiveVariant, photoToken]
+  );
   const bar = useMemo(() => myBar(frameAt(data).bars), [data]);
 
   const caption = useMemo(
@@ -164,8 +181,7 @@ export function ShareCardPanel({
       // the image can read off it. Posting the photo is the athlete's choice
       // to make in the share sheet, once, not a side effect of tapping Copy
       // link. The link still works; it unfurls with the generic card.
-      const storyBlob =
-        photo && !publishPhoto ? null : blobRef.current.get(`story:${effectiveVariant}`);
+      const storyBlob = photo && !publishPhoto ? null : blobRef.current.get(cacheKey('story'));
       if (storyBlob) {
         void uploadShareImage({
           shareId,
@@ -204,12 +220,13 @@ export function ShareCardPanel({
       hostToken,
       photo,
       publishPhoto,
+      cacheKey,
     ]
   );
 
   useEffect(() => {
     let cancelled = false;
-    const key = `${layout}:${effectiveVariant}`;
+    const key = cacheKey(layout);
     const startedAt = performance.now();
 
     async function render(): Promise<void> {
@@ -238,7 +255,7 @@ export function ShareCardPanel({
     return () => {
       cancelled = true;
     };
-  }, [data, drawOptions, layout, effectiveVariant]);
+  }, [data, drawOptions, layout, effectiveVariant, cacheKey]);
 
   useEffect(() => {
     const urls = blobRef.current;
@@ -271,7 +288,7 @@ export function ShareCardPanel({
   }, [replay.blob, shareId, cutId, caption, layout, recordShare]);
 
   const handleShare = useCallback(async () => {
-    const blob = blobRef.current.get(`${layout}:${effectiveVariant}`);
+    const blob = blobRef.current.get(cacheKey(layout));
     if (!blob) {
       return;
     }
@@ -285,7 +302,7 @@ export function ShareCardPanel({
     if (result.outcome === 'downloaded') {
       setNotice('Saved. Caption copied — paste it when you post.');
     }
-  }, [layout, effectiveVariant, shareId, caption, recordShare]);
+  }, [layout, cacheKey, shareId, caption, recordShare]);
 
   const handleCopyLink = useCallback(async () => {
     recordShare('card');
