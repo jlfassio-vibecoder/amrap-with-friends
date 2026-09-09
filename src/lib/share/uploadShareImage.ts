@@ -1,12 +1,18 @@
 import { callRpc } from '@/lib/api/callRpc';
 import { supabase } from '@/lib/supabase';
+import { MAX_OG_IMAGE_BYTES, extensionForType } from '@/lib/share/ogImage';
 
 export const SHARE_BUCKET = 'mission-shares';
-/** Matches the bucket's own limit, so an oversized file fails here with a reason rather than at the API. */
-export const MAX_SHARE_IMAGE_BYTES = 400 * 1024;
+export { MAX_OG_IMAGE_BYTES as MAX_SHARE_IMAGE_BYTES } from '@/lib/share/ogImage';
 
-export function shareImagePath(shareId: string): string {
-  return `${shareId}.png`;
+/**
+ * The storage policy matches `{shareId}.png|webp` and nothing else, so the
+ * extension comes from the blob's own type rather than a hardcoded png — a
+ * webp written to a .png key is a 403 at upload time.
+ */
+export function shareImagePath(shareId: string, type = 'image/png'): string {
+  const extension = extensionForType(type);
+  return extension ? `${shareId}.${extension}` : `${shareId}.png`;
 }
 
 export function shareImageUrl(supabaseUrl: string, imagePath: string): string {
@@ -32,13 +38,16 @@ export async function uploadShareImage(input: {
   claimToken?: string | null;
   hostToken?: string | null;
 }): Promise<{ ok: boolean; reason?: string }> {
-  if (input.blob.size > MAX_SHARE_IMAGE_BYTES) {
+  if (input.blob.size > MAX_OG_IMAGE_BYTES) {
     return { ok: false, reason: 'too_large' };
   }
+  if (!extensionForType(input.blob.type)) {
+    return { ok: false, reason: 'unsupported_type' };
+  }
 
-  const path = shareImagePath(input.shareId);
+  const path = shareImagePath(input.shareId, input.blob.type);
   const { error } = await supabase.storage.from(SHARE_BUCKET).upload(path, input.blob, {
-    contentType: 'image/png',
+    contentType: input.blob.type,
     // Never overwrite: the image is what somebody already posted.
     upsert: false,
   });

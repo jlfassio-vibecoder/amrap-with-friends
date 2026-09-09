@@ -24,9 +24,16 @@ async function ensureFonts(): Promise<void> {
   return fontsReady;
 }
 
+export interface EncodeOptions {
+  /** Defaults to png, which is right for a flat card and wrong for one with a photo behind it. */
+  type?: string;
+  quality?: number;
+}
+
 export async function renderCardBlob(
   data: ReplayData,
-  options: DrawFrameOptions
+  options: DrawFrameOptions,
+  encode: EncodeOptions = {}
 ): Promise<Blob | null> {
   await ensureFonts();
 
@@ -42,8 +49,11 @@ export async function renderCardBlob(
 
   drawFrame(ctx, frameAt(data), options);
 
+  const type = encode.type ?? 'image/png';
   return new Promise<Blob | null>((resolve) => {
-    canvas.toBlob((blob) => resolve(blob), 'image/png');
+    // A browser that cannot encode the requested type falls back to png
+    // silently, so the caller checks blob.type rather than assuming.
+    canvas.toBlob((blob) => resolve(blob), type, encode.quality);
   });
 }
 

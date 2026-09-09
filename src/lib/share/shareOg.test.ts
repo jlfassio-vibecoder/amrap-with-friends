@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { shareOgDescription, shareOgImage, shareOgTitle } from '@/lib/share/shareOg';
+import {
+  shareOgDescription,
+  shareOgImage,
+  shareOgImageSize,
+  shareOgTitle,
+} from '@/lib/share/shareOg';
 
 const summary = {
   shareId: 'abc12345',
@@ -53,5 +58,27 @@ describe('shareOgDescription', () => {
   it('describes the product either way', () => {
     expect(shareOgDescription(summary)).toContain('friends');
     expect(shareOgDescription(null)).toContain('AMRAP');
+  });
+});
+
+describe('shareOgImageSize', () => {
+  const summary = {
+    shareId: '4jppeegd',
+    imagePath: '4jppeegd.webp',
+    templateId: null,
+    durationMinutes: 15,
+    rounds: 10,
+    reps: 28,
+  };
+
+  it('declares the landscape card, which is what the card render actually is', () => {
+    // Facebook picks its large-image layout from these before fetching the
+    // file, so declaring 1200x630 for a 1080x608 card costs the layout.
+    expect(shareOgImageSize(summary)).toEqual({ width: 1080, height: 608 });
+  });
+
+  it('declares the site social image when there is no card', () => {
+    expect(shareOgImageSize({ ...summary, imagePath: null })).toEqual({ width: 1200, height: 630 });
+    expect(shareOgImageSize(null)).toEqual({ width: 1200, height: 630 });
   });
 });

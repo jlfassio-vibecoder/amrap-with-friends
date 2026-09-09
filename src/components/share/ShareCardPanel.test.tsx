@@ -8,6 +8,16 @@ vi.mock('@/lib/share/renderCard', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/share/renderCard')>()),
   renderCardBlob,
 }));
+const { uploadShareImage } = vi.hoisted(() => ({ uploadShareImage: vi.fn() }));
+vi.mock('@/lib/share/uploadShareImage', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/share/uploadShareImage')>()),
+  uploadShareImage,
+}));
+const { callRpc } = vi.hoisted(() => ({ callRpc: vi.fn() }));
+vi.mock('@/lib/api/callRpc', () => ({ callRpc }));
+vi.mock('@/lib/share/shareSheet', () => ({
+  shareArtifact: vi.fn().mockResolvedValue({ outcome: 'shared' }),
+}));
 vi.mock('@/lib/analytics/track', () => ({ track: vi.fn(), trackBeacon: vi.fn() }));
 vi.mock('@/lib/share/replay/useReplay', () => ({
   useReplay: () => ({ blob: null, state: 'idle', progress: 0, start: () => undefined }),
@@ -47,6 +57,22 @@ const data: ReplayData = {
     { participantId: 'p1', n: 3, atSeconds: 36 },
   ],
 };
+
+function stubBrowser(): void {
+  // jsdom has no object URLs and no ImageBitmap decoder.
+  let urls = 0;
+  vi.stubGlobal(
+    'URL',
+    Object.assign(URL, {
+      createObjectURL: () => `blob:card-${(urls += 1)}`,
+      revokeObjectURL: () => undefined,
+    })
+  );
+  vi.stubGlobal(
+    'createImageBitmap',
+    vi.fn().mockResolvedValue({ width: 4, height: 5, close() {} })
+  );
+}
 
 function addPhoto(): void {
   const input = document.querySelector('input[type="file"]') as HTMLInputElement;
@@ -90,5 +116,105 @@ describe('adding a photo to the share card', () => {
     await waitFor(() => expect(screen.getByText('Remove photo')).toBeTruthy());
     await waitFor(() => expect(renderCardBlob).toHaveBeenCalledTimes(2));
     expect(renderCardBlob.mock.calls[1][1].photo).toMatchObject({ width: 4, height: 5 });
+  });
+});
+
+describe('the image the link preview gets', () => {
+  afterEach(() => {
+    cleanup();
+    renderCardBlob.mockReset();
+    uploadShareImage.mockReset();
+    callRpc.mockReset();
+  });
+
+  async function shareIt(): Promise<void> {
+    stubBrowser();
+    callRpc.mockResolvedValue({ data: null, error: null });
+    uploadShareImage.mockResolvedValue({ ok: true });
+    render(<ShareCardPanel data={data} workoutTitle="The Piston" />);
+    await waitFor(() => expect(renderCardBlob).toHaveBeenCalled());
+    fireEvent.click(screen.getByText('Copy link'));
+  }
+
+  it('is a landscape webp render, not the story card the athlete is looking at', async () => {
+    // Regression: the story card was uploaded as the og:image. A crawler crops
+    // og:image to roughly 1.91:1, so a 9:16 card arrived as a band out of its
+    // middle -- no hero, no workout, no chart. Found on a real Facebook share.
+    renderCardBlob.mockResolvedValue(new Blob(['card'], { type: 'image/webp' }));
+    await shareIt();
+
+    await waitFor(() => expect(uploadShareImage).toHaveBeenCalled());
+    const ogCall = renderCardBlob.mock.calls.find((call) => call[1].layout === 'landscape');
+    expect(ogCall).toBeDefined();
+    expect(ogCall![2]).toMatchObject({ type: 'image/webp' });
+    expect(uploadShareImage.mock.calls[0]![0].blob.type).toBe('image/webp');
+  });
+
+  it('uploads nothing when the share row never landed', async () => {
+    // This is also what enforces the ordering. set_mission_share_image needs
+    // the row to exist; both calls used to be fired un-awaited in the same
+    // tick, and when the image lost that race the link kept the site logo with
+    // nothing logged anywhere.
+    renderCardBlob.mockResolvedValue(new Blob(['card'], { type: 'image/webp' }));
+    stubBrowser();
+    callRpc.mockResolvedValue({ data: null, error: new Error('offline') });
+    render(<ShareCardPanel data={data} workoutTitle="The Piston" />);
+    await waitFor(() => expect(renderCardBlob).toHaveBeenCalled());
+    fireEvent.click(screen.getByText('Copy link'));
+
+    await waitFor(() => expect(callRpc).toHaveBeenCalledTimes(2)); // one retry
+    expect(uploadShareImage).not.toHaveBeenCalled();
+  });
+
+  it('steps the quality down rather than giving up when the first encode is too big', async () => {
+    // The photo card that could not be published was 1.3 MB as png against a
+    // 400 KB bucket. Nothing surfaced -- the link just kept the site logo.
+    const big = new Blob([new Uint8Array(500 * 1024)], { type: 'image/webp' });
+    const small = new Blob(['small'], { type: 'image/webp' });
+    renderCardBlob
+      .mockResolvedValueOnce(new Blob(['preview'], { type: 'image/png' }))
+      .mockResolvedValueOnce(big)
+      .mockResolvedValue(small);
+    await shareIt();
+
+    await waitFor(() => expect(uploadShareImage).toHaveBeenCalled());
+    expect(uploadShareImage.mock.calls[0]![0].blob.size).toBe(small.size);
+  });
+
+  it('drops the photo from the preview render unless the athlete published it', async () => {
+    // The athlete's result is not private; their face is. Before this the
+    // whole upload was skipped, so the link fell back to the site logo.
+    renderCardBlob.mockResolvedValue(new Blob(['card'], { type: 'image/webp' }));
+    stubBrowser();
+    callRpc.mockResolvedValue({ data: null, error: null });
+    uploadShareImage.mockResolvedValue({ ok: true });
+    render(<ShareCardPanel data={data} workoutTitle="The Piston" />);
+    await waitFor(() => expect(renderCardBlob).toHaveBeenCalled());
+
+    addPhoto();
+    await waitFor(() => expect(screen.getByText('Remove photo')).toBeTruthy());
+    fireEvent.click(screen.getByText('Copy link'));
+
+    await waitFor(() => expect(uploadShareImage).toHaveBeenCalled());
+    const ogCall = renderCardBlob.mock.calls.find((call) => call[1].layout === 'landscape');
+    expect(ogCall![1].photo).toBeNull();
+  });
+
+  it('puts the photo in the preview when the athlete did publish it', async () => {
+    renderCardBlob.mockResolvedValue(new Blob(['card'], { type: 'image/webp' }));
+    stubBrowser();
+    callRpc.mockResolvedValue({ data: null, error: null });
+    uploadShareImage.mockResolvedValue({ ok: true });
+    render(<ShareCardPanel data={data} workoutTitle="The Piston" />);
+    await waitFor(() => expect(renderCardBlob).toHaveBeenCalled());
+
+    addPhoto();
+    await waitFor(() => expect(screen.getByText('Remove photo')).toBeTruthy());
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByText('Copy link'));
+
+    await waitFor(() => expect(uploadShareImage).toHaveBeenCalled());
+    const ogCall = renderCardBlob.mock.calls.find((call) => call[1].layout === 'landscape');
+    expect(ogCall![1].photo).toMatchObject({ width: 4, height: 5 });
   });
 });
