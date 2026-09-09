@@ -107,6 +107,18 @@ export function coachDashboardWindowLabel(window: CoachDashboardWindow): string 
   }
 }
 
+export interface CoachAcquisitionRow {
+  channel: string;
+  source: string;
+  campaign: string;
+  browsers: number;
+  signedUp: number;
+  signupRatePct: number | null;
+  trained: number;
+  completed: number;
+  completionRatePct: number | null;
+}
+
 export interface CoachSignupFunnelRow {
   method: string;
   attempts: number;
@@ -153,6 +165,7 @@ export interface CoachDashboard {
   missionDropoff: MissionDropoffRow[];
   socialLift: SocialLiftRow[];
   weeklyRetention: RetentionCell[];
+  acquisition: CoachAcquisitionRow[];
   signupFunnel: CoachSignupFunnelRow[];
   authFailureReasons: CoachAuthFailureRow[];
   campaignFunnel: CoachCampaignFunnel;
@@ -433,6 +446,20 @@ function parseCampaignLengthRow(row: Record<string, unknown>): CoachCampaignLeng
     campaigns: num(row, 'campaigns'),
     campaignsFinished: num(row, 'campaigns_finished'),
     occurrenceAdherencePct: numOrNull(row, 'occurrence_adherence_pct'),
+  };
+}
+
+function parseAcquisitionRow(row: Record<string, unknown>): CoachAcquisitionRow {
+  return {
+    channel: str(row, 'channel'),
+    source: str(row, 'source'),
+    campaign: str(row, 'campaign'),
+    browsers: num(row, 'browsers'),
+    signedUp: num(row, 'signed_up'),
+    signupRatePct: numOrNull(row, 'signup_rate_pct'),
+    trained: num(row, 'trained'),
+    completed: num(row, 'completed'),
+    completionRatePct: numOrNull(row, 'completion_rate_pct'),
   };
 }
 
@@ -859,6 +886,7 @@ export async function fetchCoachDashboard(window: CoachDashboardWindow = 'all'):
       missionDropoff: asArray(raw.missionDropoff).map(parseMissionDropoffRow),
       socialLift: asArray(raw.socialLift).map(parseSocialLiftRow),
       weeklyRetention: asArray(raw.weeklyRetention).map(parseRetentionCell),
+      acquisition: asArray(raw.acquisition).map(parseAcquisitionRow),
       signupFunnel: asArray(raw.signupFunnel).map(parseSignupFunnelRow),
       authFailureReasons: asArray(raw.authFailureReasons).map(parseAuthFailureRow),
       campaignFunnel: parseCampaignFunnel(asRecord(raw.campaignFunnel)),

@@ -1,8 +1,11 @@
+import { useAttributionCapture } from '@/hooks/useAttributionCapture';
 import { useGlobalPresenceBroadcast } from '@/hooks/useGlobalPresenceBroadcast';
 
 /** Renders nothing — writes a 60s presence_heartbeat so Coach can see who
- * has the app open without joining presence:global. */
+ * has the app open without joining presence:global, and records where this
+ * browser first arrived from. */
 export function GlobalPresenceBroadcaster() {
+  useAttributionCapture();
   useGlobalPresenceBroadcast();
   return null;
 }

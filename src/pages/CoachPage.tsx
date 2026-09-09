@@ -291,6 +291,48 @@ export default function CoachPage() {
             </section>
 
             <section className="space-y-3">
+              <CoachSectionHeader
+                title={`Where athletes come from · ${coachDashboardWindowLabel(dashboard.window)}`}
+              />
+              <div className="card space-y-3 p-4">
+                <CoachDataTable
+                  rows={dashboard.acquisition}
+                  rowKey={(row) => `${row.channel}-${row.source}-${row.campaign}`}
+                  emptyLabel="No first-touch data yet — capture starts with the next deploy."
+                  columns={[
+                    { header: 'Channel', render: (row) => formatCoachLabel(row.channel) },
+                    { header: 'Source', render: (row) => row.source },
+                    { header: 'Campaign', render: (row) => row.campaign },
+                    { header: 'Browsers', render: (row) => row.browsers, align: 'right' },
+                    { header: 'Signed up', render: (row) => row.signedUp, align: 'right' },
+                    {
+                      header: 'Sign-up %',
+                      render: (row) => pct(row.signupRatePct),
+                      align: 'right',
+                    },
+                    {
+                      header: 'Completed a mission',
+                      render: (row) => row.completed,
+                      align: 'right',
+                    },
+                    {
+                      header: 'Browser → completed %',
+                      render: (row) => pct(row.completionRatePct),
+                      align: 'right',
+                    },
+                  ]}
+                />
+                <p className="text-xs text-secondary">
+                  First touch, ranked by athletes who completed a mission rather than by traffic — a
+                  channel sending a thousand bounces is worth less than one sending ten people who
+                  train. Clicks from our own content pages count as internal, not as a referral, so
+                  the site cannot take credit for its own traffic. Only browsers seen since this
+                  shipped appear here.
+                </p>
+              </div>
+            </section>
+
+            <section className="space-y-3">
               <CoachSectionHeader title="Does anyone come back" />
               <div className="card space-y-3 p-4">
                 <CoachRetentionGrid cells={dashboard.weeklyRetention} />
