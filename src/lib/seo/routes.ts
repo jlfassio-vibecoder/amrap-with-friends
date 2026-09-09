@@ -184,6 +184,13 @@ export const CONTENT_ROUTES: RouteSeo[] = [
     index: true,
   },
   {
+    path: '/creators',
+    title: 'Host weekly AMRAPs. Get paid when your squad trains. — AMRAP With Friends',
+    description:
+      'Host a live synced AMRAP each week, earn a share of every subscription your squad buys, and turn finishes into posts that tag you.',
+    index: true,
+  },
+  {
     path: '/privacy',
     title: 'Privacy — AMRAP With Friends',
     description:
