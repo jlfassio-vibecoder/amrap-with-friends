@@ -49,6 +49,7 @@ function data(participants: number, meRounds = 7): ReplayData {
       isMe: index === 0,
       finalRounds: index === 0 ? meRounds : 3,
       finalReps: index === 0 ? 12 : 0,
+      finalScore: null,
       role: index === 0 ? 'host' : 'joiner',
     })),
     rounds: [],
@@ -153,5 +154,86 @@ describe('drawFrame during the replay', () => {
     const { ctx, texts } = recordingCtx();
     drawFrame(ctx, frameAt(data(3)), { ...baseOptions, capSeconds: 720 });
     expect(texts.map((entry) => entry.text)).toContain('7 rounds + 12');
+  });
+});
+
+describe('the card actually shows the result', () => {
+  function fullCard(): ReplayData {
+    const base = data(1);
+    base.mission.workout = {
+      movements: [
+        { name: 'Air Squats', reps: 10 },
+        { name: 'Hand-Release Push-ups', reps: 10 },
+      ],
+    };
+    base.rounds = [8, 18, 28, 38, 68, 98, 139].map((atSeconds, index) => ({
+      participantId: 'p0',
+      n: index + 1,
+      atSeconds,
+    }));
+    return base;
+  }
+
+  const richOptions = (extra: Record<string, unknown> = {}) => ({
+    ...baseOptions,
+    movements: [
+      { name: 'Air Squats', reps: 10, unit: null },
+      { name: 'Hand-Release Push-ups', reps: 10, unit: null },
+    ],
+    splits: [
+      { n: 1, seconds: 8 },
+      { n: 2, seconds: 10 },
+      { n: 3, seconds: 41 },
+    ],
+    totalReps: 140,
+    finalScore: 119,
+    showBoard: false,
+    ...extra,
+  });
+
+  it('names the movements, which the first card omitted entirely', () => {
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, frameAt(fullCard()), richOptions());
+    const all = texts.map((entry) => entry.text);
+    expect(all).toContain('10 Air Squats');
+    expect(all).toContain('10 Hand-Release Push-ups');
+    expect(all).toContain('THE WORKOUT');
+  });
+
+  it('draws the round splits with their times', () => {
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, frameAt(fullCard()), richOptions());
+    const all = texts.map((entry) => entry.text);
+    expect(all).toContain('ROUND SPLITS');
+    expect(all).toContain('0:08');
+    expect(all).toContain('0:41');
+  });
+
+  it('shows the totals the scorecard shows', () => {
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, frameAt(fullCard()), richOptions());
+    expect(texts.map((entry) => entry.text)).toContain('140 reps  ·  score 119');
+  });
+
+  it('omits the one-row board on a solo mission', () => {
+    // A single leaderboard row restates the hero, and left the first card
+    // roughly two thirds empty.
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, frameAt(fullCard()), richOptions());
+    expect(texts.filter((entry) => entry.text === '1')).toHaveLength(0);
+  });
+
+  it('still draws the board when there is a squad', () => {
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, frameAt(data(4)), richOptions({ showBoard: true }));
+    expect(texts.map((entry) => entry.text)).toContain('Athlete 1');
+  });
+
+  it('fills the card instead of leaving the lower two thirds empty', () => {
+    // The concrete complaint about the first version.
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, frameAt(fullCard()), richOptions());
+    const lowest = Math.max(...texts.map((entry) => entry.y));
+    expect(lowest).toBeGreaterThan(1000);
   });
 });

@@ -7,6 +7,7 @@ import { createShareId, shareUrl } from '@/lib/share/shareId';
 import { shareArtifact } from '@/lib/share/shareSheet';
 import { uploadShareImage } from '@/lib/share/uploadShareImage';
 import { frameAt, myBar, resolveVariant } from '@/lib/share/timeline';
+import { cardMovements, roundSplits, shouldDrawBoard } from '@/lib/share/cardContent';
 import { defaultCut } from '@/lib/share/cuts';
 import {
   detectEncoderPath,
@@ -72,6 +73,15 @@ export function ShareCardPanel({
     [bar, workoutTitle, data.mission.durationMinutes, data.participants.length, shareId]
   );
 
+  const me = useMemo(() => data.participants.find((entry) => entry.isMe) ?? null, [data]);
+  // Total reps, the way the scorecard counts them: whole rounds plus the
+  // partial. Derived rather than fetched — the reps per round are the sum of
+  // the workout's own movements.
+  const repsPerRound = useMemo(
+    () => cardMovements(data).reduce((sum, movement) => sum + (movement.reps ?? 0), 0),
+    [data]
+  );
+
   const drawOptions = useMemo(
     () => ({
       layout,
@@ -81,8 +91,13 @@ export function ShareCardPanel({
       shareUrl: shareUrl(shareId),
       // Every card carries it for now: there is no athlete tier to exempt.
       watermark: true,
+      movements: cardMovements(data),
+      splits: me ? roundSplits(data.rounds, me.participantId) : [],
+      totalReps: me ? me.finalRounds * repsPerRound + me.finalReps : null,
+      finalScore: me?.finalScore ?? null,
+      showBoard: shouldDrawBoard(data),
     }),
-    [layout, effectiveVariant, workoutTitle, data.mission.durationMinutes, shareId]
+    [layout, effectiveVariant, workoutTitle, data, me, shareId]
   );
 
   // Recorded when a share actually happens, with what was actually shared.
