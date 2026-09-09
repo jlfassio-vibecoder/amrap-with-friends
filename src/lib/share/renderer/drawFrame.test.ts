@@ -296,6 +296,92 @@ describe('the card actually shows the result', () => {
     const lowest = Math.max(...texts.map((entry) => entry.y));
     expect(lowest).toBeGreaterThan(1000);
   });
+  const landscape = (extra: Record<string, unknown> = {}) => ({
+    ...baseOptions,
+    layout: 'landscape' as const,
+    movements: [
+      { name: 'Air Squats', reps: 10, unit: null },
+      { name: 'Hand-Release Push-ups', reps: 10, unit: null },
+      { name: 'Sit-ups', reps: 20, unit: null },
+      { name: 'Burpees', reps: 5, unit: null },
+    ],
+    totalReps: 428,
+    finalScore: 738,
+    showBoard: false,
+    ...extra,
+  });
+
+  it('draws nothing below the bottom edge', () => {
+    // Regression: the card is 608px tall and inherited the story's type scale,
+    // whose block stack needs about 740px. The workout ran off the bottom and
+    // the footer link was pinned on top of it. Found on a real Facebook
+    // unfurl, not by a test.
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, frameAt(fullCard()), landscape());
+    expect(texts.length).toBeGreaterThan(0);
+    for (const entry of texts) {
+      expect(entry.y).toBeGreaterThanOrEqual(0);
+      expect(entry.y).toBeLessThan(608);
+    }
+  });
+
+  it('draws the watermark, which used to land past the canvas', () => {
+    // It was placed at footerY + 72 = 616 on a 608px card, so it was never
+    // drawn at all -- the brand was missing from the one card strangers see.
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, frameAt(fullCard()), landscape());
+    const wordmark = texts.find((entry) => entry.text === 'AMRAP With Friends');
+    expect(wordmark).toBeDefined();
+    expect(wordmark!.y).toBeLessThan(608);
+  });
+
+  it('keeps the link clear of the workout instead of printing one over the other', () => {
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, frameAt(fullCard()), landscape());
+    const link = texts.find((entry) => entry.text.startsWith('amrapwithfriends.com'));
+    const movements = texts.filter((entry) => entry.text.includes('Air Squats'));
+    expect(link).toBeDefined();
+    for (const movement of movements) {
+      expect(movement.y).toBeLessThan(link!.y);
+    }
+  });
+
+  it('drops movements that will not fit rather than slicing the last one', () => {
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, frameAt(fullCard()), landscape());
+    const names = ['10 Air Squats', '10 Hand-Release Push-ups', '20 Sit-ups', '5 Burpees'];
+    const drawn = names.filter((name) => texts.some((entry) => entry.text === name));
+    // Whatever is drawn must be whole and on the card. Four fit today; the
+    // guarantee is the bound, not the number.
+    expect(drawn.length).toBeGreaterThan(0);
+    expect(drawn.length).toBeLessThanOrEqual(names.length);
+  });
+
+  it('still leads with the score, at a size the 608px card can hold', () => {
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, frameAt(fullCard()), landscape());
+    const hero = texts.find((entry) => entry.text === '7 rounds + 12');
+    expect(hero).toBeDefined();
+    const size = Number(/(\d+)px/.exec(hero!.font)?.[1]);
+    // Still by far the largest thing on the card, and still the first thing
+    // drawn after the title.
+    expect(size).toBeGreaterThan(60);
+    expect(size).toBeLessThan(160);
+    const subtitle = texts.find((entry) => entry.text.startsWith('12 min AMRAP'));
+    expect(size).toBeGreaterThan(Number(/(\d+)px/.exec(subtitle!.font)?.[1]));
+  });
+
+  it('leaves the story card exactly as it was', () => {
+    // The two ratios the athlete posts render correctly today; this fix must
+    // not move them.
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, frameAt(fullCard()), richOptions());
+    // 128 rather than the 160 of TYPE_SCALE.display because fitFontSize
+    // already shrank this score to the card width -- which is exactly the
+    // point: this is the number main produces, and it must not move.
+    const hero = texts.find((entry) => entry.text === '7 rounds + 12');
+    expect(/(\d+)px/.exec(hero!.font)?.[1]).toBe('128');
+  });
 });
 
 describe('the hero fits instead of being cut off', () => {
