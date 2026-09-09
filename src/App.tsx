@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import SharePage from '@/pages/SharePage';
 import { AppLink } from '@/components/AppLink';
 import { GlobalPresenceBroadcaster } from '@/components/GlobalPresenceBroadcaster';
 import { PasswordRecoveryRedirect } from '@/components/PasswordRecoveryRedirect';
@@ -67,6 +68,7 @@ function App() {
             }
           />
           <Route path="/join" element={<JoinMissionPage />} />
+          <Route path="/s/:shareId" element={<SharePage />} />
           <Route path="/rally-point/:rallyPointId" element={<RallyPointPage />} />
           {/* Public: the invite preview is what convinces someone to sign up,
               so it must render before the auth gate. */}

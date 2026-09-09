@@ -32,18 +32,17 @@ export function createShareId(): string {
 /**
  * The link printed on the card and pasted into the caption.
  *
- * Deliberately the bare domain until phase 3 ships. `/s/{id}` is not
- * registered in seo/routes.ts, so the edge middleware answers it with a real
- * 404 before the SPA loads — and a card is not a page that can be fixed later:
- * it is a PNG inside somebody's Instagram post, permanently, pointing at
- * nothing. The share row is still recorded, so phase 3 can turn the id back on
- * by restoring one line here.
+ * Back to the per-share id now that /s/:id is registered in seo/routes.ts and
+ * the middleware serves it — before phase 3 this was the bare domain, because
+ * the middleware answered /s/ with a real 404 and a card is a PNG inside
+ * somebody's post permanently.
  */
-export function shareUrl(): string {
-  return 'amrapwithfriends.com';
+export function shareUrl(shareId: string): string {
+  return shareDeepLink(shareId);
 }
 
-/** What phase 3 restores once /s/:id exists and is registered. */
+/** The canonical share address. */
+
 export function shareDeepLink(shareId: string): string {
   return `amrapwithfriends.com/s/${shareId}`;
 }

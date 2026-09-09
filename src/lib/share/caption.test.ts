@@ -23,7 +23,7 @@ describe('buildCaption', () => {
         squadSize: 4,
       })
     ).toBe(
-      '7 rounds + 12 · 12 min AMRAP · with 3 others\nJoin the next mission: amrapwithfriends.com'
+      '7 rounds + 12 · 12 min AMRAP · with 3 others\nJoin the next mission: amrapwithfriends.com/s/abc12345'
     );
   });
 
@@ -70,6 +70,6 @@ describe('buildCaption', () => {
       squadSize: 1,
     });
     expect(caption.startsWith('10 min AMRAP')).toBe(true);
-    expect(caption).toContain('amrapwithfriends.com');
+    expect(caption).toContain('amrapwithfriends.com/s/abc12345');
   });
 });
