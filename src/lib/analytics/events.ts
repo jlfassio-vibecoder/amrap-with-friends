@@ -95,6 +95,11 @@ export const ANALYTICS_EVENT_NAMES = [
   'pacing_calculator_scored',
   'pacing_calculator_cta_clicked',
 
+  // Share card
+  'share_card_rendered',
+  'share_opened',
+  'share_completed',
+
   // Platform / reliability
   'audio_unlock_result',
   'rpc_call',
