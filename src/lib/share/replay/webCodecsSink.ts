@@ -2,11 +2,10 @@
 // but swapping encoder libraries is a rewrite of this sink rather than a
 // review fix, and it cannot be verified without a device — tracked as follow-up.
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
+import { avcCandidates } from '@/lib/share/replay/avcCodec';
 import type { FrameSink } from '@/lib/share/replay/encodeLoop';
 import { REPLAY_FPS } from '@/lib/share/replay/frames';
 
-/** Baseline first: the widest device support. Main profile is the fallback for encoders that refuse it. */
-const CODECS = ['avc1.42E01E', 'avc1.4D401F'] as const;
 
 export interface WebCodecsSinkOptions {
   canvas: OffscreenCanvas | HTMLCanvasElement;
@@ -47,26 +46,31 @@ export async function createWebCodecsSink(options: WebCodecsSinkOptions): Promis
     },
   });
 
+  // isConfigSupported, not try/catch around configure(). An unsupported level
+  // is reported through the encoder's async error callback, so configure()
+  // returns without throwing and the failure surfaces mid-render instead of
+  // falling through to the next candidate — which is exactly how a level-3.0
+  // string shipped for a 1080x1920 frame.
   let configured = false;
-  for (const codec of CODECS) {
-    try {
-      encoder.configure({
-        codec,
-        width: options.width,
-        height: options.height,
-        bitrate: options.bitrate ?? 6_000_000,
-        framerate: fps,
-        latencyMode: 'quality',
-      });
+  for (const codec of avcCandidates(options.width, options.height)) {
+    const config: VideoEncoderConfig = {
+      codec,
+      width: options.width,
+      height: options.height,
+      bitrate: options.bitrate ?? 6_000_000,
+      framerate: fps,
+      latencyMode: 'quality',
+    };
+    const support = await scope.VideoEncoder.isConfigSupported(config).catch(() => null);
+    if (support?.supported) {
+      encoder.configure(config);
       configured = true;
       break;
-    } catch {
-      /* try the next profile */
     }
   }
   if (!configured) {
     encoder.close();
-    throw new Error('no supported H.264 profile');
+    throw new Error(`no supported H.264 profile for ${options.width}x${options.height}`);
   }
 
   return {

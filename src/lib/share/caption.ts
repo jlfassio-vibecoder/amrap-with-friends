@@ -16,7 +16,8 @@ export function buildCaption(input: {
   squadSize: number;
 }): string {
   const score = input.bar ? `${formatScore(input.bar)} · ` : '';
-  const withSquad = input.squadSize > 1 ? ` · with ${input.squadSize - 1} others` : '';
+  const others = input.squadSize - 1;
+  const withSquad = others > 0 ? ` · with ${others} ${others === 1 ? 'other' : 'others'}` : '';
   return [
     `${score}${input.durationMinutes} min AMRAP${withSquad}`,
     `Join the next mission: ${shareUrl()}`,
