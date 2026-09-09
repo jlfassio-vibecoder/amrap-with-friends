@@ -17,9 +17,11 @@ const page = readFileSync(join(root, 'src/pages/MissionWaitingRoomPage.tsx'), 'u
  * past `MissionPacingGauge` and drops the parts into the page again.
  */
 describe('the pacing gauge is mounted, not inlined', () => {
-  it('reaches the page through exactly one component', () => {
+  it('reaches the page through the race mount or the AMQAP mount', () => {
     expect(page).toContain('<MissionPacingGauge');
+    expect(page).toContain('<MissionAmqapGauge');
     expect(page.match(/<MissionPacingGauge/g) ?? []).toHaveLength(1);
+    expect(page.match(/<MissionAmqapGauge/g) ?? []).toHaveLength(1);
   });
 
   it('does not pull the gauge’s parts into the page directly', () => {
@@ -27,6 +29,8 @@ describe('the pacing gauge is mounted, not inlined', () => {
     // bypassed, and with it the boundary and the keep-inputs-out-of-work rule.
     for (const internal of [
       '@/components/mission/PacingGauge',
+      '@/components/mission/AmqapGauge',
+      '@/components/mission/GaugeDial',
       '@/components/mission/MissionWidgetBoundary',
       '@/lib/pacing/pacingGaugePrefs',
       '@/lib/pacing/pacingGauge',
@@ -41,7 +45,8 @@ describe('the pacing gauge is mounted, not inlined', () => {
 
     const clock = at('formatTime(live.timeLeftSec)');
     const logRound = at('onClick={handleLogRound}');
-    const mount = at('<MissionPacingGauge');
+    const mounts = [at('<MissionPacingGauge'), at('<MissionAmqapGauge')].filter((n) => n > -1);
+    const mount = Math.min(...mounts);
     expect(clock).toBeGreaterThan(-1);
     expect(logRound).toBeGreaterThan(-1);
     expect(mount).toBeGreaterThan(-1);
