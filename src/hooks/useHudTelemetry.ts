@@ -18,14 +18,18 @@ export function useHudTelemetry() {
     let cancelled = false;
 
     void (async () => {
-      // Finished AMQAP without PartialReps never hit hud_telemetry; lock them
-      // before reading so Active Recovery / week / 7d / lastLockedAt catch up.
-      await repairUnlockedAmqapScores();
-      if (cancelled) {
-        return;
-      }
-
       try {
+        // Finished AMQAP without PartialReps never hit hud_telemetry; lock them
+        // before reading so Active Recovery / week / 7d / lastLockedAt catch up.
+        try {
+          await repairUnlockedAmqapScores();
+        } catch {
+          // Best-effort repair — still load whatever telemetry is already locked.
+        }
+        if (cancelled) {
+          return;
+        }
+
         const result = await fetchHudTelemetry();
         if (cancelled) {
           return;
