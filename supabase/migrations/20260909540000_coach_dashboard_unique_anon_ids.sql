@@ -1,4 +1,11 @@
--- coach_dashboard rebuilt from 20260909500000 with engagement depth and 404s.
+-- Copilot review on PR #122: uniqueAnonIds counted placeholder anon ids.
+--
+-- '' and 'unknown' are sentinels, not people — the same exclusions guestBrowsers7d
+-- and report_tool_conversion already apply. Counting them inflated the top-strip
+-- uniqueAnonIds metric.
+--
+-- A separate migration rather than relying on an edit to 20260909520000, which is
+-- already recorded in the remote migration history.
 
 CREATE OR REPLACE FUNCTION public.coach_dashboard(p_window text DEFAULT 'all')
 RETURNS jsonb
