@@ -115,3 +115,43 @@ describe('drawFrame', () => {
     expect(texts.some((entry) => entry.text.endsWith('…'))).toBe(true);
   });
 });
+
+describe('drawFrame during the replay', () => {
+  it('draws a countdown clock in the race phase, not a score hero', () => {
+    const { ctx, texts } = recordingCtx();
+    const race = { ...frameAt(data(3)), phase: 'race' as const, clockSeconds: 120, cardBlend: 0 };
+    drawFrame(ctx, race, { ...baseOptions, capSeconds: 720 });
+    expect(texts.map((entry) => entry.text)).toContain('10:00');
+  });
+
+  it('keeps the clock inside the story safe area', () => {
+    // Instagram's own header sits over the top 250px.
+    const { ctx, texts } = recordingCtx();
+    const race = { ...frameAt(data(3)), phase: 'race' as const, clockSeconds: 0, cardBlend: 0 };
+    drawFrame(ctx, race, { ...baseOptions, capSeconds: 720 });
+    for (const entry of texts) {
+      expect(entry.y).toBeGreaterThanOrEqual(250);
+    }
+  });
+
+  it('draws a bar per athlete, sized by progress', () => {
+    const { ctx, rects } = recordingCtx();
+    const race = {
+      ...frameAt(data(3)),
+      phase: 'race' as const,
+      clockSeconds: 300,
+      cardBlend: 0,
+    };
+    race.bars = race.bars.map((bar, index) => ({ ...bar, progress: index === 0 ? 1 : 0.5 }));
+    drawFrame(ctx, race, { ...baseOptions, capSeconds: 720 });
+    const fills = rects.filter((rect) => rect[3] === 28);
+    // Track plus fill for each of the three athletes.
+    expect(fills.length).toBeGreaterThanOrEqual(6);
+  });
+
+  it('renders the card alone once the crossfade completes', () => {
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, frameAt(data(3)), { ...baseOptions, capSeconds: 720 });
+    expect(texts.map((entry) => entry.text)).toContain('7 rounds + 12');
+  });
+});

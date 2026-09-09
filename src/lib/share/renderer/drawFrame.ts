@@ -1,4 +1,5 @@
 import { boardRows, formatScore, myBar, type FrameState } from '@/lib/share/timeline';
+import { formatClockSeconds } from '@/lib/share/replay/frames';
 import {
   AWF_THEME,
   LAYOUTS,
@@ -17,6 +18,8 @@ export interface DrawFrameOptions {
   shareUrl: string;
   watermark: boolean;
   theme?: ShareTheme;
+  /** Set for replay frames; the card omits it. */
+  capSeconds?: number;
 }
 
 /**
@@ -48,7 +51,94 @@ function fitText(ctx: Ctx, text: string, maxWidth: number): string {
   return `${trimmed}…`;
 }
 
+/**
+ * The live phases: a clock, and one bar per athlete that grows as their rounds
+ * land. Crossfades into the card during the freeze via `cardBlend`, which is
+ * why both live in one function — a separate replay renderer would drift from
+ * the card it hands over to.
+ */
+function drawRaceFrame(ctx: Ctx, frame: FrameState, options: DrawFrameOptions): void {
+  const theme = options.theme ?? AWF_THEME;
+  const spec = LAYOUTS[options.layout];
+  const left = SAFE_AREA;
+  const contentWidth = spec.width - SAFE_AREA * 2;
+
+  ctx.fillStyle = theme.background;
+  ctx.fillRect(0, 0, spec.width, spec.height);
+
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = theme.secondary;
+  ctx.font = font(TYPE_SCALE.body, 600);
+  ctx.fillText(fitText(ctx, options.title, contentWidth), left, spec.safeTop);
+
+  // The clock sits inside the safe area: on a Story it would otherwise be
+  // under Instagram's own header.
+  ctx.fillStyle = theme.ink;
+  ctx.font = font(TYPE_SCALE.display, 800);
+  ctx.fillText(
+    formatClockSeconds(options.capSeconds ?? 0, frame.clockSeconds),
+    left,
+    spec.safeTop + TYPE_SCALE.body + 24
+  );
+
+  const barsTop = spec.safeTop + TYPE_SCALE.body + TYPE_SCALE.display + 80;
+  const rowHeight = 104;
+  const available = spec.height - spec.safeBottom - barsTop;
+  const visible = Math.max(0, Math.min(frame.bars.length, Math.floor(available / rowHeight)));
+
+  for (let index = 0; index < visible; index += 1) {
+    const bar = frame.bars[index];
+    if (!bar) {
+      continue;
+    }
+    const y = barsTop + index * rowHeight;
+    const trackWidth = contentWidth;
+    const fillWidth = Math.max(6, trackWidth * Math.max(0, Math.min(1, bar.progress)));
+
+    ctx.fillStyle = theme.surface;
+    ctx.fillRect(left, y + 44, trackWidth, 28);
+    ctx.fillStyle = bar.highlight ? theme.accent : theme.border;
+    ctx.fillRect(left, y + 44, fillWidth, 28);
+
+    // A round landing pops the bar. Decays over half a mission second, so it
+    // reads as a beat rather than a flicker.
+    if (bar.flash > 0) {
+      ctx.globalAlpha = bar.flash;
+      ctx.fillStyle = theme.ink;
+      ctx.fillRect(left, y + 44, fillWidth, 28);
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.fillStyle = bar.highlight ? theme.ink : theme.secondary;
+    ctx.font = font(TYPE_SCALE.body, bar.highlight ? 800 : 600);
+    ctx.fillText(fitText(ctx, bar.displayName, contentWidth - 260), left, y);
+
+    ctx.textAlign = 'right';
+    ctx.fillText(formatScore(bar), spec.width - SAFE_AREA, y);
+    ctx.textAlign = 'left';
+  }
+}
+
 export function drawFrame(ctx: Ctx, frame: FrameState, options: DrawFrameOptions): void {
+  // Title and race are the live video; freeze is the card. The crossfade
+  // between them is what makes the last two seconds land on the shareable
+  // image rather than cutting to it.
+  if (frame.phase !== 'freeze') {
+    drawRaceFrame(ctx, frame, options);
+    return;
+  }
+  if (frame.cardBlend < 1 && options.capSeconds !== undefined) {
+    drawRaceFrame(ctx, frame, options);
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, frame.cardBlend));
+    drawCardFrame(ctx, frame, options);
+    ctx.restore();
+    return;
+  }
+  drawCardFrame(ctx, frame, options);
+}
+
+function drawCardFrame(ctx: Ctx, frame: FrameState, options: DrawFrameOptions): void {
   const theme = options.theme ?? AWF_THEME;
   const spec = LAYOUTS[options.layout];
   const { width, height } = spec;

@@ -5,6 +5,7 @@ import { AppLink } from '@/components/AppLink';
 import { resolvePacingData } from '@/lib/scoring/resolvePacingData';
 import { ScoreBreakdownDisplay } from '@/components/ScoreBreakdownDisplay';
 import { DaisyChainCta } from '@/components/mission/DaisyChainCta';
+import { ShareCardSection } from '@/components/share/ShareCardSection';
 import { announceNextMission } from '@/lib/api/rallyPoint';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
@@ -27,6 +28,9 @@ interface MissionScorecardProps {
   nextUpMissionName?: string | null;
   /** After chain advance: primary Continue navigates here instead of Daisy-chain / hub. */
   nextMissionId?: string | null;
+  /** Set to offer the share card. Omitted where there is no mission to share (previews, tests). */
+  missionId?: string | null;
+  templateId?: string | null;
 }
 
 function saveButtonLabel(saveState: MissionScorecardSaveState): string {
@@ -55,6 +59,8 @@ export function MissionScorecard({
   isHost = false,
   nextUpMissionName = null,
   nextMissionId = null,
+  missionId = null,
+  templateId = null,
 }: MissionScorecardProps) {
   const navigate = useNavigate();
   const titleId = 'mission-scorecard-title';
@@ -189,6 +195,9 @@ export function MissionScorecard({
               <DaisyChainCta onActivate={handleDaisyChain} />
             )}
             {daisyError ? <p className="text-error text-sm">{daisyError}</p> : null}
+            {/* Before the exits: a guest who shares and leaves has still put
+                the link in front of their followers. */}
+            {missionId ? <ShareCardSection missionId={missionId} templateId={templateId} /> : null}
             <button type="button" className="btn-neutral w-full text-sm" onClick={onClose}>
               Close
             </button>
