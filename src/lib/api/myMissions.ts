@@ -13,6 +13,7 @@ import { parseScoreBreakdownJson } from '@/lib/scoring/parseScoreBreakdownJson';
 import { computeBaseScore } from '@/lib/scoring/computeBaseScore';
 import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
 import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
+import { countOf } from '@/lib/units/plural';
 
 export interface MyMissionEntry {
   participantId: string;
@@ -114,7 +115,7 @@ export function formatMyMissionScoreDisplay(entry: MyMissionEntry): string {
   // for every finished mission, reps-countable or not, unconditionally
   // labelled "reps" even for a round-based workout.
   if (!isMyMissionScoreScorable(entry)) {
-    return `${entry.roundCount} rounds`;
+    return countOf(entry.roundCount, 'round');
   }
 
   return `${computeMyMissionBaseScore(entry)} reps`;

@@ -6,6 +6,7 @@ import {
 import { getPviMultiplier } from '@/lib/scoring/getPviMultiplier';
 import { formatSplitDuration } from '@/lib/missionSync/computeParticipantSplits';
 import { ScoreStatInfoTrigger } from '@/components/scoring/ScoreStatInfoTrigger';
+import { countOf } from '@/lib/units/plural';
 
 interface PacingBarChartProps {
   roundSplits: number[];
@@ -19,7 +20,7 @@ const PADDING = { top: 12, right: 12, bottom: 28, left: 36 };
 const BAR_GAP = 8;
 
 function buildAriaLabel(roundSplits: number[], slowestRound: number): string {
-  return `Pacing chart with ${roundSplits.length} rounds. Slowest round was round ${slowestRound}.`;
+  return `Pacing chart with ${countOf(roundSplits.length, 'round')}. Slowest round was round ${slowestRound}.`;
 }
 
 export function PacingBarChart({ roundSplits, durationMinutes, pvi }: PacingBarChartProps) {

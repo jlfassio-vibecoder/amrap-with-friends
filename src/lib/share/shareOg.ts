@@ -4,7 +4,11 @@
  * into the middleware bundle for one line of formatting.
  */
 function formatScore(rounds: number, reps: number): string {
-  return reps > 0 ? `${rounds} rounds + ${reps}` : `${rounds} rounds`;
+  // countOf() from @/lib/units/plural, inlined for the same reason as the rest
+  // of this file: the edge runtime does not resolve the alias. Keep the two in
+  // step — this string and the card's hero are the same sentence in two places.
+  const label = `${rounds} ${Math.abs(rounds) === 1 ? 'round' : 'rounds'}`;
+  return reps > 0 ? `${label} + ${reps}` : label;
 }
 
 export interface ShareSummary {

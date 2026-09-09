@@ -24,6 +24,14 @@ describe('shareOgTitle', () => {
     expect(shareOgTitle({ ...summary, reps: 0 })).toBe('7 rounds · 12 min AMRAP');
   });
 
+  it('says "1 round" in the unfurl too', () => {
+    // This file cannot import the shared pluraliser -- the edge runtime does
+    // not resolve the alias -- so it carries its own copy, and this is what
+    // catches the two drifting apart.
+    expect(shareOgTitle({ ...summary, rounds: 1, reps: 0 })).toBe('1 round · 12 min AMRAP');
+    expect(shareOgTitle({ ...summary, rounds: 1, reps: 12 })).toBe('1 round + 12 · 12 min AMRAP');
+  });
+
   it('falls back to the product name for an unknown share', () => {
     expect(shareOgTitle(null)).toBe('AMRAP With Friends');
   });

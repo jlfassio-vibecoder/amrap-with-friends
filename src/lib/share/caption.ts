@@ -1,5 +1,6 @@
 import { formatScore, type FrameBar } from '@/lib/share/timeline';
 import { shareUrl } from '@/lib/share/shareId';
+import { countOf } from '@/lib/units/plural';
 
 /**
  * The text that goes to the share sheet and the clipboard.
@@ -17,7 +18,7 @@ export function buildCaption(input: {
 }): string {
   const score = input.bar ? `${formatScore(input.bar)} · ` : '';
   const others = input.squadSize - 1;
-  const withSquad = others > 0 ? ` · with ${others} ${others === 1 ? 'other' : 'others'}` : '';
+  const withSquad = others > 0 ? ` · with ${countOf(others, 'other')}` : '';
   return [
     `${score}${input.durationMinutes} min AMRAP${withSquad}`,
     `Join the next mission: ${shareUrl(input.shareId)}`,

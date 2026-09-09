@@ -1,5 +1,6 @@
 import { CUTS, missionTimeAt, phaseAt, type CutId } from '@/lib/share/cuts';
 import type { ReplayData, ShareVariant } from '@/lib/share/types';
+import { countOf } from '@/lib/units/plural';
 
 export interface FrameBar {
   participantId: string;
@@ -149,7 +150,8 @@ export function myBar(bars: FrameBar[]): FrameBar | null {
 }
 
 export function formatScore(bar: Pick<FrameBar, 'rounds' | 'reps'>): string {
-  return bar.reps > 0 ? `${bar.rounds} rounds + ${bar.reps}` : `${bar.rounds} rounds`;
+  const rounds = countOf(bar.rounds, 'round');
+  return bar.reps > 0 ? `${rounds} + ${bar.reps}` : rounds;
 }
 
 /**
