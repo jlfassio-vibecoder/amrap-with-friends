@@ -1,3 +1,4 @@
+import { CUTS, missionTimeAt, phaseAt, type CutId } from '@/lib/share/cuts';
 import type { ReplayData, ShareVariant } from '@/lib/share/types';
 
 export interface FrameBar {
@@ -7,6 +8,10 @@ export interface FrameBar {
   reps: number;
   rank: number;
   highlight: boolean;
+  /** 0..1 of the leader's rounds, for the bar width. */
+  progress: number;
+  /** 0..1, decays after a round lands. Drives the round-pop flash. */
+  flash: number;
 }
 
 export interface FrameState {
@@ -44,13 +49,81 @@ export function rankParticipants(data: ReplayData): FrameBar[] {
       reps: participant.finalReps,
       rank: index + 1,
       highlight: participant.isMe,
+      progress: 1,
+      flash: 0,
     }));
 }
 
+const FLASH_DECAY_SECONDS = 0.5;
+
 /**
- * Phase 1 implements the freeze frame only — the card. `t` is accepted now so
- * Phase 2 can fill in title/race/finish without changing a call site.
+ * The whole storyboard, as a pure function of (data, videoTime, cut).
+ *
+ * Determinism is the requirement, not a nicety: the encoder calls this once
+ * per frame, and anything derived from render order — a mutable previous
+ * frame, a Date.now(), an unstable sort — would make two encodes of the same
+ * mission differ. Everything here is computed from the round timestamps.
  */
+export function frameAtVideoTime(data: ReplayData, t: number, cutId: CutId): FrameState {
+  const cut = CUTS[cutId];
+  const cap = data.mission.capSeconds;
+  const phase = phaseAt(cut, cap, t);
+  const missionSeconds = missionTimeAt(cut, cap, t);
+
+  const rows = data.participants.map((participant) => {
+    const rounds = data.rounds.filter((round) => round.participantId === participant.participantId);
+    const landed = rounds.filter((round) => round.atSeconds <= missionSeconds);
+    const last = landed.length > 0 ? landed[landed.length - 1] : null;
+    // Mission seconds since the last round landed, converted to a decaying
+    // flash. Derived from the data, so scrubbing backwards looks the same as
+    // playing forwards.
+    const sinceLast = last ? missionSeconds - last.atSeconds : Number.POSITIVE_INFINITY;
+    return {
+      participant,
+      rounds: landed.length,
+      // Reps only exist as a final figure, so they appear when the clock does.
+      reps: phase.phase === 'freeze' || missionSeconds >= cap ? participant.finalReps : 0,
+      flash: Math.max(0, 1 - sinceLast / FLASH_DECAY_SECONDS),
+    };
+  });
+
+  const leader = Math.max(1, ...rows.map((row) => row.rounds));
+
+  const bars = rows
+    .sort((a, b) => {
+      if (b.rounds !== a.rounds) {
+        return b.rounds - a.rounds;
+      }
+      if (b.reps !== a.reps) {
+        return b.reps - a.reps;
+      }
+      return a.participant.displayName.localeCompare(b.participant.displayName);
+    })
+    .map((row, index) => ({
+      participantId: row.participant.participantId,
+      displayName: row.participant.displayName,
+      rounds: row.rounds,
+      reps: row.reps,
+      rank: index + 1,
+      highlight: row.participant.isMe,
+      progress: row.rounds / leader,
+      flash: row.flash,
+    }));
+
+  const freezeSpan = cut.durationSeconds - (phase.phase === 'freeze' ? phase.from : 0);
+
+  return {
+    phase: phase.phase,
+    clockSeconds: Math.max(0, Math.min(cap, missionSeconds)),
+    bars,
+    cardBlend:
+      phase.phase === 'freeze' && freezeSpan > 0
+        ? Math.max(0, Math.min(1, (t - phase.from) / freezeSpan))
+        : 0,
+  };
+}
+
+/** The card: the last frame of the storyboard, with the board already final. */
 export function frameAt(data: ReplayData, t: number = data.mission.capSeconds): FrameState {
   return {
     phase: 'freeze',

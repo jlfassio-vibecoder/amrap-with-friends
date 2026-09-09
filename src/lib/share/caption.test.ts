@@ -8,6 +8,8 @@ const bar = {
   reps: 12,
   rank: 1,
   highlight: true,
+  progress: 1,
+  flash: 0,
 };
 
 describe('buildCaption', () => {
