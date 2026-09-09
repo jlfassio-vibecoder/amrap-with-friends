@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
+  CONSENT_VERSION,
   canUseIdentifiedAnalytics,
+  enforceConsentBoundary,
   countryRequiresConsent,
   isConsentRequired,
   readConsentState,
@@ -104,5 +106,73 @@ describe('the gate', () => {
     expect(canUseIdentifiedAnalytics()).toBe(false);
     expect(getOrCreateAnonId()).toBeNull();
     expect(localStorage.getItem('amrap_anon_id')).toBeNull();
+  });
+});
+
+describe('re-asking existing visitors', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    setRegionCookie(null);
+    localStorage.clear();
+  });
+
+  it('removes an identifier minted before the gate existed', () => {
+    // The pre-gate case: an EEA visitor already carrying an id and no stored
+    // answer. Gating future reads is not enough -- the id is on their device.
+    setRegionCookie('1');
+    localStorage.setItem('amrap_anon_id', 'pre-existing-id');
+    localStorage.setItem('amrap_first_touch', '{"channel":"organic_search"}');
+
+    enforceConsentBoundary();
+
+    expect(localStorage.getItem('amrap_anon_id')).toBeNull();
+    expect(localStorage.getItem('amrap_first_touch')).toBeNull();
+    expect(shouldAskForConsent()).toBe(true);
+  });
+
+  it('leaves a granted visitor alone', () => {
+    setRegionCookie('1');
+    writeConsentState('granted');
+    localStorage.setItem('amrap_anon_id', 'kept');
+
+    enforceConsentBoundary();
+
+    expect(localStorage.getItem('amrap_anon_id')).toBe('kept');
+  });
+
+  it('does not clear an ungated visitor who simply has not opted out', () => {
+    setRegionCookie('0');
+    localStorage.setItem('amrap_anon_id', 'kept');
+
+    enforceConsentBoundary();
+
+    expect(localStorage.getItem('amrap_anon_id')).toBe('kept');
+  });
+
+  it('re-asks when the consent version moves on', () => {
+    setRegionCookie('1');
+    localStorage.setItem('amrap_consent', `granted:${CONSENT_VERSION - 1}`);
+
+    // A yes given under different terms is not a yes to these.
+    expect(readConsentState()).toBe('unanswered');
+    expect(shouldAskForConsent()).toBe(true);
+    expect(canUseIdentifiedAnalytics()).toBe(false);
+  });
+
+  it('treats an unversioned stored answer as unanswered', () => {
+    setRegionCookie('1');
+    localStorage.setItem('amrap_consent', 'granted');
+
+    expect(readConsentState()).toBe('unanswered');
+  });
+
+  it('round-trips a decision at the current version', () => {
+    setRegionCookie('1');
+    writeConsentState('granted');
+    expect(localStorage.getItem('amrap_consent')).toBe(`granted:${CONSENT_VERSION}`);
+    expect(readConsentState()).toBe('granted');
   });
 });

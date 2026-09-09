@@ -5,6 +5,7 @@ import {
   readStoredAttribution,
   referrerHost,
 } from '@/lib/analytics/attribution';
+import { enforceConsentBoundary } from '@/lib/analytics/consent';
 import { mountConsentBanner } from '@/lib/analytics/consentBanner';
 import { sendContentEvent } from '@/lib/analytics/contentBeacon';
 import { isAppRoute } from '@/lib/seo/routes';
@@ -22,6 +23,10 @@ export function initContentAnalytics(): void {
   if (typeof window === 'undefined') {
     return;
   }
+
+  // Before anything reads the id: a gated visitor carrying one from before the
+  // gate existed has it removed rather than merely ignored.
+  enforceConsentBoundary();
 
   // Asked before anything is stored, and only where the region requires it.
   // The pageview below still reports either way -- with no identifier when

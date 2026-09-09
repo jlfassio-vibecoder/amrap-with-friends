@@ -49,6 +49,23 @@ export function clearIdentifiedStorage(): void {
   }
 }
 
+/**
+ * Run on load, before anything reads the identifier.
+ *
+ * A visitor in a gated region who has not granted consent should not be
+ * carrying an identifier at all -- including one minted before the gate
+ * existed, or under a previous consent version. Gating future reads is not
+ * enough on its own: the id is already on their device, and leaving it there
+ * until they happen to answer is the state they have not agreed to.
+ *
+ * Deliberately not called for an ungated visitor who simply has not opted out.
+ */
+export function enforceConsentBoundary(): void {
+  if (isConsentRequired() && readConsentState() !== 'granted') {
+    clearIdentifiedStorage();
+  }
+}
+
 /** The one entry point for a decision, from the banner or from /privacy. */
 export function setConsentDecision(granted: boolean): void {
   writeConsentState(granted ? 'granted' : 'denied');
@@ -58,6 +75,16 @@ export function setConsentDecision(granted: boolean): void {
 }
 
 const CONSENT_KEY = 'amrap_consent';
+
+/**
+ * Bump to re-ask everyone.
+ *
+ * A stored answer is only valid for the terms it was given under, so when what
+ * we do with the identifier changes, the old yes does not carry over. A stored
+ * value without a version predates versioning and is treated as unanswered --
+ * which is also how the first visitors after the gate ships are re-asked.
+ */
+export const CONSENT_VERSION = 1;
 
 /** Reads the middleware's cookie. Absent means gate: a stripped or blocked cookie must not silently open tracking. */
 export function isConsentRequired(cookieString?: string): boolean {
@@ -72,7 +99,14 @@ export function isConsentRequired(cookieString?: string): boolean {
 export function readConsentState(): ConsentState {
   try {
     const stored = localStorage.getItem(CONSENT_KEY);
-    return stored === 'granted' || stored === 'denied' ? stored : 'unanswered';
+    if (!stored) {
+      return 'unanswered';
+    }
+    const [state, version] = stored.split(':');
+    if (Number(version) !== CONSENT_VERSION) {
+      return 'unanswered';
+    }
+    return state === 'granted' || state === 'denied' ? state : 'unanswered';
   } catch {
     return 'unanswered';
   }
@@ -81,7 +115,7 @@ export function readConsentState(): ConsentState {
 /** Remembering the answer is itself strictly necessary — a visitor who declines must not be asked on every page. */
 export function writeConsentState(state: Exclude<ConsentState, 'unanswered'>): void {
   try {
-    localStorage.setItem(CONSENT_KEY, state);
+    localStorage.setItem(CONSENT_KEY, `${state}:${CONSENT_VERSION}`);
   } catch {
     /* a browser that cannot remember the answer will simply ask again */
   }

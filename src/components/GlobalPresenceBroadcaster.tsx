@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { enforceConsentBoundary } from '@/lib/analytics/consent';
 import { mountConsentBanner } from '@/lib/analytics/consentBanner';
 import { useAttributionCapture } from '@/hooks/useAttributionCapture';
 import { useGlobalPresenceBroadcast } from '@/hooks/useGlobalPresenceBroadcast';
@@ -10,6 +11,7 @@ export function GlobalPresenceBroadcaster() {
   // The same banner the content pages mount — one implementation, so the two
   // surfaces cannot drift on what the visitor was told.
   useEffect(() => {
+    enforceConsentBoundary();
     mountConsentBanner();
   }, []);
 
