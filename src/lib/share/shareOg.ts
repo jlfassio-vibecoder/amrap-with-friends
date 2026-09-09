@@ -50,16 +50,17 @@ export function shareOgDescription(summary: ShareSummary | null): string {
 /**
  * The dimensions to declare for whatever shareOgImage returned.
  *
- * Facebook picks its large-image layout from these before it has fetched the
- * file, so a wrong pair costs the layout the card was drawn for. The card is
- * the landscape render (1080x608); the fallback is the site's own social
+ * A platform reads these before it has fetched the file, and uses them to
+ * choose a layout. The card is the portrait story render (1080x1920) — saying
+ * so is what lets a client that can show a tall image show the whole one
+ * rather than assuming a landscape crop. The fallback is the site's own social
  * image, which is not the same shape.
  */
 export function shareOgImageSize(summary: ShareSummary | null): {
   width: number;
   height: number;
 } {
-  return summary?.imagePath ? { width: 1080, height: 608 } : { width: 1200, height: 630 };
+  return summary?.imagePath ? { width: 1080, height: 1920 } : { width: 1200, height: 630 };
 }
 
 export function shareOgImage(

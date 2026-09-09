@@ -136,18 +136,33 @@ describe('the image the link preview gets', () => {
     fireEvent.click(screen.getByText('Copy link'));
   }
 
-  it('is a landscape webp render, not the story card the athlete is looking at', async () => {
-    // Regression: the story card was uploaded as the og:image. A crawler crops
-    // og:image to roughly 1.91:1, so a 9:16 card arrived as a band out of its
-    // middle -- no hero, no workout, no chart. Found on a real Facebook share.
+  it('uploads the same portrait card the panel is previewing, as webp', async () => {
+    // The link has to unfurl as the card the athlete composed. It shipped as a
+    // landscape render for a while -- chosen to survive a crawler's 1.91:1
+    // crop -- and that put a different card behind the link from the one on
+    // screen, with the athlete's face cropped out of their own photo.
     renderCardBlob.mockResolvedValue(new Blob(['card'], { type: 'image/webp' }));
     await shareIt();
 
     await waitFor(() => expect(uploadShareImage).toHaveBeenCalled());
-    const ogCall = renderCardBlob.mock.calls.find((call) => call[1].layout === 'landscape');
+    const ogCall = renderCardBlob.mock.calls.find((call) => call[2]?.type === 'image/webp');
     expect(ogCall).toBeDefined();
-    expect(ogCall![2]).toMatchObject({ type: 'image/webp' });
+    expect(ogCall![1].layout).toBe('story');
     expect(uploadShareImage.mock.calls[0]![0].blob.type).toBe('image/webp');
+  });
+
+  it('sends the splits and the board with it, so nothing the panel shows is dropped', async () => {
+    // The landscape render skipped the chart and had no room for the board.
+    // Whatever the preview draws, the link gets.
+    renderCardBlob.mockResolvedValue(new Blob(['card'], { type: 'image/webp' }));
+    await shareIt();
+
+    await waitFor(() => expect(uploadShareImage).toHaveBeenCalled());
+    const preview = renderCardBlob.mock.calls[0]!;
+    const og = renderCardBlob.mock.calls.find((call) => call[2]?.type === 'image/webp')!;
+    expect(og[1].splits).toEqual(preview[1].splits);
+    expect(og[1].showBoard).toBe(preview[1].showBoard);
+    expect(og[1].variant).toBe(preview[1].variant);
   });
 
   it('uploads nothing when the share row never landed', async () => {
@@ -196,7 +211,7 @@ describe('the image the link preview gets', () => {
     fireEvent.click(screen.getByText('Copy link'));
 
     await waitFor(() => expect(uploadShareImage).toHaveBeenCalled());
-    const ogCall = renderCardBlob.mock.calls.find((call) => call[1].layout === 'landscape');
+    const ogCall = renderCardBlob.mock.calls.find((call) => call[2]?.type === 'image/webp');
     expect(ogCall![1].photo).toBeNull();
   });
 
@@ -214,7 +229,7 @@ describe('the image the link preview gets', () => {
     fireEvent.click(screen.getByText('Copy link'));
 
     await waitFor(() => expect(uploadShareImage).toHaveBeenCalled());
-    const ogCall = renderCardBlob.mock.calls.find((call) => call[1].layout === 'landscape');
+    const ogCall = renderCardBlob.mock.calls.find((call) => call[2]?.type === 'image/webp');
     expect(ogCall![1].photo).toMatchObject({ width: 4, height: 5 });
   });
 });
