@@ -1,3 +1,5 @@
+import { canUseIdentifiedAnalytics } from '@/lib/analytics/consent';
+
 /**
  * Where a visitor came from, captured once and kept.
  *
@@ -144,6 +146,9 @@ export function isAttributable(attribution: Attribution): boolean {
 const STORAGE_KEY = 'amrap_first_touch';
 
 export function readStoredAttribution(): Attribution | null {
+  if (!canUseIdentifiedAnalytics()) {
+    return null;
+  }
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
@@ -165,6 +170,11 @@ export function readStoredAttribution(): Attribution | null {
 }
 
 export function persistAttribution(attribution: Attribution): void {
+  // First touch is a durable record of where one person came from — the same
+  // Article 5(3) storage the browser id is, and gated the same way.
+  if (!canUseIdentifiedAnalytics()) {
+    return;
+  }
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(attribution));
   } catch {

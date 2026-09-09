@@ -1,4 +1,5 @@
 import { next } from '@vercel/edge';
+import { CONSENT_REGION_COOKIE, countryRequiresConsent } from './src/lib/analytics/consentRegion';
 import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, isKnownRoute, resolveSeo } from './src/lib/seo/routes';
 
 const BOT_UA =
@@ -18,13 +19,28 @@ export const config = {
   matcher: ['/((?!_vercel|assets/|_app-shell(?:/|$)|.*\\.[a-zA-Z0-9]+$).*)'],
 };
 
+/**
+ * Tells the browser whether this visitor's region needs a consent prompt,
+ * without the page having to ask a server or a third party.
+ *
+ * The country is only ever read, never stored: the cookie carries a single
+ * bit — needs asking, or not — and no identifier, which is why setting it does
+ * not itself require consent. `SameSite=Lax` and no `HttpOnly`, because the
+ * page's own script is the only thing that reads it.
+ */
+function consentRegionCookie(request: Request): string {
+  const country = request.headers.get('x-vercel-ip-country');
+  const required = countryRequiresConsent(country) ? '1' : '0';
+  return `${CONSENT_REGION_COOKIE}=${required}; Path=/; Max-Age=86400; SameSite=Lax`;
+}
+
 export default function middleware(request: Request): Response | Promise<Response> {
   const url = new URL(request.url);
   const pathname = url.pathname;
 
   // SPA shell file: vercel.json rewrites /create etc. here under cleanUrls.
   if (pathname === '/_app-shell' || pathname.startsWith('/_app-shell/')) {
-    return next();
+    return next({ headers: { 'set-cookie': consentRegionCookie(request) } });
   }
 
   // A catch-all rewrite to index.html answers every typo with HTTP 200 and an
@@ -48,7 +64,12 @@ export default function middleware(request: Request): Response | Promise<Respons
   // header says so without the crawler needing to render anything, which the
   // robots meta tag in the SPA cannot promise.
   if (!BOT_UA.test(ua) || !OG_ROUTES.has(pathname)) {
-    return next({ headers: { 'x-robots-tag': seo.robots } });
+    return next({
+      headers: {
+        'x-robots-tag': seo.robots,
+        'set-cookie': consentRegionCookie(request),
+      },
+    });
   }
 
   const card = url.searchParams.get('card') === 'm' ? 'm' : 'f';

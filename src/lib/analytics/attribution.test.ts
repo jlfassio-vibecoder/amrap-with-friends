@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   buildAttribution,
   classifyReferrer,
@@ -119,6 +119,11 @@ describe('isAttributable', () => {
 });
 
 describe('stored attribution', () => {
+  beforeEach(() => {
+    // Outside the gated regions; consent.test.ts covers the gated path.
+    document.cookie = 'awf_consent_required=0; path=/';
+  });
+
   afterEach(() => {
     localStorage.clear();
     vi.restoreAllMocks();

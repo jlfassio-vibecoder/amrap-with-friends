@@ -5,6 +5,7 @@ import {
   readStoredAttribution,
   referrerHost,
 } from '@/lib/analytics/attribution';
+import { mountConsentBanner } from '@/lib/analytics/consentBanner';
 import { sendContentEvent } from '@/lib/analytics/contentBeacon';
 import { isAppRoute } from '@/lib/seo/routes';
 
@@ -21,6 +22,12 @@ export function initContentAnalytics(): void {
   if (typeof window === 'undefined') {
     return;
   }
+
+  // Asked before anything is stored, and only where the region requires it.
+  // The pageview below still reports either way -- with no identifier when
+  // consent is absent, which Article 5(3) does not reach -- so declining costs
+  // the visitor's privacy nothing and costs us only the attribution link.
+  mountConsentBanner();
 
   // First touch, captured with the same rules the app uses -- shared module,
   // not a second copy, so the two surfaces cannot drift on what counts as

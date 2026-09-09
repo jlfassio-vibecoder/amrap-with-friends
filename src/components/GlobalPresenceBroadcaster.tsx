@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { mountConsentBanner } from '@/lib/analytics/consentBanner';
 import { useAttributionCapture } from '@/hooks/useAttributionCapture';
 import { useGlobalPresenceBroadcast } from '@/hooks/useGlobalPresenceBroadcast';
 
@@ -5,6 +7,12 @@ import { useGlobalPresenceBroadcast } from '@/hooks/useGlobalPresenceBroadcast';
  * has the app open without joining presence:global, and records where this
  * browser first arrived from. */
 export function GlobalPresenceBroadcaster() {
+  // The same banner the content pages mount — one implementation, so the two
+  // surfaces cannot drift on what the visitor was told.
+  useEffect(() => {
+    mountConsentBanner();
+  }, []);
+
   useAttributionCapture();
   useGlobalPresenceBroadcast();
   return null;
