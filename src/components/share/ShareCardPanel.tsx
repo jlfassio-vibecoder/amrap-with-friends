@@ -53,6 +53,9 @@ export function ShareCardPanel({
   const [encoderPath] = useState(() => detectEncoderPath(readCapabilities()));
   const [photo, setPhoto] = useState<ImageBitmap | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  // Off by default. A photo of a person going to a public URL should be a
+  // decision somebody made, not one they failed to notice.
+  const [publishPhoto, setPublishPhoto] = useState(false);
 
   // Decoded once into an ImageBitmap rather than kept as a File: the renderer
   // draws it on every ratio change, and re-decoding a 12MP photo each time is
@@ -161,7 +164,8 @@ export function ShareCardPanel({
       // the image can read off it. Posting the photo is the athlete's choice
       // to make in the share sheet, once, not a side effect of tapping Copy
       // link. The link still works; it unfurls with the generic card.
-      const storyBlob = photo ? null : blobRef.current.get(`story:${effectiveVariant}`);
+      const storyBlob =
+        photo && !publishPhoto ? null : blobRef.current.get(`story:${effectiveVariant}`);
       if (storyBlob) {
         void uploadShareImage({
           shareId,
@@ -199,6 +203,7 @@ export function ShareCardPanel({
       claimToken,
       hostToken,
       photo,
+      publishPhoto,
     ]
   );
 
@@ -367,10 +372,24 @@ export function ShareCardPanel({
 
       {photoError ? <p className="text-xs text-secondary">{photoError}</p> : null}
       {photo ? (
-        <p className="text-xs text-secondary">
-          Your photo is drawn into the card on this device. Sharing the image puts it wherever you
-          post it.
-        </p>
+        <div className="space-y-2 rounded-card border border-border p-3">
+          <label className="flex items-start gap-2 text-xs text-secondary">
+            <input
+              type="checkbox"
+              checked={publishPhoto}
+              onChange={(event) => setPublishPhoto(event.target.checked)}
+              className="mt-0.5"
+            />
+            <span>
+              Show my photo in the link preview. Off by default — the share link is public, so
+              anyone who opens it would see the photo. Leave it off and the card is still yours to
+              post wherever you like; only the link preview uses the plain card.
+            </span>
+          </label>
+          <p className="text-xs text-secondary">
+            Either way the photo is drawn on this device. It is never uploaded unless you tick this.
+          </p>
+        </div>
       ) : null}
 
       <div className="flex flex-wrap gap-2">
