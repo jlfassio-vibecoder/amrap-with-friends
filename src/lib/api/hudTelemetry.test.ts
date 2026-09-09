@@ -298,7 +298,11 @@ describe('parseHudTelemetryPayload', () => {
         activity7d,
         overtraining,
       })
-    ).toBeNull();
+    ).toEqual(
+      expect.objectContaining({
+        domainMinutes30d: { 5: 1, 10: 1, 15: 1, 20: 1, other: 0, activeRecovery: 0 },
+      })
+    );
   });
 });
 

@@ -78,15 +78,15 @@ function readDomainMinutes(value: unknown): HudDomainMinutes | null {
   const fifteen = readNonNegativeInt(row['15']);
   const twenty = readNonNegativeInt(row['20']);
   const other = readNonNegativeInt(row.other);
-  const activeRecovery = readNonNegativeInt(row.activeRecovery);
+  // Missing until 20260909550000 lands: older hud_telemetry omits the key.
+  const activeRecovery = readNonNegativeInt(row.activeRecovery) ?? 0;
 
   if (
     five === null ||
     ten === null ||
     fifteen === null ||
     twenty === null ||
-    other === null ||
-    activeRecovery === null
+    other === null
   ) {
     return null;
   }

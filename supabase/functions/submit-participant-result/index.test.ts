@@ -74,6 +74,40 @@ Deno.test('deriveRoundDurationsSec computes elapsed deltas', () => {
   assertEquals(deriveRoundDurationsSec(rounds), [60, 60, 60]);
 });
 
+Deno.test('computeLockedScore falls back to round count when workout is unscorable', () => {
+  const rounds: RoundRow[] = [
+    { round_index: 0, elapsed_sec_at_round: 60 },
+    { round_index: 1, elapsed_sec_at_round: 120 },
+    { round_index: 2, elapsed_sec_at_round: 180 },
+    { round_index: 3, elapsed_sec_at_round: 240 },
+    { round_index: 4, elapsed_sec_at_round: 300 },
+    { round_index: 5, elapsed_sec_at_round: 360 },
+  ];
+
+  const nameOnlyWorkout = [
+    { name: 'Quadruped Hip Circles (5/side)' },
+    { name: 'Low Lunge (5/side)' },
+    { name: 'Half Moon Pose (15-Sec/side)' },
+  ];
+
+  const result = computeLockedScore(rounds, nameOnlyWorkout, 15, 0);
+
+  assertEquals('repsPerRound' in result, true);
+  if (!('repsPerRound' in result)) {
+    return;
+  }
+
+  assertEquals(result.repsPerRound, 0);
+
+  assertEquals('breakdown' in result, true);
+  if (!('breakdown' in result)) {
+    return;
+  }
+
+  assertEquals(result.breakdown.baseScore, 6);
+  assertEquals(result.breakdown.roundCount, 6);
+});
+
 Deno.test('computeLockedScore derives 302 from 4 rounds and 15 partial reps', () => {
   const rounds: RoundRow[] = [
     { round_index: 0, elapsed_sec_at_round: 60 },
