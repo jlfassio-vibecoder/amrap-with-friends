@@ -130,7 +130,7 @@ export default function RevenueEstimator() {
             key={t.name}
             role="tab"
             type="button"
-            className={`creators-tier${tierIndex === i ? 'is-active' : ''}`}
+            className={`creators-tier${tierIndex === i ? ' is-active' : ''}`}
             aria-selected={tierIndex === i}
             onClick={() => setUserTier(i)}
           >

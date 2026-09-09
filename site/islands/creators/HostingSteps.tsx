@@ -81,7 +81,7 @@ export default function HostingSteps() {
         {STEPS.map((step, i) => (
           <button
             key={step.title}
-            className={`creators-step${active === i ? 'is-active' : ''}`}
+            className={`creators-step${active === i ? ' is-active' : ''}`}
             type="button"
             onClick={() => setActive(i)}
           >
@@ -97,7 +97,7 @@ export default function HostingSteps() {
             {screen.clock ? <span className="creators-ph-clock">{screen.clock}</span> : null}
             {screen.input ? <span className="creators-ph-input">{screen.input}</span> : null}
             {screen.sub ? <span className="creators-ph-sub">{screen.sub}</span> : null}
-            <span className={`creators-ph-btn${screen.big ? 'creators-ph-btn-big' : ''}`}>
+            <span className={`creators-ph-btn${screen.big ? ' creators-ph-btn-big' : ''}`}>
               {screen.btn}
             </span>
           </div>

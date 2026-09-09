@@ -35,7 +35,7 @@ export default function HostingWeekTabs() {
             key={d.label}
             role="tab"
             type="button"
-            className={`creators-day${active === i ? 'is-active' : ''}`}
+            className={`creators-day${active === i ? ' is-active' : ''}`}
             aria-selected={active === i}
             onClick={() => setActive(i)}
           >

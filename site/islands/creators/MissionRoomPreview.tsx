@@ -36,6 +36,7 @@ export default function MissionRoomPreview() {
     let cancelled = false;
     let tickId: number | undefined;
     let restartId: number | undefined;
+    let flashId: number | undefined;
     let t = 18;
     const state = FINALS.map((v) => Math.max(0, v - 3));
 
@@ -58,7 +59,10 @@ export default function MissionRoomPreview() {
           if (state[i]! < FINALS[i]! && Math.random() < 0.28) {
             state[i]! += 1;
             setFlash(i);
-            window.setTimeout(() => setFlash(null), 350);
+            if (flashId !== undefined) window.clearTimeout(flashId);
+            flashId = window.setTimeout(() => {
+              if (!cancelled) setFlash(null);
+            }, 350);
           }
         });
         paint();
@@ -78,6 +82,7 @@ export default function MissionRoomPreview() {
       cancelled = true;
       if (tickId !== undefined) window.clearInterval(tickId);
       if (restartId !== undefined) window.clearTimeout(restartId);
+      if (flashId !== undefined) window.clearTimeout(flashId);
     };
   }, []);
 
@@ -94,7 +99,7 @@ export default function MissionRoomPreview() {
         </span>
         <span className="creators-room-meta">12 min AMRAP</span>
       </div>
-      <div className={`creators-clock${isFinal ? ' is-final' : ''}`} aria-live="off">
+      <div className={`creators-clock${isFinal ? 'is-final' : ''}`} aria-live="off">
         {formatClock(secondsLeft)}
       </div>
       <ol className="creators-board">

@@ -38,7 +38,12 @@ export default function ChapterRail() {
   return (
     <nav className="creators-rail" aria-label="Page chapters">
       {LINKS.map((link) => (
-        <a key={link.href} href={link.href} className={active === link.href ? 'is-active' : ''}>
+        <a
+          key={link.href}
+          href={link.href}
+          className={active === link.href ? 'is-active' : ''}
+          aria-current={active === link.href ? 'true' : undefined}
+        >
           {link.label}
         </a>
       ))}
