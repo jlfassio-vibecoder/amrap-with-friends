@@ -1,4 +1,4 @@
-import { shouldAskForConsent, writeConsentState } from '@/lib/analytics/consent';
+import { setConsentDecision, shouldAskForConsent } from '@/lib/analytics/consent';
 
 /**
  * One banner for both surfaces.
@@ -45,7 +45,7 @@ export function mountConsentBanner(onDecision?: (granted: boolean) => void): voi
   actions.className = 'flex shrink-0 gap-2';
 
   function decide(granted: boolean): void {
-    writeConsentState(granted ? 'granted' : 'denied');
+    setConsentDecision(granted);
     banner.remove();
     onDecision?.(granted);
   }

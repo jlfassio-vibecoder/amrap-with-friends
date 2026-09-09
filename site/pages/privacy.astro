@@ -88,6 +88,22 @@ const jsonLd = [
     </section>
 
     <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Your privacy choices</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        You can turn the browser id off here at any time, whether or not we asked you. Turning it
+        off deletes the id and the note of how you arrived from this device, and we go on counting
+        pages without an id. Events we already received are not undone by that.
+      </p>
+      <div id="privacy-choices" class="space-y-3"></div>
+      <noscript>
+        <p class="text-base leading-[1.7] text-secondary">
+          This control needs JavaScript. With JavaScript off, nothing is stored on your device
+          anyway — clearing this site's data removes anything already there.
+        </p>
+      </noscript>
+    </section>
+
+    <section class="space-y-4">
       <h2 class="text-display text-2xl text-ink">Who else sees it</h2>
       <p class="text-base leading-[1.7] text-secondary">
         Other athletes in a mission you join can see the name on your profile and your score on the
@@ -108,4 +124,9 @@ const jsonLd = [
       </p>
     </section>
   </div>
+  <script>
+    import { mountConsentChoices } from '@/lib/analytics/consentChoices';
+
+    mountConsentChoices(document.getElementById('privacy-choices'));
+  </script>
 </BaseLayout>

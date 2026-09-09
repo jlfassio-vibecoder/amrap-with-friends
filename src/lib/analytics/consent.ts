@@ -30,6 +30,33 @@ export {
 
 export type ConsentState = 'granted' | 'denied' | 'unanswered';
 
+/** Everything the identified path is allowed to keep on the device. Withdrawal removes all of it. */
+const IDENTIFIED_STORAGE_KEYS = ['amrap_anon_id', 'amrap_first_touch'];
+
+/**
+ * Withdrawal has to actually remove the identifier, not merely stop sending.
+ * Leaving the id in place would mean a visitor who opted out is still carrying
+ * the thing they objected to, ready to resume if they ever changed their mind.
+ * Events already received are not undone by this, and /privacy says so.
+ */
+export function clearIdentifiedStorage(): void {
+  for (const key of IDENTIFIED_STORAGE_KEYS) {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      /* nothing to clear in a browser that will not let us look */
+    }
+  }
+}
+
+/** The one entry point for a decision, from the banner or from /privacy. */
+export function setConsentDecision(granted: boolean): void {
+  writeConsentState(granted ? 'granted' : 'denied');
+  if (!granted) {
+    clearIdentifiedStorage();
+  }
+}
+
 const CONSENT_KEY = 'amrap_consent';
 
 /** Reads the middleware's cookie. Absent means gate: a stripped or blocked cookie must not silently open tracking. */
@@ -68,10 +95,18 @@ export function canUseIdentifiedAnalytics(options?: {
   cookieString?: string;
   state?: ConsentState;
 }): boolean {
+  const state = options?.state ?? readConsentState();
+  // An explicit refusal is honoured everywhere, not only where the law
+  // compels it. Someone outside the EEA who turns this off on /privacy has
+  // said the same thing as someone inside it, and the region has no bearing
+  // on whether we listen.
+  if (state === 'denied') {
+    return false;
+  }
   if (!isConsentRequired(options?.cookieString)) {
     return true;
   }
-  return (options?.state ?? readConsentState()) === 'granted';
+  return state === 'granted';
 }
 
 /** Whether to put the banner in front of this visitor. */
