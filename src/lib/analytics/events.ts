@@ -79,6 +79,8 @@ export const ANALYTICS_EVENT_NAMES = [
 
   // Acquisition
   'first_touch_captured',
+  'content_page_viewed',
+  'content_cta_clicked',
 
   // Platform / reliability
   'audio_unlock_result',

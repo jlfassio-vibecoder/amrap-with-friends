@@ -333,6 +333,38 @@ export default function CoachPage() {
             </section>
 
             <section className="space-y-3">
+              <CoachSectionHeader
+                title={`Do the content pages convert · ${coachDashboardWindowLabel(dashboard.window)}`}
+              />
+              <div className="card space-y-3 p-4">
+                <CoachDataTable
+                  rows={dashboard.contentPerformance}
+                  rowKey={(row) => row.path}
+                  emptyLabel="No content pageviews yet — capture starts with the next deploy."
+                  scrollAfterRows={12}
+                  columns={[
+                    { header: 'Page', render: (row) => row.path },
+                    { header: 'Visitors', render: (row) => row.visitors, align: 'right' },
+                    { header: 'Landed here', render: (row) => row.entryViews, align: 'right' },
+                    { header: 'Entered the app', render: (row) => row.ctaClicks, align: 'right' },
+                    {
+                      header: 'Crossed %',
+                      render: (row) => pct(row.ctaRatePct),
+                      align: 'right',
+                    },
+                    { header: 'Signed up', render: (row) => row.signedUp, align: 'right' },
+                  ]}
+                />
+                <p className="text-xs text-secondary">
+                  Ranked by people who crossed into the app, not by traffic — a page with ten
+                  thousand readers who never enter is an SEO result, not a product one. "Landed
+                  here" counts arrivals from outside the site, so it separates entry points from
+                  pages people read second.
+                </p>
+              </div>
+            </section>
+
+            <section className="space-y-3">
               <CoachSectionHeader title="Does anyone come back" />
               <div className="card space-y-3 p-4">
                 <CoachRetentionGrid cells={dashboard.weeklyRetention} />

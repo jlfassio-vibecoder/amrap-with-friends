@@ -97,6 +97,30 @@ describe('fetchCoachDashboard', () => {
             avg_group_size: 2.8,
           },
         ],
+        acquisition: [
+          {
+            channel: 'organic_search',
+            source: 'google.com',
+            campaign: '—',
+            browsers: 120,
+            signed_up: 14,
+            signup_rate_pct: 11.67,
+            trained: 9,
+            completed: 6,
+            completion_rate_pct: 5,
+          },
+        ],
+        contentPerformance: [
+          {
+            path: '/amrap-workouts/10',
+            views: 300,
+            entry_views: 210,
+            visitors: 180,
+            cta_clicks: 22,
+            cta_rate_pct: 12.22,
+            signed_up: 5,
+          },
+        ],
         weeklyRetention: [
           {
             cohort_week: '2026-08-31',
@@ -207,6 +231,8 @@ describe('fetchCoachDashboard', () => {
     expect(result.data?.missionDropoff[0]?.medianElapsedPct).toBe(11.5);
     expect(result.data?.socialLift[1]?.completionRatePct).toBe(65);
     expect(result.data?.weeklyRetention[0]?.retainedPct).toBe(40);
+    expect(result.data?.acquisition[0]?.channel).toBe('organic_search');
+    expect(result.data?.contentPerformance[0]?.ctaRatePct).toBe(12.22);
   });
 
   it('keeps an unobservable google completion null rather than zero', async () => {
@@ -285,6 +311,8 @@ describe('fetchCoachDashboard', () => {
     expect(result.data?.missionDropoff).toEqual([]);
     expect(result.data?.socialLift).toEqual([]);
     expect(result.data?.weeklyRetention).toEqual([]);
+    expect(result.data?.acquisition).toEqual([]);
+    expect(result.data?.contentPerformance).toEqual([]);
     expect(result.data?.campaignFunnel.campaignsCreated).toBe(0);
     expect(result.data?.campaignLengthAdherence).toEqual([]);
   });
