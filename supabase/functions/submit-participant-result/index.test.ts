@@ -98,6 +98,12 @@ Deno.test('computeLockedScore falls back to round count when workout is unscorab
   }
 
   assertEquals(result.repsPerRound, 0);
+
+  assertEquals('breakdown' in result, true);
+  if (!('breakdown' in result)) {
+    return;
+  }
+
   assertEquals(result.breakdown.baseScore, 6);
   assertEquals(result.breakdown.roundCount, 6);
 });
