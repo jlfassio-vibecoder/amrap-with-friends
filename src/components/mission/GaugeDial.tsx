@@ -1,12 +1,6 @@
 import { useMemo } from 'react';
 import { MAX_RATIO, OPTIMAL_CEILING, type PacingZone } from '@/lib/pacing/pacingGauge';
 
-export const GAUGE_ZONE_NAME: Record<PacingZone, string> = {
-  optimal: 'On pace',
-  warning: 'At the limit',
-  overtime: 'Overtime',
-};
-
 const RADIUS = 46;
 const CENTRE_X = 56;
 const CENTRE_Y = 52;

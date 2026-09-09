@@ -3,7 +3,8 @@ import {
   formatPacingReadout,
   pacingReadoutLabel,
 } from '@/lib/pacing/pacingGauge';
-import { GAUGE_ZONE_NAME, GaugeDial } from '@/components/mission/GaugeDial';
+import { GaugeDial } from '@/components/mission/GaugeDial';
+import { GAUGE_ZONE_NAME } from '@/components/mission/gaugeDial.constants';
 
 interface PacingGaugeProps {
   roundSplitsSec: readonly number[] | null | undefined;
