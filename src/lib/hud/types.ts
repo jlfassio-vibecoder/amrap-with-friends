@@ -11,6 +11,8 @@ export type HudDomainMinutes = {
   15: number;
   20: number;
   other: number;
+  /** Locked I1 minutes — excluded from Sprint/Crucible/Grind/Marathon. */
+  activeRecovery: number;
 };
 
 export type ClassificationRank = 'unclassified' | 'civilian' | 'operator' | 'special_ops';

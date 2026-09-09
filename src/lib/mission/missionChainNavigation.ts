@@ -69,6 +69,8 @@ export interface ChainAdvanceDecisionInput {
   activeMissionId: string | null | undefined;
   /** Set once an advance has been attempted for this mission. */
   attemptedForMissionId: string | null;
+  /** Host must lock their score before daisy-chaining the next mission. */
+  scoreLocked: boolean;
 }
 
 export function shouldAdvanceMissionChain(input: ChainAdvanceDecisionInput): boolean {
@@ -76,6 +78,9 @@ export function shouldAdvanceMissionChain(input: ChainAdvanceDecisionInput): boo
     return false;
   }
   if (!input.rallyPointId || !input.isAuthenticated) {
+    return false;
+  }
+  if (!input.scoreLocked) {
     return false;
   }
   // Only from the mission the hub is actually on. A finished phase is not by

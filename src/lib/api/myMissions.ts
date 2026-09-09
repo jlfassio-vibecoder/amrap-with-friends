@@ -148,7 +148,7 @@ export function formatMyMissionShareText(entry: MyMissionEntry): string {
 }
 
 export function canDeleteMyMission(entry: MyMissionEntry): boolean {
-  return entry.role === 'host' && entry.scoreBreakdown === null;
+  return entry.role === 'host' && entry.scoreBreakdown === null && entry.state !== 'finished';
 }
 
 export function displayMyMissionScore(entry: MyMissionEntry): string | number {

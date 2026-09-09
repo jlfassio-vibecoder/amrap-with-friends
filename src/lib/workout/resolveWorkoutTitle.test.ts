@@ -6,6 +6,10 @@ describe('resolveWorkoutTitle', () => {
     expect(resolveWorkoutTitle('the-pendulum')).toBe('The Pendulum');
   });
 
+  it('returns the AMQAP flow name', () => {
+    expect(resolveWorkoutTitle('amqap-foundational-10')).toBe('Foundational Continuous Flow');
+  });
+
   it('falls back for custom and unknown ids', () => {
     expect(resolveWorkoutTitle(null)).toBe('Workout');
     expect(resolveWorkoutTitle(undefined)).toBe('Workout');

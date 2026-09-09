@@ -209,6 +209,10 @@ describe('myMissions helpers', () => {
     expect(canDeleteMyMission(baseEntry({ role: 'joiner' }))).toBe(false);
   });
 
+  it('canDeleteMyMission is false when the mission has finished', () => {
+    expect(canDeleteMyMission(baseEntry({ state: 'finished' }))).toBe(false);
+  });
+
   it('canDeleteMyMission is false when score breakdown exists', () => {
     expect(
       canDeleteMyMission(
