@@ -184,12 +184,11 @@ export const CONTENT_ROUTES: RouteSeo[] = [
     index: true,
   },
   {
-    path: '/partners',
-    title: 'Partner with AMRAP With Friends',
+    path: '/creators',
+    title: 'Host weekly AMRAPs. Get paid when your squad trains. — AMRAP With Friends',
     description:
-      'For coaches and creators recruiting with AMRAP With Friends — synced group missions, live leaderboards, and campaigns your audience can train together.',
-    // Stub until the recruiting landing ships; flip to true when real copy goes live.
-    index: false,
+      'Host a live synced AMRAP each week, earn a share of every subscription your squad buys, and turn finishes into posts that tag you.',
+    index: true,
   },
   {
     path: '/privacy',
