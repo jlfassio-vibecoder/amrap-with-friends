@@ -1,6 +1,6 @@
 import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { AppLink } from '@/components/AppLink';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   getStoredParticipantId,
   getStoredClaimToken,
@@ -33,7 +33,15 @@ import { EditRallyScheduleForm } from '@/components/mission/EditRallyScheduleFor
 import { ArmedRallyPointControls } from '@/components/mission/ArmedRallyPointControls';
 import { HostRallyPointSteps } from '@/components/mission/HostRallyPointSteps';
 import { LogMissedRound } from '@/components/mission/LogMissedRound';
+import { MissionAmqapGauge } from '@/components/mission/MissionAmqapGauge';
 import { MissionPacingGauge } from '@/components/mission/MissionPacingGauge';
+import { findAmqapFlow } from '@/data/amqapFlows';
+import {
+  elapsedInRoundSec,
+  formatAmqapActiveExerciseDetail,
+  setProgressFromRoundElapsed,
+} from '@/lib/amqap/amqapSetGauge';
+import { expandAmqapSets } from '@/lib/amqap/expandAmqapSets';
 import { PreMissionScalingPicker } from '@/components/mission/PreMissionScalingPicker';
 import { BenchmarkDesignateControl } from '@/components/mission/BenchmarkDesignateControl';
 import { RoundLogRippleBurst } from '@/components/mission/RoundLogRippleBurst';
@@ -498,6 +506,16 @@ function LiveMissionView({
   );
   const live = useLiveAmrapMission(missionId, channel);
   const { isHost, start: startMission, phase: livePhase } = live;
+  const amqapFlow = findAmqapFlow(live.templateId);
+  const amqapSets = useMemo(() => (amqapFlow ? expandAmqapSets(amqapFlow) : []), [amqapFlow]);
+  const amqapProgress =
+    amqapFlow && live.phase === 'work'
+      ? setProgressFromRoundElapsed(
+          elapsedInRoundSec(live.elapsedSec, live.roundSplitsSec),
+          amqapSets
+        )
+      : null;
+  const amqapCurrentMovementIndex = amqapProgress?.set.movementIndex ?? null;
   const missionLockedModal = useMissionLockedModal(livePhase, live.isPractice);
 
   const rallyPointId =
@@ -1596,16 +1614,26 @@ function LiveMissionView({
               ) : null}
 
               {/* Its own section, after the actions — never inside the clock
-                  block. The gauge owns its preference, its placement and its
-                  failure; this mount is the whole of its contact with the
-                  mission, and deleting it removes the feature. */}
-              <MissionPacingGauge
-                phase={live.phase}
-                roundSplitsSec={live.roundSplitsSec}
-                elapsedSec={live.elapsedSec}
-                isPaused={live.isPaused}
-                isPractice={live.isPractice}
-              />
+                  block. The dial owns placement and failure isolation here;
+                  AMQAP row highlighting uses expandAmqapSets / amqapSetGauge
+                  separately on the workout list. */}
+              {amqapFlow ? (
+                <MissionAmqapGauge
+                  phase={live.phase}
+                  flow={amqapFlow}
+                  roundSplitsSec={live.roundSplitsSec}
+                  elapsedSec={live.elapsedSec}
+                  isPaused={live.isPaused}
+                />
+              ) : (
+                <MissionPacingGauge
+                  phase={live.phase}
+                  roundSplitsSec={live.roundSplitsSec}
+                  elapsedSec={live.elapsedSec}
+                  isPaused={live.isPaused}
+                  isPractice={live.isPractice}
+                />
+              )}
 
               {live.isPractice && live.practiceRounds.length > 0 ? (
                 <section className="rounded-card border border-border bg-page p-4 text-left">
@@ -1646,26 +1674,43 @@ function LiveMissionView({
                         : 'text-sm'
                   }`}
                 >
-                  {live.workout.map((exercise, index) => (
-                    <li
-                      key={`${exercise.name}-${index}`}
-                      className="flex items-center gap-2 lg:gap-4"
-                    >
-                      <span className="hidden lg:flex lg:h-12 lg:w-12 lg:shrink-0 lg:items-center lg:justify-center lg:rounded-full lg:bg-accent lg:text-xl lg:font-semibold lg:text-on-accent">
-                        {index + 1}
-                      </span>
-                      <span className="min-w-0 flex-1 lg:text-2xl lg:leading-snug xl:text-3xl">
-                        {formatExerciseLabel(exercise)}
-                      </span>
-                      {omitMobileLiveHowTo ? (
-                        <span className="hidden lg:inline-flex">
-                          <ExerciseInfoTrigger name={exercise.name} size="lg" />
+                  {live.workout.map((exercise, index) => {
+                    const isCurrentAmqap = amqapCurrentMovementIndex === index;
+                    const currentAmqapSet = isCurrentAmqap ? amqapProgress?.set : undefined;
+                    const currentAmqapDetail = currentAmqapSet
+                      ? formatAmqapActiveExerciseDetail(currentAmqapSet)
+                      : '';
+                    return (
+                      <li
+                        key={`${exercise.name}-${index}`}
+                        aria-current={isCurrentAmqap ? 'true' : undefined}
+                        className={`flex items-center gap-2 lg:gap-4 ${
+                          isCurrentAmqap
+                            ? 'bg-accent/15 rounded-card px-2 py-1.5 ring-1 ring-inset ring-accent lg:px-3'
+                            : ''
+                        }`}
+                      >
+                        <span className="hidden lg:flex lg:h-12 lg:w-12 lg:shrink-0 lg:items-center lg:justify-center lg:rounded-full lg:bg-accent lg:text-xl lg:font-semibold lg:text-on-accent">
+                          {index + 1}
                         </span>
-                      ) : (
-                        <ExerciseInfoTrigger name={exercise.name} size="lg" />
-                      )}
-                    </li>
-                  ))}
+                        <span className="min-w-0 flex-1 lg:text-2xl lg:leading-snug xl:text-3xl">
+                          <span className={isCurrentAmqap ? 'font-semibold text-ink' : undefined}>
+                            {formatExerciseLabel(exercise)}
+                          </span>
+                          {currentAmqapDetail ? (
+                            <span className="text-secondary"> · {currentAmqapDetail}</span>
+                          ) : null}
+                        </span>
+                        {omitMobileLiveHowTo ? (
+                          <span className="hidden lg:inline-flex">
+                            <ExerciseInfoTrigger name={exercise.name} size="lg" />
+                          </span>
+                        ) : (
+                          <ExerciseInfoTrigger name={exercise.name} size="lg" />
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
                 {live.phase === 'waiting' && !live.isPractice ? (
                   <PreMissionScalingPicker

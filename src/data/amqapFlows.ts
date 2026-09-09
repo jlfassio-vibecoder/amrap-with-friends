@@ -12,8 +12,19 @@ export interface AmqapFlowCategory {
   description: string;
 }
 
-export type AmqapFlow = WorkoutTemplate & {
+export type AmqapLaterality = 'bilateral' | 'per-side';
+
+export interface AmqapMovement extends WorkoutTemplateMovement {
+  laterality: AmqapLaterality;
+  /** Approximate quality-tempo seconds for one set (one side, or the whole bilateral dose). */
+  durationSecPerSet: number;
+  /** Name without the `(N/side)` suffix — used on the live gauge caption. */
+  displayName: string;
+}
+
+export type AmqapFlow = Omit<WorkoutTemplate, 'movements'> & {
   flowId: AmqapFlowId;
+  movements: AmqapMovement[];
 };
 
 export const AMQAP_FLOW_CATEGORIES: AmqapFlowCategory[] = [
@@ -52,27 +63,53 @@ export const AMQAP_FLOW_CATEGORIES: AmqapFlowCategory[] = [
 const SHARED_NOTE =
   'Move slowly. The counts are one quality pass, not a score to beat. Stay in continuous tension and breathe.';
 
-function perSide(name: string, each: number): WorkoutTemplateMovement {
-  return { name: `${name} (${each}/side)`, reps: each * 2 };
+function perSide(name: string, each: number, durationSecPerSet: number): AmqapMovement {
+  return {
+    name: `${name} (${each}/side)`,
+    displayName: name,
+    reps: each * 2,
+    laterality: 'per-side',
+    durationSecPerSet,
+  };
 }
 
-function holdSeconds(name: string, seconds: number): WorkoutTemplateMovement {
-  return { name, reps: seconds, unit: 'sec' };
+function holdSeconds(name: string, seconds: number): AmqapMovement {
+  return {
+    name,
+    displayName: name,
+    reps: seconds,
+    unit: 'sec',
+    laterality: 'bilateral',
+    durationSecPerSet: seconds,
+  };
 }
 
-function holdSecondsPerSide(name: string, seconds: number): WorkoutTemplateMovement {
-  return { name: `${name} (${seconds}-Sec/side)`, reps: seconds * 2, unit: 'sec' };
+function holdSecondsPerSide(name: string, seconds: number): AmqapMovement {
+  return {
+    name: `${name} (${seconds}-Sec/side)`,
+    displayName: name,
+    reps: seconds * 2,
+    unit: 'sec',
+    laterality: 'per-side',
+    durationSecPerSet: seconds,
+  };
 }
 
-function reps(name: string, count: number): WorkoutTemplateMovement {
-  return { name, reps: count };
+function reps(name: string, count: number, durationSecPerSet: number): AmqapMovement {
+  return {
+    name,
+    displayName: name,
+    reps: count,
+    laterality: 'bilateral',
+    durationSecPerSet,
+  };
 }
 
 function flowPair(
   flowId: AmqapFlowId,
   name: string,
   focus: string,
-  movements: WorkoutTemplateMovement[]
+  movements: AmqapMovement[]
 ): AmqapFlow[] {
   return AMQAP_TIME_DOMAINS.map((durationMinutes) => ({
     id: `amqap-${flowId}-${durationMinutes}`,
@@ -91,36 +128,43 @@ function flowPair(
 // not enough to invite a race. Same pass at 10 and 15 — the clock is the container.
 export const AMQAP_FLOWS: AmqapFlow[] = [
   ...flowPair('foundational', 'Foundational Continuous Flow', 'Hips · spine · breath', [
-    perSide('90/90 Hip Transitions', 5),
-    perSide('Spiderman Lunge with Thoracic Reach', 5),
-    reps('Downward-Facing Dog to Cobra', 5),
+    perSide('90/90 Hip Transitions', 5, 25),
+    perSide('Spiderman Lunge with Thoracic Reach', 5, 30),
+    reps('Downward-Facing Dog to Cobra', 5, 30),
   ]),
   ...flowPair('hip-control', 'Hip Control and Sagittal Opening', 'Hip control', [
-    perSide('Quadruped Hip Circles', 5),
-    perSide('Low Lunge', 5),
+    perSide('Quadruped Hip Circles', 5, 25),
+    perSide('Low Lunge', 5, 25),
     holdSecondsPerSide('Half Moon Pose', 15),
   ]),
   ...flowPair('spinal', 'Spinal Articulation and Internal Rotation', 'Spine · recover', [
-    reps('Prone Internal Rotation Windshield Wipers', 10),
-    reps('Cobra Pose', 5),
+    reps('Prone Internal Rotation Windshield Wipers', 10, 40),
+    reps('Cobra Pose', 5, 25),
     holdSeconds("Child's Pose", 20),
   ]),
   ...flowPair('posterior', 'Posterior Chain and Heart Opener', 'Back line · chest', [
-    reps('Cat & Cow', 8),
+    reps('Cat & Cow', 8, 32),
     holdSeconds('Downward-Facing Dog', 20),
-    perSide('Low Lunge', 5),
+    perSide('Low Lunge', 5, 25),
     holdSeconds('Camel Pose', 20),
   ]),
   ...flowPair('deep-hip', 'Deep Hip and Total Body Integration', 'Capsule · integration', [
     holdSeconds('Downward-Facing Dog', 20),
     holdSecondsPerSide('Pigeon Pose', 20),
-    perSide('90/90 Hip Internal Rotation Lift', 5),
-    reps('Cobra Pose', 5),
+    perSide('90/90 Hip Internal Rotation Lift', 5, 25),
+    reps('Cobra Pose', 5, 25),
   ]),
 ];
 
 export function isAmqapTimeDomain(value: number): value is AmqapTimeDomain {
   return (AMQAP_TIME_DOMAINS as readonly number[]).includes(value);
+}
+
+export function findAmqapFlow(templateId: string | null | undefined): AmqapFlow | undefined {
+  if (!templateId) {
+    return undefined;
+  }
+  return AMQAP_FLOWS.find((flow) => flow.id === templateId);
 }
 
 export const AMQAP_DOMAIN_GUIDANCE: Record<AmqapTimeDomain, { title: string; body: string }> = {
