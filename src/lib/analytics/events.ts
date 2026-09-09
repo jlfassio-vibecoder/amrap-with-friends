@@ -99,6 +99,8 @@ export const ANALYTICS_EVENT_NAMES = [
   'share_card_rendered',
   'share_opened',
   'share_completed',
+  'share_link_viewed',
+  'share_link_joined',
   'replay_render_started',
   'replay_render_completed',
   'replay_cancelled',

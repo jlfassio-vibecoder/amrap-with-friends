@@ -5,6 +5,7 @@ import { buildCaption } from '@/lib/share/caption';
 import { cardFileName, renderCardBlob } from '@/lib/share/renderCard';
 import { createShareId, shareUrl } from '@/lib/share/shareId';
 import { shareArtifact } from '@/lib/share/shareSheet';
+import { uploadShareImage } from '@/lib/share/uploadShareImage';
 import { frameAt, myBar, resolveVariant } from '@/lib/share/timeline';
 import { defaultCut } from '@/lib/share/cuts';
 import {
@@ -77,11 +78,11 @@ export function ShareCardPanel({
       variant: effectiveVariant,
       title: workoutTitle,
       subtitle: `${data.mission.durationMinutes} min AMRAP`,
-      shareUrl: shareUrl(),
+      shareUrl: shareUrl(shareId),
       // Every card carries it for now: there is no athlete tier to exempt.
       watermark: true,
     }),
-    [layout, effectiveVariant, workoutTitle, data.mission.durationMinutes]
+    [layout, effectiveVariant, workoutTitle, data.mission.durationMinutes, shareId]
   );
 
   // Recorded when a share actually happens, with what was actually shared.
@@ -95,6 +96,19 @@ export function ShareCardPanel({
         return;
       }
       recordedRef.current = true;
+      // The card goes up alongside the row so /s/ can unfurl with it. Only the
+      // story ratio: it is what the link preview crops to, and uploading three
+      // versions of one card would triple the storage for no visible gain.
+      const storyBlob = blobRef.current.get(`story:${effectiveVariant}`);
+      if (storyBlob) {
+        void uploadShareImage({
+          shareId,
+          blob: storyBlob,
+          participantId,
+          claimToken,
+          hostToken,
+        });
+      }
       async function record(attempt = 0): Promise<void> {
         const { error } = await callRpc('create_mission_share', {
           p_id: shareId,
@@ -203,9 +217,9 @@ export function ShareCardPanel({
       await navigator.clipboard.writeText(caption);
       setNotice('Caption and link copied.');
     } catch {
-      setNotice(`Copy this: ${shareUrl()}`);
+      setNotice(`Copy this: ${shareUrl(shareId)}`);
     }
-  }, [caption, recordShare]);
+  }, [caption, shareId, recordShare]);
 
   return (
     <section className="card space-y-4 p-4">

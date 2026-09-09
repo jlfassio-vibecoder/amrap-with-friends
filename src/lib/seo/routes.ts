@@ -244,6 +244,14 @@ export const APP_ROUTES: RouteSeo[] = [
  * The titles are placeholders. Each generated page passes its own title and
  * description to the Astro layout; only `index` and the canonical are read here.
  */
+export const DYNAMIC_APP_ROUTES: RouteSeo[] = [
+  // Share links. Not indexed: one athlete's result is not a page a search
+  // engine should hold, and the link's job is to unfurl in a group chat.
+  // Registered so the middleware serves it instead of answering a real 404 —
+  // which is what it does to any path not listed here, before the SPA loads.
+  { path: '/s/:shareId', title: 'Shared mission', description: '', index: false },
+];
+
 export const DYNAMIC_CONTENT_ROUTES: RouteSeo[] = [
   {
     path: '/exercises/:exerciseSlug',
@@ -290,7 +298,12 @@ export const DYNAMIC_CONTENT_ROUTES: RouteSeo[] = [
  * Literals first, then app routes, then patterns last — so a real page is never
  * shadowed by a pattern that happens to match at the same depth.
  */
-export const ROUTE_SEO: RouteSeo[] = [...CONTENT_ROUTES, ...APP_ROUTES, ...DYNAMIC_CONTENT_ROUTES];
+export const ROUTE_SEO: RouteSeo[] = [
+  ...CONTENT_ROUTES,
+  ...APP_ROUTES,
+  ...DYNAMIC_APP_ROUTES,
+  ...DYNAMIC_CONTENT_ROUTES,
+];
 
 /** True for a `:param` pattern rather than a real URL — never sitemap these. */
 export function isRoutePattern(path: string): boolean {

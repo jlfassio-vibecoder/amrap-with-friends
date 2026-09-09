@@ -1,6 +1,12 @@
 import { next } from '@vercel/edge';
 import { CONSENT_REGION_COOKIE, countryRequiresConsent } from './src/lib/analytics/consentRegion';
 import { NOT_FOUND_EVENT } from './src/lib/analytics/edgeEvents';
+import {
+  shareOgDescription,
+  shareOgImage,
+  shareOgTitle,
+  type ShareSummary,
+} from './src/lib/share/shareOg';
 import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, isKnownRoute, resolveSeo } from './src/lib/seo/routes';
 
 const BOT_UA =
@@ -8,6 +14,52 @@ const BOT_UA =
 
 /** Invite routes whose whole job is to unfurl in a group chat. */
 const OG_ROUTES = new Set(['/join', '/campaign/join', '/squad/join']);
+
+/** `/s/abc12345` — the share link. Matched here rather than added to OG_ROUTES because it carries an id. */
+const SHARE_PATH = /^\/s\/([0-9a-hjkmnp-tv-z]{8})$/;
+
+/**
+ * Fetches what a share link is allowed to say about itself.
+ *
+ * Returns null on any failure, and the caller falls back to the generic card:
+ * a link pasted into a group chat has to unfurl as *something*, and a preview
+ * that fails is worse than a generic one.
+ */
+async function fetchShareSummary(shareId: string): Promise<ShareSummary | null> {
+  const url = process.env.VITE_SUPABASE_URL?.trim();
+  const key = process.env.VITE_SUPABASE_ANON_KEY?.trim();
+  if (!url || !key) {
+    return null;
+  }
+  try {
+    const response = await fetch(`${url}/rest/v1/rpc/get_share_summary`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+      },
+      body: JSON.stringify({ p_share_id: shareId }),
+    });
+    if (!response.ok) {
+      return null;
+    }
+    const body = (await response.json()) as Record<string, unknown>;
+    if (body.ok !== true) {
+      return null;
+    }
+    return {
+      shareId: String(body.shareId ?? shareId),
+      imagePath: typeof body.imagePath === 'string' ? body.imagePath : null,
+      templateId: typeof body.templateId === 'string' ? body.templateId : null,
+      durationMinutes: Number(body.durationMinutes ?? 0),
+      rounds: Number(body.rounds ?? 0),
+      reps: Number(body.reps ?? 0),
+    };
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Everything except build output and files with an extension (`/favicon.ico`,
@@ -35,7 +87,7 @@ function consentRegionCookie(request: Request): string {
   return `${CONSENT_REGION_COOKIE}=${required}; Path=/; Max-Age=86400; SameSite=Lax`;
 }
 
-export default function middleware(request: Request): Response | Promise<Response> {
+export default async function middleware(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const pathname = url.pathname;
 
@@ -60,6 +112,51 @@ export default function middleware(request: Request): Response | Promise<Respons
 
   const seo = resolveSeo(pathname);
   const ua = request.headers.get('user-agent') ?? '';
+
+  // A share link unfurls for crawlers with the athlete's own card; a human
+  // gets the SPA. Only the crawler path costs a database round trip.
+  const shareMatch = SHARE_PATH.exec(pathname);
+  if (shareMatch && BOT_UA.test(ua)) {
+    const shareId = shareMatch[1] as string;
+    const summary = await fetchShareSummary(shareId);
+    const image = shareOgImage(summary, url.origin, process.env.VITE_SUPABASE_URL?.trim() ?? null);
+    const title = shareOgTitle(summary);
+    const description = shareOgDescription(summary);
+    const pageUrl = url.toString();
+    return new Response(
+      `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeAttr(title)}</title>
+  <meta name="description" content="${escapeAttr(description)}" />
+  <meta name="robots" content="noindex, follow" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="${escapeAttr(title)}" />
+  <meta property="og:description" content="${escapeAttr(description)}" />
+  <meta property="og:url" content="${escapeAttr(pageUrl)}" />
+  <meta property="og:image" content="${escapeAttr(image)}" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="${escapeAttr(title)}" />
+  <meta name="twitter:image" content="${escapeAttr(image)}" />
+</head>
+<body>
+  <p><a href="${escapeAttr(pageUrl)}">Open AMRAP With Friends</a></p>
+</body>
+</html>`,
+      {
+        status: 200,
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+          'x-robots-tag': 'noindex, follow',
+          // Short: the card image can arrive moments after the row does, and a
+          // long cache would pin the generic fallback in front of it.
+          'cache-control': 'public, max-age=60',
+          'set-cookie': consentRegionCookie(request),
+        },
+      }
+    );
+  }
 
   // Signed-in, private and ephemeral surfaces must stay out of the index. The
   // header says so without the crawler needing to render anything, which the

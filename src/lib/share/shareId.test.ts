@@ -22,12 +22,8 @@ describe('createShareId', () => {
 });
 
 describe('shareUrl', () => {
-  it('prints a link that resolves today, not one phase 3 will add', () => {
-    // /s/:id is not registered in seo/routes.ts, so the middleware 404s it.
-    // A card is a PNG inside somebody's post forever; a dead link on it cannot
-    // be fixed after the fact the way a page can.
-    expect(shareUrl()).toBe('amrapwithfriends.com');
-    expect(shareUrl()).not.toContain('/s/');
+  it('prints the per-share link now that /s/:id is served', () => {
+    expect(shareUrl('abc12345')).toBe('amrapwithfriends.com/s/abc12345');
   });
 });
 
