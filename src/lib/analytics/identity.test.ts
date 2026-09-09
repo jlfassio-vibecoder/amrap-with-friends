@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getOrCreateAnonId } from '@/lib/analytics/identity';
 
 const ANON_ID_KEY = 'amrap_anon_id';
+/** Outside the gated regions, where the id behaves as it always has. See consent.test.ts for the gated path. */
+const UNGATED = 'awf_consent_required=0';
 const UUID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 
 function installMemoryLocalStorage(): Storage {
@@ -36,6 +38,7 @@ function installMemoryLocalStorage(): Storage {
 
 beforeEach(() => {
   installMemoryLocalStorage();
+  document.cookie = `${UNGATED}; path=/`;
 });
 
 afterEach(() => {

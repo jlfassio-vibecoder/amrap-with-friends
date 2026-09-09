@@ -42,6 +42,13 @@ const jsonLd = [
           and which actions get taken, so we can tell what is working. Grouped by the browser id described
           below, and by your account if you are signed in.
         </li>
+        <li>
+          <strong class="font-semibold text-ink">How you found us.</strong> The site that linked you here
+          — the site's name, such as <em>google.com</em>, never the full address you came from — any
+          campaign tag in the link you clicked, and which page you landed on. Recorded once, the
+          first time this browser arrives, so we can tell which pages and links bring people who
+          actually train.
+        </li>
       </ul>
     </section>
 
@@ -49,21 +56,26 @@ const jsonLd = [
       <h2 class="text-display text-2xl text-ink">What your browser stores</h2>
       <p class="text-base leading-[1.7] text-secondary">
         A small amount of data stays on your device rather than on our servers: your sign-in
-        session, your light or dark theme preference, the browser id, and a token that lets you
-        rejoin a mission you have already joined. Clearing your browser data removes all of it.
+        session, your light or dark theme preference, the browser id, a note of how you first
+        arrived, and a token that lets you rejoin a mission you have already joined. Clearing your
+        browser data removes all of it.
       </p>
     </section>
 
     <section class="space-y-4">
       <h2 class="text-display text-2xl text-ink">Your browser id</h2>
       <p class="text-base leading-[1.7] text-secondary">
-        When you open the app, this browser can keep a random id so we can tell that the same
-        browser came back. It is not your name, and it is not required to train — you can join a
-        mission, log rounds, and finish without it.
+        When you open the app — or read one of our workout, exercise or guide pages — this browser
+        can keep a random id so we can tell that the same browser came back. It is the same id
+        across both, which is how we can tell that someone who read a workout page later trained
+        with us. It is not your name, and it is not required to train — you can join a mission, log
+        rounds, and finish without it.
       </p>
       <p class="text-base leading-[1.7] text-secondary">
-        We use it only to send product usage events: which screens get used, and that the app is
-        open. Those events are write-only — the app sends them; it does not show you a log of them.
+        We use it only to send product usage events: which screens and pages get used, that the app
+        is open, and how you first arrived. Those events are write-only — the site sends them; it
+        does not show you a log of them. We do not use it to build an advertising profile, and there
+        are no third-party advertising or analytics trackers on this site.
       </p>
       <p class="text-base leading-[1.7] text-secondary">
         If you create an account or sign in on this browser, we may associate the id with your
@@ -73,6 +85,22 @@ const jsonLd = [
         Clearing this site's data from your browser removes the id. The next time you open the app,
         a new one may be created. Events we already received are not undone by that.
       </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Your privacy choices</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        You can turn the browser id off here at any time, whether or not we asked you. Turning it
+        off deletes the id and the note of how you arrived from this device, and we go on counting
+        pages without an id. Events we already received are not undone by that.
+      </p>
+      <div id="privacy-choices" class="space-y-3"></div>
+      <noscript>
+        <p class="text-base leading-[1.7] text-secondary">
+          This control needs JavaScript. With JavaScript off, nothing is stored on your device
+          anyway — clearing this site's data removes anything already there.
+        </p>
+      </noscript>
     </section>
 
     <section class="space-y-4">
@@ -96,4 +124,9 @@ const jsonLd = [
       </p>
     </section>
   </div>
+  <script>
+    import { mountConsentChoices } from '@/lib/analytics/consentChoices';
+
+    mountConsentChoices(document.getElementById('privacy-choices'));
+  </script>
 </BaseLayout>

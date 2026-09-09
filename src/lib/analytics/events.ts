@@ -77,6 +77,24 @@ export const ANALYTICS_EVENT_NAMES = [
   'featured_wod_joined',
   'featured_wod_calendar_saved',
 
+  // Acquisition
+  'first_touch_captured',
+  'content_page_viewed',
+  'content_cta_clicked',
+  'content_page_engaged',
+  'content_404',
+
+  // The free timer on /amrap-timer — the product's core action, performed
+  // before anyone has an account.
+  'free_timer_started',
+  'free_timer_completed',
+  'free_timer_abandoned',
+  'free_timer_cta_clicked',
+
+  // The pacing calculator on the science pages.
+  'pacing_calculator_scored',
+  'pacing_calculator_cta_clicked',
+
   // Platform / reliability
   'audio_unlock_result',
   'rpc_call',

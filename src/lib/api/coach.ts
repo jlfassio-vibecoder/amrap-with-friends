@@ -1,4 +1,11 @@
 import { callRpc } from '@/lib/api/callRpc';
+import type { JourneyEntry, JourneyLifetime } from '@/lib/coach/journeyTimeline';
+import type { ToolConversionRow } from '@/lib/coach/toolConversion';
+import type {
+  MissionDropoffRow,
+  RetentionCell,
+  SocialLiftRow,
+} from '@/lib/coach/engagementInsights';
 import { isLinkableAnonId } from '@/lib/api/linkAnonIdentity';
 import { isGuestHistoryCohort, type ActivityCohortId } from '@/lib/coach/activityCohorts';
 import {
@@ -101,6 +108,53 @@ export function coachDashboardWindowLabel(window: CoachDashboardWindow): string 
   }
 }
 
+export interface CoachAcquisitionRow {
+  channel: string;
+  source: string;
+  campaign: string;
+  browsers: number;
+  signedUp: number;
+  signupRatePct: number | null;
+  trained: number;
+  completed: number;
+  completionRatePct: number | null;
+}
+
+export interface CoachContentEngagementRow {
+  path: string;
+  sessions: number;
+  medianScrollPct: number | null;
+  medianDwellSec: number | null;
+  readToEnd: number;
+  bounced: number;
+  bounceRatePct: number | null;
+}
+
+export interface CoachNotFoundRow {
+  path: string;
+  referrerHost: string;
+  hits: number;
+}
+
+export interface CoachCtaPlacementRow {
+  cta: string;
+  fromPath: string;
+  toPath: string;
+  clicks: number;
+  visitors: number;
+  signedUp: number;
+}
+
+export interface CoachContentPageRow {
+  path: string;
+  views: number;
+  entryViews: number;
+  visitors: number;
+  ctaClicks: number;
+  ctaRatePct: number | null;
+  signedUp: number;
+}
+
 export interface CoachSignupFunnelRow {
   method: string;
   attempts: number;
@@ -144,6 +198,15 @@ export interface CoachDashboard {
   intakeFunnel: CoachIntakeFunnel;
   rallyConversion: CoachRallyConversion;
   missionAbandonment: CoachMissionAbandonment;
+  missionDropoff: MissionDropoffRow[];
+  socialLift: SocialLiftRow[];
+  weeklyRetention: RetentionCell[];
+  acquisition: CoachAcquisitionRow[];
+  contentPerformance: CoachContentPageRow[];
+  toolConversion: ToolConversionRow[];
+  ctaPlacement: CoachCtaPlacementRow[];
+  contentEngagement: CoachContentEngagementRow[];
+  notFound: CoachNotFoundRow[];
   signupFunnel: CoachSignupFunnelRow[];
   authFailureReasons: CoachAuthFailureRow[];
   campaignFunnel: CoachCampaignFunnel;
@@ -424,6 +487,112 @@ function parseCampaignLengthRow(row: Record<string, unknown>): CoachCampaignLeng
     campaigns: num(row, 'campaigns'),
     campaignsFinished: num(row, 'campaigns_finished'),
     occurrenceAdherencePct: numOrNull(row, 'occurrence_adherence_pct'),
+  };
+}
+
+function parseContentEngagementRow(row: Record<string, unknown>): CoachContentEngagementRow {
+  return {
+    path: str(row, 'path'),
+    sessions: num(row, 'sessions'),
+    medianScrollPct: numOrNull(row, 'median_scroll_pct'),
+    medianDwellSec: numOrNull(row, 'median_dwell_sec'),
+    readToEnd: num(row, 'read_to_end'),
+    bounced: num(row, 'bounced'),
+    bounceRatePct: numOrNull(row, 'bounce_rate_pct'),
+  };
+}
+
+function parseNotFoundRow(row: Record<string, unknown>): CoachNotFoundRow {
+  return {
+    path: str(row, 'path'),
+    referrerHost: str(row, 'referrer_host'),
+    hits: num(row, 'hits'),
+  };
+}
+
+function parseCtaPlacementRow(row: Record<string, unknown>): CoachCtaPlacementRow {
+  return {
+    cta: str(row, 'cta'),
+    fromPath: str(row, 'from_path'),
+    toPath: str(row, 'to_path'),
+    clicks: num(row, 'clicks'),
+    visitors: num(row, 'visitors'),
+    signedUp: num(row, 'signed_up'),
+  };
+}
+
+function parseToolConversionRow(row: Record<string, unknown>): ToolConversionRow {
+  return {
+    cohortOrder: num(row, 'cohort_order'),
+    cohort: str(row, 'cohort'),
+    browsers: num(row, 'browsers'),
+    ctaClicks: num(row, 'cta_clicks'),
+    signedUp: num(row, 'signed_up'),
+    signupRatePct: numOrNull(row, 'signup_rate_pct'),
+    trained: num(row, 'trained'),
+    completedMission: num(row, 'completed_mission'),
+    completedRatePct: numOrNull(row, 'completed_rate_pct'),
+  };
+}
+
+function parseContentPageRow(row: Record<string, unknown>): CoachContentPageRow {
+  return {
+    path: str(row, 'path'),
+    views: num(row, 'views'),
+    entryViews: num(row, 'entry_views'),
+    visitors: num(row, 'visitors'),
+    ctaClicks: num(row, 'cta_clicks'),
+    ctaRatePct: numOrNull(row, 'cta_rate_pct'),
+    signedUp: num(row, 'signed_up'),
+  };
+}
+
+function parseAcquisitionRow(row: Record<string, unknown>): CoachAcquisitionRow {
+  return {
+    channel: str(row, 'channel'),
+    source: str(row, 'source'),
+    campaign: str(row, 'campaign'),
+    browsers: num(row, 'browsers'),
+    signedUp: num(row, 'signed_up'),
+    signupRatePct: numOrNull(row, 'signup_rate_pct'),
+    trained: num(row, 'trained'),
+    completed: num(row, 'completed'),
+    completionRatePct: numOrNull(row, 'completion_rate_pct'),
+  };
+}
+
+function parseMissionDropoffRow(row: Record<string, unknown>): MissionDropoffRow {
+  return {
+    bucketOrder: num(row, 'bucket_order'),
+    elapsedBucket: str(row, 'elapsed_bucket'),
+    abandons: num(row, 'abandons'),
+    pctOfAbandons: numOrNull(row, 'pct_of_abandons'),
+    medianElapsedPct: numOrNull(row, 'median_elapsed_pct'),
+    medianRounds: numOrNull(row, 'median_rounds'),
+  };
+}
+
+function parseSocialLiftRow(row: Record<string, unknown>): SocialLiftRow {
+  return {
+    cohort: str(row, 'cohort'),
+    participations: num(row, 'participations'),
+    athletes: num(row, 'athletes'),
+    completed: num(row, 'completed'),
+    completionRatePct: numOrNull(row, 'completion_rate_pct'),
+    returnEligible: num(row, 'return_eligible'),
+    returnedWithin14d: num(row, 'returned_within_14d'),
+    returnRatePct: numOrNull(row, 'return_rate_pct'),
+    avgGroupSize: numOrNull(row, 'avg_group_size'),
+  };
+}
+
+function parseRetentionCell(row: Record<string, unknown>): RetentionCell {
+  return {
+    cohortWeek: str(row, 'cohort_week'),
+    cohortSize: num(row, 'cohort_size'),
+    weekOffset: num(row, 'week_offset'),
+    retained: num(row, 'retained'),
+    retainedPct: numOrNull(row, 'retained_pct'),
   };
 }
 
@@ -812,6 +981,15 @@ export async function fetchCoachDashboard(window: CoachDashboardWindow = 'all'):
       intakeFunnel: parseIntakeFunnel(asRecord(raw.intakeFunnel)),
       rallyConversion: parseRallyConversion(asRecord(raw.rallyConversion)),
       missionAbandonment: parseMissionAbandonment(asRecord(raw.missionAbandonment)),
+      missionDropoff: asArray(raw.missionDropoff).map(parseMissionDropoffRow),
+      socialLift: asArray(raw.socialLift).map(parseSocialLiftRow),
+      weeklyRetention: asArray(raw.weeklyRetention).map(parseRetentionCell),
+      acquisition: asArray(raw.acquisition).map(parseAcquisitionRow),
+      contentPerformance: asArray(raw.contentPerformance).map(parseContentPageRow),
+      toolConversion: asArray(raw.toolConversion).map(parseToolConversionRow),
+      ctaPlacement: asArray(raw.ctaPlacement).map(parseCtaPlacementRow),
+      contentEngagement: asArray(raw.contentEngagement).map(parseContentEngagementRow),
+      notFound: asArray(raw.notFound).map(parseNotFoundRow),
       signupFunnel: asArray(raw.signupFunnel).map(parseSignupFunnelRow),
       authFailureReasons: asArray(raw.authFailureReasons).map(parseAuthFailureRow),
       campaignFunnel: parseCampaignFunnel(asRecord(raw.campaignFunnel)),
@@ -1044,4 +1222,131 @@ export async function upsertCoachChartNote(input: {
   }
 
   return { data: { deleted: false, note }, error: null };
+}
+
+export interface CoachJourneyIdentity {
+  userId: string | null;
+  anonIds: string[];
+  nickname: string | null;
+  accountCreatedAt: string | null;
+  signedUpAt: string | null;
+  firstSeenAt: string | null;
+  lastSeenAt: string | null;
+}
+
+export interface CoachIdentityJourney {
+  identity: CoachJourneyIdentity;
+  lifetime: JourneyLifetime;
+  eventCounts: Record<string, number>;
+  timeline: JourneyEntry[];
+}
+
+function parseJourneyEntry(row: Record<string, unknown>): JourneyEntry | null {
+  const at = str(row, 'at');
+  const payload = asRecord(row.payload);
+  if (!at) {
+    return null;
+  }
+  if (str(row, 'kind') === 'mission') {
+    return {
+      at,
+      kind: 'mission',
+      payload: {
+        missionId: str(payload, 'missionId'),
+        role: str(payload, 'role'),
+        state: str(payload, 'state'),
+        templateId: strOrNull(payload, 'templateId'),
+        durationMinutes: numOrNull(payload, 'durationMinutes'),
+        intensityTier: numOrNull(payload, 'intensityTier'),
+        finalScore: numOrNull(payload, 'finalScore'),
+        completed: payload.completed === true,
+        guest: payload.guest === true,
+      },
+    };
+  }
+  return {
+    at,
+    kind: 'event',
+    payload: {
+      eventName: str(payload, 'eventName'),
+      route: strOrNull(payload, 'route'),
+      missionId: strOrNull(payload, 'missionId'),
+      anonId: strOrNull(payload, 'anonId'),
+      signedIn: payload.signedIn === true,
+      props: asRecord(payload.props),
+    },
+  };
+}
+
+function parseEventCounts(value: unknown): Record<string, number> {
+  const raw = asRecord(value);
+  const counts: Record<string, number> = {};
+  for (const [key, count] of Object.entries(raw)) {
+    if (typeof count === 'number' && Number.isFinite(count)) {
+      counts[key] = count;
+    }
+  }
+  return counts;
+}
+
+/** One person's whole history, guest era included. Pass either half of the identity. */
+export async function fetchCoachIdentityJourney(input: {
+  userId?: string | null;
+  anonId?: string | null;
+  limit?: number;
+}): Promise<{ data: CoachIdentityJourney | null; error: CoachApiError | null }> {
+  const { data, error } = await callRpc('coach_identity_journey', {
+    p_user_id: input.userId ?? null,
+    p_anon_id: input.anonId ?? null,
+    p_limit: input.limit ?? 300,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return {
+      data: null,
+      error: {
+        message:
+          raw.reason === 'identity_required'
+            ? 'Pick a user or a guest to see their journey.'
+            : 'Something went wrong. Please try again.',
+      },
+    };
+  }
+
+  const identity = asRecord(raw.identity);
+  const lifetime = asRecord(raw.lifetime);
+
+  return {
+    data: {
+      identity: {
+        userId: strOrNull(identity, 'userId'),
+        anonIds: asStringArray(identity.anonIds),
+        nickname: strOrNull(identity, 'nickname'),
+        accountCreatedAt: strOrNull(identity, 'accountCreatedAt'),
+        signedUpAt: strOrNull(identity, 'signedUpAt'),
+        firstSeenAt: strOrNull(identity, 'firstSeenAt'),
+        lastSeenAt: strOrNull(identity, 'lastSeenAt'),
+      },
+      lifetime: {
+        missionsHosted: num(lifetime, 'missionsHosted'),
+        missionsJoined: num(lifetime, 'missionsJoined'),
+        missionsTotal: num(lifetime, 'missionsTotal'),
+        missionsCompleted: num(lifetime, 'missionsCompleted'),
+        missionsFinishedState: num(lifetime, 'missionsFinishedState'),
+        bestScore: numOrNull(lifetime, 'bestScore'),
+        totalWorkoutMinutes: num(lifetime, 'totalWorkoutMinutes'),
+        activeDays: num(lifetime, 'activeDays'),
+      },
+      eventCounts: parseEventCounts(raw.eventCounts),
+      timeline: asArray(raw.timeline)
+        .map(parseJourneyEntry)
+        .filter((entry): entry is JourneyEntry => entry !== null),
+    },
+    error: null,
+  };
 }
