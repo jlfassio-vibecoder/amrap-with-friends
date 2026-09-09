@@ -1,5 +1,10 @@
 import { callRpc } from '@/lib/api/callRpc';
 import type { JourneyEntry, JourneyLifetime } from '@/lib/coach/journeyTimeline';
+import type {
+  MissionDropoffRow,
+  RetentionCell,
+  SocialLiftRow,
+} from '@/lib/coach/engagementInsights';
 import { isLinkableAnonId } from '@/lib/api/linkAnonIdentity';
 import { isGuestHistoryCohort, type ActivityCohortId } from '@/lib/coach/activityCohorts';
 import {
@@ -145,6 +150,9 @@ export interface CoachDashboard {
   intakeFunnel: CoachIntakeFunnel;
   rallyConversion: CoachRallyConversion;
   missionAbandonment: CoachMissionAbandonment;
+  missionDropoff: MissionDropoffRow[];
+  socialLift: SocialLiftRow[];
+  weeklyRetention: RetentionCell[];
   signupFunnel: CoachSignupFunnelRow[];
   authFailureReasons: CoachAuthFailureRow[];
   campaignFunnel: CoachCampaignFunnel;
@@ -425,6 +433,41 @@ function parseCampaignLengthRow(row: Record<string, unknown>): CoachCampaignLeng
     campaigns: num(row, 'campaigns'),
     campaignsFinished: num(row, 'campaigns_finished'),
     occurrenceAdherencePct: numOrNull(row, 'occurrence_adherence_pct'),
+  };
+}
+
+function parseMissionDropoffRow(row: Record<string, unknown>): MissionDropoffRow {
+  return {
+    bucketOrder: num(row, 'bucket_order'),
+    elapsedBucket: str(row, 'elapsed_bucket'),
+    abandons: num(row, 'abandons'),
+    pctOfAbandons: numOrNull(row, 'pct_of_abandons'),
+    medianElapsedPct: numOrNull(row, 'median_elapsed_pct'),
+    medianRounds: numOrNull(row, 'median_rounds'),
+  };
+}
+
+function parseSocialLiftRow(row: Record<string, unknown>): SocialLiftRow {
+  return {
+    cohort: str(row, 'cohort'),
+    participations: num(row, 'participations'),
+    athletes: num(row, 'athletes'),
+    completed: num(row, 'completed'),
+    completionRatePct: numOrNull(row, 'completion_rate_pct'),
+    returnEligible: num(row, 'return_eligible'),
+    returnedWithin14d: num(row, 'returned_within_14d'),
+    returnRatePct: numOrNull(row, 'return_rate_pct'),
+    avgGroupSize: numOrNull(row, 'avg_group_size'),
+  };
+}
+
+function parseRetentionCell(row: Record<string, unknown>): RetentionCell {
+  return {
+    cohortWeek: str(row, 'cohort_week'),
+    cohortSize: num(row, 'cohort_size'),
+    weekOffset: num(row, 'week_offset'),
+    retained: num(row, 'retained'),
+    retainedPct: numOrNull(row, 'retained_pct'),
   };
 }
 
@@ -813,6 +856,9 @@ export async function fetchCoachDashboard(window: CoachDashboardWindow = 'all'):
       intakeFunnel: parseIntakeFunnel(asRecord(raw.intakeFunnel)),
       rallyConversion: parseRallyConversion(asRecord(raw.rallyConversion)),
       missionAbandonment: parseMissionAbandonment(asRecord(raw.missionAbandonment)),
+      missionDropoff: asArray(raw.missionDropoff).map(parseMissionDropoffRow),
+      socialLift: asArray(raw.socialLift).map(parseSocialLiftRow),
+      weeklyRetention: asArray(raw.weeklyRetention).map(parseRetentionCell),
       signupFunnel: asArray(raw.signupFunnel).map(parseSignupFunnelRow),
       authFailureReasons: asArray(raw.authFailureReasons).map(parseAuthFailureRow),
       campaignFunnel: parseCampaignFunnel(asRecord(raw.campaignFunnel)),
