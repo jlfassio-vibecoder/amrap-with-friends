@@ -97,7 +97,7 @@ export function ShareCardPanel({
       finalScore: me?.finalScore ?? null,
       showBoard: shouldDrawBoard(data),
     }),
-    [layout, effectiveVariant, workoutTitle, data, me, shareId]
+    [layout, effectiveVariant, workoutTitle, data, me, repsPerRound, shareId]
   );
 
   // Recorded when a share actually happens, with what was actually shared.
