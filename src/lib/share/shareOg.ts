@@ -43,6 +43,21 @@ export function shareOgDescription(summary: ShareSummary | null): string {
  * a missing object: a broken image in a preview looks worse than the generic
  * one, and the generic one still says what the product is.
  */
+/**
+ * The dimensions to declare for whatever shareOgImage returned.
+ *
+ * Facebook picks its large-image layout from these before it has fetched the
+ * file, so a wrong pair costs the layout the card was drawn for. The card is
+ * the landscape render (1080x608); the fallback is the site's own social
+ * image, which is not the same shape.
+ */
+export function shareOgImageSize(summary: ShareSummary | null): {
+  width: number;
+  height: number;
+} {
+  return summary?.imagePath ? { width: 1080, height: 608 } : { width: 1200, height: 630 };
+}
+
 export function shareOgImage(
   summary: ShareSummary | null,
   origin: string,

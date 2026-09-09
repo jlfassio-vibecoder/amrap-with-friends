@@ -4,6 +4,7 @@ import { NOT_FOUND_EVENT } from './src/lib/analytics/edgeEvents';
 import {
   shareOgDescription,
   shareOgImage,
+  shareOgImageSize,
   shareOgTitle,
   type ShareSummary,
 } from './src/lib/share/shareOg';
@@ -120,6 +121,7 @@ export default async function middleware(request: Request): Promise<Response> {
     const shareId = shareMatch[1] as string;
     const summary = await fetchShareSummary(shareId);
     const image = shareOgImage(summary, url.origin, process.env.VITE_SUPABASE_URL?.trim() ?? null);
+    const imageSize = shareOgImageSize(summary);
     const title = shareOgTitle(summary);
     const description = shareOgDescription(summary);
     const pageUrl = url.toString();
@@ -136,6 +138,8 @@ export default async function middleware(request: Request): Promise<Response> {
   <meta property="og:description" content="${escapeAttr(description)}" />
   <meta property="og:url" content="${escapeAttr(pageUrl)}" />
   <meta property="og:image" content="${escapeAttr(image)}" />
+  <meta property="og:image:width" content="${imageSize.width}" />
+  <meta property="og:image:height" content="${imageSize.height}" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${escapeAttr(title)}" />
   <meta name="twitter:image" content="${escapeAttr(image)}" />

@@ -3,6 +3,7 @@ import { track } from '@/lib/analytics/track';
 import { callRpc } from '@/lib/api/callRpc';
 import { buildCaption } from '@/lib/share/caption';
 import { cardFileName, renderCardBlob } from '@/lib/share/renderCard';
+import { OG_IMAGE_TYPE, OG_LAYOUT, OG_QUALITY_STEPS, fitsOgLimit } from '@/lib/share/ogImage';
 import { createShareId, shareUrl } from '@/lib/share/shareId';
 import { shareArtifact } from '@/lib/share/shareSheet';
 import { uploadShareImage } from '@/lib/share/uploadShareImage';
@@ -160,6 +161,51 @@ export function ShareCardPanel({
     [layout, effectiveVariant, workoutTitle, data, me, repsPerRound, shareId, photo]
   );
 
+  // The link preview gets its own render, in landscape.
+  //
+  // A crawler crops og:image to roughly 1.91:1, so the story card it used
+  // to receive arrived as a band out of its middle with the hero, the
+  // workout and the chart all outside the crop. Landscape is 1.78:1 and
+  // survives it. This is a second render rather than a reuse of one on
+  // screen, because the athlete may never have opened that ratio.
+  //
+  // Whether the photo goes with it is the athlete's decision. Unticked,
+  // the preview gets the same card drawn without it — the bucket is public
+  // and the share id is printed on the card, so publishing would put a
+  // picture of a person at a URL anyone holding the image can read off it.
+  // What it must not do is fall back to the site logo, which is what the
+  // athlete actually saw before this: their result is not private, only
+  // their face is.
+  const uploadOgImage = useCallback(async (): Promise<void> => {
+    const withPhoto = photo && publishPhoto ? photo : null;
+    const ogOptions = {
+      ...drawOptions,
+      layout: OG_LAYOUT,
+      photo: withPhoto,
+      photoWidth: withPhoto?.width,
+      photoHeight: withPhoto?.height,
+    };
+    for (const quality of OG_QUALITY_STEPS) {
+      const blob = await renderCardBlob(data, ogOptions, {
+        type: OG_IMAGE_TYPE,
+        quality,
+      });
+      if (!blob) {
+        return;
+      }
+      if (fitsOgLimit(blob.size)) {
+        await uploadShareImage({
+          shareId,
+          blob,
+          participantId,
+          claimToken,
+          hostToken,
+        });
+        return;
+      }
+    }
+  }, [data, drawOptions, photo, publishPhoto, shareId, participantId, claimToken, hostToken]);
+
   // Recorded when a share actually happens, with what was actually shared.
   // On mount it always logged story/result regardless of the ratio chosen, and
   // logged for athletes who never shared at all — which would have made the
@@ -171,27 +217,7 @@ export function ShareCardPanel({
         return;
       }
       recordedRef.current = true;
-      // The card goes up alongside the row so /s/ can unfurl with it. Only the
-      // story ratio: it is what the link preview crops to, and uploading three
-      // versions of one card would triple the storage for no visible gain.
-      //
-      // Never when the card carries the athlete's photo. The bucket is public
-      // and a share id, while unguessable, is printed on the card itself — so
-      // uploading would put a picture of a person at a URL that anyone holding
-      // the image can read off it. Posting the photo is the athlete's choice
-      // to make in the share sheet, once, not a side effect of tapping Copy
-      // link. The link still works; it unfurls with the generic card.
-      const storyBlob = photo && !publishPhoto ? null : blobRef.current.get(cacheKey('story'));
-      if (storyBlob) {
-        void uploadShareImage({
-          shareId,
-          blob: storyBlob,
-          participantId,
-          claimToken,
-          hostToken,
-        });
-      }
-      async function record(attempt = 0): Promise<void> {
+      async function record(attempt = 0): Promise<boolean> {
         const { error } = await callRpc('create_mission_share', {
           p_id: shareId,
           p_mission_id: data.mission.id,
@@ -203,12 +229,21 @@ export function ShareCardPanel({
           p_host_token: hostToken ?? null,
         });
         if (error && attempt === 0) {
-          await record(1);
+          return record(1);
         }
+        return !error;
       }
+
       // Not awaited: the share sheet has to stay inside the user's gesture, and
-      // the card is useful whether or not the row lands.
-      void record();
+      // the card is useful whether or not the row lands. The image follows the
+      // row rather than racing it — set_mission_share_image needs the row to
+      // exist, and when it lost that race the link kept the site logo with no
+      // error anybody saw.
+      void (async () => {
+        if (await record()) {
+          await uploadOgImage();
+        }
+      })();
     },
     [
       shareId,
@@ -218,9 +253,7 @@ export function ShareCardPanel({
       effectiveVariant,
       claimToken,
       hostToken,
-      photo,
-      publishPhoto,
-      cacheKey,
+      uploadOgImage,
     ]
   );
 
