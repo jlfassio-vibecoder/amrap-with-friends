@@ -60,46 +60,6 @@ export const PAID_RATE = 0.07;
 /** Average weeks per calendar month. */
 export const WEEKS_PER_MONTH = 4.3;
 
-/**
- * Diminishing join curve: athletes ≈ k√followers.
- * Anchored at the page default (8,000 → 20) and the “15–30 for 5k–20k” band.
- */
-export const DEFAULT_FOLLOWERS = 8000;
-export const DEFAULT_ATHLETES = 20;
-export const ROOM_FROM_FOLLOWERS_K = DEFAULT_ATHLETES / Math.sqrt(DEFAULT_FOLLOWERS);
-
-export const FOLLOWERS_MIN = 500;
-export const FOLLOWERS_MAX = 100_000;
-export const FOLLOWERS_STEP = 500;
-export const ATHLETES_MIN = 5;
-export const ATHLETES_MAX = 150;
-export const ATHLETES_STEP = 5;
-
-function clamp(n: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, n));
-}
-
-/** Snap to the nearest step within [min, max]. */
-export function snapToStep(n: number, step: number, min: number, max: number): number {
-  return clamp(Math.round(n / step) * step, min, max);
-}
-
-/** Typical room size from reach — conservative √ model, snapped to the athletes slider. */
-export function athletesFromFollowers(followers: number): number {
-  return snapToStep(
-    ROOM_FROM_FOLLOWERS_K * Math.sqrt(followers),
-    ATHLETES_STEP,
-    ATHLETES_MIN,
-    ATHLETES_MAX
-  );
-}
-
-/** Implied reach from a stated room size — inverse of athletesFromFollowers. */
-export function followersFromAthletes(athletes: number): number {
-  const k = ROOM_FROM_FOLLOWERS_K;
-  return snapToStep((athletes / k) ** 2, FOLLOWERS_STEP, FOLLOWERS_MIN, FOLLOWERS_MAX);
-}
-
 export interface EstimateInput {
   missionsPerWeek: number;
   athletesPerRoom: number;

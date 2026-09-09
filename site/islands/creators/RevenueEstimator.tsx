@@ -1,25 +1,15 @@
 import { useMemo, useState } from 'react';
 import {
-  ATHLETES_MAX,
-  ATHLETES_MIN,
-  ATHLETES_STEP,
   CREATOR_TIERS,
-  DEFAULT_ATHLETES,
-  DEFAULT_FOLLOWERS,
-  FOLLOWERS_MAX,
-  FOLLOWERS_MIN,
-  FOLLOWERS_STEP,
-  athletesFromFollowers,
   estimateRevenue,
-  followersFromAthletes,
   formatCount,
   formatMoney,
 } from '@/lib/creators/estimateRevenue';
 
 export default function RevenueEstimator() {
-  const [followers, setFollowers] = useState(DEFAULT_FOLLOWERS);
+  const [followers, setFollowers] = useState(8000);
   const [missions, setMissions] = useState(1);
-  const [joins, setJoins] = useState(DEFAULT_ATHLETES);
+  const [joins, setJoins] = useState(20);
   const [userTier, setUserTier] = useState<number | null>(null);
   const [showMath, setShowMath] = useState(false);
 
@@ -31,16 +21,6 @@ export default function RevenueEstimator() {
   const tierIndex = userTier ?? result.autoTierIndex;
   const tier = CREATOR_TIERS[tierIndex]!;
 
-  function onFollowersChange(next: number) {
-    setFollowers(next);
-    setJoins(athletesFromFollowers(next));
-  }
-
-  function onJoinsChange(next: number) {
-    setJoins(next);
-    setFollowers(followersFromAthletes(next));
-  }
-
   return (
     <>
       <div className="creators-estimator">
@@ -50,11 +30,11 @@ export default function RevenueEstimator() {
             <output>{formatCount(followers)}</output>
             <input
               type="range"
-              min={FOLLOWERS_MIN}
-              max={FOLLOWERS_MAX}
-              step={FOLLOWERS_STEP}
+              min={500}
+              max={100000}
+              step={500}
               value={followers}
-              onChange={(e) => onFollowersChange(Number(e.target.value))}
+              onChange={(e) => setFollowers(Number(e.target.value))}
             />
           </label>
           <label>
@@ -74,16 +54,16 @@ export default function RevenueEstimator() {
             <output>{joins}</output>
             <input
               type="range"
-              min={ATHLETES_MIN}
-              max={ATHLETES_MAX}
-              step={ATHLETES_STEP}
+              min={5}
+              max={150}
+              step={5}
               value={joins}
-              onChange={(e) => onJoinsChange(Number(e.target.value))}
+              onChange={(e) => setJoins(Number(e.target.value))}
             />
           </label>
           <p className="creators-fine">
-            Room size tracks reach: about 20 athletes at 8k followers, ~30 at 20k. Drag either
-            slider and the other follows. Missions per week stay independent.
+            Rooms of 15–30 are typical for 5k–20k followers with a weekly slot. Set it to what you'd
+            actually get.
           </p>
         </div>
         <div className="creators-results" aria-live="polite">
@@ -111,12 +91,10 @@ export default function RevenueEstimator() {
           {showMath ? (
             <div className="creators-math">
               <p>
-                Typical room ≈ 0.22 × √followers (diminishing join rate as the audience grows),
-                snapped to the sliders. Athletes per month = rooms × 4.3 × athletes. 20% of guests
-                save the mission to an account. 7% of those go paid within 60 days. Average net per
-                subscription is about $50 after the athlete's 15% squad discount and card fees (most
-                pick the 12-month plan). You earn your tier's share of that in year one, and a
-                renewal share after.
+                Athletes per month = rooms × 4.3 × athletes. 20% of guests save the mission to an
+                account. 7% of those go paid within 60 days. Average net per subscription is about
+                $50 after the athlete's 15% squad discount and card fees (most pick the 12-month
+                plan). You earn your tier's share of that in year one, and a renewal share after.
               </p>
             </div>
           ) : null}
