@@ -389,6 +389,7 @@ export default function HUDPage() {
                     onSelectWeek={canInspectHistory ? setSelectedWeekIndex : undefined}
                   />
                   {canInspectHistory && selectedWeek !== null && selectedWeekIndex !== null ? (
+                    // Copilot suggestion ignored: Week History keeps detail always open by design; Close returns to the current week rather than clearing selection.
                     <WeekDetailPanel
                       week={selectedWeek}
                       isCurrent={isCurrentWeek(historyWeeks, selectedWeekIndex)}

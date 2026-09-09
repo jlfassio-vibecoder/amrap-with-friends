@@ -56,7 +56,7 @@ The current HUD architecture revolves around a single telemetry payload:
 - Time since last locked mission
 - 12-week attrition booleans
 - 12-week inspectable history buckets
-- 30-day domain totals
+- 72-hour, 7-day, and 30-day domain totals
 - Weekly classification and progress to the next tier
 - 7-day in-app activity rollup
 - Overtraining inputs
