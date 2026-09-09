@@ -121,6 +121,30 @@ describe('fetchCoachDashboard', () => {
             signed_up: 5,
           },
         ],
+        toolConversion: [
+          {
+            cohort_order: 1,
+            cohort: 'reader_only',
+            browsers: 400,
+            cta_clicks: 30,
+            signed_up: 8,
+            signup_rate_pct: 2,
+            trained: 6,
+            completed_mission: 4,
+            completed_rate_pct: 1,
+          },
+          {
+            cohort_order: 3,
+            cohort: 'timer_completed',
+            browsers: 60,
+            cta_clicks: 25,
+            signed_up: 13,
+            signup_rate_pct: 21.67,
+            trained: 11,
+            completed_mission: 9,
+            completed_rate_pct: 15,
+          },
+        ],
         weeklyRetention: [
           {
             cohort_week: '2026-08-31',
@@ -233,6 +257,8 @@ describe('fetchCoachDashboard', () => {
     expect(result.data?.weeklyRetention[0]?.retainedPct).toBe(40);
     expect(result.data?.acquisition[0]?.channel).toBe('organic_search');
     expect(result.data?.contentPerformance[0]?.ctaRatePct).toBe(12.22);
+    expect(result.data?.toolConversion[1]?.cohort).toBe('timer_completed');
+    expect(result.data?.toolConversion[1]?.signupRatePct).toBe(21.67);
   });
 
   it('keeps an unobservable google completion null rather than zero', async () => {
@@ -313,6 +339,7 @@ describe('fetchCoachDashboard', () => {
     expect(result.data?.weeklyRetention).toEqual([]);
     expect(result.data?.acquisition).toEqual([]);
     expect(result.data?.contentPerformance).toEqual([]);
+    expect(result.data?.toolConversion).toEqual([]);
     expect(result.data?.campaignFunnel.campaignsCreated).toBe(0);
     expect(result.data?.campaignLengthAdherence).toEqual([]);
   });

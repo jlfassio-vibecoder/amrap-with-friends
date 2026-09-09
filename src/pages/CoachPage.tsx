@@ -23,6 +23,11 @@ import {
 import { GUEST_BROWSERS_STAT_ID } from '@/lib/coach/guestBrowsersWindows';
 import { formatCoachLabel } from '@/lib/coach/formatCoachLabel';
 import {
+  toolCohortLabel,
+  toolLiftIsMeaningful,
+  toolLiftVsReaders,
+} from '@/lib/coach/toolConversion';
+import {
   dropoffHeadline,
   socialLift,
   socialLiftIsMeaningful,
@@ -328,6 +333,66 @@ export default function CoachPage() {
                   train. Clicks from our own content pages count as internal, not as a referral, so
                   the site cannot take credit for its own traffic. Only browsers seen since this
                   shipped appear here.
+                </p>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <CoachSectionHeader
+                title={`Do the free tools convert · ${coachDashboardWindowLabel(dashboard.window)}`}
+              />
+              <div className="card space-y-3 p-4">
+                <CoachDataTable
+                  rows={dashboard.toolConversion}
+                  rowKey={(row) => row.cohort}
+                  emptyLabel="No tool activity yet — capture starts with the next deploy."
+                  columns={[
+                    { header: 'Visitor did', render: (row) => toolCohortLabel(row.cohort) },
+                    { header: 'Browsers', render: (row) => row.browsers, align: 'right' },
+                    { header: 'Clicked through', render: (row) => row.ctaClicks, align: 'right' },
+                    { header: 'Signed up', render: (row) => row.signedUp, align: 'right' },
+                    {
+                      header: 'Sign-up %',
+                      render: (row) => pct(row.signupRatePct),
+                      align: 'right',
+                    },
+                    {
+                      header: 'Completed a mission',
+                      render: (row) => row.completedMission,
+                      align: 'right',
+                    },
+                    {
+                      header: 'Browser → completed %',
+                      render: (row) => pct(row.completedRatePct),
+                      align: 'right',
+                    },
+                  ]}
+                />
+                {toolLiftIsMeaningful(dashboard.toolConversion, 'timer_completed') ? (
+                  <p className="text-sm text-secondary">
+                    Finishing a free timer run is worth{' '}
+                    <span className="font-semibold text-ink">
+                      {toolLiftVsReaders(
+                        dashboard.toolConversion,
+                        'timer_completed',
+                        'signupRatePct'
+                      )}{' '}
+                      points
+                    </span>{' '}
+                    on sign-up against readers who never touched a tool. If that is near zero the
+                    timer is a detour, not a funnel.
+                  </p>
+                ) : (
+                  <p className="text-sm text-secondary">
+                    Not enough visitors in both groups yet — the lift is only reported once readers
+                    and tool users each clear 20 browsers.
+                  </p>
+                )}
+                <p className="text-xs text-secondary">
+                  Cohorts overlap except "read only": someone who finished a run and also scored
+                  their splits is counted in both, because each row answers "of the browsers who did
+                  this, how many went on to train". Visitors who declined consent have no identifier
+                  and are excluded here; their pageviews still count above.
                 </p>
               </div>
             </section>
