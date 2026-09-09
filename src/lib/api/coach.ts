@@ -1,4 +1,5 @@
 import { callRpc } from '@/lib/api/callRpc';
+import type { JourneyEntry, JourneyLifetime } from '@/lib/coach/journeyTimeline';
 import { isLinkableAnonId } from '@/lib/api/linkAnonIdentity';
 import { isGuestHistoryCohort, type ActivityCohortId } from '@/lib/coach/activityCohorts';
 import {
@@ -1044,4 +1045,131 @@ export async function upsertCoachChartNote(input: {
   }
 
   return { data: { deleted: false, note }, error: null };
+}
+
+export interface CoachJourneyIdentity {
+  userId: string | null;
+  anonIds: string[];
+  nickname: string | null;
+  accountCreatedAt: string | null;
+  signedUpAt: string | null;
+  firstSeenAt: string | null;
+  lastSeenAt: string | null;
+}
+
+export interface CoachIdentityJourney {
+  identity: CoachJourneyIdentity;
+  lifetime: JourneyLifetime;
+  eventCounts: Record<string, number>;
+  timeline: JourneyEntry[];
+}
+
+function parseJourneyEntry(row: Record<string, unknown>): JourneyEntry | null {
+  const at = str(row, 'at');
+  const payload = asRecord(row.payload);
+  if (!at) {
+    return null;
+  }
+  if (str(row, 'kind') === 'mission') {
+    return {
+      at,
+      kind: 'mission',
+      payload: {
+        missionId: str(payload, 'missionId'),
+        role: str(payload, 'role'),
+        state: str(payload, 'state'),
+        templateId: strOrNull(payload, 'templateId'),
+        durationMinutes: numOrNull(payload, 'durationMinutes'),
+        intensityTier: numOrNull(payload, 'intensityTier'),
+        finalScore: numOrNull(payload, 'finalScore'),
+        completed: payload.completed === true,
+        guest: payload.guest === true,
+      },
+    };
+  }
+  return {
+    at,
+    kind: 'event',
+    payload: {
+      eventName: str(payload, 'eventName'),
+      route: strOrNull(payload, 'route'),
+      missionId: strOrNull(payload, 'missionId'),
+      anonId: strOrNull(payload, 'anonId'),
+      signedIn: payload.signedIn === true,
+      props: asRecord(payload.props),
+    },
+  };
+}
+
+function parseEventCounts(value: unknown): Record<string, number> {
+  const raw = asRecord(value);
+  const counts: Record<string, number> = {};
+  for (const [key, count] of Object.entries(raw)) {
+    if (typeof count === 'number' && Number.isFinite(count)) {
+      counts[key] = count;
+    }
+  }
+  return counts;
+}
+
+/** One person's whole history, guest era included. Pass either half of the identity. */
+export async function fetchCoachIdentityJourney(input: {
+  userId?: string | null;
+  anonId?: string | null;
+  limit?: number;
+}): Promise<{ data: CoachIdentityJourney | null; error: CoachApiError | null }> {
+  const { data, error } = await callRpc('coach_identity_journey', {
+    p_user_id: input.userId ?? null,
+    p_anon_id: input.anonId ?? null,
+    p_limit: input.limit ?? 300,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return {
+      data: null,
+      error: {
+        message:
+          raw.reason === 'identity_required'
+            ? 'Pick a user or a guest to see their journey.'
+            : 'Something went wrong. Please try again.',
+      },
+    };
+  }
+
+  const identity = asRecord(raw.identity);
+  const lifetime = asRecord(raw.lifetime);
+
+  return {
+    data: {
+      identity: {
+        userId: strOrNull(identity, 'userId'),
+        anonIds: asStringArray(identity.anonIds),
+        nickname: strOrNull(identity, 'nickname'),
+        accountCreatedAt: strOrNull(identity, 'accountCreatedAt'),
+        signedUpAt: strOrNull(identity, 'signedUpAt'),
+        firstSeenAt: strOrNull(identity, 'firstSeenAt'),
+        lastSeenAt: strOrNull(identity, 'lastSeenAt'),
+      },
+      lifetime: {
+        missionsHosted: num(lifetime, 'missionsHosted'),
+        missionsJoined: num(lifetime, 'missionsJoined'),
+        missionsTotal: num(lifetime, 'missionsTotal'),
+        missionsCompleted: num(lifetime, 'missionsCompleted'),
+        missionsFinishedState: num(lifetime, 'missionsFinishedState'),
+        bestScore: numOrNull(lifetime, 'bestScore'),
+        totalWorkoutMinutes: num(lifetime, 'totalWorkoutMinutes'),
+        activeDays: num(lifetime, 'activeDays'),
+      },
+      eventCounts: parseEventCounts(raw.eventCounts),
+      timeline: asArray(raw.timeline)
+        .map(parseJourneyEntry)
+        .filter((entry): entry is JourneyEntry => entry !== null),
+    },
+    error: null,
+  };
 }
