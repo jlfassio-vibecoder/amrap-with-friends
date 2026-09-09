@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, act } from '@testing-library/react';
+
+// vi.mock is hoisted above const declarations, so the spy has to be too.
+const { sendContentEvent } = vi.hoisted(() => ({ sendContentEvent: vi.fn() }));
+vi.mock('@/lib/analytics/contentBeacon', () => ({ sendContentEvent }));
+
 import FreeAmrapTimer from './FreeAmrapTimer';
 
 function press(name: RegExp) {
@@ -72,5 +77,64 @@ describe('FreeAmrapTimer', () => {
     press(/^reset$/i);
     expect(clock()).toBe('20:00');
     expect(screen.getByText('0')).toBeTruthy();
+  });
+});
+
+describe('FreeAmrapTimer conversion path', () => {
+  beforeEach(() => {
+    sendContentEvent.mockReset();
+  });
+
+  afterEach(cleanup);
+
+  it('offers a way into the app before a run, and after one', () => {
+    // The page previously had no link into the product at all.
+    render(<FreeAmrapTimer />);
+    const cta = screen.getByRole('link', { name: /plan a mission/i });
+    expect(cta.getAttribute('href')).toBe('/plan-mission');
+  });
+
+  it('reports the start once, not on every resume', () => {
+    render(<FreeAmrapTimer />);
+    press(/start/i);
+    press(/pause/i);
+    press(/start/i);
+
+    const starts = sendContentEvent.mock.calls.filter(([name]) => name === 'free_timer_started');
+    expect(starts).toHaveLength(1);
+    expect(starts[0]?.[1]).toEqual({ duration_minutes: 20 });
+  });
+
+  it('reports the CTA click with the run so far', () => {
+    render(<FreeAmrapTimer />);
+    press(/start/i);
+    press(/log round/i);
+    fireEvent.click(screen.getByRole('link', { name: /plan a mission/i }));
+
+    const clicks = sendContentEvent.mock.calls.filter(
+      ([name]) => name === 'free_timer_cta_clicked'
+    );
+    expect(clicks[0]?.[1]).toMatchObject({ placement: 'idle', round_count: 1 });
+  });
+
+  it('reports an abandon when the run is reset mid-clock', () => {
+    render(<FreeAmrapTimer />);
+    press(/start/i);
+    press(/log round/i);
+    press(/reset/i);
+
+    const abandons = sendContentEvent.mock.calls.filter(
+      ([name]) => name === 'free_timer_abandoned'
+    );
+    expect(abandons).toHaveLength(1);
+    expect(abandons[0]?.[1]).toMatchObject({ duration_minutes: 20, round_count: 1 });
+  });
+
+  it('does not report an abandon for a timer that was never started', () => {
+    render(<FreeAmrapTimer />);
+    press(/reset/i);
+    expect(
+      sendContentEvent.mock.calls.filter(([name]) => name === 'free_timer_abandoned')
+    ).toHaveLength(0);
   });
 });

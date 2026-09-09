@@ -82,6 +82,13 @@ export const ANALYTICS_EVENT_NAMES = [
   'content_page_viewed',
   'content_cta_clicked',
 
+  // The free timer on /amrap-timer — the product's core action, performed
+  // before anyone has an account.
+  'free_timer_started',
+  'free_timer_completed',
+  'free_timer_abandoned',
+  'free_timer_cta_clicked',
+
   // Platform / reliability
   'audio_unlock_result',
   'rpc_call',
