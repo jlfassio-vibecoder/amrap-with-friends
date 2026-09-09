@@ -9,10 +9,12 @@ import {
 } from '@/lib/share/ogImage';
 
 describe('the link-preview image', () => {
-  it('is the landscape layout, because a crawler crops to roughly 1.91:1', () => {
-    // A 9:16 story card cropped to 1.91:1 keeps a band out of its middle and
-    // loses the hero, the workout and the chart — which is the whole card.
-    expect(OG_LAYOUT).toBe('landscape');
+  it('is the same portrait card the athlete was looking at', () => {
+    // It was landscape for a while, chosen to survive a crawler's 1.91:1 crop.
+    // That optimised for the crawler and shipped something the athlete never
+    // composed: a link that unfurled as a different card from the one in the
+    // panel, with their face cropped off the top of their own photo.
+    expect(OG_LAYOUT).toBe('story');
   });
 
   it('is webp, because a photo card as png cannot fit the bucket', () => {

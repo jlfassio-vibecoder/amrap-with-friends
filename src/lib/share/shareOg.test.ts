@@ -79,10 +79,11 @@ describe('shareOgImageSize', () => {
     reps: 28,
   };
 
-  it('declares the landscape card, which is what the card render actually is', () => {
-    // Facebook picks its large-image layout from these before fetching the
-    // file, so declaring 1200x630 for a 1080x608 card costs the layout.
-    expect(shareOgImageSize(summary)).toEqual({ width: 1080, height: 608 });
+  it('declares the portrait card, which is what the card render actually is', () => {
+    // A platform reads these before fetching the file. Declaring the real
+    // shape is what lets a client that can show a tall image show the whole
+    // one instead of assuming a landscape crop.
+    expect(shareOgImageSize(summary)).toEqual({ width: 1080, height: 1920 });
   });
 
   it('declares the site social image when there is no card', () => {

@@ -1,17 +1,23 @@
 /**
- * The image a link preview shows, which is not the image the athlete posts.
+ * The image a link preview shows: the same card the athlete was looking at
+ * when they pressed share.
  *
- * Those are two different jobs and they were being done by one render. A
- * crawler crops og:image to roughly 1.91:1, so a 9:16 story card arrives as a
- * horizontal band out of its middle — no hero score, no workout, no splits.
- * The landscape layout is 1.78:1 and survives that crop, so it is what goes up
- * for the unfurl; the story card stays what it always was, the file the
- * athlete shares as an image.
+ * This was landscape for a while, on the reasoning that a crawler crops
+ * og:image to roughly 1.91:1 and a 9:16 card would arrive as a band out of its
+ * middle. That reasoning was about the crawler and not about the athlete. What
+ * they compose in the panel is a portrait card — their photo with their face
+ * in it, the splits, the squad board — and a link that unfurls as something
+ * else is not the thing they chose to share. Cropping is the platform's
+ * decision to make on a whole card, not ours to pre-empt by sending a
+ * different one.
+ *
+ * So the preview gets the story render, uncropped, and og:image:width/height
+ * declare it as portrait so a platform that can lay one out does.
  */
 import type { ShareLayout } from '@/lib/share/types';
 
-/** The layout rendered for the link preview. */
-export const OG_LAYOUT: ShareLayout = 'landscape';
+/** The layout rendered for the link preview — the same one the panel previews. */
+export const OG_LAYOUT: ShareLayout = 'story';
 
 /**
  * WebP, not PNG.
