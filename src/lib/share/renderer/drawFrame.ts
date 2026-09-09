@@ -7,6 +7,7 @@ import {
   type RoundSplit,
 } from '@/lib/share/cardContent';
 import { chartBandStops, coverRect, scrimStops } from '@/lib/share/photo';
+import { cardMetrics, footerTop } from '@/lib/share/renderer/cardMetrics';
 import {
   AWF_THEME,
   LAYOUTS,
@@ -218,17 +219,31 @@ function drawCardFrame(ctx: Ctx, frame: FrameState, options: DrawFrameOptions): 
   const contentWidth = width - SAFE_AREA * 2;
   let y = spec.safeTop;
 
+  // Type and rhythm sized to this card's height. Story and square are
+  // unchanged; landscape is a third of the story's content band and was
+  // inheriting its scale, which is how a 740px stack ended up on a 608px
+  // canvas.
+  const metrics = cardMetrics(spec);
+  const gap = (value: number): number => Math.round(value * metrics.gap);
+  // Nothing is drawn below this. The footer owns the band beneath it. On a
+  // full-scale card the footer sits lower and this is only the safe line, so
+  // the guard changes nothing there.
+  const contentBottom = Math.min(
+    height - spec.safeBottom,
+    footerTop(spec, metrics, options.watermark) - gap(8)
+  );
+
   // Header
   ctx.fillStyle = theme.secondary;
-  ctx.font = font(TYPE_SCALE.body, 600);
+  ctx.font = font(metrics.subtitle, 600);
   ctx.textBaseline = 'top';
   ctx.fillText(fitText(ctx, options.subtitle, contentWidth), left, y);
-  y += TYPE_SCALE.body + 16;
+  y += metrics.subtitle + gap(16);
 
   ctx.fillStyle = theme.ink;
-  ctx.font = font(TYPE_SCALE.label, 800);
+  ctx.font = font(metrics.title, 800);
   ctx.fillText(fitText(ctx, options.title, contentWidth), left, y);
-  y += TYPE_SCALE.label + 48;
+  y += metrics.title + gap(48);
 
   const me = myBar(frame.bars);
   const showHero = options.variant !== 'squad' && me !== null;
@@ -238,17 +253,24 @@ function drawCardFrame(ctx: Ctx, frame: FrameState, options: DrawFrameOptions): 
     // number, and "4 rounds + 24" is wider than "7 rounds".
     const score = formatScore(me);
     ctx.fillStyle = theme.accent;
-    const scoreSize = fitFontSize(ctx, score, contentWidth, TYPE_SCALE.display, 800, 72);
+    const scoreSize = fitFontSize(
+      ctx,
+      score,
+      contentWidth,
+      metrics.display,
+      800,
+      metrics.displayFloor
+    );
     ctx.fillText(score, left, y);
-    y += scoreSize + 8;
+    y += scoreSize + gap(8);
 
     // A name can be arbitrarily long, so it still truncates below a floor —
     // but it shrinks first, and a clipped name costs less than a clipped
     // score.
     ctx.fillStyle = theme.ink;
-    const nameSize = fitFontSize(ctx, me.displayName, contentWidth, TYPE_SCALE.hero, 600, 48);
+    const nameSize = fitFontSize(ctx, me.displayName, contentWidth, metrics.hero, 600, gap(48));
     ctx.fillText(fitText(ctx, me.displayName, contentWidth), left, y);
-    y += nameSize + 16;
+    y += nameSize + gap(16);
 
     // The numbers the app shows on the scorecard. Rounds alone reads as an
     // incomplete result next to the screen the athlete just closed.
@@ -261,30 +283,38 @@ function drawCardFrame(ctx: Ctx, frame: FrameState, options: DrawFrameOptions): 
     }
     if (totals.length > 0) {
       ctx.fillStyle = theme.secondary;
-      ctx.font = font(TYPE_SCALE.body, 600);
+      ctx.font = font(metrics.subtitle, 600);
       ctx.fillText(totals.join('  ·  '), left, y);
-      y += TYPE_SCALE.body + 40;
+      y += metrics.subtitle + gap(40);
     } else {
-      y += 40;
+      y += gap(40);
     }
   }
 
   // What the workout was. Omitting it made the card unreadable to anyone who
   // was not there — "7 rounds" of what?
   const movements = options.movements ?? [];
-  if (movements.length > 0) {
+  const movementLine = metrics.subtitle + gap(12);
+  // Only worth starting the block if at least the label and one movement fit.
+  if (movements.length > 0 && y + gap(44) + movementLine <= contentBottom) {
     ctx.fillStyle = theme.secondary;
-    ctx.font = font(32, 800);
+    ctx.font = font(metrics.sectionLabel, 800);
     ctx.fillText('THE WORKOUT', left, y);
-    y += 44;
+    y += gap(44);
 
     ctx.fillStyle = theme.ink;
-    ctx.font = font(TYPE_SCALE.body, 600);
+    ctx.font = font(metrics.subtitle, 600);
     for (const movement of movements.slice(0, 6)) {
+      // Stop at the footer rather than drawing off the bottom edge. A card
+      // that lists three of four movements still reads; one whose last line
+      // is sliced in half looks broken.
+      if (y + movementLine > contentBottom) {
+        break;
+      }
       ctx.fillText(fitText(ctx, formatMovement(movement), contentWidth), left, y);
-      y += TYPE_SCALE.body + 12;
+      y += movementLine;
     }
-    y += 28;
+    y += gap(28);
   }
 
   // Splits. The bar chart is the only part of the card that shows how the
@@ -387,18 +417,20 @@ function drawCardFrame(ctx: Ctx, frame: FrameState, options: DrawFrameOptions): 
     y += visible * rowHeight;
   }
 
-  // Footer: link, and the watermark bar on free cards.
-  const footerY = height - spec.safeBottom + 8;
+  // Footer: link, and the watermark bar on free cards. Placed from the bottom
+  // of its own block rather than from its first line — placed from the first
+  // line, the watermark on the landscape card was drawn below the canvas.
+  const footerY = footerTop(spec, metrics, options.watermark);
   ctx.fillStyle = theme.secondary;
-  ctx.font = font(32, 600);
+  ctx.font = font(metrics.footer, 600);
   ctx.fillText(fitText(ctx, options.shareUrl, contentWidth), left, footerY);
 
   if (options.watermark) {
     ctx.fillStyle = theme.accent;
-    ctx.fillRect(left, footerY + 48, 120, 6);
+    ctx.fillRect(left, footerY + metrics.footer + gap(16), gap(120), 6);
     ctx.fillStyle = theme.secondary;
-    ctx.font = font(28, 600);
-    ctx.fillText('AMRAP With Friends', left, footerY + 72);
+    ctx.font = font(metrics.watermark, 600);
+    ctx.fillText('AMRAP With Friends', left, footerY + metrics.footer + gap(16) + gap(24));
   }
 
   ctx.restore();
