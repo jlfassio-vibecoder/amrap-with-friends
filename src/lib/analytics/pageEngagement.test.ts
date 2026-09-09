@@ -74,3 +74,21 @@ describe('reportPageEngagement', () => {
     });
   });
 });
+
+describe('bfcache lifecycle', () => {
+  it('documents why the reporter must reset on a persisted pageshow', () => {
+    // The module runs once per document, not once per visit. Coming back
+    // through bfcache resumes the same module with engagementReported already
+    // true, so without a reset the return trip reports nothing and carries the
+    // first visit's clock. The listener lives in contentPageview.ts; this
+    // pins the arithmetic it depends on.
+    const firstVisitStart = 1_000_000;
+    const leftAt = firstVisitStart + 30_000;
+    expect(computeDwellSec(firstVisitStart, leftAt)).toBe(30);
+
+    // A fresh clock on return, not a continuation of the first.
+    const returnedAt = leftAt + 600_000;
+    expect(computeDwellSec(returnedAt, returnedAt + 5_000)).toBe(5);
+    expect(computeDwellSec(firstVisitStart, returnedAt + 5_000)).toBe(635);
+  });
+});

@@ -135,12 +135,14 @@ function notFoundBeacon(pathname: string): string {
   if (!url || !key) {
     return '';
   }
-  const payload = JSON.stringify({
-    endpoint: `${url}/rest/v1/analytics_events`,
-    key,
-    event: NOT_FOUND_EVENT,
-    path: pathname,
-  });
+  const payload = escapeScriptJson(
+    JSON.stringify({
+      endpoint: `${url}/rest/v1/analytics_events`,
+      key,
+      event: NOT_FOUND_EVENT,
+      path: pathname,
+    })
+  );
   return `<script>
 (function(){try{var c=${payload};var r='';try{r=document.referrer?new URL(document.referrer).hostname:'';}catch(e){}
 fetch(c.endpoint,{method:'POST',keepalive:true,headers:{'Content-Type':'application/json',apikey:c.key,Authorization:'Bearer '+c.key},
@@ -176,6 +178,23 @@ function notFoundHtml(origin: string, pathname: string): string {
   ${notFoundBeacon(pathname)}
 </body>
 </html>`;
+}
+
+/**
+ * Make a JSON literal safe to inline in a <script> block.
+ *
+ * `new URL()` already percent-encodes `<` and `>` in a pathname, so today
+ * nothing can carry a literal `</script>` this far -- this is not fixing a
+ * live hole. It is here because the safety currently rests on an implicit
+ * parser behaviour a refactor could remove without anyone noticing, and one
+ * `\u003c` is cheaper than that risk. U+2028/9 are escaped for the separate
+ * reason that they are valid JSON but terminate a JavaScript line.
+ */
+function escapeScriptJson(value: string): string {
+  return value
+    .replace(/</g, '\\u003c')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
 }
 
 function escapeAttr(value: string): string {

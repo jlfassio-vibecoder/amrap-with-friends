@@ -80,7 +80,7 @@ export function initContentAnalytics(): void {
   // How far down they got, and how long they stayed. Tracked passively and
   // reported once, on the way out, so a long read costs one row rather than
   // one per scroll event.
-  const startedAtMs = Date.now();
+  let startedAtMs = Date.now();
   let maxScrollPct = 0;
   let engagementReported = false;
 
@@ -110,6 +110,21 @@ export function initContentAnalytics(): void {
       maxScrollPct,
       dwellSec: computeDwellSec(startedAtMs, Date.now()),
     });
+  });
+
+  // Coming back through bfcache is a second visit to the same page, and the
+  // module never re-runs — so without this reset the return trip reports
+  // nothing and carries the first visit's clock. Scroll depth restarts too:
+  // the browser restores the old scroll position, and counting that as newly
+  // read would credit the page for a screen nobody looked at again.
+  window.addEventListener('pageshow', (event) => {
+    if (!event.persisted) {
+      return;
+    }
+    engagementReported = false;
+    startedAtMs = Date.now();
+    maxScrollPct = 0;
+    sampleScroll();
   });
 
   // The conversion that matters: a click out of the content layer into the
