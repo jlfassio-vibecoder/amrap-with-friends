@@ -1960,6 +1960,8 @@ function LiveMissionView({
           isHost={isHost}
           nextUpMissionName={continueMissionName ?? nextUpMissionName}
           nextMissionId={nextChainedMissionId}
+          missionId={missionId ?? null}
+          templateId={live.templateId ?? null}
         />
       ) : null}
 
