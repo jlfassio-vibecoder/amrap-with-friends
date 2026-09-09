@@ -30,6 +30,7 @@ const advance = (
   currentMissionId: 'm1',
   activeMissionId: 'm1',
   attemptedForMissionId: null,
+  scoreLocked: true,
   ...overrides,
 });
 
@@ -127,5 +128,9 @@ describe('shouldAdvanceMissionChain', () => {
   it('does not attempt the same mission twice', () => {
     expect(shouldAdvanceMissionChain(advance({ attemptedForMissionId: 'm1' }))).toBe(false);
     expect(shouldAdvanceMissionChain(advance({ attemptedForMissionId: 'm0' }))).toBe(true);
+  });
+
+  it('waits until the host score is locked', () => {
+    expect(shouldAdvanceMissionChain(advance({ scoreLocked: false }))).toBe(false);
   });
 });

@@ -22,6 +22,7 @@ const domainMinutes30d = {
   15: 15,
   20: 40,
   other: 0,
+  activeRecovery: 0,
 };
 
 const classification = {
@@ -149,7 +150,7 @@ describe('parseHudTelemetryPayload', () => {
         weekEndsAt: '2026-08-25T07:00:00.000Z',
         lastLockedAt: null,
         attrition: Array.from({ length: 12 }, () => false),
-        domainMinutes30d: { 5: 0, 10: 0, 15: 0, 20: 0, other: 0 },
+        domainMinutes30d: { 5: 0, 10: 0, 15: 0, 20: 0, other: 0, activeRecovery: 0 },
         classification: emptyClassification,
         activity7d: emptyActivity7d,
         overtraining: { acuteLoad7d: 0, chronicWeeklyLoad28d: 0, consecutiveHighIntensityDays: 0 },
@@ -162,7 +163,7 @@ describe('parseHudTelemetryPayload', () => {
       lastLockedAt: null,
       attrition: Array.from({ length: 12 }, () => false),
       weeks: [],
-      domainMinutes30d: { 5: 0, 10: 0, 15: 0, 20: 0, other: 0 },
+      domainMinutes30d: { 5: 0, 10: 0, 15: 0, 20: 0, other: 0, activeRecovery: 0 },
       classification: emptyClassification,
       activity7d: emptyActivity7d,
       // No minutes or window in the payload: a client running ahead of the
@@ -285,6 +286,19 @@ describe('parseHudTelemetryPayload', () => {
         overtraining,
       })
     ).toBeNull();
+    expect(
+      parseHudTelemetryPayload({
+        weekMinutes: 10,
+        weekPviAverage: null,
+        weekEndsAt: '2026-08-25T07:00:00.000Z',
+        lastLockedAt: null,
+        attrition: Array.from({ length: 12 }, () => false),
+        domainMinutes30d: { 5: 1, 10: 1, 15: 1, 20: 1, other: 0 },
+        classification,
+        activity7d,
+        overtraining,
+      })
+    ).toBeNull();
   });
 });
 
@@ -302,7 +316,7 @@ describe('parseHudTelemetryPayload — week history', () => {
     weekEndsAt: '2026-08-25T07:00:00.000Z',
     lastLockedAt: null,
     attrition: Array.from({ length: 12 }, () => false),
-    domainMinutes30d: { 5: 0, 10: 0, 15: 0, 20: 0, other: 0 },
+    domainMinutes30d: { 5: 0, 10: 0, 15: 0, 20: 0, other: 0, activeRecovery: 0 },
     classification: {
       current: 'unclassified',
       previous: 'unclassified',

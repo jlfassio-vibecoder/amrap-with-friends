@@ -66,7 +66,7 @@ export function DomainMatrixChart({ domainMinutes30d }: DomainMatrixChartProps) 
           : null}
       </svg>
 
-      <div className="grid grid-cols-4 gap-2 text-center text-xs">
+      <div className="grid grid-cols-2 gap-2 text-center text-xs sm:grid-cols-5">
         {segments.map((segment) => (
           <div key={segment.domain}>
             <p className="font-medium uppercase tracking-wide text-muted">
@@ -75,10 +75,22 @@ export function DomainMatrixChart({ domainMinutes30d }: DomainMatrixChartProps) 
             <p className="text-display tabular-nums text-ink">{segment.minutes} min</p>
           </div>
         ))}
+        <div>
+          <p className="font-medium uppercase tracking-wide text-muted">Active Recovery</p>
+          <p className="text-display tabular-nums text-ink">
+            {domainMinutes30d.activeRecovery} min
+          </p>
+        </div>
       </div>
 
-      {coreTotal === 0 ? (
+      {coreTotal === 0 && domainMinutes30d.activeRecovery === 0 ? (
         <p className="text-sm text-secondary">No locked core-domain volume in the last 30 days.</p>
+      ) : null}
+
+      {coreTotal === 0 && domainMinutes30d.activeRecovery > 0 ? (
+        <p className="text-sm text-secondary">
+          Only Active Recovery volume in the last 30 days — no Sprint through Marathon lock yet.
+        </p>
       ) : null}
 
       {domainMinutes30d.other > 0 ? (

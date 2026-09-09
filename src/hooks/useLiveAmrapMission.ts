@@ -94,7 +94,7 @@ export interface UseLiveAmrapMissionReturn {
       sessionNotes: string;
       checkIns: Record<string, string>;
     }
-  ) => Promise<void>;
+  ) => Promise<boolean>;
 }
 
 function mapTimerPhaseToMissionState(phase: AmrapTimerPhase): LiveMissionPhase {
@@ -796,9 +796,9 @@ export function useLiveAmrapMission(
         sessionNotes: string;
         checkIns: Record<string, string>;
       } = { rpe: null, sessionNotes: '', checkIns: {} }
-    ) => {
+    ): Promise<boolean> => {
       if (isPractice || !participantId || hasSubmittedPartialReps) {
-        return;
+        return false;
       }
 
       setSyncError(null);
@@ -808,7 +808,7 @@ export function useLiveAmrapMission(
         setSyncError(
           'Cannot submit score without a mission credential. Rejoin the mission or sign in.'
         );
-        return;
+        return false;
       }
 
       const result = await submitParticipantResult({
@@ -827,21 +827,22 @@ export function useLiveAmrapMission(
       if (result.data?.ok === false && result.data.reason === 'score_already_locked') {
         setSyncError(null);
         setLocalPartialSubmitted(true);
-        return;
+        return true;
       }
 
       if (result.error) {
         setSyncError(result.error.message);
-        return;
+        return false;
       }
 
       if (result.data?.ok === false) {
         setSyncError(`Could not submit partial reps: ${result.data.reason}`);
-        return;
+        return false;
       }
 
       setSyncError(null);
       setLocalPartialSubmitted(true);
+      return true;
     },
     [
       isPractice,

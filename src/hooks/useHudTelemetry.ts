@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { fetchHudTelemetry } from '@/lib/api/hudTelemetry';
+import { repairUnlockedAmqapScores } from '@/lib/api/repairUnlockedAmqapScores';
 import type { HUDTelemetryPayload } from '@/lib/hud/types';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 
@@ -16,8 +17,16 @@ export function useHudTelemetry() {
 
     let cancelled = false;
 
-    fetchHudTelemetry()
-      .then((result) => {
+    void (async () => {
+      // Finished AMQAP without PartialReps never hit hud_telemetry; lock them
+      // before reading so Active Recovery / week / 7d / lastLockedAt catch up.
+      await repairUnlockedAmqapScores();
+      if (cancelled) {
+        return;
+      }
+
+      try {
+        const result = await fetchHudTelemetry();
         if (cancelled) {
           return;
         }
@@ -28,19 +37,18 @@ export function useHudTelemetry() {
           setTelemetry(result.data);
           setError(null);
         }
-      })
-      .catch(() => {
+      } catch {
         if (cancelled) {
           return;
         }
         setError('Something went wrong. Please try again.');
         setTelemetry(null);
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) {
           setHasLoaded(true);
         }
-      });
+      }
+    })();
 
     return () => {
       cancelled = true;

@@ -78,12 +78,20 @@ function readDomainMinutes(value: unknown): HudDomainMinutes | null {
   const fifteen = readNonNegativeInt(row['15']);
   const twenty = readNonNegativeInt(row['20']);
   const other = readNonNegativeInt(row.other);
+  const activeRecovery = readNonNegativeInt(row.activeRecovery);
 
-  if (five === null || ten === null || fifteen === null || twenty === null || other === null) {
+  if (
+    five === null ||
+    ten === null ||
+    fifteen === null ||
+    twenty === null ||
+    other === null ||
+    activeRecovery === null
+  ) {
     return null;
   }
 
-  return { 5: five, 10: ten, 15: fifteen, 20: twenty, other };
+  return { 5: five, 10: ten, 15: fifteen, 20: twenty, other, activeRecovery };
 }
 
 function readClassificationRank(value: unknown): ClassificationRank | null {

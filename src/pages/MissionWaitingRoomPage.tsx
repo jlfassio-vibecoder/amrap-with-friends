@@ -42,6 +42,7 @@ import {
   setProgressFromRoundElapsed,
 } from '@/lib/amqap/amqapSetGauge';
 import { expandAmqapSets } from '@/lib/amqap/expandAmqapSets';
+import { shouldAutoLockAmqapScore } from '@/lib/amqap/shouldAutoLockAmqapScore';
 import { PreMissionScalingPicker } from '@/components/mission/PreMissionScalingPicker';
 import { BenchmarkDesignateControl } from '@/components/mission/BenchmarkDesignateControl';
 import { RoundLogRippleBurst } from '@/components/mission/RoundLogRippleBurst';
@@ -471,6 +472,8 @@ function LiveMissionView({
   const [resetBusy, setResetBusy] = useState(false);
   const [hostRestartedDeadEnd, setHostRestartedDeadEnd] = useState(false);
   const [isSubmittingPartialReps, setIsSubmittingPartialReps] = useState(false);
+  const [amqapAutoLockFailed, setAmqapAutoLockFailed] = useState(false);
+  const amqapAutoLockAttemptedRef = useRef(false);
   // A modification chosen before the clock starts. Seeds the end-of-mission checklist;
   // the checklist is still the only thing that writes a result.
   const [scalingPlan, setScalingPlan] = useState<MovementVariantSelection>({});
@@ -537,7 +540,54 @@ function LiveMissionView({
     setNextChainedMissionId(null);
     setContinueMissionName(null);
     chainAdvanceAttemptedRef.current = null;
+    amqapAutoLockAttemptedRef.current = false;
+    setAmqapAutoLockFailed(false);
   }, [missionId]);
+
+  // AMQAP: lock a 0-partial score on finish so HUD Active Recovery / week volume
+  // record without the metabolic "Where did you break?" PartialReps step.
+  useEffect(() => {
+    if (
+      !shouldAutoLockAmqapScore({
+        isAmqap: Boolean(amqapFlow),
+        isPractice: live.isPractice,
+        phase: livePhase,
+        hasSubmittedPartialReps: live.hasSubmittedPartialReps,
+        hasParticipant: Boolean(live.participantId),
+      })
+    ) {
+      return;
+    }
+    if (amqapAutoLockAttemptedRef.current) {
+      return;
+    }
+    amqapAutoLockAttemptedRef.current = true;
+    let cancelled = false;
+    void (async () => {
+      const ok = await live.submitPartialReps(0);
+      if (cancelled) {
+        return;
+      }
+      if (ok) {
+        clearScalingPlan(missionId, participantId);
+        setAmqapAutoLockFailed(false);
+        return;
+      }
+      setAmqapAutoLockFailed(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    amqapFlow,
+    live.isPractice,
+    livePhase,
+    live.hasSubmittedPartialReps,
+    live.participantId,
+    live.submitPartialReps,
+    missionId,
+    participantId,
+  ]);
 
   useEffect(() => {
     if (!rallyPointId || !isAuthenticated) {
@@ -605,6 +655,7 @@ function LiveMissionView({
         currentMissionId: missionId,
         activeMissionId: rallyPointChannel.rallyPoint?.activeMissionId,
         attemptedForMissionId: chainAdvanceAttemptedRef.current,
+        scoreLocked: live.hasSubmittedPartialReps,
       })
     ) {
       return;
@@ -669,6 +720,7 @@ function LiveMissionView({
     isHost,
     live.isPractice,
     livePhase,
+    live.hasSubmittedPartialReps,
     rallyPointId,
     isAuthenticated,
     missionId,
@@ -908,6 +960,13 @@ function LiveMissionView({
     !live.isPractice &&
     livePhase === 'finished' &&
     live.repsPerRound > 0 &&
+    !live.hasSubmittedPartialReps &&
+    // AMQAP auto-locks; only fall back to PartialReps if that submit failed.
+    (!amqapFlow || amqapAutoLockFailed);
+  const amqapLockPending =
+    Boolean(amqapFlow) &&
+    !live.isPractice &&
+    livePhase === 'finished' &&
     !live.hasSubmittedPartialReps;
   const showScorecard =
     !live.isPractice &&
@@ -920,6 +979,7 @@ function LiveMissionView({
     livePhase === 'finished' &&
     claim.showClaimPrompt &&
     !showPartialRepsModal &&
+    !amqapLockPending &&
     !showScorecard;
 
   const forceNav = useRallyPointForceNav({
@@ -935,7 +995,7 @@ function LiveMissionView({
       activeMissionId: rallyPointChannel.rallyPoint?.activeMissionId,
       activeMissionState: rallyPointChannel.rallyPoint?.activeMissionState,
       nextChainedMissionId,
-      showPartialRepsModal,
+      showPartialRepsModal: showPartialRepsModal || amqapLockPending,
       showScorecard,
     }),
     onError: setForceNavError,
