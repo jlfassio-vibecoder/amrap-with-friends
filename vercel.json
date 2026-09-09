@@ -56,6 +56,10 @@
       "destination": "/_app-shell"
     },
     {
+      "source": "/s/:shareId",
+      "destination": "/_app-shell"
+    },
+    {
       "source": "/rally-point/:rallyPointId",
       "destination": "/_app-shell"
     },
