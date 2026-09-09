@@ -1,5 +1,13 @@
--- Divert intensity-tier-1 locked minutes into domainMinutes30d.activeRecovery
--- so AMQAP / Active Recovery does not inflate Sprint/Crucible/Grind/Marathon.
+-- Unshadow hud_domain_active_recovery.
+--
+-- main briefly had two files with version 20260909460000:
+--   20260909460000_tool_conversion.sql
+--   20260909460000_hud_domain_active_recovery.sql
+-- Supabase records migration history by version only, so only one ran.
+-- Production applied tool_conversion; Active Recovery never replaced hud_telemetry.
+--
+-- 0946 stays tool_conversion (already in remote history). This migration carries
+-- the shadowed hud_telemetry body under a new version so it can finally apply.
 
 CREATE OR REPLACE FUNCTION public.hud_telemetry(p_timezone text)
  RETURNS jsonb
