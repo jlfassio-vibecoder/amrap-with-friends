@@ -16,13 +16,22 @@ interface DrawnText {
   font: string;
 }
 
-function recordingCtx(): { ctx: Ctx; texts: DrawnText[]; rects: number[][] } {
+function recordingCtx(): {
+  ctx: Ctx;
+  texts: DrawnText[];
+  rects: number[][];
+  images: { x: number; y: number; width: number; height: number }[];
+} {
   const texts: DrawnText[] = [];
   const rects: number[][] = [];
+  const images: { x: number; y: number; width: number; height: number }[] = [];
   const ctx = {
     save: vi.fn(),
     restore: vi.fn(),
     fillRect: (...args: number[]) => rects.push(args),
+    drawImage: (_src: unknown, x: number, y: number, width: number, height: number) =>
+      images.push({ x, y, width, height }),
+    createLinearGradient: () => ({ addColorStop: () => undefined }),
     fillText: (text: string, x: number, y: number) =>
       texts.push({ text, x, y, font: (ctx as { font: string }).font }),
     // Width scales with the font size, as a real canvas does. A fixed-width
@@ -37,7 +46,7 @@ function recordingCtx(): { ctx: Ctx; texts: DrawnText[]; rects: number[][] } {
     textAlign: 'left',
     textBaseline: 'top',
   } as unknown as Ctx;
-  return { ctx, texts, rects };
+  return { ctx, texts, rects, images };
 }
 
 function data(participants: number, meRounds = 7): ReplayData {
@@ -292,5 +301,45 @@ describe('the hero fits instead of being cut off', () => {
     for (const entry of texts) {
       expect(entry.y).toBeLessThan(1920);
     }
+  });
+});
+
+describe('the athlete photo', () => {
+  const photoOptions = {
+    ...baseOptions,
+    photo: {} as unknown as CanvasImageSource,
+    photoWidth: 4032,
+    photoHeight: 3024,
+  };
+
+  it('draws the photo behind everything, then a scrim over it', () => {
+    const { ctx, images, rects } = recordingCtx();
+    drawFrame(ctx, frameAt(data(1)), photoOptions);
+    expect(images).toHaveLength(1);
+    // Cover-fit: wider than the card, full height, centred.
+    expect(images[0]!.width).toBeGreaterThan(1080);
+    expect(images[0]!.height).toBeCloseTo(1920, 0);
+    // A full-bleed rect after the image is the scrim.
+    expect(rects.some((rect) => rect[2] === 1080 && rect[3] === 1920)).toBe(true);
+  });
+
+  it('still draws the result on top of the photo', () => {
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, frameAt(data(1)), photoOptions);
+    const all = texts.map((entry) => entry.text);
+    expect(all).toContain('The Hull Breach');
+    expect(all).toContain('7 rounds + 12');
+  });
+
+  it('draws no photo layer when there is none', () => {
+    const { ctx, images } = recordingCtx();
+    drawFrame(ctx, frameAt(data(1)), baseOptions);
+    expect(images).toHaveLength(0);
+  });
+
+  it('ignores a photo with no dimensions rather than drawing a zero-sized image', () => {
+    const { ctx, images } = recordingCtx();
+    drawFrame(ctx, frameAt(data(1)), { ...photoOptions, photoWidth: 0, photoHeight: 0 });
+    expect(images).toHaveLength(0);
   });
 });

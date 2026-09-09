@@ -6,6 +6,7 @@ import {
   type CardMovement,
   type RoundSplit,
 } from '@/lib/share/cardContent';
+import { coverRect, scrimStops } from '@/lib/share/photo';
 import {
   AWF_THEME,
   LAYOUTS,
@@ -34,6 +35,10 @@ export interface DrawFrameOptions {
   finalScore?: number | null;
   /** False on a solo mission, where a one-row board just restates the hero. */
   showBoard?: boolean;
+  /** The athlete's own photo, drawn behind everything. */
+  photo?: CanvasImageSource | null;
+  photoWidth?: number;
+  photoHeight?: number;
 }
 
 /**
@@ -192,6 +197,22 @@ function drawCardFrame(ctx: Ctx, frame: FrameState, options: DrawFrameOptions): 
   ctx.save();
   ctx.fillStyle = theme.background;
   ctx.fillRect(0, 0, width, height);
+
+  // The athlete's photo, behind everything, cover-fit so it is never
+  // distorted — then a scrim, because the card's type is light on near-black
+  // and vanishes over a bright picture. The scrim is strongest where the text
+  // is rather than a flat wash, which would grey the photo out.
+  if (options.photo && options.photoWidth && options.photoHeight) {
+    const rect = coverRect(options.photoWidth, options.photoHeight, width, height);
+    ctx.drawImage(options.photo, rect.x, rect.y, rect.width, rect.height);
+
+    const scrim = ctx.createLinearGradient(0, 0, 0, height);
+    for (const stop of scrimStops()) {
+      scrim.addColorStop(stop.offset, `rgba(10, 9, 7, ${stop.alpha})`);
+    }
+    ctx.fillStyle = scrim;
+    ctx.fillRect(0, 0, width, height);
+  }
 
   const left = SAFE_AREA;
   const contentWidth = width - SAFE_AREA * 2;
