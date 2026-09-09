@@ -53,6 +53,38 @@ function font(size: number, weight: 400 | 600 | 800 = 600): string {
   return `${weight} ${size}px ${SHARE_FONT_STACK}`;
 }
 
+/**
+ * Shrinks the type until the line fits, and returns the size used.
+ *
+ * The hero is the number the whole card exists to show, and ellipsising it —
+ * "4 rounds +…" — loses exactly the part that matters. A score with partial
+ * reps is wider than a round number, so the first version fitted "7 rounds"
+ * and clipped "4 rounds + 24". Shrinking a step or two is invisible; a
+ * truncated headline is not.
+ *
+ * Steps down rather than solving for the width because the fit depends on the
+ * font's own metrics, which are only knowable by measuring.
+ */
+export function fitFontSize(
+  ctx: Ctx,
+  text: string,
+  maxWidth: number,
+  startSize: number,
+  weight: 400 | 600 | 800,
+  minSize: number
+): number {
+  let size = startSize;
+  while (size > minSize) {
+    ctx.font = font(size, weight);
+    if (ctx.measureText(text).width <= maxWidth) {
+      return size;
+    }
+    size -= 4;
+  }
+  ctx.font = font(minSize, weight);
+  return minSize;
+}
+
 /** Truncates to fit, so a long name pushes nothing off the card. */
 function fitText(ctx: Ctx, text: string, maxWidth: number): string {
   if (ctx.measureText(text).width <= maxWidth) {
@@ -181,15 +213,21 @@ function drawCardFrame(ctx: Ctx, frame: FrameState, options: DrawFrameOptions): 
   const showHero = options.variant !== 'squad' && me !== null;
 
   if (showHero && me) {
+    // Shrink to fit rather than clip: half the reason for the card is the
+    // number, and "4 rounds + 24" is wider than "7 rounds".
+    const score = formatScore(me);
     ctx.fillStyle = theme.accent;
-    ctx.font = font(TYPE_SCALE.display, 800);
-    ctx.fillText(fitText(ctx, formatScore(me), contentWidth), left, y);
-    y += TYPE_SCALE.display + 8;
+    const scoreSize = fitFontSize(ctx, score, contentWidth, TYPE_SCALE.display, 800, 72);
+    ctx.fillText(score, left, y);
+    y += scoreSize + 8;
 
+    // A name can be arbitrarily long, so it still truncates below a floor —
+    // but it shrinks first, and a clipped name costs less than a clipped
+    // score.
     ctx.fillStyle = theme.ink;
-    ctx.font = font(TYPE_SCALE.hero, 600);
+    const nameSize = fitFontSize(ctx, me.displayName, contentWidth, TYPE_SCALE.hero, 600, 48);
     ctx.fillText(fitText(ctx, me.displayName, contentWidth), left, y);
-    y += TYPE_SCALE.hero + 16;
+    y += nameSize + 16;
 
     // The numbers the app shows on the scorecard. Rounds alone reads as an
     // incomplete result next to the screen the athlete just closed.
