@@ -18,10 +18,16 @@ import {
 
 type UseSmartRecoveryOptions = {
   active?: boolean;
+  /**
+   * When true, fetch history and compute locks even if the Create-page toggle
+   * is off — used by HUD checklist recommendations.
+   */
+  alwaysRankWithRecovery?: boolean;
 };
 
 export function useSmartRecovery(options: UseSmartRecoveryOptions = {}) {
   const active = options.active ?? true;
+  const alwaysRankWithRecovery = options.alwaysRankWithRecovery ?? false;
   const { user, isAuthenticated, isAuthLoading } = useAmrapAuth();
   const [enabled, setEnabledState] = useState(() => readSmartRecoveryEnabled());
   const [completions, setCompletions] = useState<SmartRecoveryHistoryEntry[] | null>(null);
@@ -33,7 +39,12 @@ export function useSmartRecovery(options: UseSmartRecoveryOptions = {}) {
     writeSmartRecoveryEnabled(next);
   }, []);
 
-  const shouldFetch = active && enabled && isAuthenticated && !isAuthLoading && user !== null;
+  const shouldFetch =
+    active &&
+    isAuthenticated &&
+    !isAuthLoading &&
+    user !== null &&
+    (enabled || alwaysRankWithRecovery);
 
   useEffect(() => {
     if (!shouldFetch) {
@@ -85,7 +96,8 @@ export function useSmartRecovery(options: UseSmartRecoveryOptions = {}) {
   }, [coachWorkouts]);
 
   const locks = useMemo((): Map<string, TemplateRecoveryLock> => {
-    if (!active || !enabled || !completions || !coachWorkouts) {
+    const shouldRank = active && (enabled || alwaysRankWithRecovery);
+    if (!shouldRank || !completions || !coachWorkouts) {
       return new Map();
     }
 
@@ -95,7 +107,7 @@ export function useSmartRecovery(options: UseSmartRecoveryOptions = {}) {
     ];
 
     return computeRecoveryLocks(completions, targets, new Date(), patternIndex);
-  }, [active, enabled, completions, coachWorkouts, patternIndex]);
+  }, [active, enabled, alwaysRankWithRecovery, completions, coachWorkouts, patternIndex]);
 
   const loading = shouldFetch && (completions === null || coachWorkouts === null) && error === null;
 

@@ -68,6 +68,9 @@ export const ANALYTICS_EVENT_NAMES = [
   'plan_hub_chain_launched',
   'plan_hub_campaign_started',
 
+  // HUD
+  'hud_checklist_mission_launched',
+
   // Campaigns
   'campaign_created',
   'campaign_invite_copied',

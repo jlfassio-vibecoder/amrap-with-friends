@@ -139,9 +139,9 @@ vi.mock('@/lib/auth/authFeatures', () => ({
   isGoogleAuthEnabled: () => false,
 }));
 
-function renderPage() {
+function renderPage(initialPath = '/create') {
   return render(
-    <MemoryRouter initialEntries={['/create']}>
+    <MemoryRouter initialEntries={[initialPath]}>
       <ThemeProvider>
         <CreateMissionPage />
       </ThemeProvider>
@@ -255,6 +255,15 @@ describe('CreateMissionPage Launch identity', () => {
     expect(screen.getByText(`2. ${WORKOUT_TEMPLATES[1]!.name}`)).toBeTruthy();
     expect(screen.getByText('First workout of 2 workouts')).toBeTruthy();
     expect(screen.getAllByText(WORKOUT_TEMPLATES[0]!.name).length).toBeGreaterThan(0);
+  });
+
+  it('preselects a library workout from the template query param', () => {
+    const template = WORKOUT_TEMPLATES[0]!;
+    renderPage(`/create?template=${encodeURIComponent(template.id)}`);
+
+    expect(screen.getByText('Selected workout')).toBeTruthy();
+    expect(screen.getByText(template.name)).toBeTruthy();
+    expect(screen.getByText(`10 ${template.movements[0]!.name}`)).toBeTruthy();
   });
 
   it('opens the identity overlay for a signed-in incomplete profile', async () => {

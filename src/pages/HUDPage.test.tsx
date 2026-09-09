@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@/contexts/ThemeProvider';
+import { WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
+import { templateToExercises } from '@/lib/workout/templateToExercises';
 import HUDPage from './HUDPage';
 import type { HUDTelemetryPayload } from '@/lib/hud/types';
 
@@ -15,6 +17,7 @@ const hudTelemetryState = vi.hoisted(() => ({
 
 const athleteProfileState = vi.hoisted(() => ({
   profile: {
+    nickname: 'Ghost',
     birthYear: 1992,
     biologicalSex: 'M' as const,
     perceivedClassification: 'operator' as const,
@@ -42,6 +45,9 @@ const benchmarkProgressState = vi.hoisted(() => ({
   loading: false,
 }));
 
+const createRallyPointMock = vi.fn();
+const navigateMock = vi.fn();
+
 vi.mock('@/hooks/useHudTelemetry', () => ({
   useHudTelemetry: () => hudTelemetryState,
 }));
@@ -66,6 +72,33 @@ vi.mock('@/hooks/useAmrapAuth', () => ({
     signOut: vi.fn(),
   }),
 }));
+
+vi.mock('@/hooks/useSmartRecovery', () => ({
+  useSmartRecovery: () => ({
+    enabled: false,
+    setEnabled: vi.fn(),
+    locks: new Map(),
+    loading: false,
+    error: null,
+    isAuthenticated: true,
+    coachWorkouts: [],
+  }),
+}));
+
+vi.mock('@/lib/api/rallyPoint', () => ({
+  createRallyPointMission: (...args: unknown[]) => createRallyPointMock(...args),
+}));
+
+vi.mock('@/lib/api/missions', () => ({
+  fetchHostActiveMissionCount: () => Promise.resolve({ data: 0, error: null }),
+}));
+
+vi.mock('@/lib/analytics/track', () => ({ track: vi.fn(), trackBeacon: vi.fn() }));
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return { ...actual, useNavigate: () => navigateMock };
+});
 
 function buildTelemetry(): HUDTelemetryPayload {
   const weeks = Array.from({ length: 12 }, (_, index) => ({
@@ -146,6 +179,8 @@ function renderPage() {
 }
 
 beforeEach(() => {
+  createRallyPointMock.mockReset();
+  navigateMock.mockReset();
   Object.assign(hudTelemetryState, {
     telemetry: buildTelemetry(),
     error: null,
@@ -155,6 +190,7 @@ beforeEach(() => {
   });
   Object.assign(athleteProfileState, {
     profile: {
+      nickname: 'Ghost',
       birthYear: 1992,
       biologicalSex: 'M',
       perceivedClassification: 'operator',
@@ -262,5 +298,48 @@ describe('HUDPage tabs', () => {
     expect(screen.getByLabelText('72-hour domain matrix')).toBeTruthy();
     expect(screen.getByLabelText('7-day domain matrix')).toBeTruthy();
     expect(screen.getByLabelText('30-day domain matrix')).toBeTruthy();
+  });
+});
+
+describe('HUDPage checklist Launch mission', () => {
+  it('creates a rally-point mission and navigates to the waiting room', async () => {
+    createRallyPointMock.mockResolvedValue({
+      data: {
+        rallyPointId: 'rp1',
+        missionId: 'm-hud-1',
+        hostToken: 'ht',
+        participantId: 'p1',
+        claimToken: 'ct',
+      },
+      error: null,
+    });
+
+    renderPage();
+
+    const launchButtons = screen.getAllByRole('button', { name: 'Launch mission' });
+    expect(launchButtons.length).toBeGreaterThan(0);
+    fireEvent.click(launchButtons[0]!);
+
+    await waitFor(() => {
+      expect(createRallyPointMock).toHaveBeenCalled();
+    });
+
+    const payload = createRallyPointMock.mock.calls[0]![0] as {
+      nickname: string;
+      templateId: string;
+      durationMinutes: number;
+      intensityTier: number;
+      workout: unknown[];
+    };
+    const template = WORKOUT_TEMPLATES.find((entry) => entry.id === payload.templateId);
+    expect(template).toBeTruthy();
+    expect(payload.nickname).toBe('Ghost');
+    expect(payload.durationMinutes).toBe(template!.durationMinutes);
+    expect(payload.intensityTier).toBe(template!.intensityTier);
+    expect(payload.workout).toEqual(templateToExercises(template!));
+
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith('/mission/m-hud-1');
+    });
   });
 });

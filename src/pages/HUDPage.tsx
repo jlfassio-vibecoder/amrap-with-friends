@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AppLink } from '@/components/AppLink';
 import { AppHeader } from '@/components/AppHeader';
 import { ActivityAttributionCard } from '@/components/hud/ActivityAttributionCard';
@@ -23,11 +23,17 @@ import { WeekHistoryTrendCard } from '@/components/hud/WeekHistoryTrendCard';
 import { WeekPacingSpreadCard } from '@/components/hud/WeekPacingSpreadCard';
 import { WeeklyBaselineBar } from '@/components/hud/WeeklyBaselineBar';
 import { WeeklyVolumeTargetCard } from '@/components/hud/WeeklyVolumeTargetCard';
-import { summarizePhysicalActivityWindow } from '@/lib/hud/activityWindowSummary';
-import { evaluateOvertrainingRisk } from '@/lib/hud/evaluateOvertrainingRisk';
-import { useBenchmarkProgress } from '@/hooks/useBenchmarkProgress';
+import { WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
+import { track } from '@/lib/analytics/track';
 import { hasAthleteBodyMetrics } from '@/lib/api/athleteProfile';
+import { fetchHostActiveMissionCount } from '@/lib/api/missions';
+import { createRallyPointMission } from '@/lib/api/rallyPoint';
+import { summarizePhysicalActivityWindow } from '@/lib/hud/activityWindowSummary';
 import { claimedVolumeTargetMinutes, quotasFromProfile } from '@/lib/hud/classificationQuotas';
+import { compareClassificationRank } from '@/lib/hud/compareClassificationRank';
+import { evaluateOvertrainingRisk } from '@/lib/hud/evaluateOvertrainingRisk';
+import { nextTierChecklist } from '@/lib/hud/nextTierChecklist';
+import { recommendWorkoutsForChecklistRows } from '@/lib/hud/recommendChecklistWorkouts';
 import { scoreTrendFromHistory } from '@/lib/hud/scoreTrend';
 import type { ClassificationRank } from '@/lib/hud/types';
 import {
@@ -37,9 +43,13 @@ import {
   summarizeWeekMinutesVsPrevious,
   weekAt,
 } from '@/lib/hud/weekHistory';
+import { HOST_ACTIVE_MISSION_LIMIT } from '@/lib/mission/rallySchedule';
+import { templateToExercises } from '@/lib/workout/templateToExercises';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
+import { useBenchmarkProgress } from '@/hooks/useBenchmarkProgress';
 import { useHudTelemetry } from '@/hooks/useHudTelemetry';
 import { usePhysicalActivityLog } from '@/hooks/usePhysicalActivityLog';
+import { useSmartRecovery } from '@/hooks/useSmartRecovery';
 
 const CLAIMED_RANK_LABEL: Partial<Record<ClassificationRank, string>> = {
   operator: 'OPERATOR',
@@ -93,6 +103,7 @@ function HudPanel({
 }
 
 export default function HUDPage() {
+  const navigate = useNavigate();
   const { telemetry, error, loading, isAuthenticated, isAuthLoading } = useHudTelemetry();
   const { profile, loading: profileLoading } = useAthleteProfile();
   const quotas = quotasFromProfile(profile);
@@ -105,11 +116,39 @@ export default function HUDPage() {
     isAuthenticated && !profileLoading && profile !== null && !hasAthleteBodyMetrics(profile);
 
   const activityLog = usePhysicalActivityLog();
+  const smartRecovery = useSmartRecovery({
+    active: !isAuthLoading && isAuthenticated,
+    alwaysRankWithRecovery: true,
+  });
   const outsideSummary = summarizePhysicalActivityWindow(activityLog.entries);
   const overtrainingRisk = telemetry ? evaluateOvertrainingRisk(telemetry.overtraining) : null;
   const benchmarkProgress = useBenchmarkProgress(!isAuthLoading && isAuthenticated);
+
+  const perceived = profile?.perceivedClassification ?? null;
+  const behindClaim =
+    telemetry != null &&
+    perceived != null &&
+    compareClassificationRank(telemetry.classification.current, perceived) < 0;
+  const checklistRows = telemetry
+    ? nextTierChecklist(
+        telemetry.classification.current,
+        telemetry.classification.progress,
+        quotas,
+        behindClaim ? perceived : undefined
+      )
+    : [];
+  const unmetRowIds = checklistRows.filter((row) => !row.met).map((row) => row.id);
+  const recommendationsByRow = recommendWorkoutsForChecklistRows(
+    unmetRowIds,
+    WORKOUT_TEMPLATES,
+    smartRecovery.locks,
+    telemetry?.domainMinutes72h ?? null
+  );
   // Read once per mount: a due date must not move because the HUD re-rendered.
   const [nowMs] = useState(() => Date.now());
+  const [activeCount, setActiveCount] = useState<number | null>(null);
+  const [launchingTemplateId, setLaunchingTemplateId] = useState<string | null>(null);
+  const [checklistLaunchError, setChecklistLaunchError] = useState<string | null>(null);
   const showOvertrainingWarning =
     overtrainingRisk !== null && overtrainingRisk.riskLevel !== 'normal';
 
@@ -141,6 +180,63 @@ export default function HUDPage() {
       setSelectedWeekIndex(currentWeekIndex);
     }
   }, [activeTab, canInspectHistory, currentWeekIndex, selectedWeekIndex]);
+
+  useEffect(() => {
+    if (isAuthLoading || !isAuthenticated) {
+      return;
+    }
+    let cancelled = false;
+    void fetchHostActiveMissionCount().then((result) => {
+      if (cancelled || result.data === null) {
+        return;
+      }
+      setActiveCount(result.data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, isAuthLoading]);
+
+  async function handleLaunchChecklistTemplate(templateId: string) {
+    setChecklistLaunchError(null);
+    const nickname = profile?.nickname?.trim() ?? '';
+    if (!nickname) {
+      setChecklistLaunchError('Add your name in Your profile before launching.');
+      return;
+    }
+    if ((activeCount ?? 0) >= HOST_ACTIVE_MISSION_LIMIT) {
+      setChecklistLaunchError(`You already have ${HOST_ACTIVE_MISSION_LIMIT} active missions.`);
+      return;
+    }
+    const template = WORKOUT_TEMPLATES.find((entry) => entry.id === templateId);
+    if (!template) {
+      setChecklistLaunchError('That workout is no longer in the library.');
+      return;
+    }
+
+    setLaunchingTemplateId(templateId);
+    try {
+      const result = await createRallyPointMission({
+        nickname,
+        durationMinutes: template.durationMinutes,
+        workout: templateToExercises(template),
+        templateId: template.id,
+        intensityTier: template.intensityTier,
+      });
+      if (result.error || !result.data) {
+        setChecklistLaunchError(result.error?.message ?? 'Something went wrong. Please try again.');
+        return;
+      }
+      track('hud_checklist_mission_launched', { template_id: template.id });
+      navigate(`/mission/${result.data.missionId}`);
+    } catch (cause) {
+      setChecklistLaunchError(
+        cause instanceof Error ? cause.message : 'Something went wrong. Please try again.'
+      );
+    } finally {
+      setLaunchingTemplateId(null);
+    }
+  }
 
   function telemetryEmptyState(copy: string) {
     return <p className="text-sm text-secondary">{copy}</p>;
@@ -208,6 +304,12 @@ export default function HUDPage() {
               perceivedClassification={profile?.perceivedClassification ?? null}
               quotas={quotas}
               defaultExpanded
+              recommendationsByRow={recommendationsByRow}
+              onLaunchTemplate={(templateId) => {
+                void handleLaunchChecklistTemplate(templateId);
+              }}
+              launchingTemplateId={launchingTemplateId}
+              launchError={checklistLaunchError}
             />
           </div>
         ) : null}
