@@ -192,6 +192,12 @@ describe('MyMissionsPage delete', () => {
             finalScore: 100,
           },
         }),
+        entry({
+          participantId: 'p4',
+          missionId: 's4',
+          state: 'finished',
+          roundCount: 6,
+        }),
       ],
       error: null,
     });
@@ -199,7 +205,7 @@ describe('MyMissionsPage delete', () => {
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getAllByText('View mission')).toHaveLength(3);
+      expect(screen.getAllByText('View mission')).toHaveLength(4);
     });
 
     expect(screen.getAllByRole('button', { name: 'Delete' })).toHaveLength(1);
