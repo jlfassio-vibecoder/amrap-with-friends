@@ -1,3 +1,5 @@
+import { panelIdForHudTab } from './hudTabIds';
+
 export type HudTabKey =
   'mission-health' | 'week-history' | 'domains' | 'benchmarks' | 'physical-activity';
 
@@ -10,10 +12,6 @@ interface HudTopTabsProps {
   tabs: readonly HudTabDefinition[];
   activeTab: HudTabKey;
   onChange: (tab: HudTabKey) => void;
-}
-
-export function panelIdForHudTab(tab: HudTabKey): string {
-  return `hud-panel-${tab}`;
 }
 
 export function HudTopTabs({ tabs, activeTab, onChange }: HudTopTabsProps) {

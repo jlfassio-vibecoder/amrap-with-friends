@@ -6,12 +6,8 @@ import { ActivityAttributionCard } from '@/components/hud/ActivityAttributionCar
 import { ClassificationBadge } from '@/components/hud/ClassificationBadge';
 import { DailyTelemetry } from '@/components/hud/DailyTelemetry';
 import { DomainMatrixChart } from '@/components/hud/DomainMatrixChart';
-import {
-  HudTopTabs,
-  panelIdForHudTab,
-  type HudTabDefinition,
-  type HudTabKey,
-} from '@/components/hud/HudTopTabs';
+import { HudTopTabs, type HudTabDefinition, type HudTabKey } from '@/components/hud/HudTopTabs';
+import { panelIdForHudTab } from '@/components/hud/hudTabIds';
 import { BenchmarkProgressPanel } from '@/components/mission/BenchmarkProgressPanel';
 import { InAppActivitySummaryCard } from '@/components/hud/InAppActivitySummaryCard';
 import { OutsideActivitySummaryCard } from '@/components/hud/OutsideActivitySummaryCard';
