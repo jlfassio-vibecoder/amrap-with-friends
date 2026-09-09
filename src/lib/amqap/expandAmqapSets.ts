@@ -2,6 +2,9 @@ import type { AmqapFlow } from '@/data/amqapFlows';
 
 export type AmqapSide = 'left' | 'right';
 
+/** Extra yellow time before the first side of a later per-side movement. */
+export const AMQAP_EXERCISE_SWITCH_BUFFER_SEC = 5;
+
 export interface AmqapSet {
   movementIndex: number;
   movementName: string;
@@ -13,6 +16,8 @@ export interface AmqapSet {
    * Null for timed holds — those are already `durationSec`.
    */
   repsPerSet: number | null;
+  /** Added switch time before work. Zero on side changes and bilateral arrivals. */
+  leadBufferSec: number;
 }
 
 /**
@@ -31,6 +36,7 @@ export function expandAmqapSets(flow: AmqapFlow): AmqapSet[] {
     const repsPerSet = repsPerSetFromMovement(movement);
 
     if (movement.laterality === 'per-side') {
+      const leadBufferSec = movementIndex > 0 ? AMQAP_EXERCISE_SWITCH_BUFFER_SEC : 0;
       sets.push({
         movementIndex,
         movementName,
@@ -38,6 +44,7 @@ export function expandAmqapSets(flow: AmqapFlow): AmqapSet[] {
         durationSec,
         isLastOfRound: false,
         repsPerSet,
+        leadBufferSec,
       });
       sets.push({
         movementIndex,
@@ -46,6 +53,7 @@ export function expandAmqapSets(flow: AmqapFlow): AmqapSet[] {
         durationSec,
         isLastOfRound: false,
         repsPerSet,
+        leadBufferSec: 0,
       });
       return;
     }
@@ -57,6 +65,7 @@ export function expandAmqapSets(flow: AmqapFlow): AmqapSet[] {
       durationSec,
       isLastOfRound: false,
       repsPerSet,
+      leadBufferSec: 0,
     });
   });
 

@@ -36,8 +36,12 @@ export function AmqapGauge({
 
   const readout = formatAmqapReadout(progress);
   const readoutLabel = amqapReadoutLabel(progress);
-  const zoneName = GAUGE_ZONE_NAME[progress.zone];
+  const zoneName = progress.isSwitchBuffer ? 'Switch' : GAUGE_ZONE_NAME[progress.zone];
   const caption = formatAmqapSetCaption(progress.set);
+  const leadWarningRatio =
+    progress.set.leadBufferSec > 0 && progress.benchmarkSec > 0
+      ? progress.set.leadBufferSec / progress.benchmarkSec
+      : 0;
 
   return (
     <GaugeDial
@@ -49,6 +53,7 @@ export function AmqapGauge({
       readout={readout}
       zoneLabel={zoneName}
       caption={caption}
+      leadWarningRatio={leadWarningRatio}
       ariaLabel={`Quality set: ${caption}, ${zoneName}, ${readout} ${readoutLabel}`}
       className={className}
     />

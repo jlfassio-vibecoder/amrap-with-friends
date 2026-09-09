@@ -29,6 +29,7 @@ describe('expandAmqapSets', () => {
         durationSec: 25,
         isLastOfRound: false,
         repsPerSet: 5,
+        leadBufferSec: 0,
       },
       {
         movementIndex: 0,
@@ -37,6 +38,7 @@ describe('expandAmqapSets', () => {
         durationSec: 25,
         isLastOfRound: false,
         repsPerSet: 5,
+        leadBufferSec: 0,
       },
       {
         movementIndex: 1,
@@ -45,6 +47,7 @@ describe('expandAmqapSets', () => {
         durationSec: 30,
         isLastOfRound: false,
         repsPerSet: 5,
+        leadBufferSec: 5,
       },
       {
         movementIndex: 1,
@@ -53,6 +56,7 @@ describe('expandAmqapSets', () => {
         durationSec: 30,
         isLastOfRound: false,
         repsPerSet: 5,
+        leadBufferSec: 0,
       },
       {
         movementIndex: 2,
@@ -61,6 +65,7 @@ describe('expandAmqapSets', () => {
         durationSec: 30,
         isLastOfRound: true,
         repsPerSet: 5,
+        leadBufferSec: 0,
       },
     ]);
   });
@@ -75,6 +80,7 @@ describe('expandAmqapSets', () => {
         durationSec: 20,
         isLastOfRound: false,
         repsPerSet: null,
+        leadBufferSec: 5,
       },
       {
         movementIndex: 1,
@@ -83,6 +89,7 @@ describe('expandAmqapSets', () => {
         durationSec: 20,
         isLastOfRound: false,
         repsPerSet: null,
+        leadBufferSec: 0,
       },
     ]);
     expect(sets[sets.length - 1]).toMatchObject({
@@ -109,6 +116,47 @@ describe('expandAmqapSets', () => {
       durationSec: 15,
       isLastOfRound: true,
       repsPerSet: null,
+      leadBufferSec: 0,
     });
+  });
+
+  it('adds a 5s switch buffer only on the first side of a later per-side movement', () => {
+    const lead = (id: string) =>
+      expandAmqapSets(flow(id)).map((set) => ({
+        name: set.movementName,
+        side: set.side,
+        leadBufferSec: set.leadBufferSec,
+      }));
+
+    expect(lead('amqap-foundational-10')).toEqual([
+      { name: '90/90 Hip Transitions', side: 'left', leadBufferSec: 0 },
+      { name: '90/90 Hip Transitions', side: 'right', leadBufferSec: 0 },
+      { name: 'Spiderman Lunge with Thoracic Reach', side: 'left', leadBufferSec: 5 },
+      { name: 'Spiderman Lunge with Thoracic Reach', side: 'right', leadBufferSec: 0 },
+      { name: 'Downward-Facing Dog to Cobra', side: null, leadBufferSec: 0 },
+    ]);
+
+    expect(lead('amqap-hip-control-10')).toEqual([
+      { name: 'Quadruped Hip Circles', side: 'left', leadBufferSec: 0 },
+      { name: 'Quadruped Hip Circles', side: 'right', leadBufferSec: 0 },
+      { name: 'Low Lunge', side: 'left', leadBufferSec: 5 },
+      { name: 'Low Lunge', side: 'right', leadBufferSec: 0 },
+      { name: 'Half Moon Pose', side: 'left', leadBufferSec: 5 },
+      { name: 'Half Moon Pose', side: 'right', leadBufferSec: 0 },
+    ]);
+
+    expect(lead('amqap-spinal-10')).toEqual([
+      { name: 'Prone Internal Rotation Windshield Wipers', side: null, leadBufferSec: 0 },
+      { name: 'Cobra Pose', side: null, leadBufferSec: 0 },
+      { name: "Child's Pose", side: null, leadBufferSec: 0 },
+    ]);
+
+    expect(lead('amqap-posterior-10')).toEqual([
+      { name: 'Cat & Cow', side: null, leadBufferSec: 0 },
+      { name: 'Downward-Facing Dog', side: null, leadBufferSec: 0 },
+      { name: 'Low Lunge', side: 'left', leadBufferSec: 5 },
+      { name: 'Low Lunge', side: 'right', leadBufferSec: 0 },
+      { name: 'Camel Pose', side: null, leadBufferSec: 0 },
+    ]);
   });
 });

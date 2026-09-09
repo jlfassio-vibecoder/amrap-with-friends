@@ -60,8 +60,8 @@ describe('setProgressFromRoundElapsed', () => {
   });
 
   it('walks through mid-round sides and lands on the last exercise', () => {
-    // 25+25+30+30 = 110s programmed before Dog-to-Cobra.
-    const onLast = setProgressFromRoundElapsed(110, foundational)!;
+    // 25+25+5+30+30 = 115s programmed before Dog-to-Cobra (Spiderman Left has a switch buffer).
+    const onLast = setProgressFromRoundElapsed(115, foundational)!;
     expect(onLast.isLastSet).toBe(true);
     expect(onLast.set.movementName).toBe('Downward-Facing Dog to Cobra');
     expect(onLast.setElapsedSec).toBe(0);
@@ -70,7 +70,7 @@ describe('setProgressFromRoundElapsed', () => {
   });
 
   it('continues through the red only on the last set of the last exercise', () => {
-    const overtime = setProgressFromRoundElapsed(145, foundational)!;
+    const overtime = setProgressFromRoundElapsed(150, foundational)!;
     expect(overtime.isLastSet).toBe(true);
     expect(overtime.setElapsedSec).toBe(35);
     expect(overtime.overtimeSec).toBe(5);
@@ -79,7 +79,7 @@ describe('setProgressFromRoundElapsed', () => {
   });
 
   it('warns near the end of the last set without going red early', () => {
-    const warning = setProgressFromRoundElapsed(137, foundational)!;
+    const warning = setProgressFromRoundElapsed(142, foundational)!;
     expect(warning.isLastSet).toBe(true);
     expect(warning.zone).toBe('warning');
     expect(warning.overtimeSec).toBe(0);
@@ -94,9 +94,39 @@ describe('setProgressFromRoundElapsed', () => {
   });
 
   it('caps the needle but not the overtime counter', () => {
-    const stall = setProgressFromRoundElapsed(110 + 30 * 3, foundational)!;
+    const stall = setProgressFromRoundElapsed(115 + 30 * 3, foundational)!;
     expect(stall.ratio).toBe(MAX_RATIO);
     expect(stall.overtimeSec).toBe(60);
+  });
+
+  it('is yellow Switch for 5s when a new per-side exercise starts, then work', () => {
+    const hip = expandAmqapSets(findAmqapFlow('amqap-hip-control-10')!);
+    // Circles L+R = 50s, then Low Lunge Left buffer.
+    const switching = setProgressFromRoundElapsed(50, hip)!;
+    expect(switching.set.movementName).toBe('Low Lunge');
+    expect(switching.set.side).toBe('left');
+    expect(switching.isSwitchBuffer).toBe(true);
+    expect(switching.zone).toBe('warning');
+    expect(switching.benchmarkSec).toBe(30);
+
+    const lastBufferTick = setProgressFromRoundElapsed(54, hip)!;
+    expect(lastBufferTick.isSwitchBuffer).toBe(true);
+    expect(lastBufferTick.zone).toBe('warning');
+
+    const work = setProgressFromRoundElapsed(55, hip)!;
+    expect(work.set.movementName).toBe('Low Lunge');
+    expect(work.set.side).toBe('left');
+    expect(work.isSwitchBuffer).toBe(false);
+    expect(work.zone).toBe('optimal');
+    expect(work.setElapsedSec).toBe(5);
+  });
+
+  it('does not add a yellow lead when switching Left to Right', () => {
+    const atRight = setProgressFromRoundElapsed(25, foundational)!;
+    expect(atRight.set.side).toBe('right');
+    expect(atRight.set.movementName).toBe('90/90 Hip Transitions');
+    expect(atRight.isSwitchBuffer).toBe(false);
+    expect(atRight.zone).toBe('optimal');
   });
 
   it('returns null for an empty program', () => {
@@ -123,7 +153,7 @@ describe('captions and readout', () => {
     expect(formatAmqapReadout(left)).toBe('0:15');
     expect(amqapReadoutLabel(left)).toBe('left of this set');
 
-    const overtime = setProgressFromRoundElapsed(145, foundational)!;
+    const overtime = setProgressFromRoundElapsed(150, foundational)!;
     expect(formatAmqapReadout(overtime)).toBe('+0:05');
     expect(amqapReadoutLabel(overtime)).toBe('past this set');
   });

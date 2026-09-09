@@ -17,6 +17,8 @@ export interface AmqapSetProgress {
   overtimeSec: number;
   isLastSet: boolean;
   isActive: boolean;
+  /** True during the yellow exercise-switch buffer before work starts. */
+  isSwitchBuffer: boolean;
 }
 
 /** Seconds into the current quality pass, from the last logged split (or zero). */
@@ -31,10 +33,17 @@ export function elapsedInRoundSec(
   return Math.max(0, elapsed - lastSplit);
 }
 
+/** Buffer plus work — the span the needle sweeps and the walker consumes. */
+export function amqapSetSpanSec(set: AmqapSet): number {
+  const buffer = set.leadBufferSec > 0 ? set.leadBufferSec : 0;
+  const work = set.durationSec > 0 ? set.durationSec : 0;
+  return buffer + work;
+}
+
 /**
- * Walk every set except the last, consuming `durationSec` exactly. Mid-sets
+ * Walk every set except the last, consuming buffer + work exactly. Mid-sets
  * never enter overtime — at 1.0 the index advances and the needle is 0. The
- * last set stays; overtime is seconds past its programmed duration.
+ * last set stays; overtime is seconds past that full span.
  */
 export function setProgressFromRoundElapsed(
   elapsedInRound: number,
@@ -48,30 +57,26 @@ export function setProgressFromRoundElapsed(
 
   for (let index = 0; index < sets.length - 1; index += 1) {
     const set = sets[index];
-    const duration = set.durationSec > 0 ? set.durationSec : 0;
-    if (duration <= 0) {
+    const span = amqapSetSpanSec(set);
+    if (span <= 0) {
       continue;
     }
-    if (remaining < duration) {
+    if (remaining < span) {
       return progressForSet({
         setIndex: index,
         set,
         setElapsedSec: remaining,
-        benchmarkSec: duration,
         isLastSet: false,
       });
     }
-    remaining -= duration;
+    remaining -= span;
   }
 
   const lastIndex = sets.length - 1;
-  const last = sets[lastIndex];
-  const duration = last.durationSec > 0 ? last.durationSec : 0;
   return progressForSet({
     setIndex: lastIndex,
-    set: last,
+    set: sets[lastIndex],
     setElapsedSec: remaining,
-    benchmarkSec: duration,
     isLastSet: true,
   });
 }
@@ -80,14 +85,29 @@ function progressForSet(input: {
   setIndex: number;
   set: AmqapSet;
   setElapsedSec: number;
-  benchmarkSec: number;
   isLastSet: boolean;
 }): AmqapSetProgress {
-  const { setIndex, set, setElapsedSec, benchmarkSec, isLastSet } = input;
+  const { setIndex, set, setElapsedSec, isLastSet } = input;
+  const leadBufferSec = set.leadBufferSec > 0 ? set.leadBufferSec : 0;
+  const workSec = set.durationSec > 0 ? set.durationSec : 0;
+  const benchmarkSec = amqapSetSpanSec(set);
+  const isSwitchBuffer = leadBufferSec > 0 && setElapsedSec < leadBufferSec;
   const rawRatio = benchmarkSec > 0 ? setElapsedSec / benchmarkSec : 0;
-  // Mid-sets are capped at the benchmark so they cannot read as overtime even
-  // if a caller hands us a duration of 0 and leftover time.
-  const ratioForZone = isLastSet ? rawRatio : Math.min(1, rawRatio);
+
+  let zone: PacingZone;
+  let overtimeSec = 0;
+  if (isSwitchBuffer) {
+    zone = 'warning';
+  } else if (workSec <= 0) {
+    zone = zoneForRatio(isLastSet ? rawRatio : Math.min(1, rawRatio));
+    overtimeSec = isLastSet ? Math.max(0, setElapsedSec - benchmarkSec) : 0;
+  } else {
+    const workElapsed = Math.max(0, setElapsedSec - leadBufferSec);
+    const workRatio = workElapsed / workSec;
+    const ratioForZone = isLastSet ? workRatio : Math.min(1, workRatio);
+    zone = zoneForRatio(ratioForZone);
+    overtimeSec = isLastSet ? Math.max(0, workElapsed - workSec) : 0;
+  }
 
   return {
     setIndex,
@@ -95,10 +115,11 @@ function progressForSet(input: {
     setElapsedSec,
     benchmarkSec,
     ratio: Math.min(MAX_RATIO, rawRatio),
-    zone: zoneForRatio(ratioForZone),
-    overtimeSec: isLastSet ? Math.max(0, setElapsedSec - benchmarkSec) : 0,
+    zone,
+    overtimeSec,
     isLastSet,
     isActive: true,
+    isSwitchBuffer,
   };
 }
 

@@ -51,10 +51,28 @@ describe('MissionAmqapGauge', () => {
   });
 
   it('names overtime on the last set of the last exercise', () => {
-    renderAt('work', { elapsedSec: 145, roundSplitsSec: [] });
+    renderAt('work', { elapsedSec: 150, roundSplitsSec: [] });
     expect(screen.getByText('Downward-Facing Dog to Cobra')).toBeTruthy();
     expect(screen.getByText('Overtime')).toBeTruthy();
     expect(screen.getByText('+0:05')).toBeTruthy();
+  });
+
+  it('paints a yellow Switch bar at the start of a new per-side exercise', () => {
+    const hip = findAmqapFlow('amqap-hip-control-10')!;
+    const { container } = render(
+      <MissionAmqapGauge
+        phase="work"
+        flow={hip}
+        roundSplitsSec={[]}
+        elapsedSec={50}
+        isPaused={false}
+      />
+    );
+    expect(screen.getByText('Switch')).toBeTruthy();
+    expect(screen.getByText('Low Lunge · Left side')).toBeTruthy();
+    const arcs = [...container.querySelectorAll('path')];
+    expect(arcs).toHaveLength(4);
+    expect(arcs[0]?.getAttribute('stroke')).toBe('var(--color-pace-warning)');
   });
 
   it('snaps the needle when a set resets', () => {

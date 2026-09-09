@@ -30,6 +30,8 @@ export interface GaugeDialProps {
   caption?: string;
   ariaLabel: string;
   className?: string;
+  /** Fraction of the dial (0–1) painted warning at the start — AMQAP switch buffer. */
+  leadWarningRatio?: number;
 }
 
 function pointAt(ratio: number, radius: number = RADIUS): { x: number; y: number } {
@@ -63,15 +65,21 @@ export function GaugeDial({
   caption,
   ariaLabel,
   className,
+  leadWarningRatio = 0,
 }: GaugeDialProps) {
-  const track = useMemo(
-    () => [
-      { key: 'optimal' as const, d: arcPath(0, OPTIMAL_CEILING) },
-      { key: 'warning' as const, d: arcPath(OPTIMAL_CEILING, 1) },
-      { key: 'overtime' as const, d: arcPath(1, MAX_RATIO) },
-    ],
-    []
-  );
+  const track = useMemo(() => {
+    const lead = Math.max(0, Math.min(leadWarningRatio, OPTIMAL_CEILING));
+    const segments: { key: string; zone: PacingZone; d: string }[] = [];
+    if (lead > 0) {
+      segments.push({ key: 'lead', zone: 'warning', d: arcPath(0, lead) });
+      segments.push({ key: 'optimal', zone: 'optimal', d: arcPath(lead, OPTIMAL_CEILING) });
+    } else {
+      segments.push({ key: 'optimal', zone: 'optimal', d: arcPath(0, OPTIMAL_CEILING) });
+    }
+    segments.push({ key: 'warning', zone: 'warning', d: arcPath(OPTIMAL_CEILING, 1) });
+    segments.push({ key: 'overtime', zone: 'overtime', d: arcPath(1, MAX_RATIO) });
+    return segments;
+  }, [leadWarningRatio]);
 
   const angle = (Math.min(ratio, MAX_RATIO) / MAX_RATIO) * SWEEP_DEGREES - 90;
 
@@ -88,7 +96,7 @@ export function GaugeDial({
             key={entry.key}
             d={entry.d}
             fill="none"
-            stroke={ZONE_STROKE[entry.key]}
+            stroke={ZONE_STROKE[entry.zone]}
             strokeWidth={6}
             strokeLinecap="butt"
             opacity={isActive ? 1 : 0.28}
