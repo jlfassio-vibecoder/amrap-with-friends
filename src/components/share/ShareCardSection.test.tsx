@@ -7,28 +7,36 @@ import type { LeaderboardEntry } from '@/lib/missionSync/types';
 const { fetchReplayData } = vi.hoisted(() => ({ fetchReplayData: vi.fn() }));
 vi.mock('@/lib/share/replayData', () => ({ fetchReplayData }));
 
-function entry(): LeaderboardEntry {
-  return {
-    participantId: 'p1',
-    nickname: 'ShareTest',
-    roundCount: 7,
-    partialReps: 0,
-    repsPerRound: 20,
-    baseScore: 140,
-    pvi: 166.2,
-    pviMultiplier: 0.85,
-    pviClassification: 'System Failure',
-    pviVerdict: 'A complete tactical collapse.',
-    domainWeight: 1,
-    finalScore: 119,
-  } as LeaderboardEntry;
-}
+// Fully typed, like the fixture in MissionScorecard.test.tsx: an `as` cast
+// here would let a breaking change to LeaderboardEntry pass this test.
+const entry: LeaderboardEntry = {
+  participantId: 'p1',
+  nickname: 'ShareTest',
+  roundCount: 7,
+  partialReps: 0,
+  repsPerRound: 20,
+  baseScore: 140,
+  pvi: 166.2,
+  pviMultiplier: 0.85,
+  pviClassification: 'System Failure',
+  pviVerdict: 'A complete tactical collapse.',
+  domainWeight: 1,
+  finalScore: 119,
+  rounds: [
+    { roundNumber: 1, durationSec: 8 },
+    { roundNumber: 2, durationSec: 10 },
+    { roundNumber: 3, durationSec: 10 },
+  ],
+  isSelf: true,
+  modifiedMovements: [],
+  movementVariants: {},
+};
 
 function renderScorecard(props: Record<string, unknown>) {
   return render(
     <MemoryRouter>
       <MissionScorecard
-        entry={entry()}
+        entry={entry}
         durationMinutes={5}
         onClose={() => undefined}
         saveState="idle"
