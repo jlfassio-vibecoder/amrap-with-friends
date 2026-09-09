@@ -247,6 +247,26 @@ Workout and classification names are content, not chrome, and are untouched:
   `var(--color-*)` or the semantic Tailwind utilities that map to them. Never
   hard-code a colour in a component.
 
+## Migrations
+
+**Two migrations must never share a timestamp prefix.**
+`supabase_migrations.schema_migrations` is keyed by that prefix, so only one of
+a colliding pair can ever be recorded — the other is shadowed permanently.
+`db push` reports success, the second file's SQL never runs, and the only
+symptom is a feature that quietly does not work in production. It has happened
+three times, always from two branches picking the same timestamp independently.
+
+`migrationVersions.test.ts` fails CI on a collision and names the file to
+rename. To catch it before the commit instead:
+
+```bash
+git config core.hooksPath .githooks   # once, per clone
+```
+
+**An applied migration is immutable.** Editing a file whose version is already
+in the remote history changes what the repo says ran without changing what ran,
+and `db push` will never replay it. Corrections go in a new migration.
+
 ## Before pushing
 
 ```bash
