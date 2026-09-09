@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { AppLink } from '@/components/AppLink';
 import { AppHeader } from '@/components/AppHeader';
@@ -7,6 +7,12 @@ import { AttritionGrid } from '@/components/hud/AttritionGrid';
 import { ClassificationBadge } from '@/components/hud/ClassificationBadge';
 import { DailyTelemetry } from '@/components/hud/DailyTelemetry';
 import { DomainMatrixChart } from '@/components/hud/DomainMatrixChart';
+import {
+  HudTopTabs,
+  panelIdForHudTab,
+  type HudTabDefinition,
+  type HudTabKey,
+} from '@/components/hud/HudTopTabs';
 import { BenchmarkProgressPanel } from '@/components/mission/BenchmarkProgressPanel';
 import { InAppActivitySummaryCard } from '@/components/hud/InAppActivitySummaryCard';
 import { OutsideActivitySummaryCard } from '@/components/hud/OutsideActivitySummaryCard';
@@ -26,6 +32,38 @@ import { hasInspectableHistory, isCurrentWeek, stepWeekIndex, weekAt } from '@/l
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { useHudTelemetry } from '@/hooks/useHudTelemetry';
 import { usePhysicalActivityLog } from '@/hooks/usePhysicalActivityLog';
+
+const HUD_TABS: readonly HudTabDefinition[] = [
+  { key: 'mission-health', label: 'Mission Health' },
+  { key: 'week-history', label: 'Week History' },
+  { key: 'domains', label: 'Domains' },
+  { key: 'benchmarks', label: 'Benchmarks' },
+  { key: 'physical-activity', label: 'Physical Activity' },
+];
+
+function HudPanel({
+  tab,
+  activeTab,
+  children,
+}: {
+  tab: HudTabKey;
+  activeTab: HudTabKey;
+  children: ReactNode;
+}) {
+  const selected = tab === activeTab;
+
+  return (
+    <section
+      id={panelIdForHudTab(tab)}
+      role="tabpanel"
+      aria-labelledby={`hud-tab-${tab}`}
+      hidden={!selected}
+      className={selected ? 'space-y-4' : undefined}
+    >
+      {selected ? children : null}
+    </section>
+  );
+}
 
 export default function HUDPage() {
   const { telemetry, error, loading, isAuthenticated, isAuthLoading } = useHudTelemetry();
@@ -48,9 +86,21 @@ export default function HUDPage() {
   // inspected", which is a different state from "the current week" — the
   // live cards above never move either way.
   const historyWeeks = telemetry?.weeks ?? [];
+  const [activeTab, setActiveTab] = useState<HudTabKey>('mission-health');
   const [selectedWeekIndex, setSelectedWeekIndex] = useState<number | null>(null);
   const selectedWeek = weekAt(historyWeeks, selectedWeekIndex);
   const canInspectHistory = hasInspectableHistory(historyWeeks);
+  const showTabs = !isAuthLoading && isAuthenticated;
+
+  useEffect(() => {
+    if (activeTab !== 'week-history') {
+      setSelectedWeekIndex(null);
+    }
+  }, [activeTab]);
+
+  function telemetryEmptyState(copy: string) {
+    return <p className="text-sm text-secondary">{copy}</p>;
+  }
 
   return (
     <main className="min-h-screen bg-page">
@@ -113,117 +163,139 @@ export default function HUDPage() {
               classification={telemetry.classification}
               perceivedClassification={profile?.perceivedClassification ?? null}
               quotas={quotas}
+              defaultExpanded
             />
-
-            {showOvertrainingWarning ? (
-              <OvertrainingWarningCard overtraining={telemetry.overtraining} />
-            ) : null}
-
-            <InAppActivitySummaryCard activity7d={telemetry.activity7d} />
-            <OutsideActivitySummaryCard entries={activityLog.entries} />
-            <ActivityAttributionCard
-              inAppMissions={telemetry.activity7d.missionCount}
-              outsideMissions={outsideSummary.missionCount}
-              inAppMinutes={telemetry.activity7d.minutes}
-              outsideMinutes={outsideSummary.totalMinutes}
-            />
-
-            <div className="grid gap-4 lg:grid-cols-2">
-              <DailyTelemetry lastLockedAt={telemetry.lastLockedAt} />
-              <WeeklyBaselineBar
-                weekMinutes={telemetry.weekMinutes}
-                weekPviAverage={telemetry.weekPviAverage}
-                weekPviMissions={telemetry.weekPviMissions}
-                weekEndsAt={telemetry.weekEndsAt}
-                baselineMinutes={quotas.civilianMinutes}
-              />
-            </div>
-
-            {/*
-              Minutes above measures volume; this measures what that volume was
-              worth — the same weekly minutes can carry a rising or falling
-              score depending on pacing and reps, which a minutes-only view
-              cannot show. A progress surface, same as the panel below it.
-            */}
-            {historyWeeks.length > 0 ? (
-              <ScoreTrendChart weeks={scoreTrendFromHistory(historyWeeks)} />
-            ) : null}
-
-            {/*
-              Below the load cards and above the domain matrix: this is a
-              progress surface, not an alert, and it must not compete with the
-              overtraining card for attention.
-            */}
-            {benchmarkProgress.loading ? null : (
-              <BenchmarkProgressPanel
-                benchmarks={benchmarkProgress.benchmarks}
-                missions={benchmarkProgress.missions}
-                campaignSlots={benchmarkProgress.campaignSlots}
-                riskLevel={overtrainingRisk?.riskLevel}
-                now={nowMs}
-              />
-            )}
-
-            {/*
-              The strip and the panel are one control: the twelve cells were
-              already a row of weeks, so they become the way into a week
-              rather than the page growing a separate stepper.
-            */}
-            <AttritionGrid
-              attrition={telemetry.attrition}
-              weekEndsAt={telemetry.weekEndsAt}
-              weeks={historyWeeks}
-              selectedIndex={selectedWeekIndex}
-              onSelect={canInspectHistory ? setSelectedWeekIndex : undefined}
-            />
-
-            {selectedWeek !== null && selectedWeekIndex !== null ? (
-              <WeekDetailPanel
-                week={selectedWeek}
-                isCurrent={isCurrentWeek(historyWeeks, selectedWeekIndex)}
-                baselineMinutes={quotas.civilianMinutes}
-                canStepOlder={selectedWeekIndex > 0}
-                canStepNewer={selectedWeekIndex < historyWeeks.length - 1}
-                onStepOlder={() =>
-                  setSelectedWeekIndex(stepWeekIndex(historyWeeks, selectedWeekIndex, -1))
-                }
-                onStepNewer={() =>
-                  setSelectedWeekIndex(stepWeekIndex(historyWeeks, selectedWeekIndex, 1))
-                }
-                onJumpToCurrent={() => setSelectedWeekIndex(historyWeeks.length - 1)}
-                onClose={() => setSelectedWeekIndex(null)}
-              />
-            ) : null}
-
-            <DomainMatrixChart domainMinutes30d={telemetry.domainMinutes30d} />
           </div>
         ) : null}
 
-        {isAuthenticated ? (
-          <section className="space-y-3">
-            <h2 className="text-lg font-semibold text-ink">Physical activity</h2>
-            <p className="text-sm text-secondary">
-              Outside training you log here does not count toward weekly classification minutes —
-              verified rank stays locked-AMRAP-only.
-            </p>
-            <div className="grid gap-4 lg:grid-cols-2">
-              <PhysicalActivityLogForm
-                submitting={activityLog.submitting}
-                onSubmit={activityLog.logEntry}
-              />
-              {activityLog.loading ? (
-                <p className="text-sm text-secondary">Loading activity…</p>
+        {showTabs ? (
+          <div className="space-y-4">
+            <HudTopTabs tabs={HUD_TABS} activeTab={activeTab} onChange={setActiveTab} />
+
+            <HudPanel tab="mission-health" activeTab={activeTab}>
+              {!showTelemetry ? (
+                telemetryEmptyState(
+                  'Mission health will appear here once your HUD telemetry loads.'
+                )
               ) : (
-                <PhysicalActivityList
-                  entries={activityLog.entries}
-                  onDelete={(id) => {
-                    void activityLog.removeEntry(id);
-                  }}
+                <>
+                  {showOvertrainingWarning ? (
+                    <OvertrainingWarningCard overtraining={telemetry.overtraining} />
+                  ) : null}
+                  <InAppActivitySummaryCard activity7d={telemetry.activity7d} />
+                  <OutsideActivitySummaryCard entries={activityLog.entries} />
+                  <ActivityAttributionCard
+                    inAppMissions={telemetry.activity7d.missionCount}
+                    outsideMissions={outsideSummary.missionCount}
+                    inAppMinutes={telemetry.activity7d.minutes}
+                    outsideMinutes={outsideSummary.totalMinutes}
+                  />
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <DailyTelemetry lastLockedAt={telemetry.lastLockedAt} />
+                    <WeeklyBaselineBar
+                      weekMinutes={telemetry.weekMinutes}
+                      weekPviAverage={telemetry.weekPviAverage}
+                      weekPviMissions={telemetry.weekPviMissions}
+                      weekEndsAt={telemetry.weekEndsAt}
+                      baselineMinutes={quotas.civilianMinutes}
+                    />
+                  </div>
+                </>
+              )}
+            </HudPanel>
+
+            <HudPanel tab="week-history" activeTab={activeTab}>
+              {!showTelemetry ? (
+                telemetryEmptyState('Week history will appear here once your HUD telemetry loads.')
+              ) : historyWeeks.length === 0 ? (
+                telemetryEmptyState('No locked week history yet.')
+              ) : (
+                <>
+                  <ScoreTrendChart weeks={scoreTrendFromHistory(historyWeeks)} />
+                  <AttritionGrid
+                    attrition={telemetry.attrition}
+                    weekEndsAt={telemetry.weekEndsAt}
+                    weeks={historyWeeks}
+                    selectedIndex={selectedWeekIndex}
+                    onSelect={canInspectHistory ? setSelectedWeekIndex : undefined}
+                  />
+                  {selectedWeek !== null && selectedWeekIndex !== null ? (
+                    <WeekDetailPanel
+                      week={selectedWeek}
+                      isCurrent={isCurrentWeek(historyWeeks, selectedWeekIndex)}
+                      baselineMinutes={quotas.civilianMinutes}
+                      canStepOlder={selectedWeekIndex > 0}
+                      canStepNewer={selectedWeekIndex < historyWeeks.length - 1}
+                      onStepOlder={() =>
+                        setSelectedWeekIndex(stepWeekIndex(historyWeeks, selectedWeekIndex, -1))
+                      }
+                      onStepNewer={() =>
+                        setSelectedWeekIndex(stepWeekIndex(historyWeeks, selectedWeekIndex, 1))
+                      }
+                      onJumpToCurrent={() => setSelectedWeekIndex(historyWeeks.length - 1)}
+                      onClose={() => setSelectedWeekIndex(null)}
+                    />
+                  ) : null}
+                </>
+              )}
+            </HudPanel>
+
+            <HudPanel tab="domains" activeTab={activeTab}>
+              {!showTelemetry ? (
+                telemetryEmptyState(
+                  'Domain balance will appear here once your HUD telemetry loads.'
+                )
+              ) : (
+                <DomainMatrixChart domainMinutes30d={telemetry.domainMinutes30d} />
+              )}
+            </HudPanel>
+
+            <HudPanel tab="benchmarks" activeTab={activeTab}>
+              {benchmarkProgress.loading ? (
+                telemetryEmptyState('Loading benchmarks…')
+              ) : benchmarkProgress.benchmarks.length === 0 &&
+                benchmarkProgress.campaignSlots.length === 0 ? (
+                telemetryEmptyState('No active benchmarks yet.')
+              ) : (
+                <BenchmarkProgressPanel
+                  benchmarks={benchmarkProgress.benchmarks}
+                  missions={benchmarkProgress.missions}
+                  campaignSlots={benchmarkProgress.campaignSlots}
+                  riskLevel={overtrainingRisk?.riskLevel}
+                  now={nowMs}
                 />
               )}
-              {activityLog.error ? <p className="text-error text-sm">{activityLog.error}</p> : null}
-            </div>
-          </section>
+            </HudPanel>
+
+            <HudPanel tab="physical-activity" activeTab={activeTab}>
+              <section className="space-y-3">
+                <h2 className="text-lg font-semibold text-ink">Physical activity</h2>
+                <p className="text-sm text-secondary">
+                  Outside training you log here does not count toward weekly classification minutes
+                  — verified rank stays locked-AMRAP-only.
+                </p>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <PhysicalActivityLogForm
+                    submitting={activityLog.submitting}
+                    onSubmit={activityLog.logEntry}
+                  />
+                  {activityLog.loading ? (
+                    <p className="text-sm text-secondary">Loading activity…</p>
+                  ) : (
+                    <PhysicalActivityList
+                      entries={activityLog.entries}
+                      onDelete={(id) => {
+                        void activityLog.removeEntry(id);
+                      }}
+                    />
+                  )}
+                  {activityLog.error ? (
+                    <p className="text-error text-sm">{activityLog.error}</p>
+                  ) : null}
+                </div>
+              </section>
+            </HudPanel>
+          </div>
         ) : null}
 
         <p className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm">

@@ -22,9 +22,7 @@ describe('ClassificationBadge', () => {
   it('shows UNCLASSIFIED when below 150 minutes', () => {
     render(<ClassificationBadge classification={belowBaseline} />);
 
-    expect(screen.getByTestId('classification-current').textContent).toBe(
-      'UNCLASSIFIED'
-    );
+    expect(screen.getByTestId('classification-current').textContent).toBe('UNCLASSIFIED');
     expect(screen.getByText(/Previous:/).textContent).toContain('CIVILIAN');
   });
 
@@ -50,17 +48,12 @@ describe('ClassificationBadge', () => {
     expect(panel.textContent).toContain('Next: OPERATOR');
     expect(panel.textContent).toContain('1 / 2 Intensity 3+');
     expect(panel.textContent).toContain('180 / 240 min');
-    expect(panel.textContent).toContain(
-      '(Quotas scaled for Demographic Profile)'
-    );
+    expect(panel.textContent).toContain('(Quotas scaled for Demographic Profile)');
   });
 
   it('shows claimed vs verified when behind the declaration', () => {
     render(
-      <ClassificationBadge
-        classification={belowBaseline}
-        perceivedClassification="operator"
-      />
+      <ClassificationBadge classification={belowBaseline} perceivedClassification="operator" />
     );
 
     expect(screen.getByTestId('classification-gap').textContent).toBe(
@@ -86,23 +79,25 @@ describe('ClassificationBadge', () => {
       />
     );
 
-    expect(screen.getByTestId('classification-current').textContent).toBe(
-      'OPERATOR'
-    );
+    expect(screen.getByTestId('classification-current').textContent).toBe('OPERATOR');
     expect(screen.queryByTestId('classification-gap')).toBeNull();
   });
 
   it('shows absolute-standard copy when proving Special Ops', () => {
     render(
-      <ClassificationBadge
-        classification={belowBaseline}
-        perceivedClassification="special_ops"
-      />
+      <ClassificationBadge classification={belowBaseline} perceivedClassification="special_ops" />
     );
 
     fireEvent.click(screen.getByRole('button', { name: /checklist/i }));
     expect(screen.getByTestId('quota-note').textContent).toBe(
       '(Absolute Standard. No Demographic Scaling)'
     );
+  });
+
+  it('can start expanded for the HUD hero', () => {
+    render(<ClassificationBadge classification={belowBaseline} defaultExpanded />);
+
+    expect(screen.getByTestId('classification-checklist')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /hide/i })).toBeTruthy();
   });
 });
