@@ -18,6 +18,7 @@ function participant(overrides: Partial<ReplayParticipant>): ReplayParticipant {
     isMe: false,
     finalRounds: 0,
     finalReps: 0,
+    finalScore: null,
     role: 'joiner',
     ...overrides,
   };

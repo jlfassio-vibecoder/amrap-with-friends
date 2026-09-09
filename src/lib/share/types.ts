@@ -19,6 +19,8 @@ export interface ReplayParticipant {
   isMe: boolean;
   finalRounds: number;
   finalReps: number;
+  /** The app's own scorecard number. Null until the result is locked. */
+  finalScore: number | null;
   role: string;
 }
 

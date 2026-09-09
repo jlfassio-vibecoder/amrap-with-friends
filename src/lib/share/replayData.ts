@@ -54,6 +54,10 @@ export function parseReplayData(payload: unknown): ReplayData {
       isMe: row.isMe === true,
       finalRounds: num(row, 'finalRounds'),
       finalReps: num(row, 'finalReps'),
+      finalScore:
+        typeof row.final_score === 'number' && Number.isFinite(row.final_score)
+          ? row.final_score
+          : null,
       role: str(row, 'role') || 'joiner',
     };
   });
