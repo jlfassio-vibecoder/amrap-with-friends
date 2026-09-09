@@ -6,6 +6,15 @@ import { cardFileName, renderCardBlob } from '@/lib/share/renderCard';
 import { createShareId, shareUrl } from '@/lib/share/shareId';
 import { shareArtifact } from '@/lib/share/shareSheet';
 import { frameAt, myBar, resolveVariant } from '@/lib/share/timeline';
+import { defaultCut } from '@/lib/share/cuts';
+import {
+  detectEncoderPath,
+  readCapabilities,
+  replayActionLabel,
+  replayCaveat,
+} from '@/lib/share/replay/encoderPath';
+import { replayFileName } from '@/lib/share/replay/renderReplay';
+import { useReplay } from '@/lib/share/replay/useReplay';
 import type { ReplayData, ShareLayout, ShareVariant } from '@/lib/share/types';
 
 const LAYOUT_OPTIONS: { id: ShareLayout; label: string }[] = [
@@ -35,6 +44,9 @@ export function ShareCardPanel({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  // Detected once: the answer cannot change while the panel is open, and
+  // probing per render would run a feature test on every keystroke.
+  const [encoderPath] = useState(() => detectEncoderPath(readCapabilities()));
 
   // One id for the life of the panel: re-rendering at another ratio is the
   // same share, and a new id per ratio would fragment the view count.
@@ -138,6 +150,28 @@ export function ShareCardPanel({
     };
   }, []);
 
+  const replay = useReplay(data, drawOptions);
+  const cutId = defaultCut(data.participants.length);
+
+  const handleShareReplay = useCallback(async () => {
+    if (!replay.blob) {
+      return;
+    }
+    // Already encoded, so navigator.share is still inside this click. Awaiting
+    // the encode here instead would make iOS refuse the sheet.
+    const file = new File([replay.blob], replayFileName(shareId, cutId), { type: 'video/mp4' });
+    const result = await shareArtifact({
+      file,
+      caption,
+      shareId,
+      kind: 'replay',
+      layout,
+    });
+    if (result.outcome === 'downloaded') {
+      setNotice('Saved to your downloads. Caption copied.');
+    }
+  }, [replay.blob, shareId, cutId, caption, layout]);
+
   const handleShare = useCallback(async () => {
     const blob = blobRef.current.get(`${layout}:${effectiveVariant}`);
     if (!blob) {
@@ -229,6 +263,45 @@ export function ShareCardPanel({
           Copy link
         </button>
       </div>
+
+      {encoderPath !== 'none' ? (
+        <div className="space-y-2 border-t border-border pt-4">
+          {replay.status === 'idle' || replay.status === 'error' ? (
+            <button
+              type="button"
+              className="btn-outline text-sm"
+              onClick={() => replay.start(cutId)}
+            >
+              Make replay
+            </button>
+          ) : null}
+
+          {replay.status === 'rendering' ? (
+            <div className="space-y-2">
+              <p className="text-sm text-secondary">
+                {replay.progress < 1
+                  ? `Rendering ${Math.round(replay.progress * 100)}%`
+                  : 'Encoding…'}
+              </p>
+              <button type="button" className="btn-outline text-sm" onClick={replay.cancel}>
+                Cancel
+              </button>
+            </div>
+          ) : null}
+
+          {replay.status === 'ready' ? (
+            <button type="button" className="btn-primary text-sm" onClick={handleShareReplay}>
+              {replayActionLabel(encoderPath)}
+            </button>
+          ) : null}
+
+          {/* Said before a thirty-second render, not after it. */}
+          {replayCaveat(encoderPath) ? (
+            <p className="text-xs text-secondary">{replayCaveat(encoderPath)}</p>
+          ) : null}
+          {replay.error ? <p className="text-xs text-secondary">{replay.error}</p> : null}
+        </div>
+      ) : null}
 
       {notice ? <p className="text-xs text-secondary">{notice}</p> : null}
     </section>
