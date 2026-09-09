@@ -200,15 +200,38 @@ describe('HUDPage tabs', () => {
     renderPage();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Week History' }));
-    fireEvent.click(screen.getAllByRole('button', { name: /Week of .*1 mission$/ })[0]!);
-
     expect(screen.getByLabelText('Week detail')).toBeTruthy();
+    expect(screen.getByText('This week')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Domains' }));
     expect(screen.queryByLabelText('Week detail')).toBeNull();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Week History' }));
-    expect(screen.queryByLabelText('Week detail')).toBeNull();
+    // Re-entering re-seeds the current week — detail stays open by default.
+    expect(screen.getByLabelText('Week detail')).toBeTruthy();
+  });
+
+  it('opens Week History with the current week already inspected', () => {
+    renderPage();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Week History' }));
+
+    expect(screen.getByLabelText('Week history trend')).toBeTruthy();
+    expect(screen.getByLabelText('Week detail')).toBeTruthy();
+    expect(screen.getByText('This week')).toBeTruthy();
+    expect(screen.getByTestId('score-trend-selected-band')).toBeTruthy();
+  });
+
+  it('lets Attrition switch which week detail is open', () => {
+    renderPage();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Week History' }));
+    // Second cell from the left is the prior week (data index 10) in the fixture.
+    fireEvent.click(screen.getAllByRole('button', { name: /Week of .*1 mission$/ })[1]!);
+
+    expect(screen.getByLabelText('Week detail')).toBeTruthy();
+    expect(screen.getByText('Week of')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'This week' })).toBeTruthy();
   });
 
   it('shows tabbed fallback copy when telemetry is unavailable', () => {

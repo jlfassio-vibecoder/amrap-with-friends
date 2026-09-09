@@ -8,6 +8,10 @@ import {
 
 interface ScoreTrendChartProps {
   weeks: ScoreTrendWeek[];
+  /** Data-order index of the week currently open in Week detail (oldest = 0). */
+  selectedIndex?: number | null;
+  /** When true, omit the outer card chrome (parent owns the card). */
+  embedded?: boolean;
 }
 
 const CHART_WIDTH = 360;
@@ -56,12 +60,14 @@ function formatSignedPercent(percent: number): string {
 /**
  * Weekly accumulated Final score, the one HUD figure that folds pacing and
  * clock length into a single number — see `scoreStatGuidance.ts`'s "Final
- * score" entry for the formula. Minutes and score are shown side by side
- * (a table, not a second y-axis) specifically because they can move
- * independently: the whole reason this card exists is that a flat minutes
- * total can hide a rising or falling score.
+ * score" entry for the formula. Week detail owns the per-week minutes breakdown;
+ * this chart is the glanceable score context above Attrition.
  */
-export function ScoreTrendChart({ weeks }: ScoreTrendChartProps) {
+export function ScoreTrendChart({
+  weeks,
+  selectedIndex = null,
+  embedded = false,
+}: ScoreTrendChartProps) {
   const summary = summarizeScoreTrend(weeks);
   const hasAnyMissions = weeks.some((week) => week.missionCount > 0);
   const ceiling = niceCeiling(Math.max(...weeks.map((week) => week.totalScore), 1));
@@ -78,8 +84,8 @@ export function ScoreTrendChart({ weeks }: ScoreTrendChartProps) {
   const intensityShift =
     summary !== null ? isIntensityShiftWeek(summary.currentWeek, summary.previousWeek) : false;
 
-  return (
-    <section className="card space-y-4 p-4" aria-label="Score trend">
+  const body = (
+    <>
       <div className="flex flex-wrap items-center gap-1.5">
         <p className="text-xs font-medium uppercase tracking-wide text-muted">
           Score trend · last {weeks.length} weeks
@@ -91,10 +97,8 @@ export function ScoreTrendChart({ weeks }: ScoreTrendChartProps) {
             that score across all your locked missions each week.
           </p>
           <p>
-            Minutes trained and score are shown together on purpose. Two weeks can log the exact
-            same minutes and score very differently — more reps per round, steadier pacing, or a
-            longer clock all raise the score without adding a minute to the clock. A rising bar with
-            a flat minutes column means you trained harder in the same time, not just more.
+            Use Attrition below to open a week and inspect minutes, pacing, and missions. A rising
+            bar with flat training time means you trained harder in the same clock, not just more.
           </p>
         </HudInfoDisclosure>
       </div>
@@ -131,7 +135,7 @@ export function ScoreTrendChart({ weeks }: ScoreTrendChartProps) {
             role="img"
             aria-label={`Weekly score for the last ${weeks.length} weeks`}
             viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-            className="h-auto w-full"
+            className="h-auto max-h-[200px] w-full"
           >
             {gridlineValues.map((value) => {
               const y = PADDING.top + plotHeight - (value / ceiling) * plotHeight;
@@ -160,10 +164,12 @@ export function ScoreTrendChart({ weeks }: ScoreTrendChartProps) {
 
             {weeks.map((week, index) => {
               const isCurrentWeek = index === weeks.length - 1;
+              const isSelected = selectedIndex === index;
               const barHeight = ceiling > 0 ? (week.totalScore / ceiling) * plotHeight : 0;
               const bandX = PADDING.left + index * bandWidth;
               const barX = bandX + (bandWidth - BAR_WIDTH) / 2;
               const barY = PADDING.top + plotHeight - barHeight;
+              const dimOthers = selectedIndex !== null && selectedIndex !== undefined;
 
               return (
                 <g key={week.weekStart}>
@@ -171,6 +177,8 @@ export function ScoreTrendChart({ weeks }: ScoreTrendChartProps) {
                     <path
                       d={roundedTopBarPath(barX, barY, BAR_WIDTH, barHeight)}
                       className="fill-accent"
+                      opacity={dimOthers && !isSelected ? 0.35 : 1}
+                      data-testid={isSelected ? 'score-trend-selected-bar' : undefined}
                     >
                       <title>
                         {formatWeekLabel(week.weekStart)}: {week.totalScore} pts ·{' '}
@@ -179,7 +187,19 @@ export function ScoreTrendChart({ weeks }: ScoreTrendChartProps) {
                       </title>
                     </path>
                   ) : null}
-                  {isCurrentWeek && week.totalScore > 0 ? (
+                  {isSelected ? (
+                    <rect
+                      x={bandX + 1}
+                      y={PADDING.top}
+                      width={Math.max(0, bandWidth - 2)}
+                      height={plotHeight}
+                      className="fill-transparent stroke-ink"
+                      strokeWidth={1.5}
+                      opacity={0.55}
+                      data-testid="score-trend-selected-band"
+                    />
+                  ) : null}
+                  {(isCurrentWeek || isSelected) && week.totalScore > 0 ? (
                     <text
                       x={barX + BAR_WIDTH / 2}
                       y={barY - 5}
@@ -211,49 +231,22 @@ export function ScoreTrendChart({ weeks }: ScoreTrendChartProps) {
               changing, not the clock.
             </p>
           ) : null}
-
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[420px] text-sm">
-              <caption className="sr-only">Score and minutes trained by week</caption>
-              <thead>
-                <tr className="text-left text-xs font-medium uppercase tracking-wide text-muted">
-                  <th scope="col" className="py-1 pr-2 font-medium">
-                    Week
-                  </th>
-                  <th scope="col" className="py-1 pr-2 text-right font-medium">
-                    Score
-                  </th>
-                  <th scope="col" className="py-1 pr-2 text-right font-medium">
-                    Minutes
-                  </th>
-                  <th scope="col" className="py-1 text-right font-medium">
-                    Score / min
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {weeks.map((week, index) => (
-                  <tr
-                    key={week.weekStart}
-                    className={
-                      index === weeks.length - 1
-                        ? 'border-t border-border bg-accent-tint font-semibold text-ink'
-                        : 'border-t border-border text-secondary'
-                    }
-                  >
-                    <td className="py-1 pr-2">{formatWeekLabel(week.weekStart)}</td>
-                    <td className="py-1 pr-2 text-right tabular-nums">{week.totalScore}</td>
-                    <td className="py-1 pr-2 text-right tabular-nums">{week.totalMinutes}</td>
-                    <td className="py-1 text-right tabular-nums">
-                      {week.scorePerMinute === null ? '—' : week.scorePerMinute}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </>
       )}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div className="space-y-4" aria-label="Score trend">
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <section className="card space-y-4 p-4" aria-label="Score trend">
+      {body}
     </section>
   );
 }

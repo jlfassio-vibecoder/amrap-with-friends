@@ -8,6 +8,8 @@ interface AttritionGridProps {
   weeks?: HudHistoryWeek[];
   selectedIndex?: number | null;
   onSelect?: (index: number) => void;
+  /** When true, omit the outer card chrome (parent owns the card). */
+  embedded?: boolean;
 }
 
 function pad2(value: number): string {
@@ -62,6 +64,7 @@ export function AttritionGrid({
   weeks = [],
   selectedIndex = null,
   onSelect,
+  embedded = false,
 }: AttritionGridProps) {
   const cells = attrition.slice(0, 12);
 
@@ -73,8 +76,8 @@ export function AttritionGrid({
   // Newest on the left: walk data indexes from current → oldest.
   const displayOrder = cells.map((_, dataIndex) => dataIndex).reverse();
 
-  return (
-    <section className="card space-y-3 p-4" aria-label="12-week attrition">
+  const body = (
+    <>
       <p className="text-xs font-medium uppercase tracking-wide text-muted">12-week attrition</p>
       <div className="flex items-center justify-between gap-1">
         {displayOrder.map((dataIndex) => {
@@ -115,9 +118,21 @@ export function AttritionGrid({
           );
         })}
       </div>
-      {selectable ? (
-        <p className="text-xs text-secondary">Select a week to see what it was made of.</p>
-      ) : null}
+      {selectable ? <p className="text-xs text-secondary">Tap a week to inspect it.</p> : null}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div className="space-y-3" aria-label="12-week attrition">
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <section className="card space-y-3 p-4" aria-label="12-week attrition">
+      {body}
     </section>
   );
 }

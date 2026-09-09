@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { AppLink } from '@/components/AppLink';
 import { AppHeader } from '@/components/AppHeader';
 import { ActivityAttributionCard } from '@/components/hud/ActivityAttributionCard';
-import { AttritionGrid } from '@/components/hud/AttritionGrid';
 import { ClassificationBadge } from '@/components/hud/ClassificationBadge';
 import { DailyTelemetry } from '@/components/hud/DailyTelemetry';
 import { DomainMatrixChart } from '@/components/hud/DomainMatrixChart';
@@ -19,8 +18,8 @@ import { OutsideActivitySummaryCard } from '@/components/hud/OutsideActivitySumm
 import { OvertrainingWarningCard } from '@/components/hud/OvertrainingWarningCard';
 import { PhysicalActivityList } from '@/components/hud/PhysicalActivityList';
 import { PhysicalActivityLogForm } from '@/components/hud/PhysicalActivityLogForm';
-import { ScoreTrendChart } from '@/components/hud/ScoreTrendChart';
 import { WeekDetailPanel } from '@/components/hud/WeekDetailPanel';
+import { WeekHistoryTrendCard } from '@/components/hud/WeekHistoryTrendCard';
 import { WeekPacingSpreadCard } from '@/components/hud/WeekPacingSpreadCard';
 import { WeeklyBaselineBar } from '@/components/hud/WeeklyBaselineBar';
 import { WeeklyVolumeTargetCard } from '@/components/hud/WeeklyVolumeTargetCard';
@@ -115,13 +114,14 @@ export default function HUDPage() {
     overtrainingRisk !== null && overtrainingRisk.riskLevel !== 'normal';
 
   // The one piece of the HUD that travels in time. Null means "nothing
-  // inspected", which is a different state from "the current week" — the
-  // live cards above never move either way.
+  // inspected" while away from Week History; on that tab we always seed the
+  // current week so detail is open by default.
   const historyWeeks = telemetry?.weeks ?? [];
   const [activeTab, setActiveTab] = useState<HudTabKey>('mission-health');
   const [selectedWeekIndex, setSelectedWeekIndex] = useState<number | null>(null);
   const selectedWeek = weekAt(historyWeeks, selectedWeekIndex);
   const canInspectHistory = hasInspectableHistory(historyWeeks);
+  const currentWeekIndex = historyWeeks.length > 0 ? historyWeeks.length - 1 : null;
   const weekMinutesVsPrevious = summarizeWeekMinutesVsPrevious(historyWeeks);
   const previousHistoryWeek =
     historyWeeks.length >= 2 ? historyWeeks[historyWeeks.length - 2]! : null;
@@ -132,6 +132,15 @@ export default function HUDPage() {
       setSelectedWeekIndex(null);
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== 'week-history' || !canInspectHistory || currentWeekIndex === null) {
+      return;
+    }
+    if (selectedWeekIndex === null) {
+      setSelectedWeekIndex(currentWeekIndex);
+    }
+  }, [activeTab, canInspectHistory, currentWeekIndex, selectedWeekIndex]);
 
   function telemetryEmptyState(copy: string) {
     return <p className="text-sm text-secondary">{copy}</p>;
@@ -273,15 +282,15 @@ export default function HUDPage() {
                 telemetryEmptyState('No locked week history yet.')
               ) : (
                 <>
-                  <ScoreTrendChart weeks={scoreTrendFromHistory(historyWeeks)} />
-                  <AttritionGrid
+                  <WeekHistoryTrendCard
+                    trendWeeks={scoreTrendFromHistory(historyWeeks)}
                     attrition={telemetry.attrition}
                     weekEndsAt={telemetry.weekEndsAt}
-                    weeks={historyWeeks}
+                    historyWeeks={historyWeeks}
                     selectedIndex={selectedWeekIndex}
-                    onSelect={canInspectHistory ? setSelectedWeekIndex : undefined}
+                    onSelectWeek={canInspectHistory ? setSelectedWeekIndex : undefined}
                   />
-                  {selectedWeek !== null && selectedWeekIndex !== null ? (
+                  {canInspectHistory && selectedWeek !== null && selectedWeekIndex !== null ? (
                     <WeekDetailPanel
                       week={selectedWeek}
                       isCurrent={isCurrentWeek(historyWeeks, selectedWeekIndex)}
@@ -295,7 +304,7 @@ export default function HUDPage() {
                         setSelectedWeekIndex(stepWeekIndex(historyWeeks, selectedWeekIndex, 1))
                       }
                       onJumpToCurrent={() => setSelectedWeekIndex(historyWeeks.length - 1)}
-                      onClose={() => setSelectedWeekIndex(null)}
+                      onClose={() => setSelectedWeekIndex(historyWeeks.length - 1)}
                     />
                   ) : null}
                 </>

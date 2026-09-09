@@ -54,8 +54,7 @@ describe('ScoreTrendChart', () => {
     ];
     render(<ScoreTrendChart weeks={weeks} />);
 
-    // "260" appears in the hero figure, the SVG direct label, and the table
-    // row — all three are correct, so assert presence rather than one spot.
+    // Hero figure and SVG label both show 260.
     expect(screen.getAllByText('260').length).toBeGreaterThan(0);
     expect(screen.getByText('+30% vs last week')).toBeTruthy();
   });
@@ -114,7 +113,7 @@ describe('ScoreTrendChart', () => {
     expect(screen.queryByText(/Same time, different intensity/)).toBeNull();
   });
 
-  it('lists every week in the table, oldest first, with score, minutes, and score/min', () => {
+  it('does not render a week-by-week score table', () => {
     const weeks = [
       week('2026-08-31T12:00:00', {
         totalScore: 200,
@@ -131,28 +130,42 @@ describe('ScoreTrendChart', () => {
     ];
     render(<ScoreTrendChart weeks={weeks} />);
 
-    const table = screen.getByRole('table');
-    const rows = table.querySelectorAll('tbody tr');
-    expect(rows).toHaveLength(2);
-    expect(rows[0].textContent).toContain('200');
-    expect(rows[1].textContent).toContain('260');
+    expect(screen.queryByRole('table')).toBeNull();
   });
 
-  it('shows an em dash rather than a number for a week with no minutes logged', () => {
+  it('caps the chart SVG height for a compact hero', () => {
     const weeks = [
-      week('2026-09-07T12:00:00', { totalScore: 0, totalMinutes: 0, missionCount: 0 }),
-      week('2026-09-14T12:00:00', {
-        totalScore: 100,
-        totalMinutes: 10,
+      week('2026-09-07T12:00:00', {
+        totalScore: 200,
+        totalMinutes: 20,
         missionCount: 1,
         scorePerMinute: 10,
       }),
     ];
-    render(<ScoreTrendChart weeks={weeks} />);
+    const { container } = render(<ScoreTrendChart weeks={weeks} />);
+    const svg = container.querySelector('svg');
+    expect(svg?.className.baseVal || svg?.getAttribute('class')).toContain('max-h-[200px]');
+  });
 
-    const table = screen.getByRole('table');
-    const rows = table.querySelectorAll('tbody tr');
-    expect(rows[0].textContent).toContain('—');
+  it('highlights the selected week band on the chart', () => {
+    const weeks = [
+      week('2026-08-31T12:00:00', {
+        totalScore: 200,
+        totalMinutes: 20,
+        missionCount: 1,
+        scorePerMinute: 10,
+      }),
+      week('2026-09-07T12:00:00', {
+        totalScore: 260,
+        totalMinutes: 20,
+        missionCount: 1,
+        scorePerMinute: 13,
+      }),
+    ];
+    render(<ScoreTrendChart weeks={weeks} selectedIndex={0} />);
+
+    expect(screen.getByTestId('score-trend-selected-band')).toBeTruthy();
+    expect(screen.getByTestId('score-trend-selected-bar')).toBeTruthy();
   });
 
   it('draws one bar per week with a score, and no bar for a zero week', () => {
