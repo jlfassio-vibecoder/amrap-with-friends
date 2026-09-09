@@ -10,6 +10,7 @@ import HostingSteps from '../islands/creators/HostingSteps';
 import HostingWeekTabs from '../islands/creators/HostingWeekTabs';
 import MissionRoomPreview from '../islands/creators/MissionRoomPreview';
 import RevenueEstimator from '../islands/creators/RevenueEstimator';
+import SocialGrowthEstimator from '../islands/creators/SocialGrowthEstimator';
 import { breadcrumbList, faqPage } from '@/lib/seo/structuredData';
 import '../styles/creators.css';
 
@@ -138,6 +139,16 @@ const jsonLd = [
           </li>
         </ul>
       </div>
+    </section>
+
+    <section class="creators-chapter" id="growth">
+      <h2>Grow your socials footprint</h2>
+      <p class="creators-lede">
+        Host alongside a Live and every finish card that tags you becomes a post in someone else's
+        feed. Views turn into follows. Move the sliders — this is a conservative estimate, not a
+        promise.
+      </p>
+      <SocialGrowthEstimator client:visible />
     </section>
 
     <section class="creators-chapter" id="estimate">
