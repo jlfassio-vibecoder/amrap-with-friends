@@ -170,6 +170,13 @@ export function MissionScorecard({
           </p>
         )}
 
+        {/* Outside the daisy-chain branch on purpose. It used to live inside
+            it, which meant the common case -- a guest finishing a one-off
+            mission, which is who the card is for -- never saw it. Above the
+            exits either way, so someone who shares and leaves has still put
+            the link in front of their followers. */}
+        {missionId ? <ShareCardSection missionId={missionId} templateId={templateId} /> : null}
+
         {rallyPointHref || nextMissionId ? (
           <div className="space-y-2">
             {nextMissionId ? (
@@ -195,9 +202,6 @@ export function MissionScorecard({
               <DaisyChainCta onActivate={handleDaisyChain} />
             )}
             {daisyError ? <p className="text-error text-sm">{daisyError}</p> : null}
-            {/* Before the exits: a guest who shares and leaves has still put
-                the link in front of their followers. */}
-            {missionId ? <ShareCardSection missionId={missionId} templateId={templateId} /> : null}
             <button type="button" className="btn-neutral w-full text-sm" onClick={onClose}>
               Close
             </button>
