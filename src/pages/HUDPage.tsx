@@ -21,17 +21,45 @@ import { PhysicalActivityList } from '@/components/hud/PhysicalActivityList';
 import { PhysicalActivityLogForm } from '@/components/hud/PhysicalActivityLogForm';
 import { ScoreTrendChart } from '@/components/hud/ScoreTrendChart';
 import { WeekDetailPanel } from '@/components/hud/WeekDetailPanel';
+import { WeekPacingSpreadCard } from '@/components/hud/WeekPacingSpreadCard';
 import { WeeklyBaselineBar } from '@/components/hud/WeeklyBaselineBar';
+import { WeeklyVolumeTargetCard } from '@/components/hud/WeeklyVolumeTargetCard';
 import { summarizePhysicalActivityWindow } from '@/lib/hud/activityWindowSummary';
 import { evaluateOvertrainingRisk } from '@/lib/hud/evaluateOvertrainingRisk';
 import { useBenchmarkProgress } from '@/hooks/useBenchmarkProgress';
 import { hasAthleteBodyMetrics } from '@/lib/api/athleteProfile';
-import { quotasFromProfile } from '@/lib/hud/classificationQuotas';
+import { claimedVolumeTargetMinutes, quotasFromProfile } from '@/lib/hud/classificationQuotas';
 import { scoreTrendFromHistory } from '@/lib/hud/scoreTrend';
-import { hasInspectableHistory, isCurrentWeek, stepWeekIndex, weekAt } from '@/lib/hud/weekHistory';
+import type { ClassificationRank } from '@/lib/hud/types';
+import {
+  hasInspectableHistory,
+  isCurrentWeek,
+  stepWeekIndex,
+  summarizeWeekMinutesVsPrevious,
+  weekAt,
+} from '@/lib/hud/weekHistory';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { useHudTelemetry } from '@/hooks/useHudTelemetry';
 import { usePhysicalActivityLog } from '@/hooks/usePhysicalActivityLog';
+
+const CLAIMED_RANK_LABEL: Partial<Record<ClassificationRank, string>> = {
+  operator: 'OPERATOR',
+  special_ops: 'SPECIAL OPS',
+};
+
+function opTempoSubtitle(
+  rank: ClassificationRank | null,
+  claimedMinutes: number,
+  civilianMinutes: number
+): string {
+  const label = rank ? (CLAIMED_RANK_LABEL[rank] ?? rank.toUpperCase()) : 'CLAIMED';
+  const overCivilian = claimedMinutes - civilianMinutes;
+  const base = `Claimed ${label} · ${claimedMinutes} min`;
+  if (overCivilian > 0) {
+    return `${base} · +${overCivilian} over Civilian`;
+  }
+  return base;
+}
 
 const HUD_TABS: readonly HudTabDefinition[] = [
   { key: 'mission-health', label: 'Mission Health' },
@@ -69,6 +97,10 @@ export default function HUDPage() {
   const { telemetry, error, loading, isAuthenticated, isAuthLoading } = useHudTelemetry();
   const { profile, loading: profileLoading } = useAthleteProfile();
   const quotas = quotasFromProfile(profile);
+  const claimedTargetMinutes = claimedVolumeTargetMinutes(
+    profile?.perceivedClassification ?? null,
+    quotas
+  );
   const showTelemetry = !loading && !profileLoading && isAuthenticated && telemetry;
   const metricsMissing =
     isAuthenticated && !profileLoading && profile !== null && !hasAthleteBodyMetrics(profile);
@@ -90,6 +122,9 @@ export default function HUDPage() {
   const [selectedWeekIndex, setSelectedWeekIndex] = useState<number | null>(null);
   const selectedWeek = weekAt(historyWeeks, selectedWeekIndex);
   const canInspectHistory = hasInspectableHistory(historyWeeks);
+  const weekMinutesVsPrevious = summarizeWeekMinutesVsPrevious(historyWeeks);
+  const previousHistoryWeek =
+    historyWeeks.length >= 2 ? historyWeeks[historyWeeks.length - 2]! : null;
   const showTabs = !isAuthLoading && isAuthenticated;
 
   useEffect(() => {
@@ -182,24 +217,51 @@ export default function HUDPage() {
                   {showOvertrainingWarning ? (
                     <OvertrainingWarningCard overtraining={telemetry.overtraining} />
                   ) : null}
-                  <InAppActivitySummaryCard activity7d={telemetry.activity7d} />
-                  <OutsideActivitySummaryCard entries={activityLog.entries} />
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <InAppActivitySummaryCard activity7d={telemetry.activity7d} />
+                    <OutsideActivitySummaryCard entries={activityLog.entries} />
+                  </div>
+                  {claimedTargetMinutes !== null ? (
+                    <WeeklyVolumeTargetCard
+                      title="OP TEMPO"
+                      ariaLabel="Operational tempo"
+                      subtitle={opTempoSubtitle(
+                        profile?.perceivedClassification ?? null,
+                        claimedTargetMinutes,
+                        quotas.civilianMinutes
+                      )}
+                      weekMinutes={telemetry.weekMinutes}
+                      weekEndsAt={telemetry.weekEndsAt}
+                      targetMinutes={claimedTargetMinutes}
+                      previousWeekMinutes={weekMinutesVsPrevious.previousMinutes}
+                      previousWeek={previousHistoryWeek}
+                      shareNoun="target"
+                      paceHeading="Pace to target"
+                      targetNoun="target"
+                      progressAriaLabel="Weekly minutes toward claimed classification target"
+                      testIdPrefix="op-tempo"
+                    />
+                  ) : null}
+                  <WeeklyBaselineBar
+                    weekMinutes={telemetry.weekMinutes}
+                    weekEndsAt={telemetry.weekEndsAt}
+                    baselineMinutes={quotas.civilianMinutes}
+                    previousWeekMinutes={weekMinutesVsPrevious.previousMinutes}
+                    previousWeek={previousHistoryWeek}
+                  />
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <DailyTelemetry lastLockedAt={telemetry.lastLockedAt} />
+                    <WeekPacingSpreadCard
+                      weekPviAverage={telemetry.weekPviAverage}
+                      weekPviMissions={telemetry.weekPviMissions}
+                    />
+                  </div>
                   <ActivityAttributionCard
                     inAppMissions={telemetry.activity7d.missionCount}
                     outsideMissions={outsideSummary.missionCount}
                     inAppMinutes={telemetry.activity7d.minutes}
                     outsideMinutes={outsideSummary.totalMinutes}
                   />
-                  <div className="grid gap-4 lg:grid-cols-2">
-                    <DailyTelemetry lastLockedAt={telemetry.lastLockedAt} />
-                    <WeeklyBaselineBar
-                      weekMinutes={telemetry.weekMinutes}
-                      weekPviAverage={telemetry.weekPviAverage}
-                      weekPviMissions={telemetry.weekPviMissions}
-                      weekEndsAt={telemetry.weekEndsAt}
-                      baselineMinutes={quotas.civilianMinutes}
-                    />
-                  </div>
                 </>
               )}
             </HudPanel>

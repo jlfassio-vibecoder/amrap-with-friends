@@ -1,3 +1,5 @@
+import type { ClassificationRank } from '@/lib/hud/types';
+
 export type BiologicalSex = 'M' | 'F';
 
 export type AgeBracket = 'alpha' | 'bravo' | 'charlie' | 'delta';
@@ -57,4 +59,21 @@ export function quotasFromProfile(
     return ALPHA_MALE_QUOTAS;
   }
   return getClassificationQuotas(nowYear - profile.birthYear, profile.biologicalSex);
+}
+
+/**
+ * Weekly volume target for a claimed (perceived) classification.
+ * Null when there is no claim above Civilian — OP TEMPO should stay hidden then.
+ */
+export function claimedVolumeTargetMinutes(
+  rank: ClassificationRank | null | undefined,
+  quotas: ClassificationQuotas
+): number | null {
+  if (rank === 'operator') {
+    return quotas.operatorMinutes;
+  }
+  if (rank === 'special_ops') {
+    return quotas.specialOpsMinutes;
+  }
+  return null;
 }
