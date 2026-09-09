@@ -63,6 +63,7 @@ describe('toolLiftIsMeaningful', () => {
 describe('toolCohortLabel', () => {
   it('names each cohort in plain English and passes unknowns through', () => {
     expect(toolCohortLabel('timer_completed')).toBe('Finished a free timer run');
+    expect(toolCohortLabel('featured_acted')).toBe("Joined today's mission or saved the invite");
     expect(toolCohortLabel('something_new')).toBe('something_new');
   });
 });

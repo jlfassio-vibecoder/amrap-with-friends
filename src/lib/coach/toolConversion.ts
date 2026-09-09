@@ -15,6 +15,8 @@ export const TOOL_COHORT_LABELS: Record<string, string> = {
   timer_started: 'Started the free timer',
   timer_completed: 'Finished a free timer run',
   pacing_scored: 'Scored their own splits',
+  featured_viewed: "Saw today's mission",
+  featured_acted: "Joined today's mission or saved the invite",
 };
 
 export function toolCohortLabel(cohort: string): string {
