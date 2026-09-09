@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SHARE_ID_PATTERN, createShareId, shareUrl } from '@/lib/share/shareId';
+import { SHARE_ID_PATTERN, createShareId, shareDeepLink, shareUrl } from '@/lib/share/shareId';
 
 describe('createShareId', () => {
   it('matches the shape the database constraint enforces', () => {
@@ -22,7 +22,17 @@ describe('createShareId', () => {
 });
 
 describe('shareUrl', () => {
-  it('builds the link printed on the card', () => {
-    expect(shareUrl('abc12345')).toBe('amrapwithfriends.com/s/abc12345');
+  it('prints a link that resolves today, not one phase 3 will add', () => {
+    // /s/:id is not registered in seo/routes.ts, so the middleware 404s it.
+    // A card is a PNG inside somebody's post forever; a dead link on it cannot
+    // be fixed after the fact the way a page can.
+    expect(shareUrl()).toBe('amrapwithfriends.com');
+    expect(shareUrl()).not.toContain('/s/');
+  });
+});
+
+describe('shareDeepLink', () => {
+  it('keeps the phase 3 shape ready', () => {
+    expect(shareDeepLink('abc12345')).toBe('amrapwithfriends.com/s/abc12345');
   });
 });

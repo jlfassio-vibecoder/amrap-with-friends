@@ -19,6 +19,6 @@ export function buildCaption(input: {
   const withSquad = input.squadSize > 1 ? ` · with ${input.squadSize - 1} others` : '';
   return [
     `${score}${input.durationMinutes} min AMRAP${withSquad}`,
-    `Join the next mission: ${shareUrl(input.shareId)}`,
+    `Join the next mission: ${shareUrl()}`,
   ].join('\n');
 }

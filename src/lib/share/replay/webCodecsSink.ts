@@ -1,3 +1,6 @@
+// Copilot suggestion ignored: mp4-muxer is deprecated in favour of Mediabunny,
+// but swapping encoder libraries is a rewrite of this sink rather than a
+// review fix, and it cannot be verified without a device — tracked as follow-up.
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 import type { FrameSink } from '@/lib/share/replay/encodeLoop';
 import { REPLAY_FPS } from '@/lib/share/replay/frames';

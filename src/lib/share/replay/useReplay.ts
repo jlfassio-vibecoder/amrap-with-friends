@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { track } from '@/lib/analytics/track';
 import { defaultCut, type CutId } from '@/lib/share/cuts';
-import { detectEncoderPath, readCapabilities } from '@/lib/share/replay/encoderPath';
+import {
+  detectEncoderPath,
+  isEncoderImplemented,
+  readCapabilities,
+} from '@/lib/share/replay/encoderPath';
 import { renderReplay } from '@/lib/share/replay/renderReplay';
 import type { ReplayWorkerMessage, ReplayWorkerRequest } from '@/lib/share/replay/replay.worker';
 import type { DrawFrameOptions } from '@/lib/share/renderer/drawFrame';
@@ -57,7 +61,10 @@ export function useReplay(data: ReplayData, draw: DrawFrameOptions): UseReplayRe
       }
 
       const path = detectEncoderPath(readCapabilities());
-      if (path === 'none') {
+      // renderReplay only has a WebCodecs sink. Refusing here keeps the
+      // failure a message rather than a throw from inside the encoder, on a
+      // screen the athlete reached by finishing a workout.
+      if (!isEncoderImplemented(path)) {
         setError('This browser cannot make video.');
         setStatus('error');
         return;

@@ -9,6 +9,7 @@ import { frameAt, myBar, resolveVariant } from '@/lib/share/timeline';
 import { defaultCut } from '@/lib/share/cuts';
 import {
   detectEncoderPath,
+  isEncoderImplemented,
   readCapabilities,
   replayActionLabel,
   replayCaveat,
@@ -49,9 +50,10 @@ export function ShareCardPanel({
   const [encoderPath] = useState(() => detectEncoderPath(readCapabilities()));
 
   // One id for the life of the panel: re-rendering at another ratio is the
-  // same share, and a new id per ratio would fragment the view count.
-  const shareIdRef = useRef<string>(createShareId());
-  const shareId = shareIdRef.current;
+  // same share, and a new id per ratio would fragment the view count. Lazy
+  // useState rather than a ref, because this is a stable value rather than
+  // mutable state, and reading a ref during render is not allowed.
+  const [shareId] = useState(createShareId);
 
   const effectiveVariant = resolveVariant(data, variant);
   const blobRef = useRef<Map<string, Blob>>(new Map());
@@ -75,40 +77,45 @@ export function ShareCardPanel({
       variant: effectiveVariant,
       title: workoutTitle,
       subtitle: `${data.mission.durationMinutes} min AMRAP`,
-      shareUrl: shareUrl(shareId),
+      shareUrl: shareUrl(),
       // Every card carries it for now: there is no athlete tier to exempt.
       watermark: true,
     }),
-    [layout, effectiveVariant, workoutTitle, data.mission.durationMinutes, shareId]
+    [layout, effectiveVariant, workoutTitle, data.mission.durationMinutes]
   );
 
-  // Record the share once. Fire-and-forget with a single retry, because the
-  // card is useful whether or not the row lands — the link only needs to
-  // resolve later, and a failed insert must never block the share sheet.
-  useEffect(() => {
-    let cancelled = false;
-    async function record(attempt = 0): Promise<void> {
-      const { error } = await callRpc('create_mission_share', {
-        p_id: shareId,
-        p_mission_id: data.mission.id,
-        p_participant_id: participantId ?? null,
-        p_kind: 'card',
-        p_layout: layout,
-        p_variant: effectiveVariant,
-        p_claim_token: claimToken ?? null,
-        p_host_token: hostToken ?? null,
-      });
-      if (error && attempt === 0 && !cancelled) {
-        await record(1);
+  // Recorded when a share actually happens, with what was actually shared.
+  // On mount it always logged story/result regardless of the ratio chosen, and
+  // logged for athletes who never shared at all — which would have made the
+  // phase 3 view counts wrong before they existed.
+  const recordedRef = useRef(false);
+  const recordShare = useCallback(
+    (kind: 'card' | 'replay') => {
+      if (recordedRef.current) {
+        return;
       }
-    }
-    void record();
-    return () => {
-      cancelled = true;
-    };
-    // Deliberately once per panel, not per ratio: see shareIdRef.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+      recordedRef.current = true;
+      async function record(attempt = 0): Promise<void> {
+        const { error } = await callRpc('create_mission_share', {
+          p_id: shareId,
+          p_mission_id: data.mission.id,
+          p_participant_id: participantId ?? null,
+          p_kind: kind,
+          p_layout: layout,
+          p_variant: effectiveVariant,
+          p_claim_token: claimToken ?? null,
+          p_host_token: hostToken ?? null,
+        });
+        if (error && attempt === 0) {
+          await record(1);
+        }
+      }
+      // Not awaited: the share sheet has to stay inside the user's gesture, and
+      // the card is useful whether or not the row lands.
+      void record();
+    },
+    [shareId, data.mission.id, participantId, layout, effectiveVariant, claimToken, hostToken]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -157,6 +164,7 @@ export function ShareCardPanel({
     if (!replay.blob) {
       return;
     }
+    recordShare('replay');
     // Already encoded, so navigator.share is still inside this click. Awaiting
     // the encode here instead would make iOS refuse the sheet.
     const file = new File([replay.blob], replayFileName(shareId, cutId), { type: 'video/mp4' });
@@ -170,7 +178,7 @@ export function ShareCardPanel({
     if (result.outcome === 'downloaded') {
       setNotice('Saved to your downloads. Caption copied.');
     }
-  }, [replay.blob, shareId, cutId, caption, layout]);
+  }, [replay.blob, shareId, cutId, caption, layout, recordShare]);
 
   const handleShare = useCallback(async () => {
     const blob = blobRef.current.get(`${layout}:${effectiveVariant}`);
@@ -178,6 +186,7 @@ export function ShareCardPanel({
       return;
     }
     setBusy(true);
+    recordShare('card');
     // Already rendered, so navigator.share is still inside the click. Awaiting
     // a render here would make iOS reject the sheet.
     const file = new File([blob], cardFileName(shareId, layout), { type: 'image/png' });
@@ -186,16 +195,17 @@ export function ShareCardPanel({
     if (result.outcome === 'downloaded') {
       setNotice('Saved. Caption copied — paste it when you post.');
     }
-  }, [layout, effectiveVariant, shareId, caption]);
+  }, [layout, effectiveVariant, shareId, caption, recordShare]);
 
   const handleCopyLink = useCallback(async () => {
+    recordShare('card');
     try {
       await navigator.clipboard.writeText(caption);
       setNotice('Caption and link copied.');
     } catch {
-      setNotice(`Copy this: ${shareUrl(shareId)}`);
+      setNotice(`Copy this: ${shareUrl()}`);
     }
-  }, [caption, shareId]);
+  }, [caption, recordShare]);
 
   return (
     <section className="card space-y-4 p-4">
@@ -264,7 +274,7 @@ export function ShareCardPanel({
         </button>
       </div>
 
-      {encoderPath !== 'none' ? (
+      {isEncoderImplemented(encoderPath) ? (
         <div className="space-y-2 border-t border-border pt-4">
           {replay.status === 'idle' || replay.status === 'error' ? (
             <button
@@ -301,6 +311,10 @@ export function ShareCardPanel({
           ) : null}
           {replay.error ? <p className="text-xs text-secondary">{replay.error}</p> : null}
         </div>
+      ) : null}
+
+      {!isEncoderImplemented(encoderPath) && replayCaveat(encoderPath) ? (
+        <p className="text-xs text-secondary">{replayCaveat(encoderPath)}</p>
       ) : null}
 
       {notice ? <p className="text-xs text-secondary">{notice}</p> : null}
