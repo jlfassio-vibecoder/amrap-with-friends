@@ -89,6 +89,10 @@ export const ANALYTICS_EVENT_NAMES = [
   'free_timer_abandoned',
   'free_timer_cta_clicked',
 
+  // The pacing calculator on the science pages.
+  'pacing_calculator_scored',
+  'pacing_calculator_cta_clicked',
+
   // Platform / reliability
   'audio_unlock_result',
   'rpc_call',

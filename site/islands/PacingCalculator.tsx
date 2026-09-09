@@ -1,9 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { computePvi } from '@/lib/scoring/computePvi';
 import { shouldExcludeBuyInRound } from '@/lib/scoring/getPacingDurations';
 import { getPviMultiplier } from '@/lib/scoring/getPviMultiplier';
 import { formatSplit, parseRoundSplits } from '@/lib/scoring/parseRoundSplits';
 import { allTimeCaps, defaultCapForDomain } from '@/lib/timeDomains';
+import {
+  DEFAULT_SPLITS,
+  isOwnInput,
+  reportPacingCtaClicked,
+  reportPacingScored,
+  shouldReportPacingScore,
+} from '@/lib/analytics/pacingCalculatorEvents';
 
 /**
  * The one interactive thing on the science pages, and the only honest one: it
@@ -18,7 +25,7 @@ import { allTimeCaps, defaultCapForDomain } from '@/lib/timeDomains';
 const CAPS = allTimeCaps();
 
 export default function PacingCalculator() {
-  const [raw, setRaw] = useState('1:08 1:12 1:19 1:14 1:31');
+  const [raw, setRaw] = useState(DEFAULT_SPLITS);
   const [cap, setCap] = useState<number>(defaultCapForDomain(15));
 
   const parsed = useMemo(() => parseRoundSplits(raw), [raw]);
@@ -26,6 +33,48 @@ export default function PacingCalculator() {
   const scored = excludeFirstRound ? parsed.seconds.slice(1) : parsed.seconds;
   const pvi = computePvi(parsed.seconds, { excludeFirstRound });
   const result = getPviMultiplier(pvi);
+
+  const reportedRef = useRef(false);
+  const contextRef = useRef({
+    capMinutes: cap,
+    roundCount: scored.length,
+    pvi,
+    classification: result.classification,
+  });
+
+  // Declared before the effect that reads it, so the report always carries the
+  // numbers on screen rather than the previous render's.
+  useEffect(() => {
+    contextRef.current = {
+      capMinutes: cap,
+      roundCount: scored.length,
+      pvi,
+      classification: result.classification,
+    };
+  }, [cap, scored.length, pvi, result.classification]);
+
+  // Debounced, because the result recomputes on every keystroke and a report
+  // per keypress would be noise rather than data. One event per visit: the
+  // question is whether they checked their own pacing at all, not how many
+  // times they retyped a digit.
+  useEffect(() => {
+    if (
+      !shouldReportPacingScore({
+        edited: isOwnInput(raw),
+        hasResult: pvi !== null,
+        alreadyReported: reportedRef.current,
+      })
+    ) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      reportedRef.current = true;
+      reportPacingScored(contextRef.current);
+    }, 1500);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [raw, pvi]);
 
   const fastest = scored.length ? Math.min(...scored) : 0;
   const slowest = scored.length ? Math.max(...scored) : 0;
@@ -123,6 +172,27 @@ export default function PacingCalculator() {
             </p>
           </div>
         )}
+      </div>
+
+      {/* The page had no way into the product. Someone who has just typed their
+          own splits in is checking their real pacing against the app's scoring,
+          so the copy offers the thing that removes the typing rather than
+          asking them to sign up for its own sake. */}
+      <div className="space-y-2 border-t border-divider pt-5 text-center">
+        <p className="text-sm text-secondary">
+          {pvi === null
+            ? 'The app scores pacing like this on every mission, from rounds you log as you go.'
+            : `Log rounds during a mission and the app scores this automatically — no splits to type in afterwards.`}
+        </p>
+        <a
+          className="btn-primary inline-flex items-center justify-center text-sm"
+          href="/plan-mission"
+          onClick={() => {
+            reportPacingCtaClicked(pvi === null ? 'idle' : 'scored', contextRef.current);
+          }}
+        >
+          Plan a mission
+        </a>
       </div>
     </div>
   );
