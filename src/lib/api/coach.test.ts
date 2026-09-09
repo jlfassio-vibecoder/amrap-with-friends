@@ -121,6 +121,52 @@ describe('fetchCoachDashboard', () => {
             signed_up: 5,
           },
         ],
+        contentEngagement: [
+          {
+            path: '/guides/what-is-amrap',
+            sessions: 210,
+            median_scroll_pct: 68.5,
+            median_dwell_sec: 96,
+            read_to_end: 44,
+            bounced: 31,
+            bounce_rate_pct: 14.76,
+          },
+        ],
+        notFound: [{ path: '/old-workouts', referrer_host: 'reddit.com', hits: 12 }],
+        ctaPlacement: [
+          {
+            cta: 'hero-plan',
+            from_path: '/',
+            to_path: '/create',
+            clicks: 42,
+            visitors: 31,
+            signed_up: 7,
+          },
+        ],
+        toolConversion: [
+          {
+            cohort_order: 1,
+            cohort: 'reader_only',
+            browsers: 400,
+            cta_clicks: 30,
+            signed_up: 8,
+            signup_rate_pct: 2,
+            trained: 6,
+            completed_mission: 4,
+            completed_rate_pct: 1,
+          },
+          {
+            cohort_order: 3,
+            cohort: 'timer_completed',
+            browsers: 60,
+            cta_clicks: 25,
+            signed_up: 13,
+            signup_rate_pct: 21.67,
+            trained: 11,
+            completed_mission: 9,
+            completed_rate_pct: 15,
+          },
+        ],
         weeklyRetention: [
           {
             cohort_week: '2026-08-31',
@@ -233,6 +279,12 @@ describe('fetchCoachDashboard', () => {
     expect(result.data?.weeklyRetention[0]?.retainedPct).toBe(40);
     expect(result.data?.acquisition[0]?.channel).toBe('organic_search');
     expect(result.data?.contentPerformance[0]?.ctaRatePct).toBe(12.22);
+    expect(result.data?.contentEngagement[0]?.medianDwellSec).toBe(96);
+    expect(result.data?.notFound[0]?.referrerHost).toBe('reddit.com');
+    expect(result.data?.ctaPlacement[0]?.cta).toBe('hero-plan');
+    expect(result.data?.ctaPlacement[0]?.visitors).toBe(31);
+    expect(result.data?.toolConversion[1]?.cohort).toBe('timer_completed');
+    expect(result.data?.toolConversion[1]?.signupRatePct).toBe(21.67);
   });
 
   it('keeps an unobservable google completion null rather than zero', async () => {
@@ -313,6 +365,10 @@ describe('fetchCoachDashboard', () => {
     expect(result.data?.weeklyRetention).toEqual([]);
     expect(result.data?.acquisition).toEqual([]);
     expect(result.data?.contentPerformance).toEqual([]);
+    expect(result.data?.toolConversion).toEqual([]);
+    expect(result.data?.ctaPlacement).toEqual([]);
+    expect(result.data?.contentEngagement).toEqual([]);
+    expect(result.data?.notFound).toEqual([]);
     expect(result.data?.campaignFunnel.campaignsCreated).toBe(0);
     expect(result.data?.campaignLengthAdherence).toEqual([]);
   });

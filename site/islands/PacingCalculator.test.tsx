@@ -1,5 +1,8 @@
-import { describe, it, expect, afterEach } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
+
+const { sendContentEvent } = vi.hoisted(() => ({ sendContentEvent: vi.fn() }));
+vi.mock('@/lib/analytics/contentBeacon', () => ({ sendContentEvent }));
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import PacingCalculator from './PacingCalculator';
 
 function type(value: string) {
@@ -47,5 +50,66 @@ describe('PacingCalculator', () => {
     setCap('5');
     type('1:00');
     expect(screen.getByText(/enter at least two round times/i)).toBeTruthy();
+  });
+});
+
+describe('PacingCalculator conversion path', () => {
+  beforeEach(() => {
+    sendContentEvent.mockReset();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    cleanup();
+  });
+
+  it('offers a way into the app', () => {
+    // The page previously had no link into the product at all.
+    render(<PacingCalculator />);
+    expect(screen.getByRole('link', { name: /plan a mission/i }).getAttribute('href')).toBe(
+      '/plan-mission'
+    );
+  });
+
+  it('does not report a score for the prefilled example', () => {
+    render(<PacingCalculator />);
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(
+      sendContentEvent.mock.calls.filter(([name]) => name === 'pacing_calculator_scored')
+    ).toHaveLength(0);
+  });
+
+  it('reports once when the reader enters their own splits', () => {
+    render(<PacingCalculator />);
+    const input = screen.getByRole('textbox');
+
+    fireEvent.change(input, { target: { value: '1:04 1:09 1:11 1:15' } });
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    fireEvent.change(input, { target: { value: '1:04 1:09 1:11 1:16' } });
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+
+    const scored = sendContentEvent.mock.calls.filter(
+      ([name]) => name === 'pacing_calculator_scored'
+    );
+    expect(scored).toHaveLength(1);
+    expect(scored[0]?.[1]).toMatchObject({ round_count: expect.any(Number) });
+  });
+
+  it('does not report while the reader is still typing', () => {
+    render(<PacingCalculator />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '1:04 1:09 1:11' } });
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(
+      sendContentEvent.mock.calls.filter(([name]) => name === 'pacing_calculator_scored')
+    ).toHaveLength(0);
   });
 });

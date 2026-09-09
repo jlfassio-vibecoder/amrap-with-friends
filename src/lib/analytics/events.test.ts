@@ -50,6 +50,17 @@ function trackAliases(source: string): string[] {
   return aliases;
 }
 
+/**
+ * A name declared as `const X: AnalyticsEventName = 'y'` counts as emitted.
+ *
+ * The edge middleware answers unknown paths with hand-built HTML and reports
+ * through an inline script, so there is no call site to find — but the typed
+ * declaration is still checked by the compiler, so the registry stays binding.
+ */
+function typedEventDeclarations(source: string): string[] {
+  return [...source.matchAll(/:\s*AnalyticsEventName\s*=\s*'([^']*)'/g)].map((match) => match[1]);
+}
+
 function emittedEventNames(): Map<string, string[]> {
   const found = new Map<string, string[]>();
   const isSource = (path: string) =>
@@ -60,6 +71,13 @@ function emittedEventNames(): Map<string, string[]> {
   const files = [...walk(SRC_DIR, isSource), ...walk(SITE_DIR, isSource)];
   for (const path of files) {
     const source = readFileSync(path, 'utf8');
+
+    for (const name of typedEventDeclarations(source)) {
+      const sites = found.get(name) ?? [];
+      sites.push(path);
+      found.set(name, sites);
+    }
+
     const aliases = trackAliases(source);
     if (aliases.length === 0) {
       continue;

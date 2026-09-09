@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { formatClock } from '@/lib/amrapTimer/formatClock';
+import {
+  reportFreeTimerAbandoned,
+  reportFreeTimerCompleted,
+  reportFreeTimerCtaClicked,
+  reportFreeTimerStarted,
+  shouldReportFreeTimerAbandon,
+} from '@/lib/analytics/freeTimerEvents';
 
 const DURATIONS = [5, 10, 15, 20] as const;
 
@@ -71,6 +78,18 @@ export default function FreeAmrapTimer() {
   const { running, remaining, setRunning, reset } = useCountdown(durationMinutes);
   const beep = useBeep();
   const lastBeepRef = useRef<number | null>(null);
+  // Refs, not state: the unload handler is registered once and would otherwise
+  // close over the counts as they were at mount.
+  const startedRef = useRef(false);
+  const completedRef = useRef(false);
+  const runRef = useRef({ durationMinutes, rounds, timeLeftSec: remaining });
+
+  // Declared before every effect that reads it: effects run in order, so the
+  // completion and abandon handlers below always see the current run rather
+  // than the previous render's.
+  useEffect(() => {
+    runRef.current = { durationMinutes, rounds, timeLeftSec: remaining };
+  }, [durationMinutes, rounds, remaining]);
 
   useEffect(() => {
     if (!running || lastBeepRef.current === remaining) {
@@ -88,6 +107,37 @@ export default function FreeAmrapTimer() {
       beep(440, 0.8);
     }
   }, [remaining, beep]);
+
+  // A run that reached zero is finished whether or not they are still looking
+  // at the page, so it reports here rather than on unload.
+  useEffect(() => {
+    if (remaining === 0 && startedRef.current && !completedRef.current) {
+      completedRef.current = true;
+      reportFreeTimerCompleted(runRef.current);
+    }
+  }, [remaining]);
+
+  // Leaving mid-run is the interesting failure, and a normal request does not
+  // survive the unload — hence the beacon path inside sendContentEvent.
+  useEffect(() => {
+    function reportIfMidRun() {
+      if (
+        !shouldReportFreeTimerAbandon({
+          started: startedRef.current,
+          finished: completedRef.current,
+        })
+      ) {
+        return;
+      }
+      completedRef.current = true;
+      reportFreeTimerAbandoned(runRef.current);
+    }
+
+    window.addEventListener('pagehide', reportIfMidRun);
+    return () => {
+      window.removeEventListener('pagehide', reportIfMidRun);
+    };
+  }, []);
 
   const finished = remaining === 0;
   const label = useMemo(() => formatClock(remaining), [remaining]);
@@ -133,6 +183,10 @@ export default function FreeAmrapTimer() {
           onClick={() => {
             if (!running) {
               beep(660, 0.12);
+              if (!startedRef.current) {
+                startedRef.current = true;
+                reportFreeTimerStarted(durationMinutes);
+              }
             }
             setRunning(!running);
           }}
@@ -152,6 +206,17 @@ export default function FreeAmrapTimer() {
         <button
           type="button"
           onClick={() => {
+            // A reset ends this run for reporting: the next Start is a new one.
+            if (
+              shouldReportFreeTimerAbandon({
+                started: startedRef.current,
+                finished: completedRef.current,
+              })
+            ) {
+              reportFreeTimerAbandoned(runRef.current);
+            }
+            startedRef.current = false;
+            completedRef.current = false;
             reset();
             setRounds(0);
             lastBeepRef.current = null;
@@ -165,6 +230,28 @@ export default function FreeAmrapTimer() {
       <p className="text-center text-sm text-secondary">
         Rounds completed: <strong className="text-display text-2xl text-ink">{rounds}</strong>
       </p>
+
+      {/* The page had no way into the product at all. This is the moment of
+          most intent — they have just done the thing the app is for — so the
+          copy after a finished run names what they would get by doing it with
+          other people, rather than asking them to sign up for its own sake. */}
+      <div className="space-y-2 border-t border-border pt-5 text-center">
+        <p className="text-sm text-secondary">
+          {finished
+            ? `${rounds} rounds in ${durationMinutes} minutes. Run the same clock with friends and see everyone's rounds land live.`
+            : 'This timer is the solo version. The app runs one synced clock across everyone’s phones, with a shared leaderboard.'}
+        </p>
+        <a
+          className="btn-primary inline-flex items-center justify-center text-sm"
+          data-cta="free-timer"
+          href="/plan-mission"
+          onClick={() => {
+            reportFreeTimerCtaClicked(finished ? 'finished' : 'idle', runRef.current);
+          }}
+        >
+          {finished ? 'Do this one with friends' : 'Plan a mission'}
+        </a>
+      </div>
     </div>
   );
 }

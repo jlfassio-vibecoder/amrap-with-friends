@@ -1,5 +1,6 @@
 import { callRpc } from '@/lib/api/callRpc';
 import type { JourneyEntry, JourneyLifetime } from '@/lib/coach/journeyTimeline';
+import type { ToolConversionRow } from '@/lib/coach/toolConversion';
 import type {
   MissionDropoffRow,
   RetentionCell,
@@ -119,6 +120,31 @@ export interface CoachAcquisitionRow {
   completionRatePct: number | null;
 }
 
+export interface CoachContentEngagementRow {
+  path: string;
+  sessions: number;
+  medianScrollPct: number | null;
+  medianDwellSec: number | null;
+  readToEnd: number;
+  bounced: number;
+  bounceRatePct: number | null;
+}
+
+export interface CoachNotFoundRow {
+  path: string;
+  referrerHost: string;
+  hits: number;
+}
+
+export interface CoachCtaPlacementRow {
+  cta: string;
+  fromPath: string;
+  toPath: string;
+  clicks: number;
+  visitors: number;
+  signedUp: number;
+}
+
 export interface CoachContentPageRow {
   path: string;
   views: number;
@@ -177,6 +203,10 @@ export interface CoachDashboard {
   weeklyRetention: RetentionCell[];
   acquisition: CoachAcquisitionRow[];
   contentPerformance: CoachContentPageRow[];
+  toolConversion: ToolConversionRow[];
+  ctaPlacement: CoachCtaPlacementRow[];
+  contentEngagement: CoachContentEngagementRow[];
+  notFound: CoachNotFoundRow[];
   signupFunnel: CoachSignupFunnelRow[];
   authFailureReasons: CoachAuthFailureRow[];
   campaignFunnel: CoachCampaignFunnel;
@@ -457,6 +487,51 @@ function parseCampaignLengthRow(row: Record<string, unknown>): CoachCampaignLeng
     campaigns: num(row, 'campaigns'),
     campaignsFinished: num(row, 'campaigns_finished'),
     occurrenceAdherencePct: numOrNull(row, 'occurrence_adherence_pct'),
+  };
+}
+
+function parseContentEngagementRow(row: Record<string, unknown>): CoachContentEngagementRow {
+  return {
+    path: str(row, 'path'),
+    sessions: num(row, 'sessions'),
+    medianScrollPct: numOrNull(row, 'median_scroll_pct'),
+    medianDwellSec: numOrNull(row, 'median_dwell_sec'),
+    readToEnd: num(row, 'read_to_end'),
+    bounced: num(row, 'bounced'),
+    bounceRatePct: numOrNull(row, 'bounce_rate_pct'),
+  };
+}
+
+function parseNotFoundRow(row: Record<string, unknown>): CoachNotFoundRow {
+  return {
+    path: str(row, 'path'),
+    referrerHost: str(row, 'referrer_host'),
+    hits: num(row, 'hits'),
+  };
+}
+
+function parseCtaPlacementRow(row: Record<string, unknown>): CoachCtaPlacementRow {
+  return {
+    cta: str(row, 'cta'),
+    fromPath: str(row, 'from_path'),
+    toPath: str(row, 'to_path'),
+    clicks: num(row, 'clicks'),
+    visitors: num(row, 'visitors'),
+    signedUp: num(row, 'signed_up'),
+  };
+}
+
+function parseToolConversionRow(row: Record<string, unknown>): ToolConversionRow {
+  return {
+    cohortOrder: num(row, 'cohort_order'),
+    cohort: str(row, 'cohort'),
+    browsers: num(row, 'browsers'),
+    ctaClicks: num(row, 'cta_clicks'),
+    signedUp: num(row, 'signed_up'),
+    signupRatePct: numOrNull(row, 'signup_rate_pct'),
+    trained: num(row, 'trained'),
+    completedMission: num(row, 'completed_mission'),
+    completedRatePct: numOrNull(row, 'completed_rate_pct'),
   };
 }
 
@@ -911,6 +986,10 @@ export async function fetchCoachDashboard(window: CoachDashboardWindow = 'all'):
       weeklyRetention: asArray(raw.weeklyRetention).map(parseRetentionCell),
       acquisition: asArray(raw.acquisition).map(parseAcquisitionRow),
       contentPerformance: asArray(raw.contentPerformance).map(parseContentPageRow),
+      toolConversion: asArray(raw.toolConversion).map(parseToolConversionRow),
+      ctaPlacement: asArray(raw.ctaPlacement).map(parseCtaPlacementRow),
+      contentEngagement: asArray(raw.contentEngagement).map(parseContentEngagementRow),
+      notFound: asArray(raw.notFound).map(parseNotFoundRow),
       signupFunnel: asArray(raw.signupFunnel).map(parseSignupFunnelRow),
       authFailureReasons: asArray(raw.authFailureReasons).map(parseAuthFailureRow),
       campaignFunnel: parseCampaignFunnel(asRecord(raw.campaignFunnel)),

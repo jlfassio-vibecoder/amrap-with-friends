@@ -1,5 +1,6 @@
 import { next } from '@vercel/edge';
 import { CONSENT_REGION_COOKIE, countryRequiresConsent } from './src/lib/analytics/consentRegion';
+import { NOT_FOUND_EVENT } from './src/lib/analytics/edgeEvents';
 import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, isKnownRoute, resolveSeo } from './src/lib/seo/routes';
 
 const BOT_UA =
@@ -47,7 +48,7 @@ export default function middleware(request: Request): Response | Promise<Respons
   // empty shell. At the scale of an unbounded URL space that is a soft-404
   // problem, so unknown paths get a real 404 here, before the rewrite runs.
   if (!isKnownRoute(pathname)) {
-    return new Response(notFoundHtml(url.origin), {
+    return new Response(notFoundHtml(url.origin, pathname), {
       status: 404,
       headers: {
         'content-type': 'text/html; charset=utf-8',
@@ -116,7 +117,40 @@ ${seo.canonical ? `  <link rel="canonical" href="${escapeAttr(seo.canonical)}" /
  * gets the 404 status and a plain explanation in one round trip. Colours are
  * the light-theme page/ink tokens, inlined because this page loads no CSS.
  */
-function notFoundHtml(origin: string): string {
+/**
+ * Reports the 404 and nothing else.
+ *
+ * Broken inbound links and stale URLs were invisible: this page carries no
+ * Astro layout, so the script that reports every other page never ran here.
+ *
+ * Deliberately anonymous — no browser id, no storage read or write — so it
+ * needs no consent anywhere, and it is the right shape besides: a 404 is a
+ * fact about a URL, not about a person. The keys are injected from the edge's
+ * own environment and the whole thing is skipped when they are absent, so a
+ * misconfigured deploy serves the same page without the reporting.
+ */
+function notFoundBeacon(pathname: string): string {
+  const url = process.env.VITE_SUPABASE_URL?.trim();
+  const key = process.env.VITE_SUPABASE_ANON_KEY?.trim();
+  if (!url || !key) {
+    return '';
+  }
+  const payload = escapeScriptJson(
+    JSON.stringify({
+      endpoint: `${url}/rest/v1/analytics_events`,
+      key,
+      event: NOT_FOUND_EVENT,
+      path: pathname,
+    })
+  );
+  return `<script>
+(function(){try{var c=${payload};var r='';try{r=document.referrer?new URL(document.referrer).hostname:'';}catch(e){}
+fetch(c.endpoint,{method:'POST',keepalive:true,headers:{'Content-Type':'application/json',apikey:c.key,Authorization:'Bearer '+c.key},
+body:JSON.stringify({event_name:c.event,occurred_at:new Date().toISOString(),route:c.path,props:{path:c.path,referrer_host:r}})}).catch(function(){});}catch(e){}})();
+</script>`;
+}
+
+function notFoundHtml(origin: string, pathname: string): string {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -141,8 +175,26 @@ function notFoundHtml(origin: string): string {
        is done, so an old rally link will land here too.</p>
     <p><a href="${escapeAttr(origin)}/">Back to AMRAP With Friends</a></p>
   </main>
+  ${notFoundBeacon(pathname)}
 </body>
 </html>`;
+}
+
+/**
+ * Make a JSON literal safe to inline in a <script> block.
+ *
+ * `new URL()` already percent-encodes `<` and `>` in a pathname, so today
+ * nothing can carry a literal `</script>` this far -- this is not fixing a
+ * live hole. It is here because the safety currently rests on an implicit
+ * parser behaviour a refactor could remove without anyone noticing, and one
+ * `\u003c` is cheaper than that risk. U+2028/9 are escaped for the separate
+ * reason that they are valid JSON but terminate a JavaScript line.
+ */
+function escapeScriptJson(value: string): string {
+  return value
+    .replace(/</g, '\\u003c')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
 }
 
 function escapeAttr(value: string): string {
