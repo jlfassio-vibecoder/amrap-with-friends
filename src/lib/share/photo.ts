@@ -73,3 +73,44 @@ export function scrimStops(): ScrimStop[] {
     { offset: 1, alpha: 0.92 },
   ];
 }
+
+/**
+ * A second, local scrim behind the round-splits chart.
+ *
+ * The gradient above is fixed fractions of the card height, chosen for the
+ * story ratio. The chart is not: where it lands moves with the ratio, with how
+ * many lines the workout takes, and with whether a squad board reserved rows
+ * beneath it. On the square card the gradient's lightest stretch fell straight
+ * across the bars, and since the bars are drawn a shade *lighter* than the
+ * card's near-black background, a photo brighter than that background inverts
+ * the relationship and they stop reading as bars at all.
+ *
+ * So the band is placed at draw time from the chart's own rect rather than
+ * guessed as a fraction, and it is feathered at both edges — a hard-edged
+ * rectangle of darkness across a photo looks like a rendering fault.
+ */
+export interface ScrimBand {
+  /** Peak darkness across the middle of the band. */
+  alpha: number;
+  /** How much of the band's height each fade occupies, as a fraction. */
+  feather: number;
+}
+
+export function chartBandScrim(): ScrimBand {
+  return { alpha: 0.72, feather: 0.18 };
+}
+
+/**
+ * The band's stops, in canvas-gradient order: transparent, full, full,
+ * transparent. Returned as offsets so the feather is one rule rather than four
+ * numbers repeated at the call site.
+ */
+export function chartBandStops(band: ScrimBand = chartBandScrim()): ScrimStop[] {
+  const feather = Math.min(0.45, Math.max(0, band.feather));
+  return [
+    { offset: 0, alpha: 0 },
+    { offset: feather, alpha: band.alpha },
+    { offset: 1 - feather, alpha: band.alpha },
+    { offset: 1, alpha: 0 },
+  ];
+}

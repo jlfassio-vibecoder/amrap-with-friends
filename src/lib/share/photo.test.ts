@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { coverRect, photoRejectionReason, scrimStops } from '@/lib/share/photo';
+import {
+  chartBandScrim,
+  chartBandStops,
+  coverRect,
+  photoRejectionReason,
+  scrimStops,
+} from '@/lib/share/photo';
 
 describe('coverRect', () => {
   it('fills a 9:16 card from a landscape phone photo without distorting it', () => {
@@ -71,5 +77,33 @@ describe('scrimStops', () => {
 
   it('never lets the photo through at full brightness under the type', () => {
     expect(scrimStops().every((stop) => stop.alpha >= 0.6)).toBe(true);
+  });
+});
+
+describe('the scrim band behind the chart', () => {
+  it('fades in and out rather than cutting a hard edge across the photo', () => {
+    const stops = chartBandStops();
+    expect(stops[0]).toEqual({ offset: 0, alpha: 0 });
+    expect(stops.at(-1)).toEqual({ offset: 1, alpha: 0 });
+  });
+
+  it('holds full darkness across the middle, where the bars are', () => {
+    const { alpha } = chartBandScrim();
+    const [, rampIn, rampOut] = chartBandStops();
+    expect(rampIn!.alpha).toBe(alpha);
+    expect(rampOut!.alpha).toBe(alpha);
+    expect(rampOut!.offset).toBeGreaterThan(rampIn!.offset);
+  });
+
+  it('is darker than the card-height gradient is at its lightest', () => {
+    // The point of the band: the gradient's trough is what let the bars
+    // disappear, so a band no darker than that would fix nothing.
+    const lightest = Math.min(...scrimStops().map((stop) => stop.alpha));
+    expect(chartBandScrim().alpha).toBeGreaterThan(lightest);
+  });
+
+  it('clamps a feather that would leave no solid middle', () => {
+    const stops = chartBandStops({ alpha: 0.7, feather: 0.9 });
+    expect(stops[1]!.offset).toBeLessThanOrEqual(stops[2]!.offset);
   });
 });
