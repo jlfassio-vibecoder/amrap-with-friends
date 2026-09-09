@@ -81,6 +81,8 @@ export const ANALYTICS_EVENT_NAMES = [
   'first_touch_captured',
   'content_page_viewed',
   'content_cta_clicked',
+  'content_page_engaged',
+  'content_404',
 
   // The free timer on /amrap-timer — the product's core action, performed
   // before anyone has an account.

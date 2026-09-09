@@ -339,6 +339,70 @@ export default function CoachPage() {
 
             <section className="space-y-3">
               <CoachSectionHeader
+                title={`Read or bounced · ${coachDashboardWindowLabel(dashboard.window)}`}
+              />
+              <div className="card space-y-3 p-4">
+                <CoachDataTable
+                  rows={dashboard.contentEngagement}
+                  rowKey={(row) => row.path}
+                  emptyLabel="No engagement data yet — capture starts with the next deploy."
+                  scrollAfterRows={12}
+                  columns={[
+                    { header: 'Page', render: (row) => row.path },
+                    { header: 'Views', render: (row) => row.sessions, align: 'right' },
+                    {
+                      header: 'Median scroll',
+                      render: (row) => pct(row.medianScrollPct),
+                      align: 'right',
+                    },
+                    {
+                      header: 'Median seconds',
+                      render: (row) => row.medianDwellSec ?? '—',
+                      align: 'right',
+                    },
+                    { header: 'Read to end', render: (row) => row.readToEnd, align: 'right' },
+                    {
+                      header: 'Bounce %',
+                      render: (row) => pct(row.bounceRatePct),
+                      align: 'right',
+                    },
+                  ]}
+                />
+                <p className="text-xs text-secondary">
+                  A bounce is under ten seconds <em>and</em> under a quarter of the page — either
+                  alone is a false positive, since a short answer can be read in eight seconds and
+                  someone can scroll to the bottom hunting for a link without reading a word. A page
+                  that fits on one screen counts as fully scrolled.
+                </p>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <CoachSectionHeader
+                title={`Links that go nowhere · ${coachDashboardWindowLabel(dashboard.window)}`}
+              />
+              <div className="card space-y-3 p-4">
+                <CoachDataTable
+                  rows={dashboard.notFound}
+                  rowKey={(row) => `${row.path}-${row.referrerHost}`}
+                  emptyLabel="No 404s recorded — capture starts with the next deploy."
+                  scrollAfterRows={10}
+                  columns={[
+                    { header: 'Path', render: (row) => row.path },
+                    { header: 'Linked from', render: (row) => row.referrerHost },
+                    { header: 'Hits', render: (row) => row.hits, align: 'right' },
+                  ]}
+                />
+                <p className="text-xs text-secondary">
+                  Our own hostname here is a stale internal link to fix; another site is a redirect
+                  to add. Reported without a browser id and without touching storage, so it needs no
+                  consent anywhere — a 404 is a fact about a URL, not about a person.
+                </p>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <CoachSectionHeader
                 title={`Which link they clicked · ${coachDashboardWindowLabel(dashboard.window)}`}
               />
               <div className="card space-y-3 p-4">

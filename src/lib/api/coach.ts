@@ -120,6 +120,22 @@ export interface CoachAcquisitionRow {
   completionRatePct: number | null;
 }
 
+export interface CoachContentEngagementRow {
+  path: string;
+  sessions: number;
+  medianScrollPct: number | null;
+  medianDwellSec: number | null;
+  readToEnd: number;
+  bounced: number;
+  bounceRatePct: number | null;
+}
+
+export interface CoachNotFoundRow {
+  path: string;
+  referrerHost: string;
+  hits: number;
+}
+
 export interface CoachCtaPlacementRow {
   cta: string;
   fromPath: string;
@@ -189,6 +205,8 @@ export interface CoachDashboard {
   contentPerformance: CoachContentPageRow[];
   toolConversion: ToolConversionRow[];
   ctaPlacement: CoachCtaPlacementRow[];
+  contentEngagement: CoachContentEngagementRow[];
+  notFound: CoachNotFoundRow[];
   signupFunnel: CoachSignupFunnelRow[];
   authFailureReasons: CoachAuthFailureRow[];
   campaignFunnel: CoachCampaignFunnel;
@@ -469,6 +487,26 @@ function parseCampaignLengthRow(row: Record<string, unknown>): CoachCampaignLeng
     campaigns: num(row, 'campaigns'),
     campaignsFinished: num(row, 'campaigns_finished'),
     occurrenceAdherencePct: numOrNull(row, 'occurrence_adherence_pct'),
+  };
+}
+
+function parseContentEngagementRow(row: Record<string, unknown>): CoachContentEngagementRow {
+  return {
+    path: str(row, 'path'),
+    sessions: num(row, 'sessions'),
+    medianScrollPct: numOrNull(row, 'median_scroll_pct'),
+    medianDwellSec: numOrNull(row, 'median_dwell_sec'),
+    readToEnd: num(row, 'read_to_end'),
+    bounced: num(row, 'bounced'),
+    bounceRatePct: numOrNull(row, 'bounce_rate_pct'),
+  };
+}
+
+function parseNotFoundRow(row: Record<string, unknown>): CoachNotFoundRow {
+  return {
+    path: str(row, 'path'),
+    referrerHost: str(row, 'referrer_host'),
+    hits: num(row, 'hits'),
   };
 }
 
@@ -950,6 +988,8 @@ export async function fetchCoachDashboard(window: CoachDashboardWindow = 'all'):
       contentPerformance: asArray(raw.contentPerformance).map(parseContentPageRow),
       toolConversion: asArray(raw.toolConversion).map(parseToolConversionRow),
       ctaPlacement: asArray(raw.ctaPlacement).map(parseCtaPlacementRow),
+      contentEngagement: asArray(raw.contentEngagement).map(parseContentEngagementRow),
+      notFound: asArray(raw.notFound).map(parseNotFoundRow),
       signupFunnel: asArray(raw.signupFunnel).map(parseSignupFunnelRow),
       authFailureReasons: asArray(raw.authFailureReasons).map(parseAuthFailureRow),
       campaignFunnel: parseCampaignFunnel(asRecord(raw.campaignFunnel)),

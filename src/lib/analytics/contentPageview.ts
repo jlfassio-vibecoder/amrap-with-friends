@@ -7,6 +7,11 @@ import {
 } from '@/lib/analytics/attribution';
 import { enforceConsentBoundary } from '@/lib/analytics/consent';
 import { resolveCtaLabel } from '@/lib/analytics/ctaLabel';
+import {
+  computeDwellSec,
+  computeScrollDepthPct,
+  reportPageEngagement,
+} from '@/lib/analytics/pageEngagement';
 import { mountConsentBanner } from '@/lib/analytics/consentBanner';
 import { sendContentEvent } from '@/lib/analytics/contentBeacon';
 import { isAppRoute } from '@/lib/seo/routes';
@@ -70,6 +75,41 @@ export function initContentAnalytics(): void {
     // Whether they came from outside or from another of our own pages: it is
     // the difference between an entry point and a page people read second.
     entry: fromHost !== selfHost,
+  });
+
+  // How far down they got, and how long they stayed. Tracked passively and
+  // reported once, on the way out, so a long read costs one row rather than
+  // one per scroll event.
+  const startedAtMs = Date.now();
+  let maxScrollPct = 0;
+  let engagementReported = false;
+
+  function sampleScroll(): void {
+    maxScrollPct = Math.max(
+      maxScrollPct,
+      computeScrollDepthPct({
+        scrollY: window.scrollY,
+        viewportHeight: window.innerHeight,
+        documentHeight: document.documentElement.scrollHeight,
+      })
+    );
+  }
+
+  sampleScroll();
+  window.addEventListener('scroll', sampleScroll, { passive: true });
+
+  // pagehide rather than beforeunload: it fires for the bfcache case that
+  // beforeunload misses, which on mobile is most departures.
+  window.addEventListener('pagehide', () => {
+    if (engagementReported) {
+      return;
+    }
+    engagementReported = true;
+    reportPageEngagement({
+      path: window.location.pathname,
+      maxScrollPct,
+      dwellSec: computeDwellSec(startedAtMs, Date.now()),
+    });
   });
 
   // The conversion that matters: a click out of the content layer into the

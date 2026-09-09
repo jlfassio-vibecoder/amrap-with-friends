@@ -121,6 +121,18 @@ describe('fetchCoachDashboard', () => {
             signed_up: 5,
           },
         ],
+        contentEngagement: [
+          {
+            path: '/guides/what-is-amrap',
+            sessions: 210,
+            median_scroll_pct: 68.5,
+            median_dwell_sec: 96,
+            read_to_end: 44,
+            bounced: 31,
+            bounce_rate_pct: 14.76,
+          },
+        ],
+        notFound: [{ path: '/old-workouts', referrer_host: 'reddit.com', hits: 12 }],
         ctaPlacement: [
           {
             cta: 'hero-plan',
@@ -267,6 +279,8 @@ describe('fetchCoachDashboard', () => {
     expect(result.data?.weeklyRetention[0]?.retainedPct).toBe(40);
     expect(result.data?.acquisition[0]?.channel).toBe('organic_search');
     expect(result.data?.contentPerformance[0]?.ctaRatePct).toBe(12.22);
+    expect(result.data?.contentEngagement[0]?.medianDwellSec).toBe(96);
+    expect(result.data?.notFound[0]?.referrerHost).toBe('reddit.com');
     expect(result.data?.ctaPlacement[0]?.cta).toBe('hero-plan');
     expect(result.data?.ctaPlacement[0]?.visitors).toBe(31);
     expect(result.data?.toolConversion[1]?.cohort).toBe('timer_completed');
@@ -353,6 +367,8 @@ describe('fetchCoachDashboard', () => {
     expect(result.data?.contentPerformance).toEqual([]);
     expect(result.data?.toolConversion).toEqual([]);
     expect(result.data?.ctaPlacement).toEqual([]);
+    expect(result.data?.contentEngagement).toEqual([]);
+    expect(result.data?.notFound).toEqual([]);
     expect(result.data?.campaignFunnel.campaignsCreated).toBe(0);
     expect(result.data?.campaignLengthAdherence).toEqual([]);
   });
