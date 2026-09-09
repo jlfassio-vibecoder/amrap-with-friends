@@ -11,6 +11,7 @@ import {
   reportPacingScored,
   shouldReportPacingScore,
 } from '@/lib/analytics/pacingCalculatorEvents';
+import { countOf } from '@/lib/units/plural';
 
 /**
  * The one interactive thing on the science pages, and the only honest one: it
@@ -167,8 +168,9 @@ export default function PacingCalculator() {
             <p className="text-display text-3xl text-ink">{pvi.toFixed(1)}% variability</p>
             <p className="text-sm text-secondary">
               <span className="font-semibold text-ink">{result.classification}</span> — scored on{' '}
-              {scored.length} rounds, fastest {formatSplit(fastest)}, slowest {formatSplit(slowest)}
-              . This mission's score would be multiplied by {result.multiplier.toFixed(2)}.
+              {countOf(scored.length, 'round')}, fastest {formatSplit(fastest)}, slowest{' '}
+              {formatSplit(slowest)}. This mission's score would be multiplied by{' '}
+              {result.multiplier.toFixed(2)}.
             </p>
           </div>
         )}

@@ -7,6 +7,7 @@ import {
   reportFreeTimerStarted,
   shouldReportFreeTimerAbandon,
 } from '@/lib/analytics/freeTimerEvents';
+import { countOf } from '@/lib/units/plural';
 
 const DURATIONS = [5, 10, 15, 20] as const;
 
@@ -174,7 +175,7 @@ export default function FreeAmrapTimer() {
         {label}
       </div>
       <p className="sr-only" aria-live="polite">
-        {finished ? 'Time is up.' : `${label} remaining, ${rounds} rounds logged.`}
+        {finished ? 'Time is up.' : `${label} remaining, ${countOf(rounds, 'round')} logged.`}
       </p>
 
       <div className="flex flex-wrap justify-center gap-3">
@@ -238,7 +239,7 @@ export default function FreeAmrapTimer() {
       <div className="space-y-2 border-t border-border pt-5 text-center">
         <p className="text-sm text-secondary">
           {finished
-            ? `${rounds} rounds in ${durationMinutes} minutes. Run the same clock with friends and see everyone's rounds land live.`
+            ? `${countOf(rounds, 'round')} in ${durationMinutes} minutes. Run the same clock with friends and see everyone's rounds land live.`
             : 'This timer is the solo version. The app runs one synced clock across everyone’s phones, with a shared leaderboard.'}
         </p>
         <a

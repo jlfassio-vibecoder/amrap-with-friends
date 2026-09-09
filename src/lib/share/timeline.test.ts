@@ -122,6 +122,16 @@ describe('formatScore', () => {
     expect(formatScore({ rounds: 7, reps: 12 })).toBe('7 rounds + 12');
     expect(formatScore({ rounds: 7, reps: 0 })).toBe('7 rounds');
   });
+
+  it('says "1 round", which the hero on a real card did not', () => {
+    // The card is the thing a stranger sees first, and it read "1 rounds".
+    expect(formatScore({ rounds: 1, reps: 0 })).toBe('1 round');
+    expect(formatScore({ rounds: 1, reps: 12 })).toBe('1 round + 12');
+  });
+
+  it('treats zero as plural', () => {
+    expect(formatScore({ rounds: 0, reps: 0 })).toBe('0 rounds');
+  });
 });
 
 describe('resolveVariant', () => {

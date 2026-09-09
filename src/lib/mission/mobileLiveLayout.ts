@@ -1,4 +1,5 @@
 import type { LiveMissionPhase } from '@/lib/missionSync/types';
+import { countOf } from '@/lib/units/plural';
 
 /** Mobile LIVE compaction: hide leaderboard, chat, and mobile footer below `lg`. */
 export function hideMobileLiveChrome(phase: LiveMissionPhase): boolean {
@@ -30,5 +31,5 @@ export function formatMobileLiveScoreLabel(
   if (repsPerRound > 0) {
     return `${score} reps`;
   }
-  return `${roundCount} rounds`;
+  return countOf(roundCount, 'round');
 }
