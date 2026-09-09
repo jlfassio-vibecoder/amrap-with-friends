@@ -243,6 +243,7 @@ export default function FreeAmrapTimer() {
         </p>
         <a
           className="btn-primary inline-flex items-center justify-center text-sm"
+          data-cta="free-timer"
           href="/plan-mission"
           onClick={() => {
             reportFreeTimerCtaClicked(finished ? 'finished' : 'idle', runRef.current);

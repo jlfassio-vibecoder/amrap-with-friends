@@ -339,6 +339,35 @@ export default function CoachPage() {
 
             <section className="space-y-3">
               <CoachSectionHeader
+                title={`Which link they clicked · ${coachDashboardWindowLabel(dashboard.window)}`}
+              />
+              <div className="card space-y-3 p-4">
+                <CoachDataTable
+                  rows={dashboard.ctaPlacement}
+                  rowKey={(row) => `${row.cta}-${row.fromPath}-${row.toPath}`}
+                  emptyLabel="No click-throughs yet — capture starts with the next deploy."
+                  scrollAfterRows={12}
+                  columns={[
+                    { header: 'Placement', render: (row) => formatCoachLabel(row.cta) },
+                    { header: 'On page', render: (row) => row.fromPath },
+                    { header: 'Goes to', render: (row) => row.toPath },
+                    { header: 'Clicks', render: (row) => row.clicks, align: 'right' },
+                    { header: 'Visitors', render: (row) => row.visitors, align: 'right' },
+                    { header: 'Signed up', render: (row) => row.signedUp, align: 'right' },
+                  ]}
+                />
+                <p className="text-xs text-secondary">
+                  A named placement comes from a <code>data-cta</code> on the link; everything else
+                  is named for the landmark it sits in — nav, header, footer or inline — so nothing
+                  had to be annotated to be countable. Rows are per source page, because the same
+                  placement means different things on different pages: inline links in a guide are
+                  the guide's argument, inline links on the home page are mostly navigation.
+                </p>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <CoachSectionHeader
                 title={`Do the free tools convert · ${coachDashboardWindowLabel(dashboard.window)}`}
               />
               <div className="card space-y-3 p-4">

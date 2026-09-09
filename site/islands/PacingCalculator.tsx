@@ -186,6 +186,7 @@ export default function PacingCalculator() {
         </p>
         <a
           className="btn-primary inline-flex items-center justify-center text-sm"
+          data-cta="pacing-calculator"
           href="/plan-mission"
           onClick={() => {
             reportPacingCtaClicked(pvi === null ? 'idle' : 'scored', contextRef.current);

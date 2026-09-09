@@ -120,6 +120,15 @@ export interface CoachAcquisitionRow {
   completionRatePct: number | null;
 }
 
+export interface CoachCtaPlacementRow {
+  cta: string;
+  fromPath: string;
+  toPath: string;
+  clicks: number;
+  visitors: number;
+  signedUp: number;
+}
+
 export interface CoachContentPageRow {
   path: string;
   views: number;
@@ -179,6 +188,7 @@ export interface CoachDashboard {
   acquisition: CoachAcquisitionRow[];
   contentPerformance: CoachContentPageRow[];
   toolConversion: ToolConversionRow[];
+  ctaPlacement: CoachCtaPlacementRow[];
   signupFunnel: CoachSignupFunnelRow[];
   authFailureReasons: CoachAuthFailureRow[];
   campaignFunnel: CoachCampaignFunnel;
@@ -459,6 +469,17 @@ function parseCampaignLengthRow(row: Record<string, unknown>): CoachCampaignLeng
     campaigns: num(row, 'campaigns'),
     campaignsFinished: num(row, 'campaigns_finished'),
     occurrenceAdherencePct: numOrNull(row, 'occurrence_adherence_pct'),
+  };
+}
+
+function parseCtaPlacementRow(row: Record<string, unknown>): CoachCtaPlacementRow {
+  return {
+    cta: str(row, 'cta'),
+    fromPath: str(row, 'from_path'),
+    toPath: str(row, 'to_path'),
+    clicks: num(row, 'clicks'),
+    visitors: num(row, 'visitors'),
+    signedUp: num(row, 'signed_up'),
   };
 }
 
@@ -928,6 +949,7 @@ export async function fetchCoachDashboard(window: CoachDashboardWindow = 'all'):
       acquisition: asArray(raw.acquisition).map(parseAcquisitionRow),
       contentPerformance: asArray(raw.contentPerformance).map(parseContentPageRow),
       toolConversion: asArray(raw.toolConversion).map(parseToolConversionRow),
+      ctaPlacement: asArray(raw.ctaPlacement).map(parseCtaPlacementRow),
       signupFunnel: asArray(raw.signupFunnel).map(parseSignupFunnelRow),
       authFailureReasons: asArray(raw.authFailureReasons).map(parseAuthFailureRow),
       campaignFunnel: parseCampaignFunnel(asRecord(raw.campaignFunnel)),

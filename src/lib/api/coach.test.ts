@@ -121,6 +121,16 @@ describe('fetchCoachDashboard', () => {
             signed_up: 5,
           },
         ],
+        ctaPlacement: [
+          {
+            cta: 'hero-plan',
+            from_path: '/',
+            to_path: '/create',
+            clicks: 42,
+            visitors: 31,
+            signed_up: 7,
+          },
+        ],
         toolConversion: [
           {
             cohort_order: 1,
@@ -257,6 +267,8 @@ describe('fetchCoachDashboard', () => {
     expect(result.data?.weeklyRetention[0]?.retainedPct).toBe(40);
     expect(result.data?.acquisition[0]?.channel).toBe('organic_search');
     expect(result.data?.contentPerformance[0]?.ctaRatePct).toBe(12.22);
+    expect(result.data?.ctaPlacement[0]?.cta).toBe('hero-plan');
+    expect(result.data?.ctaPlacement[0]?.visitors).toBe(31);
     expect(result.data?.toolConversion[1]?.cohort).toBe('timer_completed');
     expect(result.data?.toolConversion[1]?.signupRatePct).toBe(21.67);
   });
@@ -340,6 +352,7 @@ describe('fetchCoachDashboard', () => {
     expect(result.data?.acquisition).toEqual([]);
     expect(result.data?.contentPerformance).toEqual([]);
     expect(result.data?.toolConversion).toEqual([]);
+    expect(result.data?.ctaPlacement).toEqual([]);
     expect(result.data?.campaignFunnel.campaignsCreated).toBe(0);
     expect(result.data?.campaignLengthAdherence).toEqual([]);
   });

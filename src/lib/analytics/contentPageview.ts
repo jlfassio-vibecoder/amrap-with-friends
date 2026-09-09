@@ -6,6 +6,7 @@ import {
   referrerHost,
 } from '@/lib/analytics/attribution';
 import { enforceConsentBoundary } from '@/lib/analytics/consent';
+import { resolveCtaLabel } from '@/lib/analytics/ctaLabel';
 import { mountConsentBanner } from '@/lib/analytics/consentBanner';
 import { sendContentEvent } from '@/lib/analytics/contentBeacon';
 import { isAppRoute } from '@/lib/seo/routes';
@@ -82,13 +83,19 @@ export function initContentAnalytics(): void {
         return;
       }
       const anchor = target.closest('a');
-      const href = anchor?.getAttribute('href');
+      if (!anchor) {
+        return;
+      }
+      const href = anchor.getAttribute('href');
       if (!href || !href.startsWith('/') || !isAppRoute(href)) {
         return;
       }
       sendContentEvent('content_cta_clicked', {
         from_path: window.location.pathname,
         to_path: href,
+        // Which link, not just where it went: a hero button and a nav item
+        // pointing at the same route are different findings.
+        cta: resolveCtaLabel(anchor),
       });
     },
     { passive: true }
