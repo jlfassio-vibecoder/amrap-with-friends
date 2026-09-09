@@ -240,7 +240,19 @@ function drawCardFrame(ctx: Ctx, frame: FrameState, options: DrawFrameOptions): 
     y += 52;
 
     const slowest = Math.max(...splits.map((split) => split.seconds), 1);
-    const chartHeight = options.layout === 'story' ? 260 : 150;
+    // Sized from the space actually left rather than a constant: the first
+    // version left roughly a third of the card empty beneath the chart. A
+    // board, when there is one, gets its rows reserved first — the squad is
+    // the point of a squad card, and the chart takes what is over.
+    const boardReserve =
+      options.variant !== 'amqap' && options.showBoard !== false
+        ? Math.min(6, frame.bars.length) * 88 + 40
+        : 0;
+    const footerTop = height - spec.safeBottom - 40 - boardReserve;
+    const chartHeight =
+      options.layout === 'story'
+        ? Math.max(200, Math.min(620, footerTop - y - 90))
+        : Math.max(120, Math.min(300, footerTop - y - 90));
     const gap = 12;
     const barWidth = Math.max(
       8,

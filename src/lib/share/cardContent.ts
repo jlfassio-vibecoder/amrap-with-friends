@@ -26,19 +26,39 @@ export function formatMovement(movement: CardMovement): string {
     : `${movement.reps} ${movement.name}`;
 }
 
-/** Reads the movements out of the mission's stored workout jsonb, tolerating anything malformed. */
+/**
+ * Reads the movements out of the mission's stored workout jsonb.
+ *
+ * The stored shape is a bare array of `{ name, unit, target }` — verified
+ * against a real row, after a first version of this function was written
+ * against an invented `{ movements: [{ reps }] }` shape, passed its own tests,
+ * and shipped a card with no movements and a rep total of zero. Both shapes
+ * are accepted now because the object form is what the design document
+ * describes, and a stored row could yet appear in either.
+ */
 export function cardMovements(data: ReplayData): CardMovement[] {
   const workout = data.mission.workout;
-  const raw = (workout && typeof workout === 'object' ? workout : {}) as Record<string, unknown>;
-  const movements = Array.isArray(raw.movements) ? raw.movements : [];
+  const movements = Array.isArray(workout)
+    ? workout
+    : Array.isArray((workout as Record<string, unknown> | null)?.movements)
+      ? ((workout as Record<string, unknown>).movements as unknown[])
+      : [];
   return movements
     .map((entry) => {
       const row = (entry && typeof entry === 'object' ? entry : {}) as Record<string, unknown>;
       const name = typeof row.name === 'string' ? row.name : '';
+      // `target` is what the rows actually carry; `reps` is the design's name
+      // for the same field.
+      const count = [row.target, row.reps].find(
+        (value) => typeof value === 'number' && Number.isFinite(value)
+      );
+      const unit = typeof row.unit === 'string' && row.unit ? row.unit : null;
       return {
         name,
-        reps: typeof row.reps === 'number' && Number.isFinite(row.reps) ? row.reps : null,
-        unit: typeof row.unit === 'string' && row.unit ? row.unit : null,
+        reps: typeof count === 'number' ? count : null,
+        // "10 reps Air Squats" reads worse than "10 Air Squats", and `reps` is
+        // the unit on almost every movement in the library.
+        unit: unit === 'reps' ? null : unit,
       };
     })
     .filter((movement) => movement.name.length > 0);

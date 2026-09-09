@@ -13,12 +13,12 @@ function data(overrides: Partial<ReplayData['mission']> = {}, participants = 1):
     mission: {
       id: 'm1',
       templateId: 'the-piston',
-      workout: {
-        movements: [
-          { name: 'Air Squats', reps: 10 },
-          { name: 'Hand-Release Push-ups', reps: 10 },
-        ],
-      },
+      // The shape a real missions row actually stores: a bare array, with
+      // `target` rather than `reps`. Copied from production, not invented.
+      workout: [
+        { name: 'Air Squats', unit: 'reps', target: 10 },
+        { name: 'Hand-Release Push-ups', unit: 'reps', target: 10 },
+      ],
       capSeconds: 300,
       durationMinutes: 5,
       intensityTier: 3,
@@ -61,7 +61,7 @@ describe('cardMovements', () => {
   it('survives a malformed or missing workout rather than blanking the card', () => {
     expect(cardMovements(data({ workout: null }))).toEqual([]);
     expect(cardMovements(data({ workout: { movements: 'nope' } }))).toEqual([]);
-    expect(cardMovements(data({ workout: { movements: [{ reps: 5 }, 'x', null] } }))).toEqual([]);
+    expect(cardMovements(data({ workout: [{ target: 5 }, 'x', null] }))).toEqual([]);
   });
 });
 
