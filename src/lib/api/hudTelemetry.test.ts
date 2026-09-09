@@ -25,6 +25,15 @@ const domainMinutes30d = {
   activeRecovery: 0,
 };
 
+const emptyDomainMinutes = {
+  5: 0,
+  10: 0,
+  15: 0,
+  20: 0,
+  other: 0,
+  activeRecovery: 0,
+};
+
 const classification = {
   current: 'civilian' as const,
   previous: 'unclassified' as const,
@@ -75,11 +84,40 @@ describe('parseHudTelemetryPayload', () => {
       // Absent from this payload: a server behind the week-history migration
       // parses fine and the HUD degrades to the read-only attrition strip.
       weeks: [],
+      // Absent 72h / 7d keys: pre-domain-windows RPC defaults to empty matrices.
+      domainMinutes72h: emptyDomainMinutes,
+      domainMinutes7d: emptyDomainMinutes,
       domainMinutes30d,
       classification,
       activity7d,
       overtraining,
     });
+  });
+
+  it('parses 72-hour and 7-day domain matrices when present', () => {
+    const domainMinutes72h = { 5: 5, 10: 0, 15: 0, 20: 10, other: 0, activeRecovery: 5 };
+    const domainMinutes7d = { 5: 10, 10: 5, 15: 0, 20: 20, other: 0, activeRecovery: 10 };
+    expect(
+      parseHudTelemetryPayload({
+        weekMinutes: 75,
+        weekPviAverage: 12.8,
+        weekEndsAt: '2026-08-25T07:00:00.000Z',
+        lastLockedAt: '2026-08-24T10:00:00.000Z',
+        attrition: attrition12,
+        domainMinutes72h,
+        domainMinutes7d,
+        domainMinutes30d,
+        classification,
+        activity7d,
+        overtraining,
+      })
+    ).toEqual(
+      expect.objectContaining({
+        domainMinutes72h,
+        domainMinutes7d,
+        domainMinutes30d,
+      })
+    );
   });
 
   it('parses weekPviMissions when present', () => {
@@ -163,6 +201,8 @@ describe('parseHudTelemetryPayload', () => {
       lastLockedAt: null,
       attrition: Array.from({ length: 12 }, () => false),
       weeks: [],
+      domainMinutes72h: emptyDomainMinutes,
+      domainMinutes7d: emptyDomainMinutes,
       domainMinutes30d: { 5: 0, 10: 0, 15: 0, 20: 0, other: 0, activeRecovery: 0 },
       classification: emptyClassification,
       activity7d: emptyActivity7d,
@@ -303,6 +343,23 @@ describe('parseHudTelemetryPayload', () => {
         domainMinutes30d: { 5: 1, 10: 1, 15: 1, 20: 1, other: 0, activeRecovery: 0 },
       })
     );
+  });
+
+  it('rejects invalid domainMinutes72h when the key is present', () => {
+    expect(
+      parseHudTelemetryPayload({
+        weekMinutes: 10,
+        weekPviAverage: null,
+        weekEndsAt: '2026-08-25T07:00:00.000Z',
+        lastLockedAt: null,
+        attrition: Array.from({ length: 12 }, () => false),
+        domainMinutes72h: { 5: 1, 10: 1, 15: 1 },
+        domainMinutes30d,
+        classification,
+        activity7d,
+        overtraining,
+      })
+    ).toBeNull();
   });
 });
 

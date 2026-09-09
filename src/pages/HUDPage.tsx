@@ -317,7 +317,20 @@ export default function HUDPage() {
                   'Domain balance will appear here once your HUD telemetry loads.'
                 )
               ) : (
-                <DomainMatrixChart domainMinutes30d={telemetry.domainMinutes30d} />
+                <>
+                  <DomainMatrixChart
+                    domainMinutes={telemetry.domainMinutes72h}
+                    windowLabel="72-hour"
+                  />
+                  <DomainMatrixChart
+                    domainMinutes={telemetry.domainMinutes7d}
+                    windowLabel="7-day"
+                  />
+                  <DomainMatrixChart
+                    domainMinutes={telemetry.domainMinutes30d}
+                    windowLabel="30-day"
+                  />
+                </>
               )}
             </HudPanel>
 

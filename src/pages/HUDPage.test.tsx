@@ -106,6 +106,8 @@ function buildTelemetry(): HUDTelemetryPayload {
     lastLockedAt: '2026-09-08T17:00:00.000Z',
     attrition: Array.from({ length: 12 }, (_, index) => index >= 10),
     weeks,
+    domainMinutes72h: { 5: 5, 10: 10, 15: 0, 20: 0, other: 0, activeRecovery: 0 },
+    domainMinutes7d: { 5: 10, 10: 20, 15: 0, 20: 10, other: 0, activeRecovery: 5 },
     domainMinutes30d: { 5: 20, 10: 40, 15: 0, 20: 20, other: 0, activeRecovery: 10 },
     classification: {
       current: 'civilian',
@@ -250,5 +252,15 @@ describe('HUDPage tabs', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: 'Benchmarks' }));
     expect(screen.getByText('No active benchmarks yet.')).toBeTruthy();
+  });
+
+  it('stacks 72-hour, 7-day, and 30-day domain matrices on Domains', () => {
+    renderPage();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Domains' }));
+
+    expect(screen.getByLabelText('72-hour domain matrix')).toBeTruthy();
+    expect(screen.getByLabelText('7-day domain matrix')).toBeTruthy();
+    expect(screen.getByLabelText('30-day domain matrix')).toBeTruthy();
   });
 });
