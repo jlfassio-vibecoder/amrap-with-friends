@@ -110,5 +110,12 @@ const graph = serializeJsonLd([organization(), ...jsonLd]);
       <slot />
     </main>
     <SiteFooter />
+    {/* Deferred and bundled by Astro, so the content pages report a pageview
+        and a click-through into the app without loading supabase-js. */}
+    <script>
+      import { initContentAnalytics } from '@/lib/analytics/contentPageview';
+
+      initContentAnalytics();
+    </script>
   </body>
 </html>

@@ -4,6 +4,10 @@ import { describe, expect, it } from 'vitest';
 import { ANALYTICS_EVENT_NAMES, RETIRED_ANALYTICS_EVENT_NAMES } from '@/lib/analytics/events';
 
 const SRC_DIR = 'src';
+// The Astro content pages emit through sendContentEvent rather than track(),
+// and they live outside src/ -- without this the registry would drift again,
+// in exactly the corner nothing else looks at.
+const SITE_DIR = 'site';
 const MIGRATIONS_DIR = 'supabase/migrations';
 
 function walk(dir: string, matches: (path: string) => boolean): string[] {
@@ -29,13 +33,16 @@ function walk(dir: string, matches: (path: string) => boolean): string[] {
 function trackAliases(source: string): string[] {
   const aliases: string[] = [];
   for (const match of source.matchAll(
-    /import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*'@\/lib\/analytics\/track'/g
+    /import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*'@\/lib\/analytics\/(?:track|contentBeacon)'/g
   )) {
     for (const clause of match[1].split(',')) {
       const parts = clause.trim().split(/\s+as\s+/);
       const imported = parts[0]?.trim();
       const local = (parts[1] ?? parts[0])?.trim();
-      if (local && (imported === 'track' || imported === 'trackBeacon')) {
+      if (
+        local &&
+        (imported === 'track' || imported === 'trackBeacon' || imported === 'sendContentEvent')
+      ) {
         aliases.push(local);
       }
     }
@@ -45,10 +52,12 @@ function trackAliases(source: string): string[] {
 
 function emittedEventNames(): Map<string, string[]> {
   const found = new Map<string, string[]>();
-  const files = walk(
-    SRC_DIR,
-    (path) => /\.tsx?$/.test(path) && !/\.test\.tsx?$/.test(path) && !path.endsWith('track.ts')
-  );
+  const isSource = (path: string) =>
+    /\.(tsx?|astro)$/.test(path) &&
+    !/\.test\.tsx?$/.test(path) &&
+    !path.endsWith('track.ts') &&
+    !path.endsWith('contentBeacon.ts');
+  const files = [...walk(SRC_DIR, isSource), ...walk(SITE_DIR, isSource)];
   for (const path of files) {
     const source = readFileSync(path, 'utf8');
     const aliases = trackAliases(source);

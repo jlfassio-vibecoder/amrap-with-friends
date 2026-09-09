@@ -1,5 +1,10 @@
 import { callRpc } from '@/lib/api/callRpc';
 import type { JourneyEntry, JourneyLifetime } from '@/lib/coach/journeyTimeline';
+import type {
+  MissionDropoffRow,
+  RetentionCell,
+  SocialLiftRow,
+} from '@/lib/coach/engagementInsights';
 import { isLinkableAnonId } from '@/lib/api/linkAnonIdentity';
 import { isGuestHistoryCohort, type ActivityCohortId } from '@/lib/coach/activityCohorts';
 import {
@@ -102,6 +107,28 @@ export function coachDashboardWindowLabel(window: CoachDashboardWindow): string 
   }
 }
 
+export interface CoachAcquisitionRow {
+  channel: string;
+  source: string;
+  campaign: string;
+  browsers: number;
+  signedUp: number;
+  signupRatePct: number | null;
+  trained: number;
+  completed: number;
+  completionRatePct: number | null;
+}
+
+export interface CoachContentPageRow {
+  path: string;
+  views: number;
+  entryViews: number;
+  visitors: number;
+  ctaClicks: number;
+  ctaRatePct: number | null;
+  signedUp: number;
+}
+
 export interface CoachSignupFunnelRow {
   method: string;
   attempts: number;
@@ -145,6 +172,11 @@ export interface CoachDashboard {
   intakeFunnel: CoachIntakeFunnel;
   rallyConversion: CoachRallyConversion;
   missionAbandonment: CoachMissionAbandonment;
+  missionDropoff: MissionDropoffRow[];
+  socialLift: SocialLiftRow[];
+  weeklyRetention: RetentionCell[];
+  acquisition: CoachAcquisitionRow[];
+  contentPerformance: CoachContentPageRow[];
   signupFunnel: CoachSignupFunnelRow[];
   authFailureReasons: CoachAuthFailureRow[];
   campaignFunnel: CoachCampaignFunnel;
@@ -425,6 +457,67 @@ function parseCampaignLengthRow(row: Record<string, unknown>): CoachCampaignLeng
     campaigns: num(row, 'campaigns'),
     campaignsFinished: num(row, 'campaigns_finished'),
     occurrenceAdherencePct: numOrNull(row, 'occurrence_adherence_pct'),
+  };
+}
+
+function parseContentPageRow(row: Record<string, unknown>): CoachContentPageRow {
+  return {
+    path: str(row, 'path'),
+    views: num(row, 'views'),
+    entryViews: num(row, 'entry_views'),
+    visitors: num(row, 'visitors'),
+    ctaClicks: num(row, 'cta_clicks'),
+    ctaRatePct: numOrNull(row, 'cta_rate_pct'),
+    signedUp: num(row, 'signed_up'),
+  };
+}
+
+function parseAcquisitionRow(row: Record<string, unknown>): CoachAcquisitionRow {
+  return {
+    channel: str(row, 'channel'),
+    source: str(row, 'source'),
+    campaign: str(row, 'campaign'),
+    browsers: num(row, 'browsers'),
+    signedUp: num(row, 'signed_up'),
+    signupRatePct: numOrNull(row, 'signup_rate_pct'),
+    trained: num(row, 'trained'),
+    completed: num(row, 'completed'),
+    completionRatePct: numOrNull(row, 'completion_rate_pct'),
+  };
+}
+
+function parseMissionDropoffRow(row: Record<string, unknown>): MissionDropoffRow {
+  return {
+    bucketOrder: num(row, 'bucket_order'),
+    elapsedBucket: str(row, 'elapsed_bucket'),
+    abandons: num(row, 'abandons'),
+    pctOfAbandons: numOrNull(row, 'pct_of_abandons'),
+    medianElapsedPct: numOrNull(row, 'median_elapsed_pct'),
+    medianRounds: numOrNull(row, 'median_rounds'),
+  };
+}
+
+function parseSocialLiftRow(row: Record<string, unknown>): SocialLiftRow {
+  return {
+    cohort: str(row, 'cohort'),
+    participations: num(row, 'participations'),
+    athletes: num(row, 'athletes'),
+    completed: num(row, 'completed'),
+    completionRatePct: numOrNull(row, 'completion_rate_pct'),
+    returnEligible: num(row, 'return_eligible'),
+    returnedWithin14d: num(row, 'returned_within_14d'),
+    returnRatePct: numOrNull(row, 'return_rate_pct'),
+    avgGroupSize: numOrNull(row, 'avg_group_size'),
+  };
+}
+
+function parseRetentionCell(row: Record<string, unknown>): RetentionCell {
+  return {
+    cohortWeek: str(row, 'cohort_week'),
+    cohortSize: num(row, 'cohort_size'),
+    weekOffset: num(row, 'week_offset'),
+    retained: num(row, 'retained'),
+    retainedPct: numOrNull(row, 'retained_pct'),
   };
 }
 
@@ -813,6 +906,11 @@ export async function fetchCoachDashboard(window: CoachDashboardWindow = 'all'):
       intakeFunnel: parseIntakeFunnel(asRecord(raw.intakeFunnel)),
       rallyConversion: parseRallyConversion(asRecord(raw.rallyConversion)),
       missionAbandonment: parseMissionAbandonment(asRecord(raw.missionAbandonment)),
+      missionDropoff: asArray(raw.missionDropoff).map(parseMissionDropoffRow),
+      socialLift: asArray(raw.socialLift).map(parseSocialLiftRow),
+      weeklyRetention: asArray(raw.weeklyRetention).map(parseRetentionCell),
+      acquisition: asArray(raw.acquisition).map(parseAcquisitionRow),
+      contentPerformance: asArray(raw.contentPerformance).map(parseContentPageRow),
       signupFunnel: asArray(raw.signupFunnel).map(parseSignupFunnelRow),
       authFailureReasons: asArray(raw.authFailureReasons).map(parseAuthFailureRow),
       campaignFunnel: parseCampaignFunnel(asRecord(raw.campaignFunnel)),

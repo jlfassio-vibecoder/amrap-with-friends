@@ -7,6 +7,7 @@ import { CoachEventsExplorer } from '@/components/coach/CoachEventsExplorer';
 import { CoachFunnelCard } from '@/components/coach/CoachFunnelCard';
 import { CoachGuestBrowsersPanel } from '@/components/coach/CoachGuestBrowsersPanel';
 import { CoachOnboardingStuckTable } from '@/components/coach/CoachOnboardingStuckTable';
+import { CoachRetentionGrid } from '@/components/coach/CoachRetentionGrid';
 import { CoachSectionHeader } from '@/components/coach/CoachSectionHeader';
 import { CoachStatGrid } from '@/components/coach/CoachStatGrid';
 import { CoachUserDetailPanel } from '@/components/coach/CoachUserDetailPanel';
@@ -21,6 +22,11 @@ import {
 } from '@/lib/api/coach';
 import { GUEST_BROWSERS_STAT_ID } from '@/lib/coach/guestBrowsersWindows';
 import { formatCoachLabel } from '@/lib/coach/formatCoachLabel';
+import {
+  dropoffHeadline,
+  socialLift,
+  socialLiftIsMeaningful,
+} from '@/lib/coach/engagementInsights';
 import { useOnlineAnonIds } from '@/hooks/useOnlineUserIds';
 
 function pct(value: number | null): string {
@@ -282,6 +288,186 @@ export default function CoachPage() {
                 </span>
                 .
               </p>
+            </section>
+
+            <section className="space-y-3">
+              <CoachSectionHeader
+                title={`Where athletes come from · ${coachDashboardWindowLabel(dashboard.window)}`}
+              />
+              <div className="card space-y-3 p-4">
+                <CoachDataTable
+                  rows={dashboard.acquisition}
+                  rowKey={(row) => `${row.channel}-${row.source}-${row.campaign}`}
+                  emptyLabel="No first-touch data yet — capture starts with the next deploy."
+                  columns={[
+                    { header: 'Channel', render: (row) => formatCoachLabel(row.channel) },
+                    { header: 'Source', render: (row) => row.source },
+                    { header: 'Campaign', render: (row) => row.campaign },
+                    { header: 'Browsers', render: (row) => row.browsers, align: 'right' },
+                    { header: 'Signed up', render: (row) => row.signedUp, align: 'right' },
+                    {
+                      header: 'Sign-up %',
+                      render: (row) => pct(row.signupRatePct),
+                      align: 'right',
+                    },
+                    {
+                      header: 'Completed a mission',
+                      render: (row) => row.completed,
+                      align: 'right',
+                    },
+                    {
+                      header: 'Browser → completed %',
+                      render: (row) => pct(row.completionRatePct),
+                      align: 'right',
+                    },
+                  ]}
+                />
+                <p className="text-xs text-secondary">
+                  First touch, ranked by athletes who completed a mission rather than by traffic — a
+                  channel sending a thousand bounces is worth less than one sending ten people who
+                  train. Clicks from our own content pages count as internal, not as a referral, so
+                  the site cannot take credit for its own traffic. Only browsers seen since this
+                  shipped appear here.
+                </p>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <CoachSectionHeader
+                title={`Do the content pages convert · ${coachDashboardWindowLabel(dashboard.window)}`}
+              />
+              <div className="card space-y-3 p-4">
+                <CoachDataTable
+                  rows={dashboard.contentPerformance}
+                  rowKey={(row) => row.path}
+                  emptyLabel="No content pageviews yet — capture starts with the next deploy."
+                  scrollAfterRows={12}
+                  columns={[
+                    { header: 'Page', render: (row) => row.path },
+                    { header: 'Visitors', render: (row) => row.visitors, align: 'right' },
+                    { header: 'Landed here', render: (row) => row.entryViews, align: 'right' },
+                    { header: 'Entered the app', render: (row) => row.ctaClicks, align: 'right' },
+                    {
+                      header: 'Crossed %',
+                      render: (row) => pct(row.ctaRatePct),
+                      align: 'right',
+                    },
+                    { header: 'Signed up', render: (row) => row.signedUp, align: 'right' },
+                  ]}
+                />
+                <p className="text-xs text-secondary">
+                  Ranked by people who crossed into the app, not by traffic — a page with ten
+                  thousand readers who never enter is an SEO result, not a product one. "Landed
+                  here" counts arrivals from outside the site, so it separates entry points from
+                  pages people read second.
+                </p>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <CoachSectionHeader title="Does anyone come back" />
+              <div className="card space-y-3 p-4">
+                <CoachRetentionGrid cells={dashboard.weeklyRetention} />
+                <p className="text-xs text-secondary">
+                  Cohorted on an athlete's first mission, not their sign-up date, and covering
+                  registered users only — an anon id is per-browser, so guest retention would mostly
+                  measure cookie lifetime. Not affected by the window picker: a cohort curve has to
+                  look back further than the window to fill in.
+                </p>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <CoachSectionHeader
+                title={`Does training with friends work · ${coachDashboardWindowLabel(dashboard.window)}`}
+              />
+              <div className="card space-y-3 p-4">
+                <CoachDataTable
+                  rows={dashboard.socialLift}
+                  rowKey={(row) => row.cohort}
+                  emptyLabel="No missions recorded in this window."
+                  columns={[
+                    { header: 'Trained', render: (row) => formatCoachLabel(row.cohort) },
+                    { header: 'Missions', render: (row) => row.participations, align: 'right' },
+                    { header: 'Athletes', render: (row) => row.athletes, align: 'right' },
+                    {
+                      header: 'Completed %',
+                      render: (row) => pct(row.completionRatePct),
+                      align: 'right',
+                    },
+                    {
+                      header: 'Returned in 14d %',
+                      render: (row) => pct(row.returnRatePct),
+                      align: 'right',
+                    },
+                    {
+                      header: 'Avg. group',
+                      render: (row) => row.avgGroupSize ?? '—',
+                      align: 'right',
+                    },
+                  ]}
+                />
+                {socialLiftIsMeaningful(dashboard.socialLift) ? (
+                  <p className="text-sm text-secondary">
+                    Training with someone else is worth{' '}
+                    <span className="font-semibold text-ink">
+                      {socialLift(dashboard.socialLift, 'completionRatePct').deltaPoints} points
+                    </span>{' '}
+                    on completion and{' '}
+                    <span className="font-semibold text-ink">
+                      {socialLift(dashboard.socialLift, 'returnRatePct').deltaPoints} points
+                    </span>{' '}
+                    on coming back within 14 days. A negative number here is the premise of the
+                    product failing, and worth acting on.
+                  </p>
+                ) : (
+                  <p className="text-sm text-secondary">
+                    Not enough missions in both groups yet to compare — the lift is only reported
+                    once solo and social each clear 20 missions.
+                  </p>
+                )}
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <CoachSectionHeader
+                title={`Where inside a mission people quit · ${coachDashboardWindowLabel(dashboard.window)}`}
+              />
+              <div className="card space-y-3 p-4">
+                <CoachDataTable
+                  rows={dashboard.missionDropoff}
+                  rowKey={(row) => String(row.bucketOrder)}
+                  emptyLabel="No abandonment beacons with a clock reading yet."
+                  columns={[
+                    { header: 'Quit during', render: (row) => row.elapsedBucket },
+                    { header: 'Abandons', render: (row) => row.abandons, align: 'right' },
+                    {
+                      header: '% of abandons',
+                      render: (row) => pct(row.pctOfAbandons),
+                      align: 'right',
+                    },
+                    {
+                      header: 'Median % elapsed',
+                      render: (row) => pct(row.medianElapsedPct),
+                      align: 'right',
+                    },
+                    {
+                      header: 'Median rounds logged',
+                      render: (row) => row.medianRounds ?? '—',
+                      align: 'right',
+                    },
+                  ]}
+                />
+                {dropoffHeadline(dashboard.missionDropoff) ? (
+                  <p className="text-sm text-secondary">
+                    <span className="font-semibold text-ink">
+                      {dropoffHeadline(dashboard.missionDropoff)}
+                    </span>{' '}
+                    Quitting early usually means the workout was wrong for the athlete; quitting
+                    late usually means the clock or the Log round flow.
+                  </p>
+                ) : null}
+              </div>
             </section>
 
             <section className="space-y-3">

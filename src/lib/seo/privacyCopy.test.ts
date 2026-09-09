@@ -33,9 +33,24 @@ describe('privacy copy contract', () => {
     expect(section).not.toMatch(/\bsession\b/i);
   });
 
-  it('does not add a consent banner or name the storage key', () => {
-    expect(source).not.toMatch(/consent/i);
+  it('does not name the internal storage key, or call localStorage a cookie', () => {
+    // This used to also assert that no consent flow existed. That was the
+    // product decision at the time; it was reversed once the browser id
+    // reached the public content pages and ePrivacy Article 5(3) applied.
+    // The rest of the intent survives: user-facing copy should not leak an
+    // implementation key, and calling localStorage a cookie is simply wrong.
     expect(source).not.toContain('amrap_anon_id');
     expect(section).not.toMatch(/\bcookie/i);
+  });
+
+  it('offers a way to withdraw, and says what withdrawing does', () => {
+    const heading = source.indexOf('Your privacy choices');
+    expect(heading).toBeGreaterThan(-1);
+    const choices = source.slice(heading, source.indexOf('Who else sees it', heading));
+    expect(choices).toContain('id="privacy-choices"');
+    expect(choices).toMatch(/turn the browser id off/i);
+    expect(choices).toMatch(/deletes the id/i);
+    // Withdrawal is forward-looking and the page must not imply otherwise.
+    expect(choices).toMatch(/already received are not undone/i);
   });
 });
