@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ageBracket,
   ALPHA_MALE_QUOTAS,
+  claimedVolumeTargetMinutes,
   getClassificationQuotas,
   quotasFromProfile,
 } from './classificationQuotas';
@@ -100,5 +101,21 @@ describe('quotasFromProfile', () => {
     expect(quotasFromProfile({ birthYear: 2000, biologicalSex: 'F' }, 2022)).toEqual(
       getClassificationQuotas(22, 'F')
     );
+  });
+});
+
+describe('claimedVolumeTargetMinutes', () => {
+  const quotas = ALPHA_MALE_QUOTAS;
+
+  it('returns operator and special_ops minute targets', () => {
+    expect(claimedVolumeTargetMinutes('operator', quotas)).toBe(quotas.operatorMinutes);
+    expect(claimedVolumeTargetMinutes('special_ops', quotas)).toBe(quotas.specialOpsMinutes);
+  });
+
+  it('returns null for civilian, unclassified, and missing claims', () => {
+    expect(claimedVolumeTargetMinutes('civilian', quotas)).toBeNull();
+    expect(claimedVolumeTargetMinutes('unclassified', quotas)).toBeNull();
+    expect(claimedVolumeTargetMinutes(null, quotas)).toBeNull();
+    expect(claimedVolumeTargetMinutes(undefined, quotas)).toBeNull();
   });
 });

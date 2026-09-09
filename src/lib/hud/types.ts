@@ -94,6 +94,8 @@ export interface HUDTelemetryPayload {
   attrition: boolean[];
   /** Empty when the server predates the week-history migration; the HUD degrades to the read-only grid. */
   weeks: HudHistoryWeek[];
+  domainMinutes72h: HudDomainMinutes;
+  domainMinutes7d: HudDomainMinutes;
   domainMinutes30d: HudDomainMinutes;
   classification: HudClassification;
   activity7d: HudActivity7d;

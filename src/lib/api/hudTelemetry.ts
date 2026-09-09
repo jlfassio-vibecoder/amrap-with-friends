@@ -81,17 +81,28 @@ function readDomainMinutes(value: unknown): HudDomainMinutes | null {
   // Missing until 20260909550000 lands: older hud_telemetry omits the key.
   const activeRecovery = readNonNegativeInt(row.activeRecovery) ?? 0;
 
-  if (
-    five === null ||
-    ten === null ||
-    fifteen === null ||
-    twenty === null ||
-    other === null
-  ) {
+  if (five === null || ten === null || fifteen === null || twenty === null || other === null) {
     return null;
   }
 
   return { 5: five, 10: ten, 15: fifteen, 20: twenty, other, activeRecovery };
+}
+
+/** Pre-domain-windows RPC responses omit 72h / 7d; treat as empty rather than failing the HUD. */
+const EMPTY_DOMAIN_MINUTES: HudDomainMinutes = {
+  5: 0,
+  10: 0,
+  15: 0,
+  20: 0,
+  other: 0,
+  activeRecovery: 0,
+};
+
+function readDomainMinutesOrEmpty(value: unknown): HudDomainMinutes | null {
+  if (value === null || value === undefined) {
+    return EMPTY_DOMAIN_MINUTES;
+  }
+  return readDomainMinutes(value);
 }
 
 function readClassificationRank(value: unknown): ClassificationRank | null {
@@ -401,6 +412,8 @@ export function parseHudTelemetryPayload(value: unknown): HUDTelemetryPayload | 
   const pviRaw = row.weekPviAverage;
   const lastLockedRaw = row.lastLockedAt;
   const attrition = readAttrition(row.attrition);
+  const domainMinutes72h = readDomainMinutesOrEmpty(row.domainMinutes72h);
+  const domainMinutes7d = readDomainMinutesOrEmpty(row.domainMinutes7d);
   const domainMinutes30d = readDomainMinutes(row.domainMinutes30d);
   const classification = readClassification(row.classification);
   const activity7d = readActivity7d(row.activity7d);
@@ -411,6 +424,8 @@ export function parseHudTelemetryPayload(value: unknown): HUDTelemetryPayload | 
     weekMinutes < 0 ||
     !weekEndsAt ||
     attrition === null ||
+    domainMinutes72h === null ||
+    domainMinutes7d === null ||
     domainMinutes30d === null ||
     classification === null ||
     activity7d === null ||
@@ -443,6 +458,8 @@ export function parseHudTelemetryPayload(value: unknown): HUDTelemetryPayload | 
     lastLockedAt,
     attrition,
     weeks: readHistoryWeeks(row.weeks),
+    domainMinutes72h,
+    domainMinutes7d,
     domainMinutes30d,
     classification,
     activity7d,

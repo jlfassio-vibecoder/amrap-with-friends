@@ -185,6 +185,12 @@ export default function CreateMissionPage() {
   }, []);
 
   useEffect(() => {
+    const templateParam = searchParams.get('template');
+    // Template deep-link owns the initial selection when present.
+    if (templateParam) {
+      return;
+    }
+
     const categoryParam = searchParams.get('category');
     const durationParam = searchParams.get('duration');
     if (!categoryParam && !durationParam) {
@@ -425,6 +431,25 @@ export default function CreateMissionPage() {
       )
     );
   }
+
+  useEffect(() => {
+    const templateId = searchParams.get('template');
+    if (!templateId) {
+      return;
+    }
+    const template = WORKOUT_TEMPLATES.find((entry) => entry.id === templateId);
+    if (!template) {
+      return;
+    }
+
+    setWorkoutSource('library');
+    applyLibraryTemplate(template);
+    const applied = applyTemplate(template);
+    const domain = domainForCap(applied.durationMinutes) ?? selectedDomain;
+    commitLibrarySelection([template.id], applied.durationMinutes, domain);
+    // Deep-link template applies once from the landing URL.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleTemplateSelect(template: WorkoutTemplate) {
     const alreadySelected = selectedTemplateIds.includes(template.id);

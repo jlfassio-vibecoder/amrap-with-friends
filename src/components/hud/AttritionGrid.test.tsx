@@ -58,6 +58,7 @@ describe('AttritionGrid', () => {
 
     expect(screen.queryAllByRole('button')).toHaveLength(0);
     expect(screen.queryByText(/Select a week/)).toBeNull();
+    expect(screen.queryByText(/Tap a week/)).toBeNull();
   });
 
   it('becomes selectable once per-week detail arrives, newest first', () => {
@@ -77,6 +78,7 @@ describe('AttritionGrid', () => {
     expect(cells).toHaveLength(12);
     // Leftmost cell is the current week (data index 11).
     expect(cells[0]!.getAttribute('aria-label')).toMatch(/3 missions$/);
+    expect(screen.getByText(/Tap a week to inspect it/)).toBeDefined();
 
     fireEvent.click(cells[0]!);
     expect(onSelect).toHaveBeenCalledWith(11);

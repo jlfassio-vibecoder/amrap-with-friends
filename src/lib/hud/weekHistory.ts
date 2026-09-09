@@ -80,3 +80,105 @@ export function baselineFillPercent(minutes: number, baselineMinutes: number): n
   }
   return Math.min(100, Math.max(0, (minutes / baselineMinutes) * 100));
 }
+
+export type WeekMinutesVsPrevious = {
+  /** Minutes from the prior local week bucket, or null when history has no prior week. */
+  previousMinutes: number | null;
+  /**
+   * Percent change in minutes vs that prior week. Null with no prior week, or a
+   * zero prior total (a ratio against zero is not a percent).
+   */
+  minutesChangePercent: number | null;
+};
+
+/** Current week vs the week before it, from the same `weeks` array `hud_telemetry` returns. */
+export function summarizeWeekMinutesVsPrevious(
+  weeks: readonly HudHistoryWeek[]
+): WeekMinutesVsPrevious {
+  if (weeks.length < 2) {
+    return { previousMinutes: null, minutesChangePercent: null };
+  }
+
+  const current = weeks[weeks.length - 1]!;
+  const previous = weeks[weeks.length - 2]!;
+  const previousMinutes = previous.minutes;
+  const minutesChangePercent =
+    previousMinutes > 0
+      ? Math.round(((current.minutes - previousMinutes) / previousMinutes) * 1000) / 10
+      : null;
+
+  return { previousMinutes, minutesChangePercent };
+}
+
+export type WeekToDateVsPrevious = {
+  /**
+   * Locked minutes from the prior week that had already landed by the same
+   * clock time one week ago (`now - 7 days`). Null when there is no prior week,
+   * or when that week has missions we cannot inspect lock-by-lock.
+   */
+  previousWeekToDateMinutes: number | null;
+  /**
+   * Percent change of this week's minutes so far vs that prior week-to-date
+   * total. Null with no prior WTD, or a zero prior WTD (ratio against zero is
+   * not a percent).
+   */
+  weekToDateChangePercent: number | null;
+};
+
+/**
+ * Locked minutes from `previousWeek` that had already landed by `now - 7 days`.
+ *
+ * Needs the prior week's mission list (lock timestamps). A week that only
+ * reports a minutes total cannot support this cut — return null rather than
+ * inventing a same-time figure from the full-week sum.
+ */
+export function previousWeekToDateMinutes(
+  previousWeek: HudHistoryWeek | null | undefined,
+  nowMs: number = Date.now()
+): number | null {
+  if (!previousWeek) {
+    return null;
+  }
+
+  // missionCount > 0 with no mission rows means payload drift — we cannot cut
+  // the prior week at "this time last week" without lock timestamps.
+  if (previousWeek.missionCount > 0 && previousWeek.missions.length === 0) {
+    return null;
+  }
+
+  const cutoffMs = nowMs - 7 * 24 * 60 * 60 * 1000;
+  let total = 0;
+  for (const mission of previousWeek.missions) {
+    const lockedMs = new Date(mission.lockedAt).getTime();
+    if (!Number.isFinite(lockedMs)) {
+      return null;
+    }
+    if (lockedMs <= cutoffMs) {
+      total += mission.durationMinutes;
+    }
+  }
+  return total;
+}
+
+/** Same weekday/time comparison against the prior week bucket in `weeks`. */
+export function summarizeWeekToDateVsPrevious(
+  weeks: readonly HudHistoryWeek[],
+  nowMs: number = Date.now()
+): WeekToDateVsPrevious {
+  if (weeks.length < 2) {
+    return { previousWeekToDateMinutes: null, weekToDateChangePercent: null };
+  }
+
+  const current = weeks[weeks.length - 1]!;
+  const previousWtd = previousWeekToDateMinutes(weeks[weeks.length - 2], nowMs);
+  if (previousWtd === null) {
+    return { previousWeekToDateMinutes: null, weekToDateChangePercent: null };
+  }
+
+  const weekToDateChangePercent =
+    previousWtd > 0
+      ? Math.round(((current.minutes - previousWtd) / previousWtd) * 1000) / 10
+      : null;
+
+  return { previousWeekToDateMinutes: previousWtd, weekToDateChangePercent };
+}
