@@ -8,19 +8,30 @@ import type { ReplayData } from '@/lib/share/types';
  * level anyway: the value here is that the renderer draws the correct *text*,
  * stays inside the safe area, and never reaches for the DOM.
  */
-function recordingCtx(): {
-  ctx: Ctx;
-  texts: { text: string; x: number; y: number }[];
-  rects: number[][];
-} {
-  const texts: { text: string; x: number; y: number }[] = [];
+interface DrawnText {
+  text: string;
+  x: number;
+  y: number;
+  /** The font in force when it was drawn, so type sizing is assertable. */
+  font: string;
+}
+
+function recordingCtx(): { ctx: Ctx; texts: DrawnText[]; rects: number[][] } {
+  const texts: DrawnText[] = [];
   const rects: number[][] = [];
   const ctx = {
     save: vi.fn(),
     restore: vi.fn(),
     fillRect: (...args: number[]) => rects.push(args),
-    fillText: (text: string, x: number, y: number) => texts.push({ text, x, y }),
-    measureText: (text: string) => ({ width: text.length * 18 }),
+    fillText: (text: string, x: number, y: number) =>
+      texts.push({ text, x, y, font: (ctx as { font: string }).font }),
+    // Width scales with the font size, as a real canvas does. A fixed-width
+    // fake cannot detect overflow at all, which is how a 160px hero that did
+    // not fit passed its own tests.
+    measureText: (text: string) => {
+      const size = Number(/(\d+)px/.exec((ctx as { font: string }).font ?? '')?.[1] ?? 40);
+      return { width: text.length * size * 0.55 };
+    },
     fillStyle: '',
     font: '',
     textAlign: 'left',
@@ -235,5 +246,51 @@ describe('the card actually shows the result', () => {
     drawFrame(ctx, frameAt(fullCard()), richOptions());
     const lowest = Math.max(...texts.map((entry) => entry.y));
     expect(lowest).toBeGreaterThan(1000);
+  });
+});
+
+describe('the hero fits instead of being cut off', () => {
+  function scored(rounds: number, reps: number): ReplayData {
+    const base = data(1);
+    base.participants[0]!.finalRounds = rounds;
+    base.participants[0]!.finalReps = reps;
+    return base;
+  }
+
+  function heroSize(texts: DrawnText[], text: string): number {
+    const entry = texts.find((item) => item.text === text);
+    return Number(/(\d+)px/.exec(entry?.font ?? '')?.[1] ?? 0);
+  }
+
+  it('never ellipsises the score, which is the point of the card', () => {
+    // The shipped bug: "4 rounds + 24" clipped to "4 rounds +…" at 160px,
+    // losing exactly the number somebody is posting.
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, frameAt(scored(4, 24)), baseOptions);
+    const all = texts.map((entry) => entry.text);
+    expect(all).toContain('4 rounds + 24');
+    expect(all.some((text) => text.includes('…') && text.includes('rounds'))).toBe(false);
+  });
+
+  it('shrinks the type to make it fit', () => {
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, frameAt(scored(4, 24)), baseOptions);
+    const size = heroSize(texts, '4 rounds + 24');
+    expect(size).toBeLessThan(160);
+    expect(size).toBeGreaterThanOrEqual(72);
+  });
+
+  it('leaves a short score at full size', () => {
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, frameAt(scored(7, 0)), baseOptions);
+    expect(heroSize(texts, '7 rounds')).toBe(160);
+  });
+
+  it('keeps everything below the hero inside the card as it shrinks', () => {
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, frameAt(scored(12, 199)), baseOptions);
+    for (const entry of texts) {
+      expect(entry.y).toBeLessThan(1920);
+    }
   });
 });
