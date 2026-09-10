@@ -206,14 +206,20 @@ describe('MyMissionsPage delete', () => {
     expect(screen.getByRole('button', { name: 'View breakdown' })).toBeTruthy();
   });
 
-  it('confirms then deletes and removes the row', async () => {
-    fetchMyMissionsMock.mockResolvedValue({
-      data: [entry()],
-      chains: {},
-      error: null,
-    });
+  it('confirms then deletes and reloads the list', async () => {
+    fetchMyMissionsMock
+      .mockResolvedValueOnce({
+        data: [entry()],
+        chains: {},
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: [],
+        chains: {},
+        error: null,
+      });
     deleteIncompleteMissionMock.mockImplementation(async () => ({ error: null }));
-    const confirmMock = vi.fn(() => true);
+    const confirmMock = vi.fn<(message?: string) => boolean>(() => true);
     vi.stubGlobal('confirm', confirmMock);
 
     renderPage();
@@ -230,6 +236,7 @@ describe('MyMissionsPage delete', () => {
       expect(deleteIncompleteMissionMock).toHaveBeenCalledWith(
         '22222222-2222-4222-8222-222222222222'
       );
+      expect(fetchMyMissionsMock).toHaveBeenCalledTimes(2);
       expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
       expect(screen.getByText(/No saved missions yet/)).toBeTruthy();
     });

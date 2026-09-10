@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AppLink } from '@/components/AppLink';
 import { fetchMyCampaigns, type CampaignSummary } from '@/lib/api/campaigns';
 import { campaignProgress, formatCampaignShape } from '@/lib/campaign';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
+import { useRefetchOnVisible } from '@/hooks/useRefetchOnVisible';
 
 /**
  * A campaign that is over still belongs in the list — it is the host's record
@@ -32,39 +33,44 @@ export function MyCampaignsPanel({ showCreateCta = true }: MyCampaignsPanelProps
   // synchronously inside the effect would cascade an extra render on mount.
   const [loading, setLoading] = useState(true);
 
+  const load = useCallback(async (options?: { isCancelled?: () => boolean }) => {
+    try {
+      const result = await fetchMyCampaigns();
+      if (options?.isCancelled?.()) {
+        return;
+      }
+      if (result.error) {
+        setError(result.error.message);
+        setCampaigns([]);
+      } else {
+        setError(null);
+        setCampaigns(result.data);
+      }
+      setLoading(false);
+    } catch {
+      if (options?.isCancelled?.()) {
+        return;
+      }
+      setError('Something went wrong. Please try again.');
+      setCampaigns([]);
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (isAuthLoading || !isAuthenticated) {
       return;
     }
 
     let cancelled = false;
-    fetchMyCampaigns()
-      .then((result) => {
-        if (cancelled) {
-          return;
-        }
-        if (result.error) {
-          setError(result.error.message);
-          setCampaigns([]);
-        } else {
-          setError(null);
-          setCampaigns(result.data);
-        }
-        setLoading(false);
-      })
-      .catch(() => {
-        if (cancelled) {
-          return;
-        }
-        setError('Something went wrong. Please try again.');
-        setCampaigns([]);
-        setLoading(false);
-      });
+    void load({ isCancelled: () => cancelled });
 
     return () => {
       cancelled = true;
     };
-  }, [isAuthLoading, isAuthenticated]);
+  }, [isAuthLoading, isAuthenticated, load]);
+
+  useRefetchOnVisible(Boolean(isAuthenticated && !isAuthLoading), load);
 
   if (isAuthLoading || !isAuthenticated) {
     return null;

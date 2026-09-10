@@ -20,18 +20,17 @@ session only. `missions.state = 'work'` must read as **Live** in athlete UI.
 
 ## Verdict
 
-`/my-missions` is a soft-gated, lazy, `noindex` SPA hub that loads an
-**unbounded, workout-heavy** `my_missions()` payload once, groups hub/chain
-siblings client-side, and nests campaigns, assigned workouts, and two
-progression panels on the same page. There is no Realtime and no refetch on
-focus.
+`/my-missions` is a hard-gated (`RequireIntake`), lazy, `noindex` SPA hub that
+loads a slim `my_missions()` list once (plus embedded chains), hydrates detail
+on demand, and nests campaigns, assigned workouts, and two progression panels
+on the same page. Lists refetch when the tab becomes visible again; there is
+still no Realtime.
 
 The architecture fits a “saved history + related account lists” product job,
-but the page has grown into a composite home for several account concerns while
-still paying the full-history payload cost that benchmarks and Smart Recovery
-already escaped. Highest-priority remaining gaps: stale list after mutations
-elsewhere (D3) and page composition (C1). P0 vocabulary, P1 payload/chains
-(D1–D2), and auth gate (A1–A3) are addressed.
+but the page has grown into a composite home for several account concerns.
+Highest-priority remaining gap: page composition (C1). P0 vocabulary, P1
+payload/chains (D1–D2), auth gate (A1–A3), and visibility refetch (D3) plus
+delete→reload (E1) are addressed.
 
 ---
 
@@ -61,7 +60,7 @@ account” on a finished guest mission is how rows appear here.
 | Concern        | Detail                                                                                                                 |
 | -------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | Route          | [`App.tsx`](../../../src/App.tsx) — `lazy(() => import('./pages/MyMissionsPage'))`, bare `<Route path="/my-missions">` |
-| Auth at router | `RequireIntake` (`guestMode="sign-in"`, `gateAllowsGuest={false}`); incomplete profiles get identity overlay |
+| Auth at router | `RequireIntake` (`guestMode="sign-in"`, `gateAllowsGuest={false}`); incomplete profiles get identity overlay           |
 | Page gate      | [`useAmrapAuth`](../../../src/hooks/useAmrapAuth.ts) — guests see copy, no RPC                                         |
 | SEO            | [`routes.ts`](../../../src/lib/seo/routes.ts) — title “My missions”, `index: false`                                    |
 | Deploy         | `vercel.json` rewrites `/my-missions` → app shell                                                                      |
@@ -146,36 +145,38 @@ Campaigns are **not** mission rows; they are a sibling panel.
 
 For a signed-in athlete the page (and nested panels) typically issue:
 
-1. `my_missions`
-2. `N × get_mission_chain` (only hubs with a real chain)
-3. `my_campaigns` (panel)
-4. assigned-workouts list (panel)
-5. `fetchMyBenchmarks` (benchmark pills)
+1. `my_missions` (slim list + embedded chains)
+2. `my_campaigns` (panel)
+3. assigned-workouts list (panel)
+4. `fetchMyBenchmarks` (benchmark pills)
 
-No Realtime channel. No visibility/focus refetch. Delete patches local state
-only.
+No Realtime channel. Tab visibility refetch via `useRefetchOnVisible` reloads
+missions (preserving hydrated detail), benchmarks, assigned workouts, and
+campaigns. Delete reloads `my_missions` so chain maps stay consistent.
 
 ```mermaid
 flowchart TB
   page["MyMissionsPage"]
   rpc["my_missions()"]
-  chains["get_mission_chain × N"]
   group["groupMyMissionsByRallyPoint"]
   assigned["AssignedWorkoutsPanel"]
   campaigns["MyCampaignsPanel"]
   benches["fetchMyBenchmarks"]
   scale["ScalingProgressionPanel"]
   checkin["CheckInProgressionPanel"]
+  visible["useRefetchOnVisible"]
 
   page --> rpc
   rpc --> group
-  rpc --> chains
-  chains --> group
   page --> assigned
   page --> campaigns
   page --> benches
   rpc --> scale
   rpc --> checkin
+  visible --> rpc
+  visible --> assigned
+  visible --> campaigns
+  visible --> benches
 ```
 
 ---
@@ -188,12 +189,12 @@ docs.
 
 ### 3.1 Data and performance
 
-| ID  | Sev | Gap                                                     | Notes                                                                                                                     |
-| --- | --- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| D1  | P1  | ~~Unbounded heavy `my_missions` payload~~ **Addressed** | Slim list rows + `my_mission_detail` for workout/breakdown; HUD repair uses `list_unlocked_amqap`.                        |
-| D2  | P1  | ~~N chain RPCs after list load~~ **Addressed**          | `my_missions` embeds `chains` (queued workouts only); page no longer fans out `get_mission_chain`.                        |
-| D3  | P1  | Stale after external mutation                           | Claiming a mission, finishing elsewhere, or campaign changes do not refresh until remount. No Realtime, no focus refetch. |
-| D4  | P2  | No pagination / filters                                 | Fine for early users; will hurt once history is long even if payload were slimmed.                                        |
+| ID  | Sev | Gap                                                     | Notes                                                                                                                                                         |
+| --- | --- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | P1  | ~~Unbounded heavy `my_missions` payload~~ **Addressed** | Slim list rows + `my_mission_detail` for workout/breakdown; HUD repair uses `list_unlocked_amqap`.                                                            |
+| D2  | P1  | ~~N chain RPCs after list load~~ **Addressed**          | `my_missions` embeds `chains` (queued workouts only); page no longer fans out `get_mission_chain`.                                                            |
+| D3  | P1  | ~~Stale after external mutation~~ **Addressed**         | `useRefetchOnVisible` refetches missions (hydrate-preserving merge), benchmarks, assigned workouts, and campaigns when the tab is visible again. No Realtime. |
+| D4  | P2  | No pagination / filters                                 | Fine for early users; will hurt once history is long even if payload were slimmed.                                                                            |
 
 ### 3.2 Auth and navigation
 
@@ -223,11 +224,11 @@ Host scheduled list delegates to the same helper (`work` → Live).
 
 ### 3.5 Correctness / edge cases
 
-| ID  | Sev | Gap                              | Notes                                                                                                                           |
-| --- | --- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| E1  | P2  | Delete does not refresh chains   | Removing a hub mission from local `entries` may leave expand state / chain map until remount.                                   |
-| E2  | P2  | Benchmark load errors are silent | Failed `fetchMyBenchmarks` leaves pills empty with no message.                                                                  |
-| E3  | P1  | Score display vs finalScore      | Card correctly shows performed reps/rounds, not PVI-adjusted `finalScore` — keep this; breakdown modal owns the adjusted story. |
+| ID  | Sev | Gap                                              | Notes                                                                                                                           |
+| --- | --- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| E1  | P2  | ~~Delete does not refresh chains~~ **Addressed** | After `deleteIncompleteMission`, page calls `loadMissions()` so entries and embedded chains stay aligned.                       |
+| E2  | P2  | Benchmark load errors are silent                 | Failed `fetchMyBenchmarks` leaves pills empty with no message.                                                                  |
+| E3  | P1  | Score display vs finalScore                      | Card correctly shows performed reps/rounds, not PVI-adjusted `finalScore` — keep this; breakdown modal owns the adjusted story. |
 
 ### 3.6 Tests
 
@@ -263,8 +264,9 @@ Ordered for impact vs risk. Implementation is out of scope for this note.
 3. ~~**Guest + incomplete-profile decision**~~ **Done** —
    `RequireIntake` sign-in gate on `/my-missions`; `shouldStayAfterSignup` keeps
    athletes on My missions / HUD after Create account.
-4. **Refetch policy** — at least refetch on window focus after delete/claim;
-   Realtime is optional and probably overkill for a history list (D3).
+4. ~~**Refetch policy**~~ **Done** — `useRefetchOnVisible` on My missions +
+   assigned/campaigns panels; delete reloads the list (E1). Realtime still
+   optional / overkill for history.
 5. **Close test gaps** on guest, empty, error, parse of check-in fields, and
    state-label formatting once (1) lands.
 

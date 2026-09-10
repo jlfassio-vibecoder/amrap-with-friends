@@ -9,6 +9,7 @@ import {
 import { createMission } from '@/lib/api/missions';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
+import { useRefetchOnVisible } from '@/hooks/useRefetchOnVisible';
 
 /**
  * Workouts a squad friend put on this athlete's list.
@@ -27,8 +28,11 @@ export function AssignedWorkoutsPanel() {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (options?: { isCancelled?: () => boolean }) => {
     const result = await fetchMyAssignedWorkouts();
+    if (options?.isCancelled?.()) {
+      return;
+    }
     if (result.error) {
       setError(result.error.message);
       setAssigned([]);
@@ -44,23 +48,13 @@ export function AssignedWorkoutsPanel() {
       return;
     }
     let cancelled = false;
-    void fetchMyAssignedWorkouts().then((result) => {
-      if (cancelled) {
-        return;
-      }
-      if (result.error) {
-        setError(result.error.message);
-        setAssigned([]);
-      } else {
-        setError(null);
-        setAssigned(result.data);
-      }
-      setLoading(false);
-    });
+    void load({ isCancelled: () => cancelled });
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, isAuthLoading]);
+  }, [isAuthenticated, isAuthLoading, load]);
+
+  useRefetchOnVisible(Boolean(isAuthenticated && !isAuthLoading), load);
 
   async function handleStart(entry: AssignedWorkout) {
     setBusyId(entry.assignedWorkoutId);

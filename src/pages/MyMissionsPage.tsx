@@ -29,6 +29,7 @@ import type { MissionChainItem } from '@/lib/api/missionChain';
 import type { WorkoutExercise } from '@/lib/api/missionTypes';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useCopyFlash } from '@/hooks/useCopyFlash';
+import { useRefetchOnVisible } from '@/hooks/useRefetchOnVisible';
 import { formatMissionStateLabel } from '@/lib/mission/formatMissionStateLabel';
 import { groupMyMissionsByRallyPoint } from '@/lib/mission/groupMyMissionsByRallyPoint';
 import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
@@ -50,6 +51,32 @@ function needsMissionDetail(entry: MyMissionEntry): boolean {
     return true;
   }
   return entry.hasScoreBreakdown && entry.scoreBreakdown === null;
+}
+
+/** Keep client-hydrated workout/breakdown when the slim list refetches. */
+function mergePreservingHydration(
+  previous: MyMissionEntry[],
+  next: MyMissionEntry[]
+): MyMissionEntry[] {
+  const prevById = new Map(previous.map((entry) => [entry.missionId, entry]));
+  return next.map((entry) => {
+    const prior = prevById.get(entry.missionId);
+    if (!prior) {
+      return entry;
+    }
+    const workout = prior.workout.length > 0 ? prior.workout : entry.workout;
+    const scoreBreakdown = prior.scoreBreakdown ?? entry.scoreBreakdown;
+    if (workout === entry.workout && scoreBreakdown === entry.scoreBreakdown) {
+      return entry;
+    }
+    return {
+      ...entry,
+      workout,
+      movementCount: workout.length > 0 ? workout.length : entry.movementCount,
+      scoreBreakdown,
+      hasScoreBreakdown: entry.hasScoreBreakdown || scoreBreakdown !== null,
+    };
+  });
 }
 
 function MyMissionMovements({
@@ -313,6 +340,30 @@ export default function MyMissionsPage() {
     }
   }, []);
 
+  const loadMissions = useCallback(
+    async (options?: { preserveHydration?: boolean; isCancelled?: () => boolean }) => {
+      const result = await fetchMyMissions();
+      if (options?.isCancelled?.()) {
+        return;
+      }
+      if (result.error) {
+        setError(result.error.message);
+        setEntries([]);
+        setChainsByRallyPointId({});
+      } else {
+        const next = result.data ?? [];
+        if (options?.preserveHydration) {
+          setEntries((prev) => mergePreservingHydration(prev, next));
+        } else {
+          setEntries(next);
+        }
+        setChainsByRallyPointId(result.chains);
+      }
+      setHasLoaded(true);
+    },
+    []
+  );
+
   const ensureDetail = useCallback(
     async (entry: MyMissionEntry): Promise<MyMissionEntry | null> => {
       if (!needsMissionDetail(entry)) {
@@ -365,26 +416,19 @@ export default function MyMissionsPage() {
     }
 
     let cancelled = false;
-
-    fetchMyMissions().then((result) => {
-      if (cancelled) {
-        return;
-      }
-      if (result.error) {
-        setError(result.error.message);
-        setEntries([]);
-        setChainsByRallyPointId({});
-      } else {
-        setEntries(result.data ?? []);
-        setChainsByRallyPointId(result.chains);
-      }
-      setHasLoaded(true);
-    });
+    void loadMissions({ isCancelled: () => cancelled });
 
     return () => {
       cancelled = true;
     };
-  }, [isAuthLoading, isAuthenticated, user]);
+  }, [isAuthLoading, isAuthenticated, user, loadMissions]);
+
+  const refetchOnVisible = useCallback(() => {
+    void loadMissions({ preserveHydration: true });
+    void loadBenchmarks();
+  }, [loadMissions, loadBenchmarks]);
+
+  useRefetchOnVisible(Boolean(isAuthenticated && user && !isAuthLoading), refetchOnVisible);
 
   const loading = isAuthLoading || (isAuthenticated && user !== null && !hasLoaded);
 
@@ -405,7 +449,7 @@ export default function MyMissionsPage() {
         setError(result.error.message);
         return;
       }
-      setEntries((prev) => prev.filter((item) => item.missionId !== entry.missionId));
+      await loadMissions();
     } catch {
       setError('Something went wrong. Please try again.');
     } finally {
