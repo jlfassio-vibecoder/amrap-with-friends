@@ -3,7 +3,7 @@ import { track } from '@/lib/analytics/track';
 import { callRpc } from '@/lib/api/callRpc';
 import { buildCaption } from '@/lib/share/caption';
 import { cardFileName, renderCardBlob } from '@/lib/share/renderCard';
-import { OG_ENCODINGS, OG_LAYOUT, fitsOgLimit } from '@/lib/share/ogImage';
+import { OG_ENCODINGS, OG_LAYOUT, OG_WIDE_LAYOUT, fitsOgLimit } from '@/lib/share/ogImage';
 import { createShareId, shareUrl } from '@/lib/share/shareId';
 import { shareArtifact } from '@/lib/share/shareSheet';
 import { uploadShareImage } from '@/lib/share/uploadShareImage';
@@ -178,29 +178,48 @@ export function ShareCardPanel({
   // their face is.
   const uploadOgImage = useCallback(async (): Promise<void> => {
     const withPhoto = photo && publishPhoto ? photo : null;
-    const ogOptions = {
-      ...drawOptions,
-      layout: OG_LAYOUT,
+    const photoOptions = {
       photo: withPhoto,
       photoWidth: withPhoto?.width,
       photoHeight: withPhoto?.height,
     };
-    for (const encoding of OG_ENCODINGS) {
-      const blob = await renderCardBlob(data, ogOptions, encoding);
-      if (!blob) {
-        return;
+
+    // Encoded at the first format and quality that fits the bucket. Null if
+    // none do, which is a card that does not get uploaded rather than one that
+    // gets uploaded broken.
+    async function encode(layout: ShareLayout): Promise<Blob | null> {
+      for (const encoding of OG_ENCODINGS) {
+        const blob = await renderCardBlob(
+          data,
+          { ...drawOptions, ...photoOptions, layout },
+          encoding
+        );
+        if (!blob) {
+          return null;
+        }
+        if (fitsOgLimit(blob.size)) {
+          return blob;
+        }
       }
-      if (fitsOgLimit(blob.size)) {
-        await uploadShareImage({
-          shareId,
-          blob,
-          participantId,
-          claimToken,
-          hostToken,
-        });
-        return;
-      }
+      return null;
     }
+
+    const blob = await encode(OG_LAYOUT);
+    if (!blob) {
+      return;
+    }
+    // The wide card is for X, which crops a portrait one to a band out of its
+    // middle. Rendered after the portrait card, and its failure never blocks
+    // the upload of the one that matters.
+    const wideBlob = await encode(OG_WIDE_LAYOUT);
+    await uploadShareImage({
+      shareId,
+      blob,
+      wideBlob,
+      participantId,
+      claimToken,
+      hostToken,
+    });
   }, [data, drawOptions, photo, publishPhoto, shareId, participantId, claimToken, hostToken]);
 
   // Recorded when a share actually happens, with what was actually shared.

@@ -35,6 +35,7 @@ export default function SharePage() {
         setSummary({
           shareId: String(raw.shareId ?? shareId),
           imagePath: typeof raw.imagePath === 'string' ? raw.imagePath : null,
+          wideImagePath: typeof raw.wideImagePath === 'string' ? raw.wideImagePath : null,
           templateId: typeof raw.templateId === 'string' ? raw.templateId : null,
           durationMinutes: Number(raw.durationMinutes ?? 0),
           rounds: Number(raw.rounds ?? 0),

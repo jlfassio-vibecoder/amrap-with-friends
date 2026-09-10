@@ -26,6 +26,8 @@ export interface ShareMeta {
   image: string;
   imageWidth: number;
   imageHeight: number;
+  /** X crops a portrait card to a band out of its middle, so it gets the wide render. */
+  twitterImage: string;
 }
 
 function escapeAttr(value: string): string {
@@ -75,7 +77,7 @@ export function injectShareMeta(shell: string, meta: ShareMeta): string {
     `<meta name="twitter:card" content="summary_large_image" />`,
     `<meta name="twitter:title" content="${escapeAttr(meta.title)}" />`,
     `<meta name="twitter:description" content="${escapeAttr(meta.description)}" />`,
-    `<meta name="twitter:image" content="${escapeAttr(meta.image)}" />`,
+    `<meta name="twitter:image" content="${escapeAttr(meta.twitterImage)}" />`,
   ].join('\n    ');
 
   return `${head}\n    ${tags}\n  ${rest}`;

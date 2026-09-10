@@ -6,6 +6,7 @@ import {
   shareOgImage,
   shareOgImageSize,
   shareOgTitle,
+  shareTwitterImage,
   type ShareSummary,
 } from './src/lib/share/shareOg';
 import { injectShareMeta } from './src/lib/share/shareShell';
@@ -71,6 +72,7 @@ async function fetchShareSummary(shareId: string): Promise<ShareSummary | null> 
     return {
       shareId: String(body.shareId ?? shareId),
       imagePath: typeof body.imagePath === 'string' ? body.imagePath : null,
+      wideImagePath: typeof body.wideImagePath === 'string' ? body.wideImagePath : null,
       templateId: typeof body.templateId === 'string' ? body.templateId : null,
       durationMinutes: Number(body.durationMinutes ?? 0),
       rounds: Number(body.rounds ?? 0),
@@ -162,6 +164,11 @@ export default async function middleware(request: Request): Promise<Response> {
           image: shareOgImage(summary, url.origin, process.env.VITE_SUPABASE_URL?.trim() ?? null),
           imageWidth: imageSize.width,
           imageHeight: imageSize.height,
+          twitterImage: shareTwitterImage(
+            summary,
+            url.origin,
+            process.env.VITE_SUPABASE_URL?.trim() ?? null
+          ),
         }),
         {
           status: 200,
