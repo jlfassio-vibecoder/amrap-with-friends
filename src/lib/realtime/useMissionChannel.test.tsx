@@ -67,6 +67,9 @@ const MISSION_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 describe('useMissionChannel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // clearAllMocks does not drain mockResolvedValueOnce queues; an unconsumed
+    // one would surface in whichever test ran next.
+    getMissionLiveStateMock.mockReset();
     channelMocks.length = 0;
     getMissionLiveStateMock.mockResolvedValue({
       ok: true,
@@ -138,6 +141,85 @@ describe('useMissionChannel', () => {
     });
 
     expect(getMissionLiveStateMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('abandons an in-flight incremental when resync starts a full snapshot', async () => {
+    // resync exists because a client can be short a rounds INSERT it never
+    // received. If an incremental request issued a moment earlier is still
+    // running, it can land after the full snapshot, overwrite what that
+    // snapshot just repaired and push the watermark forward again -- putting
+    // the hole straight back. fetchGenRef is the guard for exactly that, and
+    // resync used to walk past it.
+    vi.useFakeTimers();
+    const snapshot = (rounds: { id: string }[], incremental: boolean, at: string) => ({
+      ok: true,
+      data: {
+        mission: null,
+        missionClock: null,
+        participants: [],
+        participantIds: null,
+        rounds: rounds.map((row) => ({
+          id: row.id,
+          mission_id: MISSION_ID,
+          participant_id: 'participant-1',
+          round_index: 0,
+          elapsed_sec_at_round: 10,
+          segment_index: 0,
+          missed_log_reps: null,
+          created_at: at,
+        })),
+        messages: [],
+        segmentResults: [],
+        incremental,
+        snapshotAt: at,
+      },
+    });
+
+    getMissionLiveStateMock.mockResolvedValueOnce(snapshot([], false, '2026-09-03T00:00:00.000Z'));
+    const { result } = renderHook(() =>
+      useMissionChannel(
+        MISSION_ID,
+        { participantId: 'participant-1', nickname: 'Guest' },
+        { realtimeTables: false }
+      )
+    );
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // The poll issues a request that will not settle yet: this is the one that
+    // must lose.
+    let releaseStale: (() => void) | null = null;
+    getMissionLiveStateMock.mockReturnValueOnce(
+      new Promise((resolve) => {
+        releaseStale = () => resolve(snapshot([{ id: 'stale' }], true, '2026-09-03T00:09:00.000Z'));
+      })
+    );
+    await act(async () => {
+      vi.advanceTimersByTime(GUEST_MISSION_POLL_MS);
+      await Promise.resolve();
+    });
+    expect(getMissionLiveStateMock).toHaveBeenCalledTimes(2);
+
+    // Now the resync, which settles first and carries the repaired truth.
+    getMissionLiveStateMock.mockResolvedValueOnce(
+      snapshot([{ id: 'repaired' }], false, '2026-09-03T00:00:02.000Z')
+    );
+    await act(async () => {
+      result.current.resync();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.rounds.map((row) => row.id)).toEqual(['repaired']);
+
+    // The abandoned request lands last and must change nothing.
+    await act(async () => {
+      releaseStale?.();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.rounds.map((row) => row.id)).toEqual(['repaired']);
   });
 
   it('merges incremental clock fields and prunes roster by participant_ids', async () => {
