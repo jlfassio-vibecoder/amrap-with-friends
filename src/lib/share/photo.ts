@@ -114,3 +114,37 @@ export function chartBandStops(band: ScrimBand = chartBandScrim()): ScrimStop[] 
     { offset: 1, alpha: 0 },
   ];
 }
+
+/**
+ * Two photos, because the two cards are different shapes.
+ *
+ * One photo cover-fit into both was the first version, and the wide card gave
+ * it away: a 3:4 phone photo centred into 1.78:1 keeps a horizontal band out
+ * of the middle, so a head-and-shoulders shot arrives on X as a torso. The
+ * portrait card has the opposite bias and keeps the face.
+ *
+ * Nothing here can fix that by cropping harder — the athlete has to be able to
+ * say "this one for the tall card, that one for the wide one", or to say one
+ * photo is fine for both and accept the crop knowingly.
+ */
+export type PhotoSlot = 'portrait' | 'wide';
+
+/** Which slots an upload fills. `both` is the default: most athletes have one photo. */
+export type PhotoTarget = PhotoSlot | 'both';
+
+export const PHOTO_TARGETS: PhotoTarget[] = ['portrait', 'wide', 'both'];
+
+export function slotsForTarget(target: PhotoTarget): PhotoSlot[] {
+  return target === 'both' ? ['portrait', 'wide'] : [target];
+}
+
+/**
+ * The slot a given card ratio draws from.
+ *
+ * Square sits between the two and takes the portrait photo: it crops a 3:4
+ * photo top and bottom rather than sides, so the face survives, which is the
+ * whole reason the split exists.
+ */
+export function slotForLayout(layout: 'story' | 'square' | 'landscape'): PhotoSlot {
+  return layout === 'landscape' ? 'wide' : 'portrait';
+}

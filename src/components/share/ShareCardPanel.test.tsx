@@ -71,7 +71,16 @@ function stubBrowser(): void {
   );
   vi.stubGlobal(
     'createImageBitmap',
-    vi.fn().mockResolvedValue({ width: 4, height: 5, close() {} })
+    vi.fn().mockImplementation(() =>
+      Promise.resolve({
+        width: 4,
+        height: 5,
+        closed: false,
+        close() {
+          this.closed = true;
+        },
+      })
+    )
   );
 }
 
@@ -105,7 +114,16 @@ describe('adding a photo to the share card', () => {
     renderCardBlob.mockResolvedValue(new Blob(['card'], { type: 'image/png' }));
     vi.stubGlobal(
       'createImageBitmap',
-      vi.fn().mockResolvedValue({ width: 4, height: 5, close() {} })
+      vi.fn().mockImplementation(() =>
+        Promise.resolve({
+          width: 4,
+          height: 5,
+          closed: false,
+          close() {
+            this.closed = true;
+          },
+        })
+      )
     );
 
     render(<ShareCardPanel data={data} workoutTitle="The Piston" />);
@@ -114,7 +132,7 @@ describe('adding a photo to the share card', () => {
 
     addPhoto();
 
-    await waitFor(() => expect(screen.getByText('Remove photo')).toBeTruthy());
+    await waitFor(() => expect(screen.getAllByText('photo added').length).toBe(2));
     await waitFor(() => expect(renderCardBlob).toHaveBeenCalledTimes(2));
     expect(renderCardBlob.mock.calls[1][1].photo).toMatchObject({ width: 4, height: 5 });
   });
@@ -265,7 +283,7 @@ describe('the image the link preview gets', () => {
     await waitFor(() => expect(renderCardBlob).toHaveBeenCalled());
 
     addPhoto();
-    await waitFor(() => expect(screen.getByText('Remove photo')).toBeTruthy());
+    await waitFor(() => expect(screen.getAllByText('photo added').length).toBe(2));
     fireEvent.click(screen.getByText('Copy link'));
 
     await waitFor(() => expect(uploadShareImage).toHaveBeenCalled());
@@ -282,7 +300,7 @@ describe('the image the link preview gets', () => {
     await waitFor(() => expect(renderCardBlob).toHaveBeenCalled());
 
     addPhoto();
-    await waitFor(() => expect(screen.getByText('Remove photo')).toBeTruthy());
+    await waitFor(() => expect(screen.getAllByText('photo added').length).toBe(2));
     fireEvent.click(screen.getByRole('checkbox'));
     fireEvent.click(screen.getByText('Copy link'));
 
@@ -333,5 +351,101 @@ describe('the two ways to send a result', () => {
     await panel();
     expect(screen.getByText(/looks the same wherever it lands/)).toBeTruthy();
     expect(screen.getByText(/each app crops that its own way/)).toBeTruthy();
+  });
+});
+
+describe('a photo per card shape', () => {
+  afterEach(() => {
+    cleanup();
+    renderCardBlob.mockReset();
+    uploadShareImage.mockReset();
+    callRpc.mockReset();
+  });
+
+  async function panel(): Promise<void> {
+    stubBrowser();
+    callRpc.mockResolvedValue({ data: null, error: null });
+    uploadShareImage.mockResolvedValue({ ok: true });
+    renderCardBlob.mockResolvedValue(new Blob(['card'], { type: 'image/png' }));
+    render(<ShareCardPanel data={data} workoutTitle="The Piston" />);
+    await waitFor(() => expect(renderCardBlob).toHaveBeenCalled());
+  }
+
+  it('fills both slots by default, because most athletes have one photo', async () => {
+    await panel();
+    addPhoto();
+    await waitFor(() => expect(screen.getAllByText('photo added')).toHaveLength(2));
+  });
+
+  it('fills only the wide slot when that is what the athlete picked', async () => {
+    // The reason the split exists: a 3:4 phone photo centred into 1.78:1 keeps
+    // a band out of the middle, so a head-and-shoulders shot arrives on X as a
+    // torso. The athlete has to be able to give the wide card its own picture.
+    await panel();
+    fireEvent.click(screen.getByText('Wide card', { selector: 'button' }));
+    addPhoto();
+    await waitFor(() => expect(screen.getAllByText('photo added')).toHaveLength(1));
+    expect(screen.getAllByText('no photo')).toHaveLength(1);
+  });
+
+  it('draws the wide slot when the wide ratio is previewed', async () => {
+    // Flipping to 16:9 has to show what X will actually get, not a promise.
+    await panel();
+    fireEvent.click(screen.getByText('Wide card', { selector: 'button' }));
+    addPhoto();
+    await waitFor(() => expect(screen.getAllByText('photo added')).toHaveLength(1));
+
+    renderCardBlob.mockClear();
+    fireEvent.click(screen.getByText('16:9'));
+    await waitFor(() => expect(renderCardBlob).toHaveBeenCalled());
+    const wide = renderCardBlob.mock.calls.find((call) => call[1].layout === 'landscape');
+    expect(wide![1].photo).toMatchObject({ width: 4, height: 5 });
+  });
+
+  it('leaves the tall card empty when only the wide slot was filled', async () => {
+    await panel();
+    fireEvent.click(screen.getByText('Wide card', { selector: 'button' }));
+    addPhoto();
+    await waitFor(() => expect(screen.getAllByText('photo added')).toHaveLength(1));
+
+    renderCardBlob.mockClear();
+    fireEvent.click(screen.getByText('1:1'));
+    await waitFor(() => expect(renderCardBlob).toHaveBeenCalled());
+    const square = renderCardBlob.mock.calls.find((call) => call[1].layout === 'square');
+    expect(square![1].photo).toBeNull();
+  });
+
+  it('sends each uploaded card the photo chosen for it', async () => {
+    await panel();
+    addPhoto();
+    await waitFor(() => expect(screen.getAllByText('photo added')).toHaveLength(2));
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByText('Copy link'));
+
+    await waitFor(() => expect(uploadShareImage).toHaveBeenCalled());
+    const uploads = renderCardBlob.mock.calls.filter((call) => call[2]?.type !== undefined);
+    for (const call of uploads) {
+      expect(call[1].photo).toMatchObject({ width: 4, height: 5 });
+    }
+    expect(uploads.map((call) => call[1].layout)).toEqual(
+      expect.arrayContaining(['story', 'landscape'])
+    );
+  });
+
+  it('removing one slot leaves the other alone', async () => {
+    // Both slots can hold the same bitmap. Closing it on one removal would
+    // blank the other card.
+    await panel();
+    addPhoto();
+    await waitFor(() => expect(screen.getAllByText('photo added')).toHaveLength(2));
+
+    fireEvent.click(screen.getAllByText('Remove')[0]!);
+    await waitFor(() => expect(screen.getAllByText('photo added')).toHaveLength(1));
+
+    renderCardBlob.mockClear();
+    fireEvent.click(screen.getByText('16:9'));
+    await waitFor(() => expect(renderCardBlob).toHaveBeenCalled());
+    const wide = renderCardBlob.mock.calls.find((call) => call[1].layout === 'landscape');
+    expect(wide![1].photo).toMatchObject({ width: 4, height: 5, closed: false });
   });
 });

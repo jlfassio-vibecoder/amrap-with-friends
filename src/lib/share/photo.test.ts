@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  PHOTO_TARGETS,
   chartBandScrim,
   chartBandStops,
   coverRect,
   photoRejectionReason,
   scrimStops,
+  slotForLayout,
+  slotsForTarget,
 } from '@/lib/share/photo';
 
 describe('coverRect', () => {
@@ -105,5 +108,38 @@ describe('the scrim band behind the chart', () => {
   it('clamps a feather that would leave no solid middle', () => {
     const stops = chartBandStops({ alpha: 0.7, feather: 0.9 });
     expect(stops[1]!.offset).toBeLessThanOrEqual(stops[2]!.offset);
+  });
+});
+
+describe('which photo a card draws from', () => {
+  it('gives the wide card its own slot, which is the point', () => {
+    // A 3:4 photo centred into 1.78:1 keeps a band out of the middle, so a
+    // head-and-shoulders shot arrived on X as a torso.
+    expect(slotForLayout('landscape')).toBe('wide');
+  });
+
+  it('gives story the portrait slot', () => {
+    expect(slotForLayout('story')).toBe('portrait');
+  });
+
+  it('gives square the portrait slot, because it crops top and bottom', () => {
+    // 1:1 from a 3:4 loses the top and bottom, not the sides, so the face
+    // survives -- which is what the split is protecting.
+    expect(slotForLayout('square')).toBe('portrait');
+  });
+});
+
+describe('slotsForTarget', () => {
+  it('fills both slots by default, because most athletes have one photo', () => {
+    expect(slotsForTarget('both')).toEqual(['portrait', 'wide']);
+  });
+
+  it('fills exactly one when the athlete picked one', () => {
+    expect(slotsForTarget('portrait')).toEqual(['portrait']);
+    expect(slotsForTarget('wide')).toEqual(['wide']);
+  });
+
+  it('offers every target the athlete can choose', () => {
+    expect(PHOTO_TARGETS).toEqual(['portrait', 'wide', 'both']);
   });
 });
