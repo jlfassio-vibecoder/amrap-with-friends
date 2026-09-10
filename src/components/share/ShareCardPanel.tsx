@@ -458,6 +458,14 @@ export function ShareCardPanel({
         </div>
       ) : null}
 
+      {/* Two ways to send this, and they do not produce the same thing.
+          "Share the card" hands over the picture, so what lands is exactly
+          what is on screen. "Copy link" sends a URL and lets the app build its
+          own preview from it, which is where the shape stops being ours:
+          Facebook and Messages show the whole portrait card, X crops any
+          preview to a wide strip and has no card type that shows a tall image.
+          The athlete cannot be expected to know that, so the buttons say what
+          they do rather than both saying "share". */}
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
@@ -465,12 +473,16 @@ export function ShareCardPanel({
           disabled={!previewUrl || busy}
           onClick={handleShare}
         >
-          Share
+          Share the card
         </button>
         <button type="button" className="btn-outline text-sm" onClick={handleCopyLink}>
           Copy link
         </button>
       </div>
+      <p className="text-xs text-secondary">
+        The card posts as a picture, so it looks the same wherever it lands. A link shows a preview
+        instead, and each app crops that its own way.
+      </p>
 
       {isEncoderImplemented(encoderPath) ? (
         <div className="space-y-2 border-t border-border pt-4">

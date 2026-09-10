@@ -15,9 +15,10 @@ vi.mock('@/lib/share/uploadShareImage', async (importOriginal) => ({
 }));
 const { callRpc } = vi.hoisted(() => ({ callRpc: vi.fn() }));
 vi.mock('@/lib/api/callRpc', () => ({ callRpc }));
-vi.mock('@/lib/share/shareSheet', () => ({
+const { shareArtifact } = vi.hoisted(() => ({
   shareArtifact: vi.fn().mockResolvedValue({ outcome: 'shared' }),
 }));
+vi.mock('@/lib/share/shareSheet', () => ({ shareArtifact }));
 vi.mock('@/lib/analytics/track', () => ({ track: vi.fn(), trackBeacon: vi.fn() }));
 vi.mock('@/lib/share/replay/useReplay', () => ({
   useReplay: () => ({ blob: null, state: 'idle', progress: 0, start: () => undefined }),
@@ -288,5 +289,49 @@ describe('the image the link preview gets', () => {
     await waitFor(() => expect(uploadShareImage).toHaveBeenCalled());
     const ogCall = renderCardBlob.mock.calls.find((call) => call[2]?.type !== undefined);
     expect(ogCall![1].photo).toMatchObject({ width: 4, height: 5 });
+  });
+});
+
+describe('the two ways to send a result', () => {
+  afterEach(() => {
+    cleanup();
+    renderCardBlob.mockReset();
+    uploadShareImage.mockReset();
+    callRpc.mockReset();
+    shareArtifact.mockClear();
+  });
+
+  async function panel(): Promise<void> {
+    stubBrowser();
+    callRpc.mockResolvedValue({ data: null, error: null });
+    uploadShareImage.mockResolvedValue({ ok: true });
+    renderCardBlob.mockResolvedValue(new Blob(['card'], { type: 'image/png' }));
+    render(<ShareCardPanel data={data} workoutTitle="The Piston" />);
+    await waitFor(() => expect(renderCardBlob).toHaveBeenCalled());
+  }
+
+  it('offers the card and the link as separate, differently named actions', async () => {
+    // They do not produce the same thing, and both being called "share" hid
+    // that. X has no card type that shows a tall image, so a link can never
+    // unfurl there as the portrait card -- posting the picture is the only
+    // way that card reaches X at all.
+    await panel();
+    expect(screen.getByText('Share the card')).toBeTruthy();
+    expect(screen.getByText('Copy link')).toBeTruthy();
+  });
+
+  it('hands the actual image to the share sheet, not a URL', async () => {
+    await panel();
+    fireEvent.click(screen.getByText('Share the card'));
+    await waitFor(() => expect(shareArtifact).toHaveBeenCalled());
+    const handed = shareArtifact.mock.calls[0]![0];
+    expect(handed.file).toBeInstanceOf(File);
+    expect(handed.kind).toBe('card');
+  });
+
+  it('says what the difference is, because nobody should have to guess', async () => {
+    await panel();
+    expect(screen.getByText(/looks the same wherever it lands/)).toBeTruthy();
+    expect(screen.getByText(/each app crops that its own way/)).toBeTruthy();
   });
 });
