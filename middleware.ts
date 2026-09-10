@@ -8,6 +8,7 @@ import {
   shareOgTitle,
   type ShareSummary,
 } from './src/lib/share/shareOg';
+import { injectShareMeta } from './src/lib/share/shareShell';
 import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, isKnownRoute, resolveSeo } from './src/lib/seo/routes';
 
 const BOT_UA =
@@ -26,6 +27,24 @@ const SHARE_PATH = /^\/s\/([0-9a-hjkmnp-tv-z]{8})$/;
  * a link pasted into a group chat has to unfurl as *something*, and a preview
  * that fails is worse than a generic one.
  */
+/**
+ * The built app shell, which the share page decorates rather than replaces.
+ *
+ * `_app-shell` is excluded from this middleware's matcher, so fetching it here
+ * cannot recurse. Null on any failure — the caller falls through to the normal
+ * response, which costs the card but never the page.
+ */
+async function fetchAppShell(origin: string): Promise<string | null> {
+  try {
+    const response = await fetch(`${origin}/_app-shell`, {
+      headers: { accept: 'text/html' },
+    });
+    return response.ok ? await response.text() : null;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchShareSummary(shareId: string): Promise<ShareSummary | null> {
   const url = process.env.VITE_SUPABASE_URL?.trim();
   const key = process.env.VITE_SUPABASE_ANON_KEY?.trim();
@@ -114,52 +133,49 @@ export default async function middleware(request: Request): Promise<Response> {
   const seo = resolveSeo(pathname);
   const ua = request.headers.get('user-agent') ?? '';
 
-  // A share link unfurls for crawlers with the athlete's own card; a human
-  // gets the SPA. Only the crawler path costs a database round trip.
+  // A share link unfurls with the athlete's own card for *every* client, not
+  // just the ones whose user agent we recognised.
+  //
+  // This used to gate on a list of known crawlers and hand everyone else the
+  // app shell, whose head advertises the site: og:title the product name,
+  // og:image the logo, og:url the homepage. Apple's Messages fetches with an
+  // ordinary Safari user agent, so a link pasted into a text message got that
+  // — no card, and a claim that the link was really the homepage — while the
+  // same link on Facebook showed the card. A user-agent allowlist cannot be
+  // completed, so this stops keeping one.
   const shareMatch = SHARE_PATH.exec(pathname);
-  if (shareMatch && BOT_UA.test(ua)) {
+  if (shareMatch) {
     const shareId = shareMatch[1] as string;
-    const summary = await fetchShareSummary(shareId);
-    const image = shareOgImage(summary, url.origin, process.env.VITE_SUPABASE_URL?.trim() ?? null);
-    const imageSize = shareOgImageSize(summary);
-    const title = shareOgTitle(summary);
-    const description = shareOgDescription(summary);
-    const pageUrl = url.toString();
-    return new Response(
-      `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <title>${escapeAttr(title)}</title>
-  <meta name="description" content="${escapeAttr(description)}" />
-  <meta name="robots" content="noindex, follow" />
-  <meta property="og:type" content="website" />
-  <meta property="og:title" content="${escapeAttr(title)}" />
-  <meta property="og:description" content="${escapeAttr(description)}" />
-  <meta property="og:url" content="${escapeAttr(pageUrl)}" />
-  <meta property="og:image" content="${escapeAttr(image)}" />
-  <meta property="og:image:width" content="${imageSize.width}" />
-  <meta property="og:image:height" content="${imageSize.height}" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="${escapeAttr(title)}" />
-  <meta name="twitter:image" content="${escapeAttr(image)}" />
-</head>
-<body>
-  <p><a href="${escapeAttr(pageUrl)}">Open AMRAP With Friends</a></p>
-</body>
-</html>`,
-      {
-        status: 200,
-        headers: {
-          'content-type': 'text/html; charset=utf-8',
-          'x-robots-tag': 'noindex, follow',
-          // Short: the card image can arrive moments after the row does, and a
-          // long cache would pin the generic fallback in front of it.
-          'cache-control': 'public, max-age=60',
-          'set-cookie': consentRegionCookie(request),
-        },
-      }
-    );
+    const [summary, shell] = await Promise.all([
+      fetchShareSummary(shareId),
+      fetchAppShell(url.origin),
+    ]);
+    // No shell means the deploy is mid-flight or the fetch failed. Falling
+    // through to next() costs the card, not the page.
+    if (shell !== null) {
+      const imageSize = shareOgImageSize(summary);
+      return new Response(
+        injectShareMeta(shell, {
+          title: shareOgTitle(summary),
+          description: shareOgDescription(summary),
+          url: url.toString(),
+          image: shareOgImage(summary, url.origin, process.env.VITE_SUPABASE_URL?.trim() ?? null),
+          imageWidth: imageSize.width,
+          imageHeight: imageSize.height,
+        }),
+        {
+          status: 200,
+          headers: {
+            'content-type': 'text/html; charset=utf-8',
+            'x-robots-tag': 'noindex, follow',
+            // Short: the card image can arrive moments after the row does, and
+            // a long cache would pin the generic fallback in front of it.
+            'cache-control': 'public, max-age=60',
+            'set-cookie': consentRegionCookie(request),
+          },
+        }
+      );
+    }
   }
 
   // Signed-in, private and ephemeral surfaces must stay out of the index. The
