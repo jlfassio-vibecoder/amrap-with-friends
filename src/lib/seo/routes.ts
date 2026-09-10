@@ -185,9 +185,9 @@ export const CONTENT_ROUTES: RouteSeo[] = [
   },
   {
     path: '/creators',
-    title: 'Host weekly AMRAPs. Get paid when your squad trains. — AMRAP With Friends',
+    title: 'Founding Host pilot invitation — AMRAP With Friends',
     description:
-      'Host a live synced AMRAP each week, earn a share of every subscription your squad buys, and turn finishes into posts that tag you.',
+      'Apply for the Founding Host pilot: host weekly AMRAP missions, help your squad return, and explore proposed coach benefits. Starting with 3–5 hosts.',
     index: true,
   },
   {
