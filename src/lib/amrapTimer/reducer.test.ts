@@ -88,11 +88,14 @@ describe('amrapTimerReducer', () => {
       const state = reduce(
         started,
         { type: 'start', nowMs: at(0), setupDurationSec: setupSec, workDurationSec: workSec },
-        { type: 'tick', nowMs: at(30) }
+        // Past the countdown but still inside the work cap.
+        { type: 'tick', nowMs: at(setupSec + 2) }
       );
 
       expect(state.phase).toBe('work');
       expect(state.workStartedAtMs).toBe(at(setupSec));
+      // And the two seconds already worked are priced on the same tick.
+      expect(state.timeLeftSec).toBe(workSec - 2);
     });
 
     it('ticks through work into finished on timeout', () => {
@@ -423,6 +426,33 @@ describe('amrapTimerReducer', () => {
 
       expect(state.phase).toBe('work');
       expect(selectElapsedSec(state)).toBe(10);
+    });
+
+    it('carries the work already elapsed through a late setup transition', () => {
+      // Backgrounded through the countdown and into work. Landing in work with
+      // a full clock would publish that inflated time_left_sec to every joiner
+      // before the next tick corrected it.
+      const state = reduce(
+        started,
+        { type: 'start', nowMs: at(0), setupDurationSec: 10, workDurationSec: 300 },
+        { type: 'tick', nowMs: at(70) }
+      );
+
+      expect(state.phase).toBe('work');
+      expect(state.workStartedAtMs).toBe(at(10));
+      expect(state.timeLeftSec).toBe(240);
+      expect(selectElapsedSec(state)).toBe(60);
+    });
+
+    it('lands straight in finished when the cap passed while the tab slept', () => {
+      const state = reduce(
+        started,
+        { type: 'start', nowMs: at(0), setupDurationSec: 10, workDurationSec: 300 },
+        { type: 'tick', nowMs: at(400) }
+      );
+
+      expect(state.phase).toBe('finished');
+      expect(state.timeLeftSec).toBe(0);
     });
   });
 });

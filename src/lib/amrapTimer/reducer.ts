@@ -48,6 +48,15 @@ export function selectRoundCount(state: AmrapTimerState): number {
   return state.rounds.length;
 }
 
+/** The work clock at `nowMs`: the remaining time, or finished once the cap has passed. */
+function workTick(state: AmrapTimerState, nowMs: number): AmrapTimerState {
+  const remaining = state.workDurationSec - workElapsedSec(state, nowMs);
+  if (remaining <= 0) {
+    return { ...state, phase: 'finished', timeLeftSec: 0, isPaused: false, pausedAtMs: null };
+  }
+  return { ...state, timeLeftSec: remaining };
+}
+
 export function amrapTimerReducer(
   state: AmrapTimerState,
   action: AmrapTimerAction
@@ -178,29 +187,26 @@ export function amrapTimerReducer(
           // Work begins when the countdown *ended*, not when this tick happened
           // to run. A throttled tab would otherwise start the clock late and
           // hand the athlete extra seconds.
-          return {
+          //
+          // The same tick then has to price the work already done: a tab asleep
+          // through the countdown is usually asleep well past it, and landing
+          // in work with a full clock would publish that inflated time to every
+          // joiner until the next interval corrected it -- the drift this
+          // module exists to remove, reintroduced at the seam.
+          const inWork: AmrapTimerState = {
             ...state,
             phase: 'work',
             timeLeftSec: state.workDurationSec,
             workStartedAtMs: anchor + state.setupDurationSec * 1000,
             setupStartedAtMs: anchor,
           };
+          return workTick(inWork, action.nowMs);
         }
         return { ...state, timeLeftSec: remaining, setupStartedAtMs: anchor };
       }
 
       if (state.phase === 'work') {
-        const remaining = state.workDurationSec - workElapsedSec(state, action.nowMs);
-        if (remaining <= 0) {
-          return {
-            ...state,
-            phase: 'finished',
-            timeLeftSec: 0,
-            isPaused: false,
-            pausedAtMs: null,
-          };
-        }
-        return { ...state, timeLeftSec: remaining };
+        return workTick(state, action.nowMs);
       }
 
       return state;
