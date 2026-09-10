@@ -9,7 +9,13 @@ import { shareArtifact } from '@/lib/share/shareSheet';
 import { uploadShareImage } from '@/lib/share/uploadShareImage';
 import { frameAt, myBar, resolveVariant } from '@/lib/share/timeline';
 import { cardMovements, roundSplits, shouldDrawBoard } from '@/lib/share/cardContent';
-import { photoRejectionReason } from '@/lib/share/photo';
+import {
+  photoRejectionReason,
+  slotForLayout,
+  slotsForTarget,
+  type PhotoSlot,
+  type PhotoTarget,
+} from '@/lib/share/photo';
 import { defaultCut } from '@/lib/share/cuts';
 import {
   detectEncoderPath,
@@ -21,6 +27,17 @@ import {
 import { replayFileName } from '@/lib/share/replay/renderReplay';
 import { useReplay } from '@/lib/share/replay/useReplay';
 import type { ReplayData, ShareLayout, ShareVariant } from '@/lib/share/types';
+
+const PHOTO_TARGET_OPTIONS: { id: PhotoTarget; label: string }[] = [
+  { id: 'portrait', label: 'Tall card' },
+  { id: 'wide', label: 'Wide card' },
+  { id: 'both', label: 'Both' },
+];
+
+const PHOTO_SLOT_LABELS: { id: PhotoSlot; label: string }[] = [
+  { id: 'portrait', label: 'Tall card' },
+  { id: 'wide', label: 'Wide card' },
+];
 
 const LAYOUT_OPTIONS: { id: ShareLayout; label: string }[] = [
   { id: 'story', label: '9:16' },
@@ -52,8 +69,18 @@ export function ShareCardPanel({
   // Detected once: the answer cannot change while the panel is open, and
   // probing per render would run a feature test on every keystroke.
   const [encoderPath] = useState(() => detectEncoderPath(readCapabilities()));
-  const [photo, setPhoto] = useState<ImageBitmap | null>(null);
-  // Bumped whenever the photo changes. Rendered blobs are cached by ratio and
+  // One photo per card shape. The wide card crops a 3:4 phone photo to a band
+  // out of its middle, so the shot that works on the tall card arrives on X as
+  // a torso — the athlete needs to be able to say which photo goes where, or
+  // to say one is fine for both and accept that knowingly.
+  const [photos, setPhotos] = useState<Record<PhotoSlot, ImageBitmap | null>>({
+    portrait: null,
+    wide: null,
+  });
+  // Which slots the next upload fills. Both by default: most athletes have one
+  // photo and one photo is the thing they expect to end up on their card.
+  const [photoTarget, setPhotoTarget] = useState<PhotoTarget>('both');
+  // Bumped whenever a photo changes. Rendered blobs are cached by ratio and
   // variant; without this in the key, adding a photo hands back the cached
   // photo-less card and nothing appears to happen.
   const [photoToken, setPhotoToken] = useState(0);
@@ -65,7 +92,7 @@ export function ShareCardPanel({
   // Decoded once into an ImageBitmap rather than kept as a File: the renderer
   // draws it on every ratio change, and re-decoding a 12MP photo each time is
   // what would make the toggle feel slow.
-  const handlePhoto = useCallback(async (file: File | undefined) => {
+  const handlePhoto = useCallback(async (file: File | undefined, target: PhotoTarget) => {
     if (!file) {
       return;
     }
@@ -78,31 +105,65 @@ export function ShareCardPanel({
     try {
       // from-image so a photo taken sideways is not drawn sideways.
       const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
-      setPhoto((previous) => {
-        previous?.close();
-        return bitmap;
+      const slots = slotsForTarget(target);
+      setPhotos((previous) => {
+        const next = { ...previous };
+        for (const slot of slots) {
+          // Closed only if nothing else still points at it: one bitmap fills
+          // both slots when the target is `both`, and closing it while the
+          // other slot holds it would blank that card.
+          const outgoing = previous[slot];
+          if (outgoing && !slots.some((other) => other !== slot && previous[other] === outgoing)) {
+            outgoing.close();
+          }
+          next[slot] = bitmap;
+        }
+        return next;
       });
-      setPhotoToken((previous) => previous + 1);
+      setPhotoToken((token) => token + 1);
     } catch {
       setPhotoError('That photo could not be read.');
     }
   }, []);
 
-  const clearPhoto = useCallback(() => {
-    setPhoto((previous) => {
-      previous?.close();
-      return null;
+  const clearPhoto = useCallback((slot: PhotoSlot) => {
+    setPhotos((previous) => {
+      const outgoing = previous[slot];
+      const other: PhotoSlot = slot === 'portrait' ? 'wide' : 'portrait';
+      // Shared bitmap: dropping one slot must not close it under the other.
+      if (outgoing && previous[other] !== outgoing) {
+        outgoing.close();
+      }
+      return { ...previous, [slot]: null };
     });
-    setPhotoToken((previous) => previous + 1);
+    setPhotoToken((token) => token + 1);
   }, []);
 
-  useEffect(() => () => photo?.close(), [photo]);
+  // Close on unmount, once per distinct bitmap. The ref is written in an
+  // effect rather than during render: reading or writing one while rendering
+  // is what the compiler bails out on, and a bailout here would cost the
+  // memoisation the whole preview depends on.
+  const photosRef = useRef(photos);
+  useEffect(() => {
+    photosRef.current = photos;
+  }, [photos]);
+  useEffect(
+    () => () => {
+      const open = new Set(Object.values(photosRef.current).filter(Boolean));
+      for (const bitmap of open) {
+        bitmap?.close();
+      }
+    },
+    []
+  );
 
   // One id for the life of the panel: re-rendering at another ratio is the
   // same share, and a new id per ratio would fragment the view count. Lazy
   // useState rather than a ref, because this is a stable value rather than
   // mutable state, and reading a ref during render is not allowed.
   const [shareId] = useState(createShareId);
+
+  const hasAnyPhoto = photos.portrait !== null || photos.wide !== null;
 
   const effectiveVariant = resolveVariant(data, variant);
   const blobRef = useRef<Map<string, Blob>>(new Map());
@@ -154,11 +215,13 @@ export function ShareCardPanel({
       totalReps: me ? me.finalRounds * repsPerRound + me.finalReps : null,
       finalScore: me?.finalScore ?? null,
       showBoard: shouldDrawBoard(data),
-      photo,
-      photoWidth: photo?.width,
-      photoHeight: photo?.height,
+      // The ratio on screen decides which photo is drawn, so flipping to 16:9
+      // shows the athlete what X will actually get rather than a promise.
+      photo: photos[slotForLayout(layout)],
+      photoWidth: photos[slotForLayout(layout)]?.width,
+      photoHeight: photos[slotForLayout(layout)]?.height,
     }),
-    [layout, effectiveVariant, workoutTitle, data, me, repsPerRound, shareId, photo]
+    [layout, effectiveVariant, workoutTitle, data, me, repsPerRound, shareId, photos]
   );
 
   // The link preview gets its own render, in landscape.
@@ -177,21 +240,22 @@ export function ShareCardPanel({
   // athlete actually saw before this: their result is not private, only
   // their face is.
   const uploadOgImage = useCallback(async (): Promise<void> => {
-    const withPhoto = photo && publishPhoto ? photo : null;
-    const photoOptions = {
-      photo: withPhoto,
-      photoWidth: withPhoto?.width,
-      photoHeight: withPhoto?.height,
-    };
-
     // Encoded at the first format and quality that fits the bucket. Null if
     // none do, which is a card that does not get uploaded rather than one that
-    // gets uploaded broken.
+    // gets uploaded broken. Each layout draws its own slot's photo, so the
+    // wide card sent to X carries the photo chosen for it.
     async function encode(layout: ShareLayout): Promise<Blob | null> {
+      const slotPhoto = publishPhoto ? photos[slotForLayout(layout)] : null;
       for (const encoding of OG_ENCODINGS) {
         const blob = await renderCardBlob(
           data,
-          { ...drawOptions, ...photoOptions, layout },
+          {
+            ...drawOptions,
+            layout,
+            photo: slotPhoto,
+            photoWidth: slotPhoto?.width,
+            photoHeight: slotPhoto?.height,
+          },
           encoding
         );
         if (!blob) {
@@ -220,7 +284,7 @@ export function ShareCardPanel({
       claimToken,
       hostToken,
     });
-  }, [data, drawOptions, photo, publishPhoto, shareId, participantId, claimToken, hostToken]);
+  }, [data, drawOptions, photos, publishPhoto, shareId, participantId, claimToken, hostToken]);
 
   // Recorded when a share actually happens, with what was actually shared.
   // On mount it always logged story/result regardless of the ratio chosen, and
@@ -416,28 +480,70 @@ export function ShareCardPanel({
         ) : null}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <label className="btn-outline cursor-pointer text-sm">
-          {photo ? 'Change photo' : 'Add a photo'}
-          {/* `capture` opens the camera straight away on a phone, which is
-              where somebody is standing when they finish. */}
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="hidden"
-            onChange={(event) => void handlePhoto(event.target.files?.[0])}
-          />
-        </label>
-        {photo ? (
-          <button type="button" className="btn-outline text-sm" onClick={clearPhoto}>
-            Remove photo
-          </button>
+      {/* One upload, and the athlete says which card it is for. The tall card
+          and the wide card crop a phone photo differently — a head-and-shoulders
+          shot that works on the tall one arrives on the wide one as a torso —
+          so "both" is the default but never the only option. */}
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
+            Use this photo for
+          </span>
+          {PHOTO_TARGET_OPTIONS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              aria-pressed={photoTarget === option.id}
+              onClick={() => setPhotoTarget(option.id)}
+              className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                photoTarget === option.id
+                  ? 'border-accent bg-accent text-on-accent'
+                  : 'border-border bg-surface text-secondary'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="btn-outline cursor-pointer text-sm">
+            {hasAnyPhoto ? 'Add another photo' : 'Add a photo'}
+            {/* `capture` opens the camera straight away on a phone, which is
+                where somebody is standing when they finish. */}
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={(event) => {
+                void handlePhoto(event.target.files?.[0], photoTarget);
+                // Cleared so choosing the same file again still fires change.
+                event.target.value = '';
+              }}
+            />
+          </label>
+        </div>
+
+        {hasAnyPhoto ? (
+          <ul className="space-y-1">
+            {PHOTO_SLOT_LABELS.map((slot) => (
+              <li key={slot.id} className="flex items-center gap-2 text-xs text-secondary">
+                <span className="min-w-28">{slot.label}</span>
+                <span className="text-primary">{photos[slot.id] ? 'photo added' : 'no photo'}</span>
+                {photos[slot.id] ? (
+                  <button type="button" className="underline" onClick={() => clearPhoto(slot.id)}>
+                    Remove
+                  </button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
         ) : null}
       </div>
 
       {photoError ? <p className="text-xs text-secondary">{photoError}</p> : null}
-      {photo ? (
+      {hasAnyPhoto ? (
         <div className="space-y-2 rounded-card border border-border p-3">
           <label className="flex items-start gap-2 text-xs text-secondary">
             <input
