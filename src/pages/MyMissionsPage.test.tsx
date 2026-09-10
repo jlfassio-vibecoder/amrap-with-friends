@@ -9,6 +9,7 @@ import type { MyMissionEntry } from '@/lib/api/myMissions';
 const fetchMyMissionsMock = vi.fn();
 const deleteIncompleteMissionMock = vi.fn();
 const fetchMyCampaignsMock = vi.fn();
+const fetchMyAssignedWorkoutsMock = vi.fn();
 const authUser = { id: 'user-1' };
 
 vi.mock('@/hooks/useAmrapAuth', () => ({
@@ -17,6 +18,10 @@ vi.mock('@/hooks/useAmrapAuth', () => ({
     isAuthLoading: false,
     user: authUser,
   }),
+}));
+
+vi.mock('@/hooks/useAthleteProfile', () => ({
+  useAthleteProfile: () => ({ profile: null, loading: false }),
 }));
 
 vi.mock('@/lib/api/myMissions', async () => {
@@ -34,6 +39,16 @@ vi.mock('@/lib/api/campaigns', async () => {
   return {
     ...actual,
     fetchMyCampaigns: (...args: unknown[]) => fetchMyCampaignsMock(...args),
+  };
+});
+
+vi.mock('@/lib/api/assignedWorkouts', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/api/assignedWorkouts')>(
+    '@/lib/api/assignedWorkouts'
+  );
+  return {
+    ...actual,
+    fetchMyAssignedWorkouts: (...args: unknown[]) => fetchMyAssignedWorkoutsMock(...args),
   };
 });
 
@@ -94,11 +109,17 @@ afterEach(() => {
   fetchMyMissionsMock.mockReset();
   deleteIncompleteMissionMock.mockReset();
   fetchMyCampaignsMock.mockReset();
+  fetchMyAssignedWorkoutsMock.mockReset();
   vi.unstubAllGlobals();
 });
 
 function renderPage() {
-  fetchMyCampaignsMock.mockResolvedValue({ data: [], error: null });
+  if (!fetchMyCampaignsMock.getMockImplementation()) {
+    fetchMyCampaignsMock.mockResolvedValue({ data: [], error: null });
+  }
+  if (!fetchMyAssignedWorkoutsMock.getMockImplementation()) {
+    fetchMyAssignedWorkoutsMock.mockResolvedValue({ data: [], error: null });
+  }
   return render(
     <MemoryRouter>
       <ThemeProvider>
@@ -401,6 +422,55 @@ describe('MyMissionsPage CTAs', () => {
   });
 });
 
+describe('MyMissionsPage tabs', () => {
+  it('defaults to Missions and switches section panels', async () => {
+    fetchMyMissionsMock.mockResolvedValue({
+      data: [entry()],
+      chains: {},
+      error: null,
+    });
+    fetchMyCampaignsMock.mockResolvedValue({
+      data: [campaign()],
+      error: null,
+    });
+    fetchMyAssignedWorkoutsMock.mockResolvedValue({ data: [], error: null });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByRole('tablist', { name: 'My missions sections' })).toBeTruthy();
+      expect(screen.getByRole('tab', { name: 'Missions' }).getAttribute('aria-selected')).toBe(
+        'true'
+      );
+      expect(screen.getByRole('link', { name: 'View mission' })).toBeTruthy();
+    });
+
+    expect(screen.queryByText('Your campaigns')).toBeNull();
+    expect(screen.queryByText(/Nothing waiting from your squad/)).toBeNull();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Campaigns' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: 'Campaigns' }).getAttribute('aria-selected')).toBe(
+        'true'
+      );
+      expect(screen.getByText('Your campaigns')).toBeTruthy();
+      expect(screen.getByRole('link', { name: /Spring Build/ }).getAttribute('href')).toBe(
+        '/campaign/33333333-3333-4333-8333-333333333333'
+      );
+    });
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Sent to you' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: 'Sent to you' }).getAttribute('aria-selected')).toBe(
+        'true'
+      );
+      expect(screen.getByText(/Nothing waiting from your squad/)).toBeTruthy();
+    });
+  });
+});
+
 describe('MyMissionsPage campaigns', () => {
   it('lists campaigns with a link to the campaign detail', async () => {
     fetchMyMissionsMock.mockResolvedValue({ data: [], chains: {}, error: null });
@@ -408,6 +478,7 @@ describe('MyMissionsPage campaigns', () => {
       data: [campaign()],
       error: null,
     });
+    fetchMyAssignedWorkoutsMock.mockResolvedValue({ data: [], error: null });
 
     render(
       <MemoryRouter>
@@ -416,6 +487,8 @@ describe('MyMissionsPage campaigns', () => {
         </ThemeProvider>
       </MemoryRouter>
     );
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Campaigns' }));
 
     await waitFor(() => {
       expect(screen.getByText('Your campaigns')).toBeTruthy();

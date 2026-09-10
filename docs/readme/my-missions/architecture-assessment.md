@@ -22,15 +22,15 @@ session only. `missions.state = 'work'` must read as **Live** in athlete UI.
 
 `/my-missions` is a hard-gated (`RequireIntake`), lazy, `noindex` SPA hub that
 loads a slim `my_missions()` list once (plus embedded chains), hydrates detail
-on demand, and nests campaigns, assigned workouts, and two progression panels
-on the same page. Lists refetch when the tab becomes visible again; there is
-still no Realtime.
+on demand, and splits history / assigned / campaigns across HUD-style section
+tabs (progression stays on Missions). Lists refetch when the tab becomes
+visible again; there is still no Realtime.
 
-The architecture fits a “saved history + related account lists” product job,
-but the page has grown into a composite home for several account concerns.
-Highest-priority remaining gap: page composition (C1). P0 vocabulary, P1
-payload/chains (D1–D2), auth gate (A1–A3), and visibility refetch (D3) plus
-delete→reload (E1) are addressed.
+The architecture fits a “saved history + related account lists” product job.
+P0 vocabulary, P1 payload/chains (D1–D2), auth gate (A1–A3), visibility refetch
+(D3) plus delete→reload (E1), and page composition (C1) plus title chrome (C2)
+are addressed. Highest-priority remaining gap: pagination (D4) when history
+grows.
 
 ---
 
@@ -68,20 +68,22 @@ account” on a finished guest mission is how rows appear here.
 
 ### 2.2 Page composition
 
-[`MyMissionsPage.tsx`](../../../src/pages/MyMissionsPage.tsx) (~500 lines):
+[`MyMissionsPage.tsx`](../../../src/pages/MyMissionsPage.tsx):
 
 ```
-NarrowPageLayout ("My missions" / "Saved to your account")
+NarrowPageLayout ("My missions" / "Saved to your account", desktopTitleAsPageHeading)
 ├── Plan mission | New campaign
-├── AssignedWorkoutsPanel          → own RPC
-├── MyCampaignsPanel               → my_campaigns
-├── ScalingProgressionPanel(entries)
-├── CheckInProgressionPanel(entries)
-├── loading / guest / empty / error
-├── groupMyMissionsByRallyPoint(entries, chains)
-│   ├── single → MyMissionCard
-│   └── group  → parent MyMissionCard + expand
-│                 └── started MyMissionCard | QueuedMissionCard
+├── MyMissionsTopTabs (Missions | Sent to you | Campaigns)
+├── tab Missions
+│   ├── loading / empty / error
+│   ├── groupMyMissionsByRallyPoint(entries, chains)
+│   │   ├── single → MyMissionCard
+│   │   └── group  → parent MyMissionCard + expand
+│   │                 └── started MyMissionCard | QueuedMissionCard
+│   ├── ScalingProgressionPanel(entries)
+│   └── CheckInProgressionPanel(entries)
+├── tab Sent to you → AssignedWorkoutsPanel(showWhenEmpty)
+├── tab Campaigns → MyCampaignsPanel
 ├── MyMissionScoreBreakdownModal
 └── Back home
 ```
@@ -217,10 +219,10 @@ Host scheduled list delegates to the same helper (`work` → Live).
 
 ### 3.4 Composition / single job
 
-| ID  | Sev | Gap                    | Notes                                                                                                                                                                                                                    |
-| --- | --- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| C1  | P1  | Composite hub          | History + assigned + campaigns + two progression panels + benchmarks. Assigned and campaigns are justified (“what’s waiting” / “what programme”), but the first viewport is a stack of jobs rather than one composition. |
-| C2  | P2  | Duplicate title chrome | Mobile subtitle via `NarrowPageLayout` and a desktop-only h1 block both say “My missions”.                                                                                                                               |
+| ID  | Sev | Gap                                      | Notes                                                                                                     |
+| --- | --- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| C1  | P1  | ~~Composite hub~~ **Addressed**          | HUD-style tabs: Missions (history + progression), Sent to you, Campaigns. Page CTAs stay above the strip. |
+| C2  | P2  | ~~Duplicate title chrome~~ **Addressed** | Body h1 / mobile subtitle removed; `desktopTitleAsPageHeading` on `NarrowPageLayout`.                     |
 
 ### 3.5 Correctness / edge cases
 
@@ -267,8 +269,10 @@ Ordered for impact vs risk. Implementation is out of scope for this note.
 4. ~~**Refetch policy**~~ **Done** — `useRefetchOnVisible` on My missions +
    assigned/campaigns panels; delete reloads the list (E1). Realtime still
    optional / overkill for history.
-5. **Close test gaps** on guest, empty, error, parse of check-in fields, and
-   state-label formatting once (1) lands.
+5. ~~**Page composition**~~ **Done** — HUD-style Missions / Sent to you /
+   Campaigns tabs; duplicate body title chrome removed (C2).
+6. **Close remaining test gaps** on guest, empty, error, and parse of check-in
+   fields.
 
 ---
 

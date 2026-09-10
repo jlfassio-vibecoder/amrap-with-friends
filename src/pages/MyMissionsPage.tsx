@@ -10,6 +10,8 @@ import { SendWorkoutToSquad } from '@/components/mission/SendWorkoutToSquad';
 import { MyCampaignsPanel } from '@/components/campaign/MyCampaignsPanel';
 import { ScalingProgressionPanel } from '@/components/mission/ScalingProgressionPanel';
 import { CheckInProgressionPanel } from '@/components/mission/CheckInProgressionPanel';
+import { MyMissionsTabPanel } from '@/components/mission/MyMissionsTabPanel';
+import { MyMissionsTopTabs, type MyMissionsTabKey } from '@/components/mission/MyMissionsTopTabs';
 import { MyMissionCheckIn } from '@/components/mission/MyMissionCheckIn';
 import { fetchMyBenchmarks, retireBenchmark, type AthleteBenchmark } from '@/lib/api/benchmarks';
 import { benchmarkForMission } from '@/lib/benchmark/matchBenchmark';
@@ -327,6 +329,7 @@ export default function MyMissionsPage() {
   const [deletingMissionId, setDeletingMissionId] = useState<string | null>(null);
   const [expandedRallyPointIds, setExpandedRallyPointIds] = useState<Set<string>>(() => new Set());
   const [benchmarks, setBenchmarks] = useState<AthleteBenchmark[]>([]);
+  const [activeTab, setActiveTab] = useState<MyMissionsTabKey>('missions');
 
   const listItems = useMemo(
     () => groupMyMissionsByRallyPoint(entries, chainsByRallyPointId),
@@ -470,14 +473,11 @@ export default function MyMissionsPage() {
   }
 
   return (
-    <NarrowPageLayout title="My missions" subtitle="Saved to your account">
-      <p className="text-sm text-secondary lg:hidden">Missions you saved to your account.</p>
-
-      <div className="hidden space-y-2 lg:block">
-        <h1 className="text-display text-5xl text-ink">My missions</h1>
-        <p className="text-sm text-secondary">Missions you saved to your account.</p>
-      </div>
-
+    <NarrowPageLayout
+      title="My missions"
+      subtitle="Saved to your account"
+      desktopTitleAsPageHeading
+    >
       <div className="flex flex-wrap items-center gap-3">
         <Link className="btn-primary" to="/create">
           Plan mission
@@ -487,89 +487,98 @@ export default function MyMissionsPage() {
         </Link>
       </div>
 
-      <AssignedWorkoutsPanel />
+      <div className="space-y-4">
+        <MyMissionsTopTabs activeTab={activeTab} onChange={setActiveTab} />
 
-      <MyCampaignsPanel showCreateCta={false} />
+        <MyMissionsTabPanel tab="missions" activeTab={activeTab}>
+          {loading ? <p className="text-sm text-secondary">Loading…</p> : null}
 
-      <ScalingProgressionPanel entries={entries} />
+          {error ? <p className="text-error">Error: {error}</p> : null}
 
-      <CheckInProgressionPanel entries={entries} />
+          {!loading && isAuthenticated && entries.length === 0 ? (
+            <p className="text-sm text-secondary">
+              No saved missions yet. Finish a mission and use “Save this mission to my account”.
+            </p>
+          ) : null}
 
-      {loading ? <p className="text-sm text-secondary">Loading…</p> : null}
+          {listItems.length > 0 ? (
+            <ul className="space-y-3">
+              {listItems.map((item) => {
+                if (item.kind === 'single') {
+                  return (
+                    <li key={item.entry.participantId}>
+                      <MyMissionCard
+                        entry={item.entry}
+                        deletingMissionId={deletingMissionId}
+                        onDelete={(entry) => void handleDelete(entry)}
+                        onViewBreakdown={setBreakdownEntry}
+                        ensureDetail={ensureDetail}
+                        benchmark={benchmarkForMission(item.entry, benchmarks)}
+                        onRetireBenchmark={(id) => void handleRetireBenchmark(id)}
+                      />
+                    </li>
+                  );
+                }
 
-      {error && <p className="text-error">Error: {error}</p>}
+                const expanded = expandedRallyPointIds.has(item.rallyPointId);
+                return (
+                  <li key={item.rallyPointId} className="space-y-2">
+                    <MyMissionCard
+                      entry={item.parent}
+                      deletingMissionId={deletingMissionId}
+                      onDelete={(entry) => void handleDelete(entry)}
+                      onViewBreakdown={setBreakdownEntry}
+                      ensureDetail={ensureDetail}
+                      benchmark={benchmarkForMission(item.parent, benchmarks)}
+                      onRetireBenchmark={(id) => void handleRetireBenchmark(id)}
+                      expandControl={{
+                        expanded,
+                        missionCount: item.chainLength,
+                        position: 1,
+                        onToggle: () => toggleGroup(item.rallyPointId),
+                      }}
+                    />
+                    {expanded ? (
+                      <ul className="space-y-2 border-l-2 border-border pl-3">
+                        {item.children.map((child) =>
+                          child.kind === 'started' ? (
+                            <li key={child.entry.participantId}>
+                              <MyMissionCard
+                                entry={child.entry}
+                                deletingMissionId={deletingMissionId}
+                                onDelete={(entry) => void handleDelete(entry)}
+                                onViewBreakdown={setBreakdownEntry}
+                                ensureDetail={ensureDetail}
+                                benchmark={benchmarkForMission(child.entry, benchmarks)}
+                                onRetireBenchmark={(id) => void handleRetireBenchmark(id)}
+                              />
+                            </li>
+                          ) : (
+                            <li key={child.chainItem.id}>
+                              <QueuedMissionCard item={child.chainItem} />
+                            </li>
+                          )
+                        )}
+                      </ul>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
 
-      {!loading && isAuthenticated && entries.length === 0 ? (
-        <p className="text-sm text-secondary">
-          No saved missions yet. Finish a mission and use “Save this mission to my account”.
-        </p>
-      ) : null}
+          <ScalingProgressionPanel entries={entries} />
+          <CheckInProgressionPanel entries={entries} />
+        </MyMissionsTabPanel>
 
-      {listItems.length > 0 && (
-        <ul className="space-y-3">
-          {listItems.map((item) => {
-            if (item.kind === 'single') {
-              return (
-                <li key={item.entry.participantId}>
-                  <MyMissionCard
-                    entry={item.entry}
-                    deletingMissionId={deletingMissionId}
-                    onDelete={(entry) => void handleDelete(entry)}
-                    onViewBreakdown={setBreakdownEntry}
-                    ensureDetail={ensureDetail}
-                    benchmark={benchmarkForMission(item.entry, benchmarks)}
-                    onRetireBenchmark={(id) => void handleRetireBenchmark(id)}
-                  />
-                </li>
-              );
-            }
+        <MyMissionsTabPanel tab="sent" activeTab={activeTab}>
+          <AssignedWorkoutsPanel showWhenEmpty />
+        </MyMissionsTabPanel>
 
-            const expanded = expandedRallyPointIds.has(item.rallyPointId);
-            return (
-              <li key={item.rallyPointId} className="space-y-2">
-                <MyMissionCard
-                  entry={item.parent}
-                  deletingMissionId={deletingMissionId}
-                  onDelete={(entry) => void handleDelete(entry)}
-                  onViewBreakdown={setBreakdownEntry}
-                  ensureDetail={ensureDetail}
-                  benchmark={benchmarkForMission(item.parent, benchmarks)}
-                  onRetireBenchmark={(id) => void handleRetireBenchmark(id)}
-                  expandControl={{
-                    expanded,
-                    missionCount: item.chainLength,
-                    position: 1,
-                    onToggle: () => toggleGroup(item.rallyPointId),
-                  }}
-                />
-                {expanded ? (
-                  <ul className="space-y-2 border-l-2 border-border pl-3">
-                    {item.children.map((child) =>
-                      child.kind === 'started' ? (
-                        <li key={child.entry.participantId}>
-                          <MyMissionCard
-                            entry={child.entry}
-                            deletingMissionId={deletingMissionId}
-                            onDelete={(entry) => void handleDelete(entry)}
-                            onViewBreakdown={setBreakdownEntry}
-                            ensureDetail={ensureDetail}
-                            benchmark={benchmarkForMission(child.entry, benchmarks)}
-                            onRetireBenchmark={(id) => void handleRetireBenchmark(id)}
-                          />
-                        </li>
-                      ) : (
-                        <li key={child.chainItem.id}>
-                          <QueuedMissionCard item={child.chainItem} />
-                        </li>
-                      )
-                    )}
-                  </ul>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+        <MyMissionsTabPanel tab="campaigns" activeTab={activeTab}>
+          <MyCampaignsPanel showCreateCta={false} />
+        </MyMissionsTabPanel>
+      </div>
 
       {breakdownEntry?.scoreBreakdown ? (
         <MyMissionScoreBreakdownModal
