@@ -29,7 +29,8 @@
     "build:site": "astro build",
     "build:merge": "tsx scripts/merge-build.ts",
     "dev:site": "astro dev",
-    "check:migrations": "tsx scripts/check-migration-versions.ts"
+    "check:migrations": "tsx scripts/check-migration-versions.ts",
+    "perf:roster": "tsx scripts/load-test-roster.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.109.0",
