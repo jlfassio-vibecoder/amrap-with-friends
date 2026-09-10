@@ -49,8 +49,13 @@ export async function getMissionRoundCounts(input: {
   }
 
   const record = data as Record<string, unknown>;
-  if (record.ok === false) {
+  if (record.ok !== true) {
     return { ok: false, reason: typeof record.reason === 'string' ? record.reason : 'unknown' };
+  }
+  // A malformed body must not read as an empty mission: counts would parse to
+  // [] and the reconcile would draw a conclusion from a response it never got.
+  if (!Array.isArray(record.counts)) {
+    return { ok: false, reason: 'invalid_response' };
   }
 
   return { ok: true, counts: parseCounts(record.counts) };

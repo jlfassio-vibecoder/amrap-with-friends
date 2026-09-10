@@ -247,6 +247,35 @@ describe('useMissionChannel', () => {
     expect(getMissionLiveStateMock.mock.calls[1]![0]).toMatchObject({ since: null });
   });
 
+  it('survives the counts request rejecting', async () => {
+    // An unhandled rejection here would reach the app. The next interval asks
+    // again, so a dropped request is not worth surfacing.
+    vi.useFakeTimers();
+    getMissionLiveStateMock.mockResolvedValue(liveSnapshot());
+    getMissionRoundCountsMock.mockRejectedValue(new Error('network down'));
+    const rejections: unknown[] = [];
+    const onRejection = (reason: unknown) => rejections.push(reason);
+    process.on('unhandledRejection', onRejection);
+
+    try {
+      await renderLive();
+      await act(async () => {
+        vi.advanceTimersByTime(LIVE_RECONCILE_MS);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      // Fake timers stall setImmediate, so drain microtasks instead: an
+      // unhandled rejection is reported after the promise settles.
+      vi.useRealTimers();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    } finally {
+      process.off('unhandledRejection', onRejection);
+    }
+
+    expect(rejections).toEqual([]);
+    expect(getMissionLiveStateMock).toHaveBeenCalledTimes(1);
+  });
+
   it('does not reconcile once the mission is no longer running', async () => {
     vi.useFakeTimers();
     renderHook(() =>

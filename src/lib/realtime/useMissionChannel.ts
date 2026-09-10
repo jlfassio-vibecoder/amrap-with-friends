@@ -246,17 +246,22 @@ export function useMissionChannel(
         if (!missionForCounts) {
           return;
         }
-        const result = await getMissionRoundCounts({
-          missionId: missionForCounts,
-          participantId: participantIdForRpc,
-          claimToken: getStoredClaimToken(missionForCounts),
-          hostToken: getStoredHostToken(missionForCounts),
-        });
-        if (cancelledRef.current || !result.ok) {
-          return;
-        }
-        if (hasRoundCountDrift(localRoundCountsRef.current, result.counts)) {
-          resyncRef.current?.();
+        try {
+          const result = await getMissionRoundCounts({
+            missionId: missionForCounts,
+            participantId: participantIdForRpc,
+            claimToken: getStoredClaimToken(missionForCounts),
+            hostToken: getStoredHostToken(missionForCounts),
+          });
+          if (cancelledRef.current || !result.ok) {
+            return;
+          }
+          if (hasRoundCountDrift(localRoundCountsRef.current, result.counts)) {
+            resyncRef.current?.();
+          }
+        } catch {
+          // A dropped request is not worth surfacing: the next interval asks
+          // again, and an unhandled rejection here would reach the app.
         }
       })();
     }, LIVE_RECONCILE_MS);
