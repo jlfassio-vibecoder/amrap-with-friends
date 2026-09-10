@@ -19,25 +19,33 @@ import type { ShareLayout } from '@/lib/share/types';
 /** The layout rendered for the link preview — the same one the panel previews. */
 export const OG_LAYOUT: ShareLayout = 'story';
 
-/**
- * WebP, not PNG.
- *
- * A card is flat colour and PNG suits it — until a photo is behind the type,
- * and then PNG is storing a photograph losslessly. The one measured was 1.3 MB
- * against a 400 KB bucket limit, so publishing a photo could not work at all:
- * the upload was refused and the link quietly kept the site logo. WebP puts the
- * same card in a fraction of that, and the bucket already accepts it.
- */
-export const OG_IMAGE_TYPE = 'image/webp';
+export interface OgEncoding {
+  type: string;
+  quality?: number;
+}
 
 /**
- * Quality ladder, tried in order until one fits.
+ * What to try encoding the card as, in order, stopping at the first that fits.
  *
- * A photo card at 0.9 is usually already small enough; a busy photo may not be.
- * Stepping down beats a single conservative number that would soften every
- * card for the sake of the worst one.
+ * PNG first, because it is the format every link preview on earth can decode.
+ * A card with no photo behind it is flat colour and lands around 140 KB, so
+ * most cards never leave the first rung.
+ *
+ * WebP is the fallback rather than the default. It is small — a photo card
+ * that is 1.3 MB as PNG is under 40 KB as WebP, which is the only reason
+ * publishing a photo works at all against a 400 KB bucket — but it is also the
+ * format a renderer is most likely not to support, and a card nobody can
+ * decode is worth less than a slightly larger one everybody can.
+ *
+ * The quality rungs step down rather than starting conservative: softening
+ * every photo card for the sake of the busiest one is a worse trade.
  */
-export const OG_QUALITY_STEPS = [0.9, 0.75, 0.6];
+export const OG_ENCODINGS: OgEncoding[] = [
+  { type: 'image/png' },
+  { type: 'image/webp', quality: 0.9 },
+  { type: 'image/webp', quality: 0.75 },
+  { type: 'image/webp', quality: 0.6 },
+];
 
 /** Matches the bucket's own limit, so an oversized file fails here with a reason rather than at the API. */
 export const MAX_OG_IMAGE_BYTES = 400 * 1024;

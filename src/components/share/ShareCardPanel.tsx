@@ -3,7 +3,7 @@ import { track } from '@/lib/analytics/track';
 import { callRpc } from '@/lib/api/callRpc';
 import { buildCaption } from '@/lib/share/caption';
 import { cardFileName, renderCardBlob } from '@/lib/share/renderCard';
-import { OG_IMAGE_TYPE, OG_LAYOUT, OG_QUALITY_STEPS, fitsOgLimit } from '@/lib/share/ogImage';
+import { OG_ENCODINGS, OG_LAYOUT, fitsOgLimit } from '@/lib/share/ogImage';
 import { createShareId, shareUrl } from '@/lib/share/shareId';
 import { shareArtifact } from '@/lib/share/shareSheet';
 import { uploadShareImage } from '@/lib/share/uploadShareImage';
@@ -185,11 +185,8 @@ export function ShareCardPanel({
       photoWidth: withPhoto?.width,
       photoHeight: withPhoto?.height,
     };
-    for (const quality of OG_QUALITY_STEPS) {
-      const blob = await renderCardBlob(data, ogOptions, {
-        type: OG_IMAGE_TYPE,
-        quality,
-      });
+    for (const encoding of OG_ENCODINGS) {
+      const blob = await renderCardBlob(data, ogOptions, encoding);
       if (!blob) {
         return;
       }

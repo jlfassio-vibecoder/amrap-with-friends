@@ -136,19 +136,44 @@ describe('the image the link preview gets', () => {
     fireEvent.click(screen.getByText('Copy link'));
   }
 
-  it('uploads the same portrait card the panel is previewing, as webp', async () => {
+  it('uploads png when it fits, which is the format every renderer decodes', async () => {
+    // A card with no photo is flat colour and small, so it never needs webp.
+    // Webp is the fallback, not the default: a card a renderer cannot decode
+    // is worth less than a slightly larger one it can.
+    renderCardBlob.mockResolvedValue(new Blob(['card'], { type: 'image/png' }));
+    await shareIt();
+
+    await waitFor(() => expect(uploadShareImage).toHaveBeenCalled());
+    expect(uploadShareImage.mock.calls[0]![0].blob.type).toBe('image/png');
+    const og = renderCardBlob.mock.calls.find((call) => call[2]?.type === 'image/png');
+    expect(og![1].layout).toBe('story');
+  });
+
+  it('falls back to webp only when png will not fit the bucket', async () => {
+    const big = new Blob([new Uint8Array(500 * 1024)], { type: 'image/png' });
+    const small = new Blob(['small'], { type: 'image/webp' });
+    renderCardBlob
+      .mockResolvedValueOnce(new Blob(['preview'], { type: 'image/png' }))
+      .mockResolvedValueOnce(big)
+      .mockResolvedValue(small);
+    await shareIt();
+
+    await waitFor(() => expect(uploadShareImage).toHaveBeenCalled());
+    expect(uploadShareImage.mock.calls[0]![0].blob.type).toBe('image/webp');
+  });
+
+  it('uploads the same portrait card the panel is previewing', async () => {
     // The link has to unfurl as the card the athlete composed. It shipped as a
     // landscape render for a while -- chosen to survive a crawler's 1.91:1
     // crop -- and that put a different card behind the link from the one on
     // screen, with the athlete's face cropped out of their own photo.
-    renderCardBlob.mockResolvedValue(new Blob(['card'], { type: 'image/webp' }));
+    renderCardBlob.mockResolvedValue(new Blob(['card'], { type: 'image/png' }));
     await shareIt();
 
     await waitFor(() => expect(uploadShareImage).toHaveBeenCalled());
-    const ogCall = renderCardBlob.mock.calls.find((call) => call[2]?.type === 'image/webp');
+    const ogCall = renderCardBlob.mock.calls.find((call) => call[2]?.type !== undefined);
     expect(ogCall).toBeDefined();
     expect(ogCall![1].layout).toBe('story');
-    expect(uploadShareImage.mock.calls[0]![0].blob.type).toBe('image/webp');
   });
 
   it('sends the splits and the board with it, so nothing the panel shows is dropped', async () => {
@@ -159,7 +184,7 @@ describe('the image the link preview gets', () => {
 
     await waitFor(() => expect(uploadShareImage).toHaveBeenCalled());
     const preview = renderCardBlob.mock.calls[0]!;
-    const og = renderCardBlob.mock.calls.find((call) => call[2]?.type === 'image/webp')!;
+    const og = renderCardBlob.mock.calls.find((call) => call[2]?.type !== undefined)!;
     expect(og[1].splits).toEqual(preview[1].splits);
     expect(og[1].showBoard).toBe(preview[1].showBoard);
     expect(og[1].variant).toBe(preview[1].variant);
@@ -184,7 +209,7 @@ describe('the image the link preview gets', () => {
   it('steps the quality down rather than giving up when the first encode is too big', async () => {
     // The photo card that could not be published was 1.3 MB as png against a
     // 400 KB bucket. Nothing surfaced -- the link just kept the site logo.
-    const big = new Blob([new Uint8Array(500 * 1024)], { type: 'image/webp' });
+    const big = new Blob([new Uint8Array(500 * 1024)], { type: 'image/png' });
     const small = new Blob(['small'], { type: 'image/webp' });
     renderCardBlob
       .mockResolvedValueOnce(new Blob(['preview'], { type: 'image/png' }))
@@ -211,7 +236,7 @@ describe('the image the link preview gets', () => {
     fireEvent.click(screen.getByText('Copy link'));
 
     await waitFor(() => expect(uploadShareImage).toHaveBeenCalled());
-    const ogCall = renderCardBlob.mock.calls.find((call) => call[2]?.type === 'image/webp');
+    const ogCall = renderCardBlob.mock.calls.find((call) => call[2]?.type !== undefined);
     expect(ogCall![1].photo).toBeNull();
   });
 
@@ -229,7 +254,7 @@ describe('the image the link preview gets', () => {
     fireEvent.click(screen.getByText('Copy link'));
 
     await waitFor(() => expect(uploadShareImage).toHaveBeenCalled());
-    const ogCall = renderCardBlob.mock.calls.find((call) => call[2]?.type === 'image/webp');
+    const ogCall = renderCardBlob.mock.calls.find((call) => call[2]?.type !== undefined);
     expect(ogCall![1].photo).toMatchObject({ width: 4, height: 5 });
   });
 });
