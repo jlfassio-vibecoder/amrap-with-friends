@@ -14,7 +14,7 @@ const DAYS = [
   {
     label: 'Wednesday',
     title: 'Post the board. 10 minutes.',
-    body: 'Share your squad card: top five, plus the age-adjusted winner. Repost the athlete cards that tagged you. Reply to every one.',
+    body: 'Share your room card: top five, plus the age-adjusted winner. Repost the athlete cards that tagged you. Reply to every one.',
   },
   {
     label: 'Friday',

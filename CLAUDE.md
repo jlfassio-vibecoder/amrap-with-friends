@@ -29,6 +29,7 @@ opaque verb for one action. Same brand, opposite sides of the line.
 | **Mission**      | One AMRAP workout, start to finish. The only word for it.                                                                        | Everywhere — "Plan mission", `/mission/:id`, `missions` the table           |
 | **Campaign**     | A multi-week programme (2–12 weeks, 1–5 missions a week) with an end goal.                                                       | Buttons, page titles, routes. Always with its length: "8-week campaign"     |
 | **Squad**        | A persistent friends list for inviting people to train together. Not a mission. Prefer this over "crew" on mission/hub surfaces. | Buttons, page titles, routes, nav — "Your squad", `/squad`                  |
+| **Room**         | A coach's or gym's persistent community, at `/@handle`. Athletes join it; it is not anyone's friends list.                       | Product and marketing — "your room", `/@handle`                             |
 | **Rally point**  | The gather/start screen for **this** mission — countdown, Start, Practice. Route `/mission/:id`.                                 | Waiting-room page title, walkthrough, featured "opens shortly before start" |
 | **Next Mission** | Durable hub UI for daisy-chain / start the next workout with the squad. Route `/rally-point/:id` (data layer: `rally_points`).   | Hub page title only — not the waiting room                                  |
 | **Rally link**   | The shared invite URL. May open a mission (`?m=`) or the Next Mission hub (`?r=`). Never a squad invite.                         | The copy button, and prose about sharing                                    |
@@ -41,6 +42,18 @@ in a campaign is just a mission and gets no label — a badge on every row label
 nothing. They pass the click test because each one changes what the athlete
 should do that day: go hard and record it, compare it, or hold back. Internally
 the fourth role is `build`, which is deliberately never shown.
+
+**A room is a coach's community; a squad is your friends.** They are different
+words because they are different objects, and the difference is who chose whom.
+An athlete builds a squad by adding people they know. A coach's room is joined —
+by anyone who finishes one of that room's missions and opts in. Joining a room
+never adds anyone to anyone's squad, and leaving a squad never removes anyone
+from a room.
+
+The two are easy to conflate because the coach-facing marketing shipped before
+the distinction existed and said "squad" for what is now a room. That copy is
+corrected; if you find more of it, it is a bug. Reach for **squad** only when
+you mean the athlete's own friends list.
 
 **Mission is the only word for one workout.** It used to share the job with
 "session": session owned the buttons, routes and columns, mission owned the
@@ -127,6 +140,7 @@ Kept here so they don't creep back in.
 | Return to a lobby you scheduled for later | Return to a mission you scheduled for later |
 | Staging area not found                    | Rally point not found                       |
 | Session (as the word for one workout)     | Mission                                     |
+| Squad (as a coach's community)            | Room                                        |
 | Create session / My sessions              | Plan mission / My missions                  |
 | Create mission                            | Plan mission                                |
 | T-Minus console                           | Set the countdown                           |
