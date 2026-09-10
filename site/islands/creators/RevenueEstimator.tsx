@@ -114,9 +114,9 @@ export default function RevenueEstimator({ showTiers = true }: { showTiers?: boo
                 Typical room ≈ 0.22 × √followers (diminishing join rate as the audience grows),
                 snapped to the sliders. Athletes per month = rooms × 4.3 × athletes. 20% of guests
                 save the mission to an account. 7% of those go paid within 60 days. Average net per
-                subscription is about $50 after the athlete's 15% squad discount and card fees (most
-                pick the 12-month plan). You earn your tier's share of that in year one, and a
-                renewal share after.
+                subscription is about $50 after the athlete's 15% discount and card fees (most pick
+                the 12-month plan). You earn your tier's share of that in year one, and a renewal
+                share after.
               </p>
             </div>
           ) : null}
@@ -125,7 +125,7 @@ export default function RevenueEstimator({ showTiers = true }: { showTiers?: boo
 
       {showTiers ? (
         <>
-          <h3>Your share grows with your squad</h3>
+          <h3>Your share grows with your room</h3>
           <div className="creators-tiers" role="tablist" aria-label="Revenue share tiers">
             {CREATOR_TIERS.map((t, i) => (
               <button

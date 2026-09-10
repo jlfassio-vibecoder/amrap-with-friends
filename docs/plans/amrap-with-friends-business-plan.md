@@ -184,7 +184,23 @@ Commission is on **net revenue** (list price minus discounts, Stripe fees, refun
 | **Partner** | 100–299 | 35% | 20% | Co-branded missions on the AWF social channels, quarterly call |
 | **Anchor** | 300+ | 40% | 25% | Negotiated; potential equity/advisor discussion for the top 2–3 |
 
-Worked example at Builder tier: an athlete buys a 12-month plan at $69.99, uses the 15% attached-athlete discount ($59.49), Stripe takes ~$2.03, net ≈ $57.46. Coach earns **$17.24** on that sale, and if the athlete renews, **$8.62** the next year. 100 such referrals ≈ $1,700 in year one plus ~$860/yr trailing.
+Worked example at Builder tier: an athlete buys a 12-month plan at $69.99, uses the 15% attached-athlete discount ($59.49), Stripe takes ~$2.03, net ≈ $57.46. Coach earns **$17.24** on that sale.
+
+The renewal is at **list price**, because the attached-athlete discount applies to the first eligible plan only and does not recur: $69.99, Stripe takes ~$2.33, net ≈ $67.66, and the coach earns **$10.15** at the 15% renewal rate. 100 such referrals ≈ $1,700 in year one plus ~$1,015/yr trailing.
+
+> Corrected 10 Sep 2026. This example previously read $8.62 and ~$860/yr, which is 15% of the *discounted* first-year net — it carried the promotional discount into the renewal. The figures in the `/creators` FAQ were right and are now the ones stated here. Both use the same fee model (2.9% + $0.30).
+
+**The same athlete on the 6-month plan ($44.99).** The rate is 30% of net *for the first 12 months of the subscription*, and a 6-month plan bills twice inside that window — so both terms are at 30%, and only the third term onward drops to 15%.
+
+| Term | Gross | Fee | Net | Rate | Coach earns |
+| ---- | ----- | --- | --- | ---- | ----------- |
+| 1st (with 15% attached-athlete discount) | $38.24 | ~$1.41 | $36.83 | 30% | **$11.05** |
+| 2nd (list price, still inside month 12) | $44.99 | ~$1.60 | $43.39 | 30% | **$13.02** |
+| 3rd onward (list, months 13+) | $44.99 | ~$1.60 | $43.39 | 15% | **$6.51** |
+
+Year one: **$24.07** per subscriber, against $17.24 on the annual plan. Trailing: **~$13.02/yr** (two terms), against $10.15.
+
+That is not an anomaly to fix. Commission is a share of net revenue, and a 6-month subscriber simply pays more per year than an annual one — $80.22 net in year one versus $57.46, because the annual plan carries a 42% discount off monthly and the 6-month only 25%. $24.07 is exactly 30% of $80.22. **Say this to coaches plainly:** pushing the annual SKU is better for retention (one renewal decision a year instead of two) and worse for their year-one commission, and they should not have to work that out themselves.
 
 Gym referrals: flat **20% of the first-year gym contract** to whoever brings in the location (one-time), because the gym relationship will be owned by you, not the referrer.
 

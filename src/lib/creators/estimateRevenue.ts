@@ -22,7 +22,7 @@ export const CREATOR_TIERS: readonly CreatorTier[] = [
     share: 0.25,
     renew: 0.1,
     min: 0,
-    desc: 'of net revenue on every subscription your squad buys, for their first 12 months. 10% on renewals after that.',
+    desc: 'of net revenue on every subscription your room buys, for their first 12 months. 10% on renewals after that.',
     qual: 'Where everyone starts. Founding hosts begin at Builder rates.',
   },
   {
@@ -51,7 +51,7 @@ export const CREATOR_TIERS: readonly CreatorTier[] = [
   },
 ] as const;
 
-/** Blended net per subscription after squad discount and card fees. */
+/** Blended net per subscription after the athlete discount and card fees. */
 export const NET_PER_SUB = 50;
 /** Share of guests who save the mission to an account. */
 export const CLAIM_RATE = 0.2;
