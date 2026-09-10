@@ -32,13 +32,17 @@ describe('resolvePostAuthDestination', () => {
     expect(resolvePostAuthDestination({ pathname: '/squad/join' })).toBeNull();
   });
 
+  it('stays put on account surfaces after signup', () => {
+    expect(resolvePostAuthDestination({ pathname: '/my-missions' })).toBeNull();
+    expect(resolvePostAuthDestination({ pathname: '/hud' })).toBeNull();
+  });
+
   it('honors an explicit safe next when not on a guest-open path', () => {
     expect(resolvePostAuthDestination({ pathname: '/', next: '/hud' })).toBe('/hud');
   });
 
   it('defaults to /create and ignores /intake as next', () => {
     expect(resolvePostAuthDestination({ pathname: '/' })).toBe('/create');
-    expect(resolvePostAuthDestination({ pathname: '/my-missions' })).toBe('/create');
     expect(resolvePostAuthDestination({ pathname: '/', next: '/intake' })).toBe('/create');
     expect(resolvePostAuthDestination({ pathname: '/', next: '/intake?next=/create' })).toBe(
       '/create'

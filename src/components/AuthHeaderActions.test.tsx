@@ -94,6 +94,23 @@ describe('AuthHeaderActions', () => {
     expect(within(menu).getByRole('button', { name: 'Create account' })).toBeTruthy();
   });
 
+  it('does not force /create intent when Create account opens on My missions', () => {
+    authState.isAuthenticated = false;
+    authState.username = null;
+    sessionStorage.setItem('amrap:postAuthPath', '/create');
+    renderActions('/my-missions');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open menu' }));
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: 'Menu' })).getByRole('button', {
+        name: 'Create account',
+      })
+    );
+
+    expect(sessionStorage.getItem('amrap:postAuthPath')).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'Auth sign-up' })).toBeTruthy();
+  });
+
   it('closes the drawer on Escape', () => {
     renderActions();
 

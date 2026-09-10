@@ -29,9 +29,9 @@ focus.
 The architecture fits a “saved history + related account lists” product job,
 but the page has grown into a composite home for several account concerns while
 still paying the full-history payload cost that benchmarks and Smart Recovery
-already escaped. Highest-priority remaining gaps: soft auth / no in-page
-sign-in CTA, stale list after mutations elsewhere, and page composition.
-P0 vocabulary (V1–V3) and P1 payload/chains (D1–D2) are addressed.
+already escaped. Highest-priority remaining gaps: stale list after mutations
+elsewhere (D3) and page composition (C1). P0 vocabulary, P1 payload/chains
+(D1–D2), and auth gate (A1–A3) are addressed.
 
 ---
 
@@ -61,7 +61,7 @@ account” on a finished guest mission is how rows appear here.
 | Concern        | Detail                                                                                                                 |
 | -------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | Route          | [`App.tsx`](../../../src/App.tsx) — `lazy(() => import('./pages/MyMissionsPage'))`, bare `<Route path="/my-missions">` |
-| Auth at router | **None.** Peers like `/squad`, `/campaign/*`, `/hud` use `RequireIntake`                                               |
+| Auth at router | `RequireIntake` (`guestMode="sign-in"`, `gateAllowsGuest={false}`); incomplete profiles get identity overlay |
 | Page gate      | [`useAmrapAuth`](../../../src/hooks/useAmrapAuth.ts) — guests see copy, no RPC                                         |
 | SEO            | [`routes.ts`](../../../src/lib/seo/routes.ts) — title “My missions”, `index: false`                                    |
 | Deploy         | `vercel.json` rewrites `/my-missions` → app shell                                                                      |
@@ -197,11 +197,11 @@ docs.
 
 ### 3.2 Auth and navigation
 
-| ID  | Sev | Gap                                | Notes                                                                                                                  |
-| --- | --- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| A1  | P1  | Soft auth vs `RequireIntake` peers | Incomplete profiles can open the page; squad/plan/campaign cannot. May be intentional for history, but inconsistent.   |
-| A2  | P1  | Guest UX is quiet                  | Signed-out copy with **no** AuthModal / sign-in CTA on the page. Top CTAs still link to `/create` and `/campaign/new`. |
-| A3  | P2  | Sign-up leaves the page            | Post-auth destination from `/my-missions` goes to `/create`, not back here after claim-oriented journeys.              |
+| ID  | Sev | Gap                                                  | Notes                                                                                                           |
+| --- | --- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| A1  | P1  | ~~Soft auth vs `RequireIntake` peers~~ **Addressed** | `/my-missions` wrapped in `RequireIntake` (`guestMode="sign-in"`, `gateAllowsGuest={false}`, identity overlay). |
+| A2  | P1  | ~~Guest UX is quiet~~ **Addressed**                  | Gate shows Sign in / Create account + AuthModal with My missions copy.                                          |
+| A3  | P2  | ~~Sign-up leaves the page~~ **Addressed**            | `shouldStayAfterSignup` keeps `/my-missions` and `/hud` after Create account / Google signup.                   |
 
 ### 3.3 Product / vocabulary (click-rule)
 
@@ -260,9 +260,9 @@ Ordered for impact vs risk. Implementation is out of scope for this note.
    list projection drops workout/breakdown; `my_mission_detail` hydrates on
    demand; chains embedded; `list_unlocked_amqap` for HUD repair. Pagination
    (D4) still open.
-3. **Guest + incomplete-profile decision** — either `RequireIntake` with guest
-   passthrough + in-page sign-in, or keep soft gate but add an explicit Auth
-   CTA (A1, A2).
+3. ~~**Guest + incomplete-profile decision**~~ **Done** —
+   `RequireIntake` sign-in gate on `/my-missions`; `shouldStayAfterSignup` keeps
+   athletes on My missions / HUD after Create account.
 4. **Refetch policy** — at least refetch on window focus after delete/claim;
    Realtime is optional and probably overkill for a history list (D3).
 5. **Close test gaps** on guest, empty, error, parse of check-in fields, and

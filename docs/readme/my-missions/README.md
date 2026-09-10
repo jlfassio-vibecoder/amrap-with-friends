@@ -9,20 +9,20 @@ changes. Planning stays in [`docs/epics/`](../../epics/) and
 
 ## Naming
 
-| Pattern                | Use                                      |
-| ---------------------- | ---------------------------------------- |
-| `README.md`            | This index only                          |
-| `{topic}.md`           | One capability or assessment (kebab-case)|
-| `{yyyy-mm}-{topic}.md` | Optional when two writeups share a topic |
+| Pattern                | Use                                       |
+| ---------------------- | ----------------------------------------- |
+| `README.md`            | This index only                           |
+| `{topic}.md`           | One capability or assessment (kebab-case) |
+| `{yyyy-mm}-{topic}.md` | Optional when two writeups share a topic  |
 
 Prefer the topic as the filename so new notes can sit beside each other without
 colliding.
 
 ## Contents
 
-| Doc                                                                        | What it covers                                                                 |
-| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| [architecture-assessment.md](./architecture-assessment.md)                 | Architectural map, gap analysis, prioritized risks (2026-09)                   |
+| Doc                                                        | What it covers                                               |
+| ---------------------------------------------------------- | ------------------------------------------------------------ |
+| [architecture-assessment.md](./architecture-assessment.md) | Architectural map, gap analysis, prioritized risks (2026-09) |
 
 ## What the page is
 
@@ -36,15 +36,15 @@ daisy-chain command, and long-term score trends respectively.
 
 ## Quick map
 
-| Concern        | Where it lives                                                                 |
-| -------------- | ------------------------------------------------------------------------------ |
-| Route          | `src/App.tsx` — lazy `MyMissionsPage`, no `RequireIntake`                      |
-| Page           | `src/pages/MyMissionsPage.tsx`                                                 |
-| History RPC    | `my_missions()` (slim) + `my_mission_detail` → `src/lib/api/myMissions.ts` |
+| Concern        | Where it lives                                                                     |
+| -------------- | ---------------------------------------------------------------------------------- |
+| Route          | `src/App.tsx` — lazy `MyMissionsPage` behind `RequireIntake` (`sign-in`)           |
+| Page           | `src/pages/MyMissionsPage.tsx`                                                     |
+| History RPC    | `my_missions()` (slim) + `my_mission_detail` → `src/lib/api/myMissions.ts`         |
 | Chain grouping | `src/lib/mission/groupMyMissionsByRallyPoint.ts` + embedded `chains` from list RPC |
-| Campaigns      | `MyCampaignsPanel` → `my_campaigns`                                            |
-| Assigned       | `AssignedWorkoutsPanel` → assigned-workout RPCs                                |
-| SEO            | `src/lib/seo/routes.ts` — `index: false`                                       |
+| Campaigns      | `MyCampaignsPanel` → `my_campaigns`                                                |
+| Assigned       | `AssignedWorkoutsPanel` → assigned-workout RPCs                                    |
+| SEO            | `src/lib/seo/routes.ts` — `index: false`                                           |
 
 ## Vocabulary
 

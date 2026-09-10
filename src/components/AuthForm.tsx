@@ -5,7 +5,7 @@ import {
   isMagicLinkAuthEnabled,
   isPasswordResetEnabled,
 } from '@/lib/auth/authFeatures';
-import { isGuestOpenPath } from '@/lib/auth/guestOpenPaths';
+import { isGuestOpenPath, shouldStayAfterSignup } from '@/lib/auth/guestOpenPaths';
 import { isDuplicateAccountError } from '@/lib/auth/mapAuthError';
 import { clearPostAuthPathIntent, setPostAuthPathIntent } from '@/lib/auth/postAuthDestination';
 import {
@@ -263,7 +263,11 @@ export function AuthForm({
       return;
     }
 
-    if (passwordMode === 'sign-up' && !isGuestOpenPath(window.location.pathname)) {
+    if (
+      passwordMode === 'sign-up' &&
+      !isGuestOpenPath(window.location.pathname) &&
+      !shouldStayAfterSignup(window.location.pathname)
+    ) {
       setPostAuthPathIntent('/create');
     } else {
       clearPostAuthPathIntent();

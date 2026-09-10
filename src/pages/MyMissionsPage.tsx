@@ -453,10 +453,6 @@ export default function MyMissionsPage() {
 
       {loading ? <p className="text-sm text-secondary">Loading…</p> : null}
 
-      {!isAuthLoading && !isAuthenticated ? (
-        <p className="text-sm text-secondary">Sign in to see missions saved to your account.</p>
-      ) : null}
-
       {error && <p className="text-error">Error: {error}</p>}
 
       {!loading && isAuthenticated && entries.length === 0 ? (
