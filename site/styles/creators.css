@@ -471,7 +471,11 @@
 
 .creators-sc {
   background:
-    linear-gradient(180deg, rgb(6 21 33 / 0.55) 0%, rgb(6 21 33 / 0.78) 100%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--creators-night) 55%, transparent) 0%,
+      color-mix(in srgb, var(--creators-night) 78%, transparent) 100%
+    ),
     url('/athlete.png') center / cover no-repeat;
   color: var(--color-night-ink);
   border-radius: 12px;

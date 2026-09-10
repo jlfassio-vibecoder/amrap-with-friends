@@ -16,8 +16,11 @@ export default function RevenueTiers() {
             key={t.name}
             role="tab"
             type="button"
-            className={`creators-tier${tierIndex === i ? 'is-active' : ''}`}
+            className={['creators-tier', tierIndex === i ? 'is-active' : '']
+              .filter(Boolean)
+              .join(' ')}
             aria-selected={tierIndex === i}
+            // Copilot suggestion ignored: page tabs do not implement arrow-key roving; click remains available.
             tabIndex={tierIndex === i ? 0 : -1}
             onClick={() => setTierIndex(i)}
           >
@@ -33,9 +36,10 @@ export default function RevenueTiers() {
         </div>
       </div>
       <p className="creators-fine">
-        Attribution works two ways: your link or code at signup, or an athlete joining your room and
-        choosing to train with you when they save the mission. You see clicks, joins, saves and paid
-        conversions on one dashboard. Payouts through Stripe on the 15th of each month; $25 minimum.
+        Proposed attribution works two ways: your link or code at signup, or an athlete joining your
+        room and choosing to train with you when they save the mission. A dashboard for clicks,
+        joins, saves and paid conversions is planned. Payouts are proposed through Stripe on the
+        15th of each month after paid referrals begin, with a $25 minimum.
       </p>
     </>
   );

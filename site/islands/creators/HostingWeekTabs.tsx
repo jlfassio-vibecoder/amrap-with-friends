@@ -35,7 +35,7 @@ export default function HostingWeekTabs() {
             key={d.label}
             role="tab"
             type="button"
-            className={`creators-day${active === i ? ' is-active' : ''}`}
+            className={['creators-day', active === i ? 'is-active' : ''].filter(Boolean).join(' ')}
             aria-selected={active === i}
             onClick={() => setActive(i)}
           >
@@ -50,10 +50,10 @@ export default function HostingWeekTabs() {
         </div>
       </div>
       <div className="creators-kit">
-        <h3>Founding hosts get</h3>
+        <h3>Founding hosts are planned to get</h3>
         <ul>
-          <li>Coach account free for 12 months (normally $199/yr)</li>
-          <li>Builder-tier rates from your first sale</li>
+          <li>Coach account free for 12 months (planned standard price $199/yr)</li>
+          <li>Builder-tier rates from your first eligible sale once paid referrals launch</li>
           <li>
             A 30-minute setup call and a launch kit: card templates, a 15-second app clip, five
             mission templates
@@ -63,7 +63,9 @@ export default function HostingWeekTabs() {
             channels for your first room
           </li>
         </ul>
-        <p>In return: one public room a week for eight weeks, and you post the finish.</p>
+        <p>
+          In return if accepted: one public room a week for eight weeks, and you post the finish.
+        </p>
       </div>
     </>
   );

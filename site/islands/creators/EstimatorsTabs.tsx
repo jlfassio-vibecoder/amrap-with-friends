@@ -24,8 +24,11 @@ export default function EstimatorsTabs() {
             key={tab.id}
             role="tab"
             type="button"
-            className={`creators-tier${active === tab.id ? 'is-active' : ''}`}
+            className={['creators-tier', active === tab.id ? 'is-active' : '']
+              .filter(Boolean)
+              .join(' ')}
             aria-selected={active === tab.id}
+            // Copilot suggestion ignored: page tabs do not implement arrow-key roving; click remains available.
             tabIndex={active === tab.id ? 0 : -1}
             onClick={() => setActive(tab.id)}
           >
