@@ -92,3 +92,51 @@ export function footerTop(spec: LayoutSpec, metrics: CardMetrics, watermark: boo
     spec.height - spec.safeBottom - footerHeight(metrics, watermark) + Math.round(8 * metrics.gap)
   );
 }
+
+/**
+ * The workout, overlaid at the bottom of a replay frame.
+ *
+ * A replay shows a clock and bars racing. Someone who was not there cannot
+ * tell what the bars are counting — "12 rounds" of what? The card answers that
+ * and the replay never did, so the answer follows the athlete into the video.
+ *
+ * It is context, not the subject: capped at four movements, drawn small, and
+ * skipped entirely when taking the space would starve the race of rows. The
+ * bars are what the replay is for.
+ */
+export interface MovementOverlay {
+  lines: number;
+  height: number;
+  /** Type size for the movement lines. */
+  size: number;
+  labelSize: number;
+}
+
+export const MAX_OVERLAY_MOVEMENTS = 4;
+
+export function raceMovementOverlay(input: {
+  metrics: CardMetrics;
+  movementCount: number;
+  /** Vertical space between the top of the bars and the bottom safe line. */
+  available: number;
+  /** Rows the race itself must keep, whatever the workout says. */
+  reservedRows: number;
+  rowHeight: number;
+}): MovementOverlay | null {
+  const { metrics, movementCount, available, reservedRows, rowHeight } = input;
+  if (movementCount <= 0) {
+    return null;
+  }
+  const lines = Math.min(movementCount, MAX_OVERLAY_MOVEMENTS);
+  const size = metrics.subtitle;
+  const labelSize = metrics.sectionLabel;
+  const gap = Math.round(10 * metrics.gap);
+  const height = labelSize + gap + lines * (size + gap) + Math.round(24 * metrics.gap);
+
+  // The race keeps its rows first. A replay that explains a workout nobody can
+  // see the progress of has traded the wrong thing away.
+  if (available - height < reservedRows * rowHeight) {
+    return null;
+  }
+  return { lines, height, size, labelSize };
+}

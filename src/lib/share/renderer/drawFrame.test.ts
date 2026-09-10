@@ -170,6 +170,87 @@ describe('drawFrame during the replay', () => {
     expect(fills.length).toBeGreaterThanOrEqual(6);
   });
 
+  const raceOptions = (extra: Record<string, unknown> = {}) => ({
+    ...baseOptions,
+    capSeconds: 720,
+    movements: [
+      { name: 'Air Squats', reps: 10, unit: null },
+      { name: 'Hand-Release Push-ups', reps: 10, unit: null },
+    ],
+    ...extra,
+  });
+  const raceFrame = (participants = 3) => ({
+    ...frameAt(data(participants)),
+    phase: 'race' as const,
+    clockSeconds: 300,
+    cardBlend: 0,
+  });
+
+  it('names the workout, because a bar chart does not say what it counts', () => {
+    // Someone who was not there cannot tell what "12 rounds" is 12 of.
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, raceFrame(), raceOptions());
+    const all = texts.map((entry) => entry.text);
+    expect(all).toContain('THE WORKOUT');
+    expect(all).toContain('10 Air Squats');
+    expect(all).toContain('10 Hand-Release Push-ups');
+  });
+
+  it('puts it bottom left, inside the safe area', () => {
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, raceFrame(), raceOptions());
+    const label = texts.find((entry) => entry.text === 'THE WORKOUT')!;
+    expect(label.x).toBe(72);
+    expect(label.y).toBeGreaterThan(1920 / 2);
+    for (const entry of texts) {
+      expect(entry.y).toBeLessThan(1920 - 300 + 80);
+    }
+  });
+
+  it('takes the space from the bars rather than drawing over them', () => {
+    // The bars are what the replay is for; overlapping them would be worse
+    // than omitting the workout.
+    const { ctx, texts, rects } = recordingCtx();
+    drawFrame(ctx, raceFrame(6), raceOptions());
+    const label = texts.find((entry) => entry.text === 'THE WORKOUT')!;
+    const tracks = rects.filter((rect) => rect[3] === 28);
+    expect(tracks.length).toBeGreaterThan(0);
+    for (const track of tracks) {
+      expect(track[1]! + track[3]!).toBeLessThanOrEqual(label.y);
+    }
+  });
+
+  it('gives way entirely when the race cannot spare the rows', () => {
+    // Landscape leaves 184px below the clock — enough for one bar and nothing
+    // else.
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, raceFrame(), raceOptions({ layout: 'landscape' as const }));
+    expect(texts.map((entry) => entry.text)).not.toContain('THE WORKOUT');
+  });
+
+  it('caps a long workout instead of papering the frame with it', () => {
+    const { ctx, texts } = recordingCtx();
+    drawFrame(
+      ctx,
+      raceFrame(),
+      raceOptions({
+        movements: ['Air Squats', 'Push-ups', 'Sit-ups', 'Burpees', 'Lunges', 'Planks'].map(
+          (name) => ({ name, reps: 10, unit: null })
+        ),
+      })
+    );
+    const drawn = ['Air Squats', 'Push-ups', 'Sit-ups', 'Burpees', 'Lunges', 'Planks'].filter(
+      (name) => texts.some((entry) => entry.text.includes(name))
+    );
+    expect(drawn).toHaveLength(4);
+  });
+
+  it('shows nothing when there is no workout to name', () => {
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, raceFrame(), raceOptions({ movements: [] }));
+    expect(texts.map((entry) => entry.text)).not.toContain('THE WORKOUT');
+  });
+
   it('renders the card alone once the crossfade completes', () => {
     const { ctx, texts } = recordingCtx();
     drawFrame(ctx, frameAt(data(3)), { ...baseOptions, capSeconds: 720 });

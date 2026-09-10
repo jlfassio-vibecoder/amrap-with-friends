@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { cardMetrics, cardScale, footerHeight } from '@/lib/share/renderer/cardMetrics';
+import {
+  MAX_OVERLAY_MOVEMENTS,
+  cardMetrics,
+  cardScale,
+  footerHeight,
+  raceMovementOverlay,
+} from '@/lib/share/renderer/cardMetrics';
 import { LAYOUTS, TYPE_SCALE } from '@/lib/share/renderer/theme';
 
 describe('cardScale', () => {
@@ -51,5 +57,50 @@ describe('footerHeight', () => {
     const height = footerHeight(metrics, true);
     expect(height).toBeGreaterThan(metrics.footer + metrics.watermark);
     expect(LAYOUTS.landscape.safeBottom + height).toBeLessThan(LAYOUTS.landscape.height);
+  });
+});
+
+describe('raceMovementOverlay', () => {
+  const story = cardMetrics(LAYOUTS.story);
+  const base = {
+    metrics: story,
+    movementCount: 2,
+    available: 1090,
+    reservedRows: 3,
+    rowHeight: 104,
+  };
+
+  it('fits under the bars on a story replay', () => {
+    const overlay = raceMovementOverlay(base);
+    expect(overlay).not.toBeNull();
+    expect(overlay!.lines).toBe(2);
+    expect(overlay!.height).toBeLessThan(1090 - 3 * 104);
+  });
+
+  it('caps a long workout rather than papering the frame with it', () => {
+    // Context, not the subject. Past four it is a wall of text over a moving
+    // chart.
+    const overlay = raceMovementOverlay({ ...base, movementCount: 9 });
+    expect(overlay!.lines).toBe(MAX_OVERLAY_MOVEMENTS);
+  });
+
+  it('gives way when the race would lose its rows', () => {
+    // Landscape leaves 184px for bars; spending it on the workout would
+    // explain a race nobody can see.
+    const overlay = raceMovementOverlay({ ...base, available: 184 });
+    expect(overlay).toBeNull();
+  });
+
+  it('is skipped when there is no workout to show', () => {
+    expect(raceMovementOverlay({ ...base, movementCount: 0 })).toBeNull();
+  });
+
+  it('scales with the card, so a shorter frame gets smaller type', () => {
+    const wide = raceMovementOverlay({
+      ...base,
+      metrics: cardMetrics(LAYOUTS.landscape),
+      available: 1090,
+    });
+    expect(wide!.size).toBeLessThan(story.subtitle);
   });
 });

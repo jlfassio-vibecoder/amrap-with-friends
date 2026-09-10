@@ -7,7 +7,7 @@ import {
   type RoundSplit,
 } from '@/lib/share/cardContent';
 import { chartBandStops, coverRect, scrimStops } from '@/lib/share/photo';
-import { cardMetrics, footerTop } from '@/lib/share/renderer/cardMetrics';
+import { cardMetrics, footerTop, raceMovementOverlay } from '@/lib/share/renderer/cardMetrics';
 import { splitLabelIndices, splitLabelSize } from '@/lib/share/splitLabels';
 import {
   AWF_THEME,
@@ -137,7 +137,23 @@ function drawRaceFrame(ctx: Ctx, frame: FrameState, options: DrawFrameOptions): 
   const barsTop = spec.safeTop + TYPE_SCALE.body + TYPE_SCALE.display + 80;
   const rowHeight = 104;
   const available = spec.height - spec.safeBottom - barsTop;
-  const visible = Math.max(0, Math.min(frame.bars.length, Math.floor(available / rowHeight)));
+
+  // The workout goes bottom-left, and the bars give up the space for it —
+  // which is why it is sized before they are laid out rather than drawn over
+  // them afterwards. raceMovementOverlay refuses when the race cannot spare
+  // the rows.
+  const metrics = cardMetrics(spec);
+  const movements = options.movements ?? [];
+  const overlay = raceMovementOverlay({
+    metrics,
+    movementCount: movements.length,
+    available,
+    reservedRows: Math.min(frame.bars.length, 3),
+    rowHeight,
+  });
+
+  const barsSpace = available - (overlay?.height ?? 0);
+  const visible = Math.max(0, Math.min(frame.bars.length, Math.floor(barsSpace / rowHeight)));
 
   for (let index = 0; index < visible; index += 1) {
     const bar = frame.bars[index];
@@ -169,6 +185,25 @@ function drawRaceFrame(ctx: Ctx, frame: FrameState, options: DrawFrameOptions): 
     ctx.textAlign = 'right';
     ctx.fillText(formatScore(bar), spec.width - SAFE_AREA, y);
     ctx.textAlign = 'left';
+  }
+
+  if (overlay) {
+    const gap = Math.round(10 * metrics.gap);
+    // Anchored to the bottom safe line rather than to the bars: the number of
+    // bars changes with the squad, and the workout should not move with it.
+    let y = spec.height - spec.safeBottom - overlay.height + Math.round(24 * metrics.gap);
+
+    ctx.fillStyle = theme.secondary;
+    ctx.font = font(overlay.labelSize, 800);
+    ctx.fillText('THE WORKOUT', left, y);
+    y += overlay.labelSize + gap;
+
+    ctx.fillStyle = theme.ink;
+    ctx.font = font(overlay.size, 600);
+    for (const movement of movements.slice(0, overlay.lines)) {
+      ctx.fillText(fitText(ctx, formatMovement(movement), contentWidth), left, y);
+      y += overlay.size + gap;
+    }
   }
 }
 
