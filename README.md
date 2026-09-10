@@ -1,6 +1,8 @@
 # AMRAP With Friends
 
-AMRAP With Friends is a standalone web app for running social AMRAP (As Many Rounds As Possible) workout sessions with friends in real time. This repository is a from-scratch rebuild focused on a single, self-contained experience—create or join a session, sync the timer, and track rounds together.
+AMRAP With Friends is a standalone web app for running social AMRAP (As Many Rounds As Possible) missions with friends in real time. This repository is a from-scratch rebuild focused on a single, self-contained experience—plan or join a mission, sync the timer, and track rounds together.
+
+Plan mission (`/create`) also offers **AMQAP** — as many quality rounds as possible. That is a continuous mobility flow (I1, 10 or 15 minutes), not a metabolic race. See [AMQAP quality flows](#amqap-quality-flows).
 
 ## Local development
 
@@ -15,14 +17,15 @@ The dev server runs at [http://localhost:5173](http://localhost:5173).
 
 ### Other scripts
 
-| Command | Description |
-|---|---|
-| `npm run build` | Type-check and production build |
-| `npm run lint` | ESLint |
-| `npm run typecheck` | TypeScript project references build |
-| `npm run test` | Vitest (single run) |
-| `npm run format` | Prettier |
-| `npm run seed:exercise-media` | Manual: seed empty `exercise-media/{id}/.keep` folders in Supabase Storage |
+| Command                                          | Description                                                                          |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| `npm run build`                                  | Type-check and production build                                                      |
+| `npm run lint`                                   | ESLint                                                                               |
+| `npm run typecheck`                              | TypeScript project references build                                                  |
+| `npm run test`                                   | Vitest (single run)                                                                  |
+| `npm run format`                                 | Prettier                                                                             |
+| `npm run seed:exercise-media`                    | Manual: seed empty `exercise-media/{id}/.keep` folders in Supabase Storage           |
+| `npx tsx scripts/sync-exercise-media-folders.ts` | Compare the library + AMQAP catalog to the bucket and seed only missing folders      |
 
 ### Seed exercise-media folders (manual)
 
@@ -31,15 +34,38 @@ When you add exercises to [`src/data/exerciseLibrary.ts`](src/data/exerciseLibra
 1. Put `SUPABASE_SERVICE_ROLE_KEY` in `.env` (never prefix with `VITE_`).
 2. Run `npm run seed:exercise-media` once from your machine.
 
-The script reads `EXERCISE_LIBRARY` directly and upserts `${id}/.keep` placeholders. It is **not** part of the app runtime or CI — re-run only when new exercise ids appear.
+`npm run seed:exercise-media` reads `EXERCISE_LIBRARY` and upserts `${id}/.keep` placeholders. Prefer `npx tsx scripts/sync-exercise-media-folders.ts` when you only want folders that are missing (it also walks AMQAP flows). Neither script is part of the app runtime or CI — re-run when new exercise ids appear.
 
-Upload sequence stills as **`{exerciseId}/sequence.jpeg`** or **`{exerciseId}/sequence.png`** in the `exercise-media` bucket (Gemini → `.jpeg`, ChatGPT → `.png`). The library defaults to `.jpeg`; the info modal falls back across `.jpeg` / `.png` / `.jpg` if the first path 404s.
+Upload sequence stills as **`{exerciseId}/sequence.jpeg`** or **`{exerciseId}/sequence.png`** in the `exercise-media` bucket (Gemini → `.jpeg`, ChatGPT → `.png`). The library defaults to `.jpeg`; the info modal falls back across `.jpeg` / `.png` / `.jpg` if the first path 404s. AMQAP movements have folders in the bucket; stills are not required for How-to copy to ship.
+
+## AMQAP quality flows
+
+AMQAP is a **continuous mobility protocol**, not a library category. Putting I1 recovery into [`WORKOUT_TEMPLATES`](src/data/workoutTemplates.ts) would mix it into the race picker, show 5/20 “Soon” chips, and publish Astro movement pages for templates that are not in the metabolic catalog. The flows live in their own module and launch as a normal mission (existing clock and rounds). Time-in-Flow scoring and a live “move slowly” engine are not in this pass.
+
+| Piece | Where |
+| ----- | ----- |
+| Science and execution rules | [`docs/workouts/mobility-amrap-scientific-investigation.md`](docs/workouts/mobility-amrap-scientific-investigation.md) |
+| Catalog (5 families × 10 and 15 min) | [`src/data/amqapFlows.ts`](src/data/amqapFlows.ts) |
+| Plan mission picker | [`src/components/createMission/AmqapFlowPicker.tsx`](src/components/createMission/AmqapFlowPicker.tsx) |
+| How-to write-ups | [`src/data/exerciseLibrary.ts`](src/data/exerciseLibrary.ts) (ids such as `pigeon-pose`, `90-90-hip-transitions`) |
+| Scaling (prop / smaller range) | [`src/data/exerciseScaling.ts`](src/data/exerciseScaling.ts) — `MOBILITY_LADDER` |
+
+What ships today:
+
+- **AMQAP** source chip on Plan mission, next to Custom, Choose from library, and Coach WODs. The picker heading spells out the acronym.
+- **10 min and 15 min only.** Switching to AMQAP snaps the clock to 10 if the current cap is not already 10 or 15, then locks the summary to that canonical minute (no 7–9 / 12–14).
+- **Five flow families:** Foundational, Hip control, Spinal articulation, Posterior chain, Deep hip. No intensity filter, name search, Smart Recovery, or mission chain on this source.
+- **Quality-round doses** on each card — reps, per-side counts, or breath-length holds. The same pass is used at 10 and 15 minutes; the clock is the container, not a volume target.
+- **How to** on every movement, using the same modal as the race library (setup, mistakes, cue, quality-pass tip).
+- **Scaling** named as “Use a prop” and “Smaller range” so a tight hip can still finish the flow without inventing a bounce-for-volume option.
+
+Intensity is I1. Launch still uses `create_mission` workout jsonb. These ids are not added to `featuredWorkouts` or the SEO content pages.
 
 ## Supabase migrations
 
-Lobby schema and RPCs live in [`supabase/migrations/`](supabase/migrations/). Apply with the Supabase CLI (`supabase db push`) or paste into the Supabase SQL editor. Use a service-role key only on your machine for admin tasks—never in the client or `.env` bundled with the app.
+Rally point schema and RPCs live in [`supabase/migrations/`](supabase/migrations/). Apply with the Supabase CLI (`supabase db push`) or paste into the Supabase SQL editor. Use a service-role key only on your machine for admin tasks—never in the client or `.env` bundled with the app.
 
-Manual RPC checks: [`supabase/scripts/verify_lobby_rpc.sql`](supabase/scripts/verify_lobby_rpc.sql).
+Manual RPC checks: [`supabase/scripts/verify_rally_point_rpc.sql`](supabase/scripts/verify_rally_point_rpc.sql).
 
 ### Verifying a migration locally
 
@@ -66,12 +92,12 @@ Exercising an RPC afterwards needs a row in `auth.users`, a matching
 `perceived_classification` is one of `civilian` / `operator` / `special_ops`),
 then `SET request.jwt.claim.sub = '<uuid>'` so `auth.uid()` resolves.
 
-Note that `create_session` is overloaded such that a positional 3-argument call
+Note that `create_mission` is overloaded such that a positional 3-argument call
 is ambiguous. The client always sends all seven named parameters, so this never
 bites in production, but a hand-written `psql` call has to use the 7-argument
 form.
 
-### Hosted Supabase deploy (required for score lock at session finish)
+### Hosted Supabase deploy (required for score lock at mission finish)
 
 After linking the project (`supabase link --project-ref <ref>`):
 
@@ -84,18 +110,27 @@ supabase functions deploy submit-participant-result
 
 ### Auth (manual verification)
 
-Enable Supabase Auth **email** provider and redirect URLs for your dev origin (e.g. `http://localhost:5173`). Sign-in options: **magic link** or **email + password**. Set `VITE_AUTH_MAGIC_LINK_ENABLED=false` in `.env` (and Vercel) to hide magic link until custom SMTP (e.g. Resend) is configured.
+Enable Supabase Auth **email** provider and redirect URLs for your dev origin (e.g. `http://localhost:5173`). Sign-in is **email + password** by default. Set `VITE_AUTH_MAGIC_LINK_ENABLED=true` in `.env` (and Vercel) only after custom SMTP (e.g. Resend) is configured. Password reset (`Forgot password?` + `/reset-password`) stays off until `VITE_AUTH_PASSWORD_RESET_ENABLED=true` after the same SMTP setup; add `/reset-password` to the Auth redirect allow-list before flipping that flag.
+
+**Google OAuth** (`Continue with Google`) stays off until `VITE_AUTH_GOOGLE_ENABLED=true`. Before enabling: create a Google Cloud OAuth 2.0 Web client with authorized redirect URI `https://<project-ref>.supabase.co/auth/v1/callback`, enable Google under Dashboard → Authentication → Providers, and keep Site URL / redirect allow-list covering production (`https://www.amrapwithfriends.com/**`), apex if used, and `http://localhost:5173/**`. `VITE_*` flags are bake-in at build time — set the Vercel env var, then **redeploy**.
+
+**Google HITL (after the flag is on):**
+
+1. Password account → **Continue with Google** (same email) → one user with both providers in Dashboard → Auth → Users.
+2. Google-only account → set a password on `/intake` → email/password sign-in works.
+3. Cancel Google consent → land on the same path with cancel copy; `error` query params are stripped from the URL.
+4. Keep Dashboard automatic identity linking on (default). Do not enable manual linking unless a later phase needs it.
 
 **Hosted vs local auth settings:** Local `supabase/config.toml` sets `enable_confirmations = false` and `minimum_password_length = 6`. The hosted dashboard may differ (Confirm email is often ON by default; password minimum may change). Before shipping to prod, check Dashboard → **Authentication → Providers → Email** and align [`AUTH_MIN_PASSWORD_LENGTH`](src/lib/auth/passwordPolicy.ts) with the hosted minimum if needed.
 
 After `supabase db push` for `20260822140000_auth_claim.sql`:
 
-1. Play a session as guest, finish, sign in (magic link or password), click **Save this session to my account**.
-2. Open **My sessions** — saved session appears with round count.
-3. Optional: sign in mid-session, save, then **Log round** still works after claim.
+1. Play a mission as guest, finish, sign in (magic link or password), click **Save this mission to my account**.
+2. Open **My missions** — the saved mission appears with round count.
+3. Optional: sign in mid-mission, save, then **Log round** still works after claim.
 4. Password sign-up: if email confirmation is enabled on hosted, UI should prompt to check email; local dev may sign in immediately.
 
-**Follow-up (out of scope):** forgot-password / password reset flow.
+**Follow-up (out of scope):** Resend confirmation email; confirm-password on Create account.
 
 ## Architecture decisions
 

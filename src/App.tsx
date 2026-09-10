@@ -1,15 +1,19 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import HomePage from './pages/HomePage';
-import { FeaturedWodCard } from '@/components/home/FeaturedWodCard';
+import SharePage from '@/pages/SharePage';
+import { AppLink } from '@/components/AppLink';
 import { GlobalPresenceBroadcaster } from '@/components/GlobalPresenceBroadcaster';
+import { PasswordRecoveryRedirect } from '@/components/PasswordRecoveryRedirect';
 import { RequireIntake } from '@/components/RequireIntake';
 import { RequireCoach } from '@/components/RequireCoach';
+import { useSeo } from '@/hooks/useSeo';
 
-const CreateSessionPage = lazy(() => import('./pages/CreateSessionPage'));
-const JoinSessionPage = lazy(() => import('./pages/JoinSessionPage'));
-const SessionWaitingRoomPage = lazy(() => import('./pages/SessionWaitingRoomPage'));
-const MySessionsPage = lazy(() => import('./pages/MySessionsPage'));
+const CreateMissionPage = lazy(() => import('./pages/CreateMissionPage'));
+const PlanMissionPage = lazy(() => import('./pages/PlanMissionPage'));
+const JoinMissionPage = lazy(() => import('./pages/JoinMissionPage'));
+const MissionWaitingRoomPage = lazy(() => import('./pages/MissionWaitingRoomPage'));
+const RallyPointPage = lazy(() => import('./pages/RallyPointPage'));
+const MyMissionsPage = lazy(() => import('./pages/MyMissionsPage'));
 const CreateCampaignPage = lazy(() => import('./pages/CreateCampaignPage'));
 const CampaignDetailPage = lazy(() => import('./pages/CampaignDetailPage'));
 const JoinCampaignPage = lazy(() => import('./pages/JoinCampaignPage'));
@@ -17,9 +21,12 @@ const SquadPage = lazy(() => import('./pages/SquadPage'));
 const JoinSquadPage = lazy(() => import('./pages/JoinSquadPage'));
 const HUDPage = lazy(() => import('./pages/HUDPage'));
 const IntakePage = lazy(() => import('./pages/IntakePage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const CoachPage = lazy(() => import('./pages/CoachPage'));
 const CoachWodsPage = lazy(() => import('./pages/CoachWodsPage'));
+const CoachArticlesPage = lazy(() => import('./pages/CoachArticlesPage'));
 const TimerDevPage = lazy(() => import('./pages/dev/TimerDevPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 function RouteFallback() {
   return (
@@ -30,21 +37,39 @@ function RouteFallback() {
 }
 
 function App() {
+  useSeo();
+
   return (
     <>
       <GlobalPresenceBroadcaster />
+      <PasswordRecoveryRedirect />
       <Suspense fallback={<RouteFallback />}>
         <Routes>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/create" element={<CreateMissionPage />} />
           <Route
-            path="/create"
+            path="/plan-mission"
             element={
-              <RequireIntake guestMode="sign-in" signedOutPreview={<FeaturedWodCard />}>
-                <CreateSessionPage />
+              <RequireIntake
+                guestMode="sign-in"
+                gateTitle="Plan"
+                gateMessage="Sign in and set up your profile to launch ready-made chains and campaigns."
+                gateAllowsGuest={false}
+                signedOutPreview={
+                  <p className="text-sm text-secondary">
+                    Prefer to plan one mission without an account?{' '}
+                    <AppLink className="link-accent" to="/create">
+                      Plan mission
+                    </AppLink>
+                  </p>
+                }
+              >
+                <PlanMissionPage />
               </RequireIntake>
             }
           />
-          <Route path="/join" element={<JoinSessionPage />} />
+          <Route path="/join" element={<JoinMissionPage />} />
+          <Route path="/s/:shareId" element={<SharePage />} />
+          <Route path="/rally-point/:rallyPointId" element={<RallyPointPage />} />
           {/* Public: the invite preview is what convinces someone to sign up,
               so it must render before the auth gate. */}
           <Route path="/campaign/join" element={<JoinCampaignPage />} />
@@ -88,14 +113,15 @@ function App() {
               </RequireIntake>
             }
           />
-          <Route path="/session/:sessionId" element={<SessionWaitingRoomPage />} />
-          <Route path="/my-sessions" element={<MySessionsPage />} />
+          <Route path="/mission/:missionId" element={<MissionWaitingRoomPage />} />
+          <Route path="/my-missions" element={<MyMissionsPage />} />
           <Route path="/intake" element={<IntakePage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route
             path="/hud"
             element={
               // Copilot suggestion ignored: passthrough keeps HUDPage guest copy; RequireIntake still redirects signed-in users missing a dossier.
-              <RequireIntake guestMode="passthrough">
+              <RequireIntake guestMode="passthrough" identityGate="redirect">
                 <HUDPage />
               </RequireIntake>
             }
@@ -116,7 +142,16 @@ function App() {
               </RequireCoach>
             }
           />
+          <Route
+            path="/coach/articles"
+            element={
+              <RequireCoach>
+                <CoachArticlesPage />
+              </RequireCoach>
+            }
+          />
           {import.meta.env.DEV && <Route path="/dev/timer" element={<TimerDevPage />} />}
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
     </>

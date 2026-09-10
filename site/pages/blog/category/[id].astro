@@ -1,0 +1,97 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { breadcrumbList } from '@/lib/seo/structuredData';
+import { ARTICLE_CATEGORIES } from '@/lib/coach/articles/taxonomy';
+
+export async function getStaticPaths() {
+  const MIN_POSTS_FOR_HUB = 3;
+  let posts: Awaited<ReturnType<typeof getCollection>> = [];
+  try {
+    posts = await getCollection('blog');
+  } catch {
+    posts = [];
+  }
+  const counts = new Map<string, number>();
+  for (const post of posts) {
+    const id = post.data.category;
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+
+  return ARTICLE_CATEGORIES.filter((cat) => (counts.get(cat.id) ?? 0) >= MIN_POSTS_FOR_HUB).map(
+    (cat) => ({
+      params: { id: cat.id },
+      props: {
+        categoryId: cat.id,
+        categoryLabel: cat.label,
+      },
+    })
+  );
+}
+
+const { categoryId, categoryLabel } = Astro.props;
+let posts: Awaited<ReturnType<typeof getCollection>> = [];
+try {
+  posts = await getCollection('blog');
+} catch {
+  posts = [];
+}
+posts = posts
+  .filter((post) => post.data.category === categoryId)
+  .sort((a, b) => new Date(b.data.publishedAt).getTime() - new Date(a.data.publishedAt).getTime());
+
+const jsonLd = [
+  breadcrumbList([
+    { name: 'Home', path: '/' },
+    { name: 'Blog', path: '/blog' },
+    { name: categoryLabel, path: `/blog/category/${categoryId}` },
+  ]),
+];
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) {
+    return iso;
+  }
+  return d.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+---
+
+<BaseLayout
+  title={`${categoryLabel} — Blog — AMRAP With Friends`}
+  description={`Blog posts in ${categoryLabel}: programming notes, pacing, and training together.`}
+  jsonLd={jsonLd}
+>
+  <div class="mx-auto w-full max-w-[46rem] space-y-12 px-6 py-12 lg:px-10 lg:py-16">
+    <header class="space-y-4">
+      <nav aria-label="Breadcrumb" class="text-xs text-muted">
+        <a class="link-accent" href="/blog">Blog</a> / {categoryLabel}
+      </nav>
+      <h1 class="text-display text-[clamp(2.5rem,7vw,4rem)] leading-[0.9] text-ink">
+        {categoryLabel}
+      </h1>
+      <p class="text-base leading-[1.7] text-secondary">
+        Posts in this category from the AMRAP With Friends blog.
+      </p>
+    </header>
+
+    <ul class="space-y-4">
+      {
+        posts.map((post) => (
+          <li class="card p-5">
+            <p class="text-xs text-muted">
+              <time datetime={post.data.publishedAt}>{formatDate(post.data.publishedAt)}</time>
+            </p>
+            <a
+              class="text-display mt-2 block text-xl text-ink hover:text-accent"
+              href={`/blog/${post.data.slug}`}
+            >
+              {post.data.title}
+            </a>
+            <p class="mt-2 text-sm leading-[1.6] text-secondary">{post.data.description}</p>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</BaseLayout>

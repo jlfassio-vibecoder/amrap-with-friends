@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { formatModifiedBadge } from '@/lib/mission/modifiedMovements';
+import { formatVariantBadge } from '@/lib/mission/exerciseScaling';
 import { PacingBadge } from '@/components/PacingBadge';
 import {
   buildParticipantRoster,
@@ -7,18 +9,18 @@ import {
   rosterEntriesForDisplay,
   type LeaderboardSortMode,
   type ParticipantRosterEntry,
-} from '@/lib/sessionSync/buildParticipantRoster';
+} from '@/lib/missionSync/buildParticipantRoster';
 import type {
   LeaderboardEntry,
-  LiveSessionPhase,
-  SessionPresenceEntry,
-} from '@/lib/sessionSync/types';
+  LiveMissionPhase,
+  MissionPresenceEntry,
+} from '@/lib/missionSync/types';
 
 interface ParticipantsPanelProps {
   leaderboard: LeaderboardEntry[];
-  presence: SessionPresenceEntry[];
+  presence: MissionPresenceEntry[];
   selfParticipantId: string;
-  phase: LiveSessionPhase;
+  phase: LiveMissionPhase;
   className?: string;
 }
 
@@ -30,16 +32,20 @@ function formatMultiplier(multiplier: number): string {
 
 function formatRosterScore(
   entry: ParticipantRosterEntry,
-  phase: LiveSessionPhase,
+  phase: LiveMissionPhase,
   sortMode: LeaderboardSortMode
 ): string {
   if (phase === 'finished' && sortMode === 'discipline' && entry.pvi !== null) {
     return `${entry.pvi}% · ${formatMultiplier(entry.pviMultiplier)}`;
   }
 
-  const score = phase === 'finished' ? entry.finalScore : entry.baseScore;
+  // Always baseScore, never finalScore: finalScore is baseScore adjusted by
+  // P.V.I. and Domain, and is worth more or less than the reps the athlete
+  // actually did. It ranks the "Absolute" sort (compareAbsoluteRoster reads
+  // finalScore directly), but the number shown next to "reps" here must stay
+  // the real rep count or it reads as a different — wrong — workout result.
   const unit = entry.repsPerRound > 0 ? 'reps' : 'rounds';
-  const value = entry.repsPerRound > 0 ? score : entry.roundCount;
+  const value = entry.repsPerRound > 0 ? entry.baseScore : entry.roundCount;
   return `${value} ${unit}`;
 }
 
@@ -89,14 +95,14 @@ function LeaderboardSortToggle({
 function RankBadge({ rank }: { rank: number }) {
   if (rank === 1) {
     return (
-      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center text-sm font-semibold text-accent tabular-nums">
+      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center text-sm font-semibold tabular-nums text-accent">
         {rank}
       </span>
     );
   }
 
   return (
-    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center text-sm font-medium text-muted tabular-nums">
+    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center text-sm font-medium tabular-nums text-muted">
       {rank}
     </span>
   );
@@ -108,11 +114,15 @@ function RosterRow({
   sortMode,
 }: {
   entry: ParticipantRosterEntry;
-  phase: LiveSessionPhase;
+  phase: LiveMissionPhase;
   sortMode: LeaderboardSortMode;
 }) {
   const showPacingBadge = phase === 'finished' && entry.pviVerdict.length > 0;
   const scoreDisplay = formatRosterScore(entry, phase, sortMode);
+  // Shown, never hidden and never removed from the board: an honest mark that
+  // costs an athlete their place on it would stop being given.
+  const modifiedBadge =
+    formatVariantBadge(entry.movementVariants) ?? formatModifiedBadge(entry.modifiedMovements);
 
   return (
     <div role="listitem" className="flex items-center gap-2 px-2 py-1.5">
@@ -127,11 +137,16 @@ function RosterRow({
         {entry.nickname}
         {entry.isSelf ? ' (you)' : ''}
       </span>
+      {modifiedBadge ? (
+        <span
+          className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary"
+          title={modifiedBadge}
+        >
+          Modified
+        </span>
+      ) : null}
       {showPacingBadge ? (
-        <PacingBadge
-          classification={entry.pviClassification}
-          verdict={entry.pviVerdict}
-        />
+        <PacingBadge classification={entry.pviClassification} verdict={entry.pviVerdict} />
       ) : null}
       <span className="shrink-0 text-sm font-semibold tabular-nums">{scoreDisplay}</span>
     </div>
@@ -172,9 +187,9 @@ export function ParticipantsPanel({
       className={`card flex h-full min-h-0 flex-col gap-3 overflow-hidden p-4 ${className ?? ''}`}
       data-walkthrough-id="participants"
     >
-      <div className="flex shrink-0 items-center justify-between gap-3">
-        <h2 className="text-display text-sm text-ink lg:text-base">Participants</h2>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-page px-2.5 py-1 text-xs font-medium text-success-text">
+      <div className="relative flex shrink-0 items-center justify-center">
+        <h2 className="text-display text-sm text-ink lg:text-base">Leaderboard</h2>
+        <span className="absolute right-0 inline-flex items-center gap-1.5 rounded-full border border-border bg-page px-2.5 py-1 text-xs font-medium text-success-text">
           <span className="inline-block h-2 w-2 rounded-full bg-success" aria-hidden />
           {onlineCount} here
         </span>
@@ -227,7 +242,7 @@ export function ParticipantsPanel({
           ) : (
             <div
               role="list"
-              className="min-h-0 max-h-48 flex-1 space-y-1 overflow-y-auto lg:max-h-none"
+              className="max-h-48 min-h-0 flex-1 space-y-1 overflow-y-auto lg:max-h-none"
             >
               {displayEntries.map((entry) => (
                 <RosterRow

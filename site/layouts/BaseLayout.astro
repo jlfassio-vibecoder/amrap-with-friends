@@ -1,0 +1,121 @@
+---
+import '@/index.css';
+import { backFallbackFor } from '@/lib/seo/backFallback';
+import { resolveSeo, SITE_NAME } from '@/lib/seo/routes';
+import { organization, serializeJsonLd, type JsonLd } from '@/lib/seo/structuredData';
+import BackLink from '../components/BackLink.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+
+interface Props {
+  /** Extra schema.org nodes for this page. Organization is always included. */
+  jsonLd?: JsonLd[];
+  /** The home page carries its own nav inside the hero's dark ground. */
+  hideHeader?: boolean;
+  /** Hide the history back control (e.g. home). Default: show whenever the site header shows. */
+  hideBack?: boolean;
+  /**
+   * Where ← Back goes if there is no same-origin previous page (new tab, direct URL).
+   * Defaults from the pathname when omitted.
+   */
+  backFallback?: string;
+  /**
+   * Generated pages (a movement, a workout, a collection) are not rows in the
+   * route table — there are a hundred of them — so they pass their own title and
+   * description. The canonical and robots still come from the table's pattern row.
+   */
+  title?: string;
+  description?: string;
+  /** Absolute OG image URL. Defaults to the brand card. */
+  ogImage?: string;
+}
+
+const {
+  jsonLd = [],
+  hideHeader = false,
+  hideBack = false,
+  backFallback,
+  title,
+  description,
+  ogImage: ogImageProp,
+} = Astro.props;
+const showBack = !hideHeader && !hideBack;
+const resolvedBackFallback = backFallback ?? backFallbackFor(Astro.url.pathname);
+
+// Title, description, canonical and robots all come from src/lib/seo/routes.ts —
+// the same table the SPA and the edge middleware read, so a page cannot describe
+// itself one way to a browser and another way to a crawler.
+const resolved = resolveSeo(Astro.url.pathname);
+const seo = {
+  ...resolved,
+  title: title ?? resolved.title,
+  description: description ?? resolved.description,
+};
+const ogImage = ogImageProp ?? new URL('/og-image-f.png', Astro.site).href;
+const graph = serializeJsonLd([organization(), ...jsonLd]);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="only light" />
+
+    <title>{seo.title}</title>
+    <meta name="description" content={seo.description} />
+    <meta name="robots" content={seo.robots} />
+    {seo.canonical && <link rel="canonical" href={seo.canonical} />}
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE_NAME} />
+    <meta property="og:title" content={seo.title} />
+    <meta property="og:description" content={seo.description} />
+    {seo.canonical && <meta property="og:url" content={seo.canonical} />}
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="AMRAP With Friends logo" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={seo.title} />
+    <meta name="twitter:description" content={seo.description} />
+    <meta name="twitter:image" content={ogImage} />
+
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Work+Sans:wght@400;600;700&family=Rubik:wght@700&family=DM+Sans:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <script type="application/ld+json" is:inline set:html={graph} />
+  </head>
+  <body class="home-marketing bg-page text-ink">
+    {!hideHeader && <SiteHeader />}
+    {
+      showBack && (
+        <div class="border-b border-border bg-page">
+          <div class="mx-auto w-full max-w-[1240px] px-6 py-3 lg:px-10">
+            <BackLink fallback={resolvedBackFallback} />
+          </div>
+        </div>
+      )
+    }
+    <main>
+      <slot />
+    </main>
+    <SiteFooter />
+    {/* Deferred and bundled by Astro, so the content pages report a pageview
+        and a click-through into the app without loading supabase-js. */}
+    <script>
+      import { initContentAnalytics } from '@/lib/analytics/contentPageview';
+
+      initContentAnalytics();
+    </script>
+  </body>
+</html>

@@ -22,7 +22,7 @@ describe('computeScoreBreakdown', () => {
     });
   });
 
-  it('excludes round 1 for 10+ minute sessions at finish', () => {
+  it('excludes round 1 for 10+ minute missions at finish', () => {
     expect(computeScoreBreakdown([120, 60, 60], 10, 'finished', 120)).toEqual({
       baseScore: 120,
       pvi: 0,

@@ -75,7 +75,7 @@ const STEPS = [
   {
     num: '03 / Earn the title',
     Icon: LaunchIcon,
-    title: 'Launch the session',
+    title: 'Launch the mission',
     body: 'Train live. Log rounds with a tap. Watch the crew advance together and finish with a score that counted for more than yourself.',
     footnote: 'Live effort · real belonging',
   },

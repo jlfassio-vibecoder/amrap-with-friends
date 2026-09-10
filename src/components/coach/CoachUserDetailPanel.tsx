@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CoachDataTable } from '@/components/coach/CoachDataTable';
 import { CoachEventsExplorer } from '@/components/coach/CoachEventsExplorer';
+import { CoachJourneyPanel } from '@/components/coach/CoachJourneyPanel';
 import { CoachStatGrid } from '@/components/coach/CoachStatGrid';
 import { OvertrainingWarningCard } from '@/components/hud/OvertrainingWarningCard';
 import { fetchCoachUserDetail, type CoachUserDetail } from '@/lib/api/coach';
@@ -48,7 +49,7 @@ export function CoachUserDetailPanel({ userId }: { userId: string }) {
     return null;
   }
 
-  const { profile, summary, sessions, classificationHistory, overtraining } = detail;
+  const { profile, summary, missions, classificationHistory, overtraining } = detail;
   // Copilot suggestion ignored: mirrors HUDPage pre-check so elevated/high gating stays consistent at the call site.
   const overtrainingRisk = evaluateOvertrainingRisk(overtraining);
 
@@ -61,8 +62,7 @@ export function CoachUserDetailPanel({ userId }: { userId: string }) {
         </p>
         <div className="flex flex-wrap gap-4 text-sm text-secondary">
           <span>
-            Rank:{' '}
-            <span className="font-semibold text-ink">{profile.perceivedClassification}</span>
+            Rank: <span className="font-semibold text-ink">{profile.perceivedClassification}</span>
           </span>
           <span>Sex: {profile.biologicalSex ?? '—'}</span>
           <span>Height: {profile.heightCm ?? '—'} cm</span>
@@ -76,15 +76,13 @@ export function CoachUserDetailPanel({ userId }: { userId: string }) {
       ) : null}
 
       <section className="space-y-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-secondary">
-          Frequency
-        </h3>
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-secondary">Frequency</h3>
         <CoachStatGrid
           stats={[
-            { label: 'Total sessions', value: summary.totalSessions },
-            { label: 'As host', value: summary.sessionsAsHost },
-            { label: 'As joiner', value: summary.sessionsAsJoiner },
-            { label: 'Practice sessions', value: summary.practiceSessionsStarted },
+            { label: 'Total missions', value: summary.totalMissions },
+            { label: 'As host', value: summary.missionsAsHost },
+            { label: 'As joiner', value: summary.missionsAsJoiner },
+            { label: 'Practice missions', value: summary.practiceMissionsStarted },
           ]}
         />
         <p className="text-sm text-secondary">
@@ -94,14 +92,12 @@ export function CoachUserDetailPanel({ userId }: { userId: string }) {
       </section>
 
       <section className="space-y-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-secondary">
-          Workouts
-        </h3>
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-secondary">Workouts</h3>
         <div className="card p-4">
           <CoachDataTable
-            rows={sessions}
-            rowKey={(row) => row.sessionId}
-            emptyLabel="No sessions yet."
+            rows={missions}
+            rowKey={(row) => row.missionId}
+            emptyLabel="No missions yet."
             columns={[
               { header: 'Template', render: (row) => row.templateId ?? 'Custom' },
               { header: 'Role', render: (row) => row.role },
@@ -137,6 +133,8 @@ export function CoachUserDetailPanel({ userId }: { userId: string }) {
         <h3 className="text-sm font-semibold uppercase tracking-wide text-secondary">
           Support: recent activity
         </h3>
+        <CoachJourneyPanel key={`journey-${userId}`} userId={userId} />
+
         <CoachEventsExplorer key={userId} userId={userId} />
       </section>
     </div>

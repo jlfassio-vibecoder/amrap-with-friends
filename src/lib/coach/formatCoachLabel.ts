@@ -9,6 +9,14 @@ function isSlugLikeString(value: string): boolean {
   return /^[a-z][a-z0-9]*$/.test(value);
 }
 
+/**
+ * Tokens that are acronyms, not words. Without these, Explore rows read
+ * "Rpc call", "Mission id copied" and "Featured wod viewed" — the last one
+ * mangling an acronym the coach surface is allowed to use (CLAUDE.md keeps WOD
+ * in coach-facing tooling and out of anything a first-time visitor reads).
+ */
+const ACRONYMS = new Set(['wod', 'wods', 'rpc', 'id', 'ids', 'url', 'ui', 'pvi', 'amrap']);
+
 function titleCaseWord(word: string): string {
   if (word.length === 0) {
     return word;
@@ -16,17 +24,29 @@ function titleCaseWord(word: string): string {
   return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
 }
 
+/** Show a copyable full UUID in title; keep the cell to 8…4. */
+export function truncateAnonId(anonId: string): string {
+  if (anonId.length <= 12) {
+    return anonId;
+  }
+  return `${anonId.slice(0, 8)}…${anonId.slice(-4)}`;
+}
+
 /** intake_submitted → "Intake submitted"; blood-shunt → "Blood shunt" */
 export function formatCoachLabel(value: string): string {
   if (!value.trim()) {
     return value;
   }
-  const words = value.split(/[_-]+/).filter(Boolean).map((word) => word.toLowerCase());
+  const words = value
+    .split(/[_-]+/)
+    .filter(Boolean)
+    .map((word) => word.toLowerCase());
   if (words.length === 0) {
     return value;
   }
-  words[0] = titleCaseWord(words[0]);
-  return words.join(' ');
+  const cased = words.map((word) => (ACRONYMS.has(word) ? word.toUpperCase() : word));
+  cased[0] = ACRONYMS.has(words[0]) ? cased[0] : titleCaseWord(words[0]);
+  return cased.join(' ');
 }
 
 function formatCoachPropValue(value: unknown): unknown {
@@ -51,14 +71,31 @@ function formatCoachPropsObject(props: Record<string, unknown>): Record<string, 
   );
 }
 
-/** For rpc_call rows: "Rpc call · Upsert athlete profile" */
-export function formatCoachEventLabel(
-  eventName: string,
-  props: Record<string, unknown>
-): string {
+/**
+ * The prop that says *which* one, for events whose name alone is not enough to
+ * read a row. Explore now lists every registered event rather than a curated
+ * fifteen, so the feed is dense with repeated names — "Auth sign up failed"
+ * four times running says nothing, "Auth sign up failed · Duplicate" says the
+ * copy is sending returning users to the wrong form.
+ */
+const EVENT_DETAIL_PROP: Record<string, string> = {
+  rpc_call: 'rpc_name',
+  realtime_status: 'status',
+  audio_unlock_result: 'state',
+  template_selected: 'template_id',
+  coach_workout_selected: 'template_id',
+  auth_sign_up_failed: 'reason',
+  auth_sign_in_failed: 'reason',
+  auth_google_failed: 'reason',
+};
+
+/** For rpc_call rows: "RPC call · Upsert athlete profile" */
+export function formatCoachEventLabel(eventName: string, props: Record<string, unknown>): string {
   const label = formatCoachLabel(eventName);
-  if (eventName === 'rpc_call' && typeof props.rpc_name === 'string') {
-    return `${label} · ${formatCoachLabel(props.rpc_name)}`;
+  const detailKey = EVENT_DETAIL_PROP[eventName];
+  const detail = detailKey ? props[detailKey] : null;
+  if (typeof detail === 'string' && detail.trim()) {
+    return `${label} · ${formatCoachLabel(detail)}`;
   }
   return label;
 }

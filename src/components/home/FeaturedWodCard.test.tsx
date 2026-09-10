@@ -8,9 +8,8 @@ const fetchCurrentFeaturedWodMock = vi.fn();
 const trackMock = vi.fn();
 
 vi.mock('@/lib/api/featuredWod', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/api/featuredWod')>(
-    '@/lib/api/featuredWod'
-  );
+  const actual =
+    await vi.importActual<typeof import('@/lib/api/featuredWod')>('@/lib/api/featuredWod');
   return {
     ...actual,
     fetchCurrentFeaturedWod: (...args: unknown[]) => fetchCurrentFeaturedWodMock(...args),
@@ -19,6 +18,15 @@ vi.mock('@/lib/api/featuredWod', async () => {
 
 vi.mock('@/lib/analytics/track', () => ({
   track: (...args: unknown[]) => trackMock(...args),
+}));
+
+vi.mock('@/hooks/useAthleteProfile', () => ({
+  useAthleteProfile: () => ({
+    profile: null,
+    missing: false,
+    loading: false,
+    error: null,
+  }),
 }));
 
 afterEach(() => {
@@ -37,7 +45,7 @@ function featured(overrides: Partial<FeaturedWod> = {}): FeaturedWod {
     tags: ['functional fitness'],
     // Default inside the 15-minute join lead window.
     scheduledAt: new Date(Date.now() + 5 * 60_000).toISOString(),
-    sessionId: '22222222-2222-4222-8222-222222222222',
+    missionId: '22222222-2222-4222-8222-222222222222',
     state: 'waiting',
     startedAt: null,
     attendeeCount: 3,
@@ -89,15 +97,13 @@ describe('FeaturedWodCard', () => {
     });
     expect(screen.getByText(/3 joining/)).toBeTruthy();
 
-    const joinLink = screen.getByRole('link', { name: 'Join session' });
-    expect(joinLink.getAttribute('href')).toBe(
-      '/join?s=22222222-2222-4222-8222-222222222222'
-    );
+    const joinLink = screen.getByRole('link', { name: 'Join mission' });
+    expect(joinLink.getAttribute('href')).toBe('/join?m=22222222-2222-4222-8222-222222222222');
 
-    expect(trackMock).toHaveBeenCalledWith(
-      'featured_wod_viewed',
-      { joinable: true, state: 'waiting' }
-    );
+    expect(trackMock).toHaveBeenCalledWith('featured_wod_viewed', {
+      joinable: true,
+      state: 'waiting',
+    });
   });
 
   it('shows locked in-progress copy and hides join once work starts', async () => {
@@ -115,7 +121,7 @@ describe('FeaturedWodCard', () => {
     renderCard();
 
     await waitFor(() => {
-      expect(screen.getByText('Session locked, amrap in progress.')).toBeTruthy();
+      expect(screen.getByText('Mission locked, amrap in progress.')).toBeTruthy();
     });
     expect(screen.queryByRole('link', { name: /Join/ })).toBeNull();
   });
@@ -129,14 +135,14 @@ describe('FeaturedWodCard', () => {
     renderCard();
 
     await waitFor(() => {
-      expect(screen.getByText('Session locked, AMRAP ended.')).toBeTruthy();
+      expect(screen.getByText('Mission locked, AMRAP ended.')).toBeTruthy();
     });
     expect(screen.queryByRole('link', { name: /Join/ })).toBeNull();
   });
 
-  it('shows a no-join message and no attendee count before the session is generated', async () => {
+  it('shows a no-join message and no attendee count before the mission is generated', async () => {
     fetchCurrentFeaturedWodMock.mockResolvedValue({
-      data: featured({ sessionId: null, state: null, attendeeCount: null }),
+      data: featured({ missionId: null, state: null, attendeeCount: null }),
       error: null,
     });
 
@@ -146,11 +152,11 @@ describe('FeaturedWodCard', () => {
       expect(screen.getByText('Sunrise AMRAP')).toBeTruthy();
     });
     expect(screen.queryByRole('link', { name: /Join/ })).toBeNull();
-    expect(screen.getByText('Staging area opens shortly before start.')).toBeTruthy();
+    expect(screen.getByText('Rally point opens shortly before start.')).toBeTruthy();
     expect(screen.queryByText(/joining/)).toBeNull();
   });
 
-  it('keeps Join session hidden until 15 minutes before start even when a session exists', async () => {
+  it('keeps Join mission hidden until 15 minutes before start even when a mission exists', async () => {
     fetchCurrentFeaturedWodMock.mockResolvedValue({
       data: featured({
         scheduledAt: new Date(Date.now() + 2 * 60 * 60_000).toISOString(),
@@ -165,7 +171,7 @@ describe('FeaturedWodCard', () => {
       expect(screen.getByText('Sunrise AMRAP')).toBeTruthy();
     });
     expect(screen.queryByRole('link', { name: /Join/ })).toBeNull();
-    expect(screen.getByText('Staging area opens shortly before start.')).toBeTruthy();
+    expect(screen.getByText('Rally point opens shortly before start.')).toBeTruthy();
     expect(screen.getByText(/1 joining/)).toBeTruthy();
   });
 
@@ -175,15 +181,15 @@ describe('FeaturedWodCard', () => {
     renderCard();
 
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: 'Join session' })).toBeTruthy();
+      expect(screen.getByRole('link', { name: 'Join mission' })).toBeTruthy();
     });
 
-    screen.getByRole('link', { name: 'Join session' }).click();
+    screen.getByRole('link', { name: 'Join mission' }).click();
 
     expect(trackMock).toHaveBeenCalledWith(
       'featured_wod_joined',
       { state: 'waiting' },
-      { sessionId: '22222222-2222-4222-8222-222222222222' }
+      { missionId: '22222222-2222-4222-8222-222222222222' }
     );
   });
 
@@ -228,19 +234,19 @@ describe('FeaturedWodCard', () => {
     expect(trackMock).toHaveBeenCalledTimes(1);
   });
 
-  it('tracks a new view when a session gets generated between poll ticks', async () => {
+  it('tracks a new view when a mission gets generated between poll ticks', async () => {
     vi.useFakeTimers();
     fetchCurrentFeaturedWodMock
       .mockResolvedValueOnce({
-        data: featured({ sessionId: null, state: null, attendeeCount: null }),
+        data: featured({ missionId: null, state: null, attendeeCount: null }),
         error: null,
       })
-      .mockResolvedValueOnce({ data: featured({ sessionId: 'new-session-id' }), error: null });
+      .mockResolvedValueOnce({ data: featured({ missionId: 'new-mission-id' }), error: null });
 
     renderCard();
 
     await vi.waitFor(() => {
-      expect(screen.getByText('Staging area opens shortly before start.')).toBeTruthy();
+      expect(screen.getByText('Rally point opens shortly before start.')).toBeTruthy();
     });
     expect(trackMock).toHaveBeenCalledWith('featured_wod_viewed', {
       joinable: false,
@@ -250,7 +256,7 @@ describe('FeaturedWodCard', () => {
     await vi.advanceTimersByTimeAsync(20_000);
 
     await vi.waitFor(() => {
-      expect(screen.getByRole('link', { name: 'Join session' })).toBeTruthy();
+      expect(screen.getByRole('link', { name: 'Join mission' })).toBeTruthy();
     });
     expect(trackMock).toHaveBeenCalledWith('featured_wod_viewed', {
       joinable: true,
@@ -258,9 +264,9 @@ describe('FeaturedWodCard', () => {
     });
   });
 
-  it('shows calendar links even before the session is generated, with a stable non-session UID', async () => {
+  it('shows calendar links even before the mission is generated, with a stable non-mission UID', async () => {
     fetchCurrentFeaturedWodMock.mockResolvedValue({
-      data: featured({ sessionId: null, state: null, attendeeCount: null }),
+      data: featured({ missionId: null, state: null, attendeeCount: null }),
       error: null,
     });
 
@@ -269,7 +275,9 @@ describe('FeaturedWodCard', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Download calendar invite' })).toBeTruthy();
     });
-    const googleLink = screen.getByRole('link', { name: 'Add to Google Calendar' }) as HTMLAnchorElement;
+    const googleLink = screen.getByRole('link', {
+      name: 'Add to Google Calendar',
+    }) as HTMLAnchorElement;
     expect(googleLink.href).toContain('calendar.google.com/calendar/render');
     expect(googleLink.href).toContain('Sunrise+AMRAP');
   });
@@ -279,7 +287,13 @@ describe('FeaturedWodCard', () => {
     fetchCurrentFeaturedWodMock.mockResolvedValue({ data: featured(), error: null });
     const createObjectURL = vi.fn().mockReturnValue('blob:fake-url');
     const revokeObjectURL = vi.fn();
-    vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL });
+    const RealURL = globalThis.URL;
+    function PatchedURL(this: unknown, ...args: ConstructorParameters<typeof URL>): URL {
+      return Reflect.construct(RealURL, args) as URL;
+    }
+    Object.setPrototypeOf(PatchedURL, RealURL);
+    Object.assign(PatchedURL, RealURL, { createObjectURL, revokeObjectURL });
+    vi.stubGlobal('URL', PatchedURL);
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
     const appendSpy = vi.spyOn(document.body, 'appendChild');
 
@@ -301,7 +315,7 @@ describe('FeaturedWodCard', () => {
     expect(trackMock).toHaveBeenCalledWith(
       'featured_wod_calendar_saved',
       { method: 'ics' },
-      { sessionId: '22222222-2222-4222-8222-222222222222' }
+      { missionId: '22222222-2222-4222-8222-222222222222' }
     );
 
     clickSpy.mockRestore();
@@ -322,7 +336,7 @@ describe('FeaturedWodCard', () => {
     expect(trackMock).toHaveBeenCalledWith(
       'featured_wod_calendar_saved',
       { method: 'google' },
-      { sessionId: '22222222-2222-4222-8222-222222222222' }
+      { missionId: '22222222-2222-4222-8222-222222222222' }
     );
   });
 

@@ -15,6 +15,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
 import { EXERCISE_LIBRARY, getExerciseInfo } from '../src/data/exerciseLibrary.ts';
+import { AMQAP_FLOWS } from '../src/data/amqapFlows.ts';
 import { WORKOUT_TEMPLATES } from '../src/data/workoutTemplates.ts';
 
 const EXERCISE_MEDIA_BUCKET = 'exercise-media';
@@ -61,9 +62,7 @@ function slugifyMovementName(name: string): string {
     .replace(/^-|-$/g, '');
 }
 
-async function listTopLevelFolders(
-  supabase: ReturnType<typeof createClient>
-): Promise<string[]> {
+async function listTopLevelFolders(supabase: ReturnType<typeof createClient>): Promise<string[]> {
   const names: string[] = [];
   let offset = 0;
 
@@ -104,7 +103,7 @@ function collectExpectedFolderIds(): {
   const missingFromLibrary: string[] = [];
   const seenNames = new Set<string>();
 
-  for (const template of WORKOUT_TEMPLATES) {
+  for (const template of [...WORKOUT_TEMPLATES, ...AMQAP_FLOWS]) {
     for (const movement of template.movements) {
       if (seenNames.has(movement.name)) {
         continue;
@@ -131,8 +130,7 @@ function collectExpectedFolderIds(): {
 async function main(): Promise<void> {
   loadEnvFile(resolve(ROOT, '.env'));
 
-  const supabaseUrl =
-    process.env.SUPABASE_URL?.trim() || process.env.VITE_SUPABASE_URL?.trim();
+  const supabaseUrl = process.env.SUPABASE_URL?.trim() || process.env.VITE_SUPABASE_URL?.trim();
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
 
   if (!supabaseUrl || !serviceRoleKey) {
@@ -152,10 +150,7 @@ async function main(): Promise<void> {
   const bucketSet = new Set(bucketFolders);
   const missingFolders = expectedIds.filter((id) => !bucketSet.has(id));
   const bucketOnly = bucketFolders.filter(
-    (name) =>
-      name !== '.emptyFolderPlaceholder' &&
-      name !== '.keep' &&
-      !expectedIds.includes(name)
+    (name) => name !== '.emptyFolderPlaceholder' && name !== '.keep' && !expectedIds.includes(name)
   );
 
   console.log(`Library entries: ${EXERCISE_LIBRARY.length}`);
@@ -183,7 +178,9 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.log(`\n${dryRun ? '[dry-run] Would seed' : 'Seeding'} ${missingFolders.length} missing folder(s):\n`);
+  console.log(
+    `\n${dryRun ? '[dry-run] Would seed' : 'Seeding'} ${missingFolders.length} missing folder(s):\n`
+  );
 
   if (dryRun) {
     for (const id of missingFolders) {

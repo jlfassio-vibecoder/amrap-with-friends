@@ -1,9 +1,7 @@
-import type { WorkoutExercise } from '@/lib/api/sessionTypes';
+import type { WorkoutExercise } from '@/lib/api/missionTypes';
 import type { WorkoutTemplate, WorkoutTemplateMovement } from '@/data/workoutTemplates';
 
-export function templateMovementToExercise(
-  movement: WorkoutTemplateMovement
-): WorkoutExercise {
+export function templateMovementToExercise(movement: WorkoutTemplateMovement): WorkoutExercise {
   if (movement.reps === undefined) {
     return { name: movement.name };
   }

@@ -20,6 +20,7 @@ afterEach(() => {
 const infoWithBrokenPhoto: ExerciseInfo = {
   id: 'test-exercise',
   name: 'Test Exercise',
+  primaryPatterns: ['full-body-conditioning'],
   setupAndExecution: ['Do the thing.'],
   commonMistakes: [],
   coachingCue: 'Stay tall.',

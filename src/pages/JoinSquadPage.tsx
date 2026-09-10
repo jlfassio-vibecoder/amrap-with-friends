@@ -1,25 +1,39 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppLink } from '@/components/AppLink';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AuthModal } from '@/components/AuthModal';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
+import { IdentityOverlay } from '@/components/onboarding/IdentityOverlay';
 import {
   acceptSquadInviteCode,
   fetchSquadInvitePreview,
   type SquadInvitePreview,
 } from '@/lib/api/squad';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
+import { useAthleteProfile } from '@/hooks/useAthleteProfile';
+import { useEnsureAthleteIdentity } from '@/hooks/useEnsureAthleteIdentity';
+import { isIntakeRequiredMessage } from '@/lib/auth/profileNeedsIntake';
 
 export default function JoinSquadPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const inviteCode = (searchParams.get('c') ?? '').trim();
   const { isAuthenticated, isAuthLoading } = useAmrapAuth();
+  const { loading: profileLoading } = useAthleteProfile();
+  const {
+    ensureThen,
+    open: identityOpen,
+    overlayProps,
+  } = useEnsureAthleteIdentity({
+    acceptLabel: 'Accept & join',
+  });
 
   const [preview, setPreview] = useState<SquadInvitePreview | null>(null);
   const [loadedCode, setLoadedCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [accepting, setAccepting] = useState(false);
-  const [authOpen, setAuthOpen] = useState(false);
+  const [authOpenMode, setAuthOpenMode] = useState<'sign-in' | 'sign-up' | null>(null);
+  const joinAfterAuthRef = useRef(false);
 
   useEffect(() => {
     if (!inviteCode) {
@@ -46,26 +60,49 @@ export default function JoinSquadPage() {
     };
   }, [inviteCode]);
 
-  async function handleAccept() {
-    setAccepting(true);
-    setError(null);
-    const result = await acceptSquadInviteCode(inviteCode);
-    setAccepting(false);
-    if (result.error) {
-      setError(result.error.message);
+  const performAccept = useCallback(
+    async function runAccept(needsRetry = true) {
+      setAccepting(true);
+      setError(null);
+      const result = await acceptSquadInviteCode(inviteCode);
+      setAccepting(false);
+      if (result.error && isIntakeRequiredMessage(result.error.message) && needsRetry) {
+        ensureThen(() => {
+          void runAccept(false);
+        });
+        return;
+      }
+      if (result.error) {
+        setError(result.error.message);
+        return;
+      }
+      navigate('/squad');
+    },
+    [ensureThen, inviteCode, navigate]
+  );
+
+  const handleAccept = useCallback(() => {
+    ensureThen(() => {
+      void performAccept();
+    });
+  }, [ensureThen, performAccept]);
+
+  useEffect(() => {
+    if (!joinAfterAuthRef.current || !isAuthenticated || isAuthLoading || profileLoading) {
       return;
     }
-    navigate('/squad');
-  }
+    joinAfterAuthRef.current = false;
+    handleAccept();
+  }, [handleAccept, isAuthenticated, isAuthLoading, profileLoading]);
 
   if (!inviteCode) {
     return (
       <NarrowPageLayout title="Your squad" subtitle="You’ve been invited">
         <p className="text-error">That invite link is not valid.</p>
         <p className="text-center text-sm">
-          <Link className="link-accent" to="/">
+          <AppLink className="link-accent" to="/">
             Back home
-          </Link>
+          </AppLink>
         </p>
       </NarrowPageLayout>
     );
@@ -88,9 +125,9 @@ export default function JoinSquadPage() {
       <NarrowPageLayout title="Your squad" subtitle="You’ve been invited">
         <p className="text-error">{error ?? 'That invite is not available.'}</p>
         <p className="text-center text-sm">
-          <Link className="link-accent" to="/">
+          <AppLink className="link-accent" to="/">
             Back home
-          </Link>
+          </AppLink>
         </p>
       </NarrowPageLayout>
     );
@@ -105,7 +142,7 @@ export default function JoinSquadPage() {
         <h2 className="text-display text-3xl text-ink">{inviter} invited you</h2>
         <p className="text-sm text-secondary">
           Accept to add them to your squad. You will need an account — a squad tracks people, not
-          one session.
+          one mission.
         </p>
 
         {signedIn ? (
@@ -122,21 +159,54 @@ export default function JoinSquadPage() {
             <p className="text-sm text-secondary">
               Sign in to accept. If you do not have an account yet, create one first.
             </p>
-            <button type="button" className="btn-primary" onClick={() => setAuthOpen(true)}>
-              Sign in to join
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => {
+                  joinAfterAuthRef.current = true;
+                  setAuthOpenMode('sign-in');
+                }}
+              >
+                Sign in to join
+              </button>
+              <button
+                type="button"
+                className="btn-neutral"
+                onClick={() => {
+                  joinAfterAuthRef.current = true;
+                  setAuthOpenMode('sign-up');
+                }}
+              >
+                Create account
+              </button>
+            </div>
           </div>
         )}
 
         {error ? <p className="alert-error">{error}</p> : null}
       </section>
 
-      {authOpen ? <AuthModal onClose={() => setAuthOpen(false)} /> : null}
+      {authOpenMode ? (
+        <AuthModal
+          onClose={() => {
+            joinAfterAuthRef.current = false;
+            setAuthOpenMode(null);
+          }}
+          initialPasswordMode={authOpenMode}
+          onAuthenticated={() => {
+            joinAfterAuthRef.current = true;
+            setAuthOpenMode(null);
+          }}
+          guestAllowed={false}
+        />
+      ) : null}
+      {identityOpen ? <IdentityOverlay {...overlayProps} /> : null}
 
       <p className="text-center text-sm">
-        <Link className="link-accent" to="/">
+        <AppLink className="link-accent" to="/">
           Back home
-        </Link>
+        </AppLink>
       </p>
     </NarrowPageLayout>
   );

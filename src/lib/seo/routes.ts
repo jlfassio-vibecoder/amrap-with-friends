@@ -1,0 +1,393 @@
+/**
+ * The single source of truth for per-route search metadata.
+ *
+ * Two consumers, deliberately: the SPA ([`useSeo`](../../hooks/useSeo.ts)) writes
+ * these into the document head for renderers, and the edge middleware
+ * (`middleware.ts`) reads the same table to send `X-Robots-Tag` and to 404
+ * unknown paths — which is what crawlers that never run JavaScript actually see.
+ * Keep it free of React and of `@/` imports: the middleware bundles it directly.
+ */
+
+export const SITE_HOST = 'amrapwithfriends.com';
+export const SITE_ORIGIN = `https://${SITE_HOST}`;
+export const SITE_NAME = 'AMRAP With Friends';
+
+export const DEFAULT_TITLE = 'AMRAP With Friends — Live Group AMRAP Workout Timer';
+export const DEFAULT_DESCRIPTION =
+  'Live group AMRAP workout timer. Host or join a mission, sync one countdown across phones, and race the leaderboard together.';
+
+export interface RouteSeo {
+  /** Path pattern. `:name` matches exactly one segment. */
+  path: string;
+  title: string;
+  description: string;
+  /**
+   * Whether search engines may index this URL.
+   *
+   * False for every signed-in, private or ephemeral surface. Rally points and
+   * missions are an unbounded, short-lived URL space — indexing them would fill
+   * the index with dead pages — but they stay `follow` and keep their OG tags so
+   * a shared rally link still unfurls in a group chat.
+   */
+  index: boolean;
+}
+
+/**
+ * Static pages built by Astro. Real HTML in the first response, which is the
+ * only thing an AI crawler ever reads — none of them execute JavaScript.
+ */
+export const CONTENT_ROUTES: RouteSeo[] = [
+  {
+    path: '/',
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    index: true,
+  },
+  {
+    path: '/amrap-timer',
+    title: 'Free AMRAP Timer — Online, No Signup',
+    description:
+      'A free online AMRAP timer for 5, 10, 15 and 20 minute workouts. Countdown clock, round counter, audible cues. No signup, no app install, no ads.',
+    index: true,
+  },
+  {
+    path: '/amrap-workouts',
+    title: 'AMRAP Workouts — 150 Bodyweight Workouts, 5 to 20 Minutes',
+    description:
+      'Browse 150 bodyweight AMRAP workouts by time (5–20 min) or training stimulus, with coaching cues and a shared live timer.',
+    index: true,
+  },
+  {
+    path: '/exercises',
+    title: 'AMRAP Exercise Library — Form and Coaching Cues',
+    description:
+      'Every movement in the AMRAP workout library: setup and execution, the coaching cue that holds under fatigue, and the workouts that use it.',
+    index: true,
+  },
+  {
+    path: '/science',
+    title: 'The Science of AMRAP Training — Sourced Research',
+    description:
+      'What published exercise physiology shows about AMRAP training, with every claim cited and every gap admitted. Written by a certified Master Fitness Trainer.',
+    index: true,
+  },
+  {
+    path: '/science/energy-systems',
+    title: 'AMRAP Energy Systems: What the Research Shows',
+    description:
+      "Both energy systems run from an AMRAP's first second. What the research shows about picking a time cap, and why heart rate cannot tell 4 minutes from 17.",
+    index: true,
+  },
+  {
+    path: '/science/lactate',
+    title: 'Lactate Is Not What Makes an AMRAP Hurt',
+    description:
+      'Lactate is a fuel, not a waste product, and it does not cause the burn or next-day soreness. What the research shows, and where it is still genuinely arguing.',
+    index: true,
+  },
+  {
+    path: '/science/pacing',
+    title: 'AMRAP Pacing: What the Research Supports',
+    description:
+      'Pacing is regulated against a known endpoint, and an even split is a sound default rather than a proven law. What the evidence supports, and what it does not.',
+    index: true,
+  },
+  {
+    path: '/science/fatigue',
+    title: 'Fatigue in an AMRAP: Velocity, Holds and Movement Choice',
+    description:
+      'Your movement slows in an AMRAP, and part of that is a decision rather than failure. What the research shows about velocity loss, holds and picking movements.',
+    index: true,
+  },
+  {
+    path: '/guides',
+    title: 'AMRAP Guides — How the Format Actually Works',
+    description:
+      'Plain answers to what people actually ask about AMRAP training: what it means, how to score it, how to pace it, and how it differs from EMOM and Tabata.',
+    index: true,
+  },
+  {
+    path: '/blog',
+    title: 'AMRAP Blog — Training Notes from the Field',
+    description:
+      'Timely takes on programming, pacing, and training together — separate from the evergreen guides in the library.',
+    index: true,
+  },
+  {
+    path: '/guides/what-is-amrap',
+    title: 'What Does AMRAP Mean? — As Many Rounds As Possible',
+    description:
+      'AMRAP means As Many Rounds (or Reps) As Possible. What the format is, how a round works, how the score is written, and why it scales to any fitness level.',
+    index: true,
+  },
+  {
+    path: '/guides/amrap-vs-emom-vs-tabata',
+    title: 'AMRAP vs EMOM vs Tabata — What Each Format Trains',
+    description:
+      'AMRAP, EMOM and Tabata are three different clocks, and they train three different things. How each one works, what it asks of you, and when to pick which.',
+    index: true,
+  },
+  {
+    path: '/guides/how-to-score-an-amrap',
+    title: 'How to Score an AMRAP — Rounds Plus Reps, Explained',
+    description:
+      'An AMRAP score is rounds plus reps, written 7+12. How to count it, what to do with a partial round, the tiebreak rules, and how to record it usefully.',
+    index: true,
+  },
+  {
+    path: '/guides/what-is-a-good-amrap-score',
+    title: 'What Is a Good AMRAP Score? — An Honest Answer',
+    description:
+      'There is no universal good AMRAP score, and anyone quoting one is guessing. Why it only means something against the same workout, and how to build a baseline.',
+    index: true,
+  },
+  {
+    path: '/guides/amrap-pacing',
+    title: 'AMRAP Pacing — Why the First Round Decides the Score',
+    description:
+      'Most AMRAPs are lost in the first ninety seconds. How round-time variance predicts your score, what an even split actually looks like, and how to hold one.',
+    index: true,
+  },
+  {
+    path: '/guides/group-workouts-remotely',
+    title: 'How to Work Out With Friends Remotely',
+    description:
+      'Training together when you are not in the same room: what actually breaks, why separate timers drift, and how a shared clock and leaderboard fix it.',
+    index: true,
+  },
+  {
+    path: '/campaigns',
+    title: 'AMRAP Training Campaigns — Benchmark, Train, Retest',
+    description:
+      'A campaign is a 2 to 12 week AMRAP programme that opens with a benchmark workout and retests it later, so you find out whether the training moved the number.',
+    index: true,
+  },
+  {
+    path: '/stats',
+    title: 'How 150 AMRAP Workouts Are Built — The Data',
+    description:
+      'Original data from our workout library: which movements get programmed most, how round density changes with the time cap, and the shape of the long tail.',
+    index: true,
+  },
+  {
+    path: '/authors/justin-fassio',
+    title: 'Justin Fassio — Master Fitness Trainer, Founder',
+    description:
+      'Certified Master Fitness Trainer since 1998. Owned San Diego Core Fitness, co-founded gymgo and aiworkoutgenerator.com, and writes the AMRAP With Friends blog.',
+    index: true,
+  },
+  {
+    path: '/about',
+    title: 'About AMRAP With Friends',
+    description:
+      'Why AMRAP With Friends exists: most workout timers are built for one person. This one puts a whole crew on the same clock and leaderboard.',
+    index: true,
+  },
+  {
+    path: '/creators',
+    title: 'Host weekly AMRAPs. Get paid when your squad trains. — AMRAP With Friends',
+    description:
+      'Host a live synced AMRAP each week, earn a share of every subscription your squad buys, and turn finishes into posts that tag you.',
+    index: true,
+  },
+  {
+    path: '/privacy',
+    title: 'Privacy — AMRAP With Friends',
+    description:
+      'How AMRAP With Friends handles accounts, workout data, and browser data — and how to request deletion of what we store.',
+    index: true,
+  },
+  {
+    path: '/terms',
+    title: 'Terms of Use — AMRAP With Friends',
+    description:
+      'Terms of use for AMRAP With Friends: accounts, acceptable use, liability limits, and how live missions and rally links work.',
+    index: true,
+  },
+];
+
+/** Routes served by the React SPA shell. */
+export const APP_ROUTES: RouteSeo[] = [
+  {
+    path: '/create',
+    title: 'Plan an AMRAP mission — AMRAP With Friends',
+    description:
+      'Build an AMRAP workout, pick the time domain, and get a rally link to share. Everyone runs the same synced countdown, wherever they are training.',
+    index: true,
+  },
+  { path: '/plan-mission', title: 'Plan', description: '', index: false },
+  {
+    path: '/join',
+    title: 'Join an AMRAP mission — AMRAP With Friends',
+    description:
+      'Open a rally link to join a live AMRAP with friends. No app install — one synced clock, one shared leaderboard.',
+    index: true,
+  },
+  { path: '/rally-point/:rallyPointId', title: 'Rally point', description: '', index: false },
+  { path: '/mission/:missionId', title: 'Mission', description: '', index: false },
+  { path: '/campaign/join', title: "You've been invited", description: '', index: false },
+  { path: '/campaign/new', title: 'New campaign', description: '', index: false },
+  { path: '/campaign/:campaignId', title: 'Campaign', description: '', index: false },
+  { path: '/squad/join', title: "You've been invited", description: '', index: false },
+  { path: '/squad', title: 'Your squad', description: '', index: false },
+  { path: '/my-missions', title: 'My missions', description: '', index: false },
+  { path: '/intake', title: 'Your profile', description: '', index: false },
+  { path: '/reset-password', title: 'Reset password', description: '', index: false },
+  { path: '/hud', title: 'HUD', description: '', index: false },
+  { path: '/coach', title: 'Coach', description: '', index: false },
+  { path: '/coach/wods', title: 'WOD Builder', description: '', index: false },
+  { path: '/coach/articles', title: 'Article Builder', description: '', index: false },
+];
+
+/**
+ * Generated content pages, as patterns.
+ *
+ * The pages themselves are enumerated in `contentPages.ts`, which reads the
+ * exercise library and the workout templates — far too much data to pull into
+ * the edge middleware just to answer "is this a real path". Patterns are enough
+ * there: an unknown slug matches the pattern, passes through, and Vercel answers
+ * with a real 404 because no file was built for it.
+ *
+ * The titles are placeholders. Each generated page passes its own title and
+ * description to the Astro layout; only `index` and the canonical are read here.
+ */
+export const DYNAMIC_APP_ROUTES: RouteSeo[] = [
+  // Share links. Not indexed: one athlete's result is not a page a search
+  // engine should hold, and the link's job is to unfurl in a group chat.
+  // Registered so the middleware serves it instead of answering a real 404 —
+  // which is what it does to any path not listed here, before the SPA loads.
+  { path: '/s/:shareId', title: 'Shared mission', description: '', index: false },
+];
+
+export const DYNAMIC_CONTENT_ROUTES: RouteSeo[] = [
+  {
+    path: '/exercises/:exerciseSlug',
+    title: 'Exercise',
+    description: '',
+    index: true,
+  },
+  // Literal `style` before `:duration/:workoutSlug`, or `/amrap-workouts/style/x`
+  // would classify as a workout detail with duration "style".
+  {
+    path: '/amrap-workouts/style/:style',
+    title: 'AMRAP workout style',
+    description: '',
+    index: true,
+  },
+  {
+    path: '/amrap-workouts/:duration',
+    title: 'AMRAP workouts',
+    description: '',
+    index: true,
+  },
+  {
+    path: '/amrap-workouts/:duration/:workoutSlug',
+    title: 'AMRAP workout',
+    description: '',
+    index: true,
+  },
+  // Category hubs before `/blog/:slug`, or `/blog/category/x` would match as a post.
+  {
+    path: '/blog/category/:id',
+    title: 'Blog category',
+    description: '',
+    index: true,
+  },
+  {
+    path: '/blog/:slug',
+    title: 'Blog post',
+    description: '',
+    index: true,
+  },
+];
+
+/**
+ * Literals first, then app routes, then patterns last — so a real page is never
+ * shadowed by a pattern that happens to match at the same depth.
+ */
+export const ROUTE_SEO: RouteSeo[] = [
+  ...CONTENT_ROUTES,
+  ...APP_ROUTES,
+  ...DYNAMIC_APP_ROUTES,
+  ...DYNAMIC_CONTENT_ROUTES,
+];
+
+/** True for a `:param` pattern rather than a real URL — never sitemap these. */
+export function isRoutePattern(path: string): boolean {
+  return path.includes(':');
+}
+
+/** True when this path is served by the SPA shell rather than a static page. */
+export function isAppRoute(pathname: string): boolean {
+  return APP_ROUTES.some((route) => matchRoutePath(route.path, pathname));
+}
+
+/**
+ * Trailing slashes, repeated slashes and a `.html` suffix are all the same URL
+ * to us; the canonical carries none of them. The `.html` case is not theoretical:
+ * Astro's file-format build reports `/about.html` as the page's pathname and
+ * `/index.html` for the home page, and `cleanUrls` redirects those away in
+ * production.
+ */
+export function normalizePathname(pathname: string): string {
+  const withoutQuery = pathname.split(/[?#]/)[0];
+  const collapsed = withoutQuery.replace(/\/{2,}/g, '/');
+  const withoutSuffix = collapsed.replace(/\.html$/i, '');
+  // `/index` is the directory's own document, not a page called "index".
+  const withoutIndex = withoutSuffix.replace(/\/index$/i, '/');
+  const trimmed = withoutIndex.replace(/\/+$/, '');
+  return trimmed === '' ? '/' : trimmed;
+}
+
+/** `:param` matches exactly one non-empty segment. No wildcards — every app route is fixed depth. */
+export function matchRoutePath(pattern: string, pathname: string): boolean {
+  const patternSegments = pattern.split('/');
+  const pathSegments = normalizePathname(pathname).split('/');
+  if (patternSegments.length !== pathSegments.length) {
+    return false;
+  }
+  return patternSegments.every((segment, i) =>
+    segment.startsWith(':') ? pathSegments[i].length > 0 : segment === pathSegments[i]
+  );
+}
+
+export function findRouteSeo(pathname: string): RouteSeo | undefined {
+  return ROUTE_SEO.find((route) => matchRoutePath(route.path, pathname));
+}
+
+/** A path the app actually serves. Anything else is a 404, not an empty shell. */
+export function isKnownRoute(pathname: string): boolean {
+  return findRouteSeo(pathname) !== undefined;
+}
+
+export interface ResolvedSeo {
+  title: string;
+  description: string;
+  /** Absolute self-referencing canonical, or null when the page must not be indexed. */
+  canonical: string | null;
+  /** Value for both the robots meta tag and the `X-Robots-Tag` header. */
+  robots: string;
+  /** False when the path matches no route — the caller should render a 404. */
+  known: boolean;
+}
+
+export function resolveSeo(pathname: string): ResolvedSeo {
+  const route = findRouteSeo(pathname);
+  if (!route) {
+    return {
+      title: `Page not found — ${SITE_NAME}`,
+      description: '',
+      canonical: null,
+      robots: 'noindex, follow',
+      known: false,
+    };
+  }
+  const normalized = normalizePathname(pathname);
+  return {
+    title: route.title,
+    description: route.description || DEFAULT_DESCRIPTION,
+    canonical: route.index ? `${SITE_ORIGIN}${normalized}` : null,
+    robots: route.index ? 'index, follow' : 'noindex, follow',
+    known: true,
+  };
+}

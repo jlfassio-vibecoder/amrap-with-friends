@@ -1,9 +1,5 @@
 import { addCalendarDays, isCalendarDate, isLocalTime, weekdayOf } from './calendarDate';
-import {
-  CAMPAIGN_WEEK_COUNTS,
-  MAX_SESSIONS_PER_WEEK,
-  MIN_SESSIONS_PER_WEEK,
-} from './constants';
+import { CAMPAIGN_WEEK_COUNTS, MAX_MISSIONS_PER_WEEK, MIN_MISSIONS_PER_WEEK } from './constants';
 import {
   CampaignValidationError,
   type CampaignCalendar,
@@ -24,24 +20,24 @@ function assertValidInput(input: CampaignScheduleInput): void {
   }
 
   const count = input.slots.length;
-  if (count < MIN_SESSIONS_PER_WEEK || count > MAX_SESSIONS_PER_WEEK) {
+  if (count < MIN_MISSIONS_PER_WEEK || count > MAX_MISSIONS_PER_WEEK) {
     throw new CampaignValidationError(
-      `A campaign needs ${MIN_SESSIONS_PER_WEEK} to ${MAX_SESSIONS_PER_WEEK} sessions a week.`
+      `A campaign needs ${MIN_MISSIONS_PER_WEEK} to ${MAX_MISSIONS_PER_WEEK} missions a week.`
     );
   }
 
   const seen = new Set<number>();
   for (const slot of input.slots) {
     if (!Number.isInteger(slot.weekday) || slot.weekday < 0 || slot.weekday > 6) {
-      throw new CampaignValidationError('Each session day must be a weekday from 0 to 6.');
+      throw new CampaignValidationError('Each mission day must be a weekday from 0 to 6.');
     }
     if (seen.has(slot.weekday)) {
-      throw new CampaignValidationError('Each session must fall on a different day of the week.');
+      throw new CampaignValidationError('Each mission must fall on a different day of the week.');
     }
     seen.add(slot.weekday);
 
     if (!isLocalTime(slot.timeLocal)) {
-      throw new CampaignValidationError('Each session time must be a 24-hour time (HH:MM).');
+      throw new CampaignValidationError('Each mission time must be a 24-hour time (HH:MM).');
     }
   }
 }
@@ -60,7 +56,7 @@ function firstOffsetForSlot(slot: CampaignSlot, startWeekday: number): number {
  * Expands a weekly pattern into the campaign's full calendar.
  *
  * Occurrences carry local dates and wall-clock times only. Resolving them to
- * absolute instants is the generator's job at session-creation time — a
+ * absolute instants is the generator's job at mission-creation time — a
  * campaign booked for 18:00 stays at 18:00 after the clocks change, which
  * persisting a computed `timestamptz` months ahead would not.
  */
@@ -92,10 +88,10 @@ export function buildCampaignCalendar(input: CampaignScheduleInput): CampaignCal
 
   return {
     occurrences,
-    sessionsPerWeek: orderedSlots.length,
-    totalSessions: occurrences.length,
+    missionsPerWeek: orderedSlots.length,
+    totalMissions: occurrences.length,
     anchorDate: input.startDate,
-    firstSessionDate: occurrences[0].localDate,
-    lastSessionDate: occurrences[occurrences.length - 1].localDate,
+    firstMissionDate: occurrences[0].localDate,
+    lastMissionDate: occurrences[occurrences.length - 1].localDate,
   };
 }

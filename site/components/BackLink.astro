@@ -1,0 +1,50 @@
+---
+/**
+ * History back when the previous page is same-origin (keeps scroll position).
+ * Otherwise navigate to `fallback`.
+ */
+interface Props {
+  fallback?: string;
+}
+
+const { fallback = '/' } = Astro.props;
+---
+
+<button
+  type="button"
+  class="link-accent inline-flex items-center gap-1 text-sm font-semibold"
+  data-site-back
+  data-fallback={fallback}
+>
+  ← Back
+</button>
+
+<script>
+  function sameOriginReferrer(): boolean {
+    const ref = document.referrer;
+    if (!ref) return false;
+    try {
+      const url = new URL(ref);
+      return (
+        url.origin === window.location.origin &&
+        url.pathname.replace(/\/$/, '') !== window.location.pathname.replace(/\/$/, '')
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  function onBackClick(event: Event) {
+    const button = event.currentTarget as HTMLButtonElement;
+    const fallback = button.dataset.fallback || '/';
+    if (sameOriginReferrer()) {
+      window.history.back();
+      return;
+    }
+    window.location.assign(fallback);
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('[data-site-back]').forEach((button) => {
+    button.addEventListener('click', onBackClick);
+  });
+</script>

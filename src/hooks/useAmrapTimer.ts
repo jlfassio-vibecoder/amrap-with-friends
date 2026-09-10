@@ -28,21 +28,17 @@ export interface UseAmrapTimerReturn {
   pause: () => void;
   resume: () => void;
   finish: () => void;
-  logRound: () => void;
+  logRound: (missed?: { elapsedSecOverride: number; missedLogReps: number }) => void;
   reset: () => void;
 }
 
 export function useAmrapTimer(): UseAmrapTimerReturn {
-  const [state, dispatch] = useReducer(
-    amrapTimerReducer,
-    undefined,
-    createInitialState
-  );
+  const [state, dispatch] = useReducer(amrapTimerReducer, undefined, createInitialState);
 
   const { phase, isPaused } = state;
 
   useEffect(() => {
-    if (phase !== 'setup' && phase !== 'work' || isPaused) {
+    if ((phase !== 'setup' && phase !== 'work') || isPaused) {
       return;
     }
 
@@ -53,16 +49,13 @@ export function useAmrapTimer(): UseAmrapTimerReturn {
     return () => clearInterval(interval);
   }, [phase, isPaused]);
 
-  const start = useCallback(
-    (config: { setupDurationSec: number; workDurationSec: number }) => {
-      dispatch({
-        type: 'start',
-        setupDurationSec: config.setupDurationSec,
-        workDurationSec: config.workDurationSec,
-      });
-    },
-    []
-  );
+  const start = useCallback((config: { setupDurationSec: number; workDurationSec: number }) => {
+    dispatch({
+      type: 'start',
+      setupDurationSec: config.setupDurationSec,
+      workDurationSec: config.workDurationSec,
+    });
+  }, []);
 
   const hydrate = useCallback(
     (config: {
@@ -98,8 +91,13 @@ export function useAmrapTimer(): UseAmrapTimerReturn {
     dispatch({ type: 'finish' });
   }, []);
 
-  const logRound = useCallback(() => {
-    dispatch({ type: 'logRound', nowMs: Date.now() });
+  const logRound = useCallback((missed?: { elapsedSecOverride: number; missedLogReps: number }) => {
+    dispatch({
+      type: 'logRound',
+      nowMs: Date.now(),
+      elapsedSecOverride: missed?.elapsedSecOverride,
+      missedLogReps: missed?.missedLogReps ?? null,
+    });
   }, []);
 
   const reset = useCallback(() => {

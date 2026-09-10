@@ -63,7 +63,9 @@ FROM fixtures;
 --     "weekEndsAt": <timestamptz>,
 --     "lastLockedAt": <timestamptz|null>,
 --     "attrition": [<bool x 12>],
---     "domainMinutes30d": { "5": <int>, "10": <int>, "15": <int>, "20": <int>, "other": <int> },
+--     "domainMinutes72h": { "5": <int>, "10": <int>, "15": <int>, "20": <int>, "other": <int>, "activeRecovery": <int> },
+--     "domainMinutes7d": { "5": <int>, "10": <int>, "15": <int>, "20": <int>, "other": <int>, "activeRecovery": <int> },
+--     "domainMinutes30d": { "5": <int>, "10": <int>, "15": <int>, "20": <int>, "other": <int>, "activeRecovery": <int> },
 --     "classification": {
 --       "current": "unclassified"|"civilian"|"operator"|"special_ops",
 --       "previous": "unclassified"|"civilian"|"operator"|"special_ops",
@@ -77,6 +79,7 @@ FROM fixtures;
 --   }
 -- }
 -- attrition length must be 12; index 11 = current local week; index 0 = 11 weeks ago.
--- A week is true iff sum(duration_minutes) of claimed+locked sessions in that Mon–Sun >= 150.
--- domainMinutes30d uses rolling now() - 30 days on score lock time; other = non 5/10/15/20.
+-- A week is true iff sum(duration_minutes) of claimed+locked missions in that Mon–Sun >= 150.
+-- domainMinutes72h / 7d / 30d use rolling now() - 72 hours / 7 days / 30 days on score lock time;
+-- other = non 5/10/15/20; activeRecovery = intensity_tier 1 (all durations).
 -- NULL intensity_tier counts as 2 for lethality; custom/historical cannot fill I3+/I4+ quotas alone.

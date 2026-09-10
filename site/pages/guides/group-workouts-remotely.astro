@@ -1,0 +1,95 @@
+---
+import GuideLayout from '../../layouts/GuideLayout.astro';
+
+const answer =
+  'Pick one workout everyone can do, start one clock that everyone can see, and put the scores somewhere shared. The hard part is the clock: if each person runs their own timer, the workouts drift apart within a minute and the scores stop being comparable.';
+
+const faqs = [
+  {
+    question: 'Can you do a workout with friends over video call?',
+    answer:
+      'You can, and it is better than training alone, but the call is not a timer. Video lag is one to three seconds and varies per person, so everyone sees "go" at a slightly different moment. Use the call for company and something synced for the clock.',
+  },
+  {
+    question: 'What is the best workout format for a group?',
+    answer:
+      'An AMRAP, by a wide margin. Everyone starts and finishes together regardless of fitness, nobody is left doing burpees alone while the rest watch, and it produces one comparable number per person. Formats scored by completion time do the opposite.',
+  },
+  {
+    question: 'How do you keep it competitive without it being discouraging?',
+    answer:
+      "Compare against each person's own previous score as well as against each other. A newer athlete who added two rounds since last month has done something a fitter athlete who added none has not, and a leaderboard that shows only raw scores hides that entirely.",
+  },
+];
+---
+
+<GuideLayout heading="How to work out with friends remotely" answer={answer} faqs={faqs}>
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">What actually breaks</h2>
+    <p class="text-base leading-[1.7] text-secondary">
+      Almost everyone tries the same thing first: a group chat, a video call, and everyone hitting
+      start on their own phone at the same time. It falls apart in three predictable ways.
+    </p>
+    <ul class="space-y-3 text-base leading-[1.7] text-secondary">
+      <li>
+        <strong class="font-semibold text-ink">The clocks drift.</strong> Timers started by hand are seconds
+        apart at best, and video adds its own lag. By minute fifteen the person who started two seconds
+        early has had two extra seconds of work.
+      </li>
+      <li>
+        <strong class="font-semibold text-ink">Scores arrive late and unverifiable.</strong> People message
+        a number after the fact. Nobody saw the workout, so nobody can compare anything except on trust.
+      </li>
+      <li>
+        <strong class="font-semibold text-ink">The suffering is private.</strong> The thing that makes
+        training with people work is knowing someone else is mid-round right now. A number posted twenty
+        minutes later does not do that.
+      </li>
+    </ul>
+  </section>
+
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">What to do instead</h2>
+    <ol class="space-y-3 text-base leading-[1.7] text-secondary">
+      <li>
+        <strong class="font-semibold text-ink">Pick a bodyweight AMRAP.</strong> No equipment means no
+        excuses about who has what at home, and an AMRAP means everyone finishes together. Any of the
+        <a class="link-accent" href="/amrap-workouts">150 workouts in our library</a> qualifies.
+      </li>
+      <li>
+        <strong class="font-semibold text-ink">Run one clock, not several.</strong> One countdown that
+        every phone reads from, reconciled as it runs, so nobody is ahead or behind.
+      </li>
+      <li>
+        <strong class="font-semibold text-ink">Log rounds live.</strong> A leaderboard that updates during
+        the workout is doing the job the group chat cannot: it tells you where you are while you can still
+        do something about it.
+      </li>
+      <li>
+        <strong class="font-semibold text-ink">Repeat the same workout later.</strong> Comparing to other
+        people is motivating; comparing to your own previous score is the part that tells you whether
+        the training worked.
+        <a class="link-accent" href="/campaigns">Campaigns</a> schedule that automatically.
+      </li>
+    </ol>
+  </section>
+
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">Different time zones</h2>
+    <p class="text-base leading-[1.7] text-secondary">
+      A live shared clock needs everyone present at the same moment, which is not always possible.
+      The fallback that still works is the same workout on the same day, scored the same way, with
+      the results on one board — you lose the live element but keep the comparison and the
+      accountability. Agreeing a window rather than a minute is usually enough.
+    </p>
+  </section>
+
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">Set one up</h2>
+    <p class="text-base leading-[1.7] text-secondary">
+      AMRAP With Friends is built for exactly this: pick a workout, share a rally link, and everyone
+      who opens it lands on the same countdown with a live leaderboard. No app install, and the
+      people you invite do not need an account.
+    </p>
+  </section>
+</GuideLayout>

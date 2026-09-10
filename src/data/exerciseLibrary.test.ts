@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { getExerciseInfo } from './exerciseLibrary';
+import { EXERCISE_LIBRARY, getExerciseInfo } from './exerciseLibrary';
+import { EXERCISE_PATTERN_TAGS } from '@/lib/smartRecovery/exercisePatternTags';
+import { isMovementPattern } from '@/lib/smartRecovery/movementPatterns';
 
 describe('getExerciseInfo', () => {
   it('returns the Burpees entry when found', () => {
@@ -57,12 +59,8 @@ describe('getExerciseInfo', () => {
     expect(getExerciseInfo('Floor Dips')?.id).toBe('floor-dips');
     expect(getExerciseInfo('Hollow Hold')?.id).toBe('hollow-hold');
     expect(getExerciseInfo('Reverse Lunges')?.id).toBe('reverse-lunges');
-    expect(getExerciseInfo('Single-Leg Glute Bridges')?.id).toBe(
-      'single-leg-glute-bridges'
-    );
-    expect(getExerciseInfo('Standard Glute Bridges')?.id).toBe(
-      'standard-glute-bridges'
-    );
+    expect(getExerciseInfo('Single-Leg Glute Bridges')?.id).toBe('single-leg-glute-bridges');
+    expect(getExerciseInfo('Standard Glute Bridges')?.id).toBe('standard-glute-bridges');
     expect(getExerciseInfo('Wide Push-ups')?.id).toBe('wide-push-ups');
     expect(getExerciseInfo('Side Plank Dips')?.id).toBe('side-plank-dips');
     expect(getExerciseInfo('Pogo Jumps')?.id).toBe('pogo-jumps');
@@ -70,9 +68,7 @@ describe('getExerciseInfo', () => {
   });
 
   it('strips parenthetical for Sphinx Push-ups from Localized Trap templates', () => {
-    expect(getExerciseInfo('Sphinx Push-ups (Forearm to hand)')?.id).toBe(
-      'sphinx-push-ups'
-    );
+    expect(getExerciseInfo('Sphinx Push-ups (Forearm to hand)')?.id).toBe('sphinx-push-ups');
   });
 
   it('strips parenthetical for batch 2 Localized Trap template names', () => {
@@ -86,16 +82,13 @@ describe('getExerciseInfo', () => {
 
   it('keeps Glute Bridges separate from Standard Glute Bridges', () => {
     expect(getExerciseInfo('Glute Bridges')?.id).toBe('glute-bridges');
-    expect(getExerciseInfo('Standard Glute Bridges')?.id).toBe(
-      'standard-glute-bridges'
-    );
+    expect(getExerciseInfo('Standard Glute Bridges')?.id).toBe('standard-glute-bridges');
   });
 
-  it('hides empty common mistakes for Localized Trap entries', () => {
-    expect(getExerciseInfo('Bottom Squat Hold')?.commonMistakes).toEqual([]);
-    expect(getExerciseInfo('Hollow Hold')?.commonMistakes).toEqual([]);
-    expect(getExerciseInfo('Reverse Lunges')?.commonMistakes).toEqual([]);
-    expect(getExerciseInfo('Pogo Jumps')?.commonMistakes).toEqual([]);
+  it('carries common mistakes for Localized Trap entries', () => {
+    for (const name of ['Bottom Squat Hold', 'Hollow Hold', 'Reverse Lunges', 'Pogo Jumps']) {
+      expect(getExerciseInfo(name)?.commonMistakes.length, name).toBeGreaterThanOrEqual(2);
+    }
   });
 
   it('matches Engine Room entries by exact name', () => {
@@ -121,17 +114,11 @@ describe('getExerciseInfo', () => {
 
   it('strips parenthetical for Engine Room template names', () => {
     expect(getExerciseInfo('Sprawls (No-Push-up Burpees)')?.id).toBe('sprawls');
-    expect(getExerciseInfo('Mountain Climbers (Total)')?.id).toBe(
-      'mountain-climbers'
-    );
+    expect(getExerciseInfo('Mountain Climbers (Total)')?.id).toBe('mountain-climbers');
     expect(getExerciseInfo('High Knees (Total)')?.id).toBe('high-knees');
     expect(getExerciseInfo('Butt Kicks (Total)')?.id).toBe('butt-kicks');
-    expect(getExerciseInfo('Half-Burpees (Plank to squat stance)')?.id).toBe(
-      'half-burpees'
-    );
-    expect(getExerciseInfo('Double-Tap Jumps (Penguin Taps)')?.id).toBe(
-      'double-tap-jumps'
-    );
+    expect(getExerciseInfo('Half-Burpees (Plank to squat stance)')?.id).toBe('half-burpees');
+    expect(getExerciseInfo('Double-Tap Jumps (Penguin Taps)')?.id).toBe('double-tap-jumps');
   });
 
   it('keeps Cross-Body Mountain Climbers separate from Mountain Climbers', () => {
@@ -141,9 +128,10 @@ describe('getExerciseInfo', () => {
     );
   });
 
-  it('hides empty common mistakes for Engine Room entries', () => {
-    expect(getExerciseInfo('Sprawls')?.commonMistakes).toEqual([]);
-    expect(getExerciseInfo('Jumping Jacks')?.commonMistakes).toEqual([]);
+  it('carries common mistakes for Engine Room entries', () => {
+    for (const name of ['Sprawls', 'Jumping Jacks']) {
+      expect(getExerciseInfo(name)?.commonMistakes.length, name).toBeGreaterThanOrEqual(2);
+    }
   });
 
   it('matches Midline Tension entries by exact name', () => {
@@ -152,24 +140,21 @@ describe('getExerciseInfo', () => {
     expect(getExerciseInfo('Leg Raises')?.id).toBe('leg-raises');
     expect(getExerciseInfo('Russian Twists')?.id).toBe('russian-twists');
     expect(getExerciseInfo('Bicycle Crunches')?.id).toBe('bicycle-crunches');
-    expect(getExerciseInfo('Plank Knee-to-Elbows')?.id).toBe(
-      'plank-knee-to-elbows'
-    );
+    expect(getExerciseInfo('Plank Knee-to-Elbows')?.id).toBe('plank-knee-to-elbows');
     expect(getExerciseInfo('Dead Bugs')?.id).toBe('dead-bugs');
     expect(getExerciseInfo('Flutter Kicks')?.id).toBe('flutter-kicks');
     expect(getExerciseInfo('Superman Raises')?.id).toBe('superman-raises');
   });
 
   it('keeps Plank Knee-to-Elbows separate from Plank Shoulder Taps', () => {
-    expect(getExerciseInfo('Plank Knee-to-Elbows')?.id).toBe(
-      'plank-knee-to-elbows'
-    );
+    expect(getExerciseInfo('Plank Knee-to-Elbows')?.id).toBe('plank-knee-to-elbows');
     expect(getExerciseInfo('Plank Shoulder Taps')?.id).toBe('plank-shoulder-taps');
   });
 
-  it('hides empty common mistakes for Midline Tension entries', () => {
-    expect(getExerciseInfo('Dead Bugs')?.commonMistakes).toEqual([]);
-    expect(getExerciseInfo('Flutter Kicks')?.commonMistakes).toEqual([]);
+  it('carries common mistakes for Midline Tension entries', () => {
+    for (const name of ['Dead Bugs', 'Flutter Kicks']) {
+      expect(getExerciseInfo(name)?.commonMistakes.length, name).toBeGreaterThanOrEqual(2);
+    }
   });
 
   it('matches remaining dictionary entries by exact name', () => {
@@ -183,18 +168,14 @@ describe('getExerciseInfo', () => {
     expect(getExerciseInfo('V-Sit Hold')?.id).toBe('v-sit-hold');
     expect(getExerciseInfo('Butterfly Sit-ups')?.id).toBe('butterfly-sit-ups');
     expect(getExerciseInfo('Cross-Body Climbers')?.id).toBe('cross-body-climbers');
-    expect(getExerciseInfo('Bodyweight Good Mornings')?.id).toBe(
-      'bodyweight-good-mornings'
-    );
+    expect(getExerciseInfo('Bodyweight Good Mornings')?.id).toBe('bodyweight-good-mornings');
     expect(getExerciseInfo('Glute Bridge Hold')?.id).toBe('glute-bridge-hold');
     expect(getExerciseInfo('Glute Bridge Walkouts')?.id).toBe('glute-bridge-walkouts');
     expect(getExerciseInfo('Reverse Snow Angels')?.id).toBe('reverse-snow-angels');
     expect(getExerciseInfo('Superman Hold')?.id).toBe('superman-hold');
     expect(getExerciseInfo('Superman Pull-downs')?.id).toBe('superman-pull-downs');
     expect(getExerciseInfo('Supermans')?.id).toBe('supermans');
-    expect(getExerciseInfo('Bear Crawl to Broad Jumps')?.id).toBe(
-      'bear-crawl-to-broad-jumps'
-    );
+    expect(getExerciseInfo('Bear Crawl to Broad Jumps')?.id).toBe('bear-crawl-to-broad-jumps');
     expect(getExerciseInfo('Strict Reverse Lunges')?.id).toBe('strict-reverse-lunges');
     expect(getExerciseInfo('Walking Lunges')?.id).toBe('walking-lunges');
   });
@@ -222,5 +203,59 @@ describe('getExerciseInfo', () => {
     expect(getExerciseInfo('Supermans')?.id).toBe('supermans');
     expect(getExerciseInfo('Superman Raises')?.id).toBe('superman-raises');
     expect(getExerciseInfo('Superman Hold')?.id).toBe('superman-hold');
+  });
+
+  it('matches AMQAP mobility names, including per-side suffixes', () => {
+    expect(getExerciseInfo('90/90 Hip Transitions')?.id).toBe('90-90-hip-transitions');
+    expect(getExerciseInfo('90/90 Hip Transitions (5/side)')?.id).toBe('90-90-hip-transitions');
+    expect(getExerciseInfo('Spiderman Lunge with Thoracic Reach (5/side)')?.id).toBe(
+      'spiderman-lunge-with-thoracic-reach'
+    );
+    expect(getExerciseInfo('Downward-Facing Dog to Cobra')?.id).toBe(
+      'downward-facing-dog-to-cobra'
+    );
+    expect(getExerciseInfo('Quadruped Hip Circles (5/side)')?.id).toBe('quadruped-hip-circles');
+    expect(getExerciseInfo('Low Lunge (5/side)')?.id).toBe('low-lunge');
+    expect(getExerciseInfo('Half Moon Pose (15-Sec/side)')?.id).toBe('half-moon-pose');
+    expect(getExerciseInfo('Prone Internal Rotation Windshield Wipers')?.id).toBe(
+      'prone-internal-rotation-windshield-wipers'
+    );
+    expect(getExerciseInfo('Cobra Pose')?.id).toBe('cobra-pose');
+    expect(getExerciseInfo("Child's Pose")?.id).toBe('childs-pose');
+    expect(getExerciseInfo('Cat & Cow')?.id).toBe('cat-and-cow');
+    expect(getExerciseInfo('Downward-Facing Dog')?.id).toBe('downward-facing-dog');
+    expect(getExerciseInfo('Camel Pose')?.id).toBe('camel-pose');
+    expect(getExerciseInfo('Pigeon Pose (20-Sec/side)')?.id).toBe('pigeon-pose');
+    expect(getExerciseInfo('90/90 Hip Internal Rotation Lift (5/side)')?.id).toBe(
+      '90-90-hip-internal-rotation-lift'
+    );
+  });
+
+  it('keeps Downward-Facing Dog separate from the dog-to-cobra wave', () => {
+    expect(getExerciseInfo('Downward-Facing Dog')?.id).toBe('downward-facing-dog');
+    expect(getExerciseInfo('Downward-Facing Dog to Cobra')?.id).toBe(
+      'downward-facing-dog-to-cobra'
+    );
+  });
+});
+
+describe('EXERCISE_LIBRARY primaryPatterns', () => {
+  it('assigns at least one valid pattern to every entry', () => {
+    for (const entry of EXERCISE_LIBRARY) {
+      expect(entry.primaryPatterns.length, entry.id).toBeGreaterThan(0);
+      for (const pattern of entry.primaryPatterns) {
+        expect(isMovementPattern(pattern), `${entry.id}:${pattern}`).toBe(true);
+      }
+    }
+  });
+
+  it('matches EXERCISE_PATTERN_TAGS keys to library ids exactly', () => {
+    const libraryIds = new Set(EXERCISE_LIBRARY.map((entry) => entry.id));
+    const tagIds = new Set(Object.keys(EXERCISE_PATTERN_TAGS));
+    expect(tagIds).toEqual(libraryIds);
+  });
+
+  it('exposes primaryPatterns through getExerciseInfo', () => {
+    expect(getExerciseInfo('Burpees')?.primaryPatterns).toEqual(['full-body-conditioning']);
   });
 });

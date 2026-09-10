@@ -6,10 +6,10 @@ import {
   ghostRepsAtElapsed,
   type GhostRepCurvePoint,
 } from '@/lib/scoring/ghostCurve';
-import type { StoredGhostSelection } from '@/lib/sessionIdentity';
+import type { StoredGhostSelection } from '@/lib/missionIdentity';
 
 export interface UseGhostPacerInput {
-  sessionId: string;
+  missionId: string;
   ghostSelection: StoredGhostSelection | null;
   repsPerRound: number;
   workDurationSec: number;
@@ -31,7 +31,7 @@ export function ghostRunRefToStoredSelection(
   label: string
 ): StoredGhostSelection {
   return {
-    sessionId: ghost.sessionId,
+    missionId: ghost.missionId,
     participantId: ghost.participantId,
     label,
     nickname: ghost.nickname,
@@ -53,7 +53,7 @@ export function useGhostPacer({
   selfBaseScore,
 }: UseGhostPacerInput): UseGhostPacerResult {
   const ghostKey = ghostSelection
-    ? `${ghostSelection.sessionId}:${ghostSelection.participantId}`
+    ? `${ghostSelection.missionId}:${ghostSelection.participantId}`
     : null;
 
   const [fetchState, setFetchState] = useState<GhostCurveFetchState | null>(null);
@@ -71,35 +71,33 @@ export function useGhostPacer({
       }
     });
 
-    fetchGhostCurveData(ghostSelection.sessionId, ghostSelection.participantId).then(
-      (result) => {
-        if (cancelled) {
-          return;
-        }
+    fetchGhostCurveData(ghostSelection.missionId, ghostSelection.participantId).then((result) => {
+      if (cancelled) {
+        return;
+      }
 
-        if (result.error || !result.data) {
-          setFetchState({
-            curve: null,
-            error: result.error?.message ?? 'Could not load ghost pacing data.',
-            isLoading: false,
-          });
-          return;
-        }
-
-        const builtCurve = buildGhostRepCurve(
-          result.data.rounds,
-          result.data.repsPerRound,
-          result.data.partialReps,
-          result.data.durationSec
-        );
-
+      if (result.error || !result.data) {
         setFetchState({
-          curve: builtCurve,
-          error: null,
+          curve: null,
+          error: result.error?.message ?? 'Could not load ghost pacing data.',
           isLoading: false,
         });
+        return;
       }
-    );
+
+      const builtCurve = buildGhostRepCurve(
+        result.data.rounds,
+        result.data.repsPerRound,
+        result.data.partialReps,
+        result.data.durationSec
+      );
+
+      setFetchState({
+        curve: builtCurve,
+        error: null,
+        isLoading: false,
+      });
+    });
 
     return () => {
       cancelled = true;

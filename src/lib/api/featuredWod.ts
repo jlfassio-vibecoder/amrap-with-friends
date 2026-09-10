@@ -9,14 +9,14 @@ export interface FeaturedWod {
   intensityTier: number;
   tags: string[];
   scheduledAt: string;
-  /** Null until the scheduler has generated the actual session — the card
+  /** Null until the scheduler has generated the actual mission — the card
    * still withholds the join CTA until the 15-minute lead window. */
-  sessionId: string | null;
+  missionId: string | null;
   state: FeaturedWodState;
   /** Wall-clock work start when state is work; null otherwise. */
   startedAt: string | null;
-  /** Null until sessionId is set — participant count for the generated
-   * session (host included), so the card can show "N joining". */
+  /** Null until missionId is set — participant count for the generated
+   * mission (host included), so the card can show "N joining". */
   attendeeCount: number | null;
 }
 
@@ -39,12 +39,7 @@ function readNumber(value: unknown): number | null {
 }
 
 function readState(value: unknown): FeaturedWodState {
-  if (
-    value === 'waiting' ||
-    value === 'setup' ||
-    value === 'work' ||
-    value === 'finished'
-  ) {
+  if (value === 'waiting' || value === 'setup' || value === 'work' || value === 'finished') {
     return value;
   }
   return null;
@@ -63,11 +58,9 @@ function parseFeaturedWod(row: Record<string, unknown>): FeaturedWod | null {
     focus: readString(row.focus),
     durationMinutes,
     intensityTier,
-    tags: Array.isArray(row.tags)
-      ? row.tags.filter((t): t is string => typeof t === 'string')
-      : [],
+    tags: Array.isArray(row.tags) ? row.tags.filter((t): t is string => typeof t === 'string') : [],
     scheduledAt,
-    sessionId: readString(row.sessionId),
+    missionId: readString(row.missionId),
     state: readState(row.state),
     startedAt: readString(row.startedAt),
     attendeeCount: readNumber(row.attendeeCount),

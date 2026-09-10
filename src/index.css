@@ -5,7 +5,7 @@
  */
 
 :root {
-  color-scheme: light;
+  color-scheme: only light;
 
   --color-page: #f7f2ea;
   --color-surface: #fffdf8;
@@ -38,6 +38,26 @@
   --color-avatar-slate: #8a8072;
   --color-avatar-plum: #8b5a6b;
   --color-avatar-teal: #4a8f8f;
+
+  /*
+   * Chart series. Validated with the dataviz palette checks (lightness band,
+   * chroma floor, colour-vision separation, contrast vs the chart surface) —
+   * which is why these are not the avatar hues: avatar teal reads gray at
+   * chart size (OKLCH chroma 0.07) and avatar ochre falls under 3:1 on the
+   * light surface. Light and dark are separate steps, not an automatic flip.
+   */
+  /* Pacing gauge zones. Their own steps, not the categorical chart hues:
+     status colour is a reserved role and must not double as "series 4".
+     Validated light and dark separately (OKLCH band, chroma, CVD ΔE, WCAG) —
+     the amber's sub-3:1 contrast is relieved by the readout and zone name the
+     gauge always shows, so the colour is never carrying the meaning alone. */
+  --color-pace-optimal: #5a9e52;
+  --color-pace-warning: #e0a81e;
+  --color-pace-overtime: #e64a2e;
+
+  --color-chart-1: #db3834;
+  --color-chart-2: #189694;
+  --color-chart-3: #cc8317;
 
   --shadow-card: 0 2px 0 0 var(--color-border);
 
@@ -82,12 +102,25 @@
   --color-on-accent: #fffdf8;
   --color-scrim: rgb(0 0 0 / 0.5);
 
+  /* Dark is chosen, not flipped. Holding the light steps here fails outright:
+     the dark lightness band forces amber and the brand red together, where
+     deuteranopia collapses them to ΔE 0.5 — warning and overtime become the
+     same colour for the readers who most need them apart. Green moves toward
+     teal and overtime toward crimson to buy that separation back. */
+  --color-pace-optimal: #3da882;
+  --color-pace-warning: #b8891a;
+  --color-pace-overtime: #e35070;
+
   --color-avatar-coral: #e64a2e;
   --color-avatar-sage: #5a9e52;
   --color-avatar-ochre: #d98c1f;
   --color-avatar-slate: #8a8072;
   --color-avatar-plum: #8b5a6b;
   --color-avatar-teal: #4a8f8f;
+
+  --color-chart-1: #d6464f;
+  --color-chart-2: #119391;
+  --color-chart-3: #c68206;
 
   --shadow-card: 0 2px 0 0 var(--color-border);
 }
@@ -103,12 +136,136 @@
 }
 
 @layer components {
+  /* --- Round log feedback ---------------------------------------------
+     A logged round plays the vault-round-log sample; these carry its visual
+     half, all fired by the same tap (see `useRoundLogPulse`): the button
+     squashes and releases, concentric gradient ripples radiate from it, and
+     the clock digits flash the same success green before settling back to
+     accent. Kept short on purpose — "Log round" is tapped dozens of times
+     over one mission, and nothing here should still be moving by the next
+     tap.
+
+     The seal is toggled by removing and re-adding this class in JS rather
+     than by a `key` remount, because the button it sits on must never
+     remount — see the hook for why. */
+  .animate-round-log-seal {
+    animation: round-log-seal 220ms ease-out;
+  }
+
+  .round-log-ripple {
+    @apply pointer-events-none fixed z-40 overflow-visible;
+  }
+
+  .round-log-ripple-wave {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 100%;
+    height: 100%;
+    border-radius: 9999px;
+    /* Soft ring band: transparent core → success green → fade to clear. */
+    background: radial-gradient(
+      circle,
+      transparent 0%,
+      transparent 42%,
+      rgb(90 158 82 / 0.55) 52%,
+      rgb(90 158 82 / 0.28) 62%,
+      rgb(90 158 82 / 0.1) 72%,
+      transparent 82%
+    );
+    box-shadow: 0 0 22px rgb(90 158 82 / 0.4);
+    animation: round-log-ripple-wave 780ms cubic-bezier(0.12, 0.7, 0.2, 1) forwards;
+    will-change: transform, opacity;
+  }
+
+  .round-log-ripple-wave:nth-child(2) {
+    animation-delay: 95ms;
+    background: radial-gradient(
+      circle,
+      transparent 0%,
+      transparent 46%,
+      rgb(90 158 82 / 0.4) 56%,
+      rgb(90 158 82 / 0.18) 66%,
+      transparent 78%
+    );
+  }
+
+  .round-log-ripple-wave:nth-child(3) {
+    animation-delay: 190ms;
+    background: radial-gradient(
+      circle,
+      transparent 0%,
+      transparent 50%,
+      rgb(90 158 82 / 0.28) 60%,
+      rgb(90 158 82 / 0.1) 70%,
+      transparent 82%
+    );
+  }
+
+  .animate-round-log-flash {
+    animation: round-log-flash 550ms ease-out forwards;
+  }
+
+  @keyframes round-log-seal {
+    0% {
+      transform: scale(1);
+      filter: brightness(1);
+    }
+    35% {
+      transform: scale(0.93);
+      filter: brightness(1.15);
+    }
+    100% {
+      transform: scale(1);
+      filter: brightness(1);
+    }
+  }
+
+  @keyframes round-log-ripple-wave {
+    0% {
+      opacity: 0.95;
+      transform: translate(-50%, -50%) scale(0.55);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(3.6);
+    }
+  }
+
+  @keyframes round-log-flash {
+    /* Same glow recipe as the "Realtime: connected" text below it: a fixed
+       brand-green shadow (not a theme token — light and dark share it) under
+       a text colour that does follow the theme. */
+    0% {
+      color: var(--color-success-text);
+      text-shadow:
+        0 0 8px rgb(90 158 82 / 0.95),
+        0 0 18px rgb(90 158 82 / 0.55);
+    }
+    100% {
+      color: var(--color-accent);
+      text-shadow: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-round-log-seal,
+    .round-log-ripple-wave,
+    .animate-round-log-flash {
+      animation: none;
+    }
+  }
+
   .card {
     @apply rounded-card border border-border bg-surface shadow-card;
   }
 
   .btn-primary {
     @apply rounded-card bg-accent px-4 py-2 font-semibold text-on-accent hover:bg-accent-hover disabled:opacity-50;
+  }
+
+  .btn-teal {
+    @apply inline-flex items-center rounded-full bg-avatar-teal px-3 py-1 text-sm font-semibold leading-tight text-on-accent hover:opacity-90 disabled:opacity-50;
   }
 
   .btn-neutral {
@@ -122,6 +279,10 @@
   .input-field {
     @apply w-full rounded-card border border-border px-3 py-2 text-ink focus:outline-none focus:ring-2 focus:ring-accent;
     background-color: var(--color-surface-muted);
+  }
+
+  .input-field-compact {
+    @apply input-field py-1.5 text-sm;
   }
 
   .text-display {
@@ -175,6 +336,16 @@
   }
 
   .landing-headline {
-    @apply font-display uppercase leading-[0.82] tracking-[0.01em];
+    font-family: Rubik, system-ui, sans-serif;
+    @apply font-bold uppercase leading-[0.9] tracking-[0.02em];
+  }
+
+  .home-marketing {
+    font-family: 'DM Sans', system-ui, sans-serif;
+  }
+
+  .home-marketing .text-display {
+    font-family: Rubik, system-ui, sans-serif;
+    @apply font-extrabold;
   }
 }

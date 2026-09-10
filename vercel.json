@@ -1,3 +1,79 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "outputDirectory": "dist",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/create",
+      "destination": "/_app-shell"
+    },
+    {
+      "source": "/plan-mission",
+      "destination": "/_app-shell"
+    },
+    {
+      "source": "/join",
+      "destination": "/_app-shell"
+    },
+    {
+      "source": "/intake",
+      "destination": "/_app-shell"
+    },
+    {
+      "source": "/reset-password",
+      "destination": "/_app-shell"
+    },
+    {
+      "source": "/hud",
+      "destination": "/_app-shell"
+    },
+    {
+      "source": "/my-missions",
+      "destination": "/_app-shell"
+    },
+    {
+      "source": "/squad",
+      "destination": "/_app-shell"
+    },
+    {
+      "source": "/squad/join",
+      "destination": "/_app-shell"
+    },
+    {
+      "source": "/campaign/new",
+      "destination": "/_app-shell"
+    },
+    {
+      "source": "/campaign/join",
+      "destination": "/_app-shell"
+    },
+    {
+      "source": "/campaign/:campaignId",
+      "destination": "/_app-shell"
+    },
+    {
+      "source": "/mission/:missionId",
+      "destination": "/_app-shell"
+    },
+    {
+      "source": "/s/:shareId",
+      "destination": "/_app-shell"
+    },
+    {
+      "source": "/rally-point/:rallyPointId",
+      "destination": "/_app-shell"
+    },
+    {
+      "source": "/coach",
+      "destination": "/_app-shell"
+    },
+    {
+      "source": "/coach/wods",
+      "destination": "/_app-shell"
+    },
+    {
+      "source": "/coach/articles",
+      "destination": "/_app-shell"
+    }
+  ]
 }

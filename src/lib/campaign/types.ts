@@ -1,5 +1,5 @@
 import type { IntensityTier, TimeDomain, WorkoutCategory } from '@/data/workoutTemplates';
-import type { WorkoutExercise } from '@/lib/api/sessionTypes';
+import type { WorkoutExercise } from '@/lib/api/missionTypes';
 
 export class CampaignValidationError extends Error {
   constructor(message: string) {
@@ -30,9 +30,9 @@ export interface CampaignScheduleInput {
 }
 
 /**
- * One planned session. Deliberately carries no absolute timestamp: the
+ * One planned mission. Deliberately carries no absolute timestamp: the
  * generator resolves `localDate` + `localTime` against the campaign's timezone
- * when it creates the session, so a campaign spanning a DST change keeps its
+ * when it creates the mission, so a campaign spanning a DST change keeps its
  * wall-clock time.
  */
 export interface CampaignOccurrence {
@@ -49,23 +49,23 @@ export interface CampaignOccurrence {
 
 export interface CampaignCalendar {
   occurrences: CampaignOccurrence[];
-  sessionsPerWeek: number;
-  totalSessions: number;
+  missionsPerWeek: number;
+  totalMissions: number;
   /**
    * The anchor week 1 is measured from — what the host picked. Not necessarily
    * a training day: a campaign anchored to a Sunday with Mon/Wed/Fri slots
-   * holds its first session on the Monday.
+   * holds its first mission on the Monday.
    */
   anchorDate: string;
-  /** Local date of the first session. Use this when describing the campaign. */
-  firstSessionDate: string;
-  /** Local date of the final session. */
-  lastSessionDate: string;
+  /** Local date of the first mission. Use this when describing the campaign. */
+  firstMissionDate: string;
+  /** Local date of the final mission. */
+  lastMissionDate: string;
 }
 
 /**
  * A (duration, category) pair the host wants the campaign drawn from. The
- * planner rotates across tracks so consecutive sessions vary the stimulus.
+ * planner rotates across tracks so consecutive missions vary the stimulus.
  */
 export interface CampaignTrack {
   durationMinutes: TimeDomain;
@@ -81,7 +81,7 @@ export interface PlannedCampaignOccurrence extends CampaignOccurrence {
   /**
    * The movements, resolved at plan time. The template library is client-side,
    * so an occurrence has to carry its own workout — the generator copies this
-   * into the session rather than looking a template up.
+   * into the mission rather than looking a template up.
    */
   workout: WorkoutExercise[];
 }

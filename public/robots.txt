@@ -1,4 +1,73 @@
+# AMRAP With Friends — https://amrapwithfriends.com
+#
+# Everything public is open to everyone. Private and ephemeral surfaces are kept
+# out of the index with X-Robots-Tag headers (see middleware.ts), not with
+# Disallow rules, so crawlers can still follow a shared rally link and render a
+# social card for it.
+#
+# The named groups below are redundant with the wildcard today. They exist so the
+# policy for each AI agent is explicit and reviewable in one place, and so a
+# future rule cannot silently change what an AI crawler is allowed to fetch.
+
 User-agent: *
+Allow: /
+# The SPA's entry HTML. App routes are rewritten to it server-side, so crawlers
+# only ever request the real URLs; this just keeps the internal path out.
+Disallow: /_app-shell
+
+# --- Search crawlers -------------------------------------------------------
+# Googlebot also feeds AI Overviews and Gemini grounding.
+User-agent: Googlebot
+Allow: /
+
+# Bingbot's index is what Copilot and DuckDuckGo answer from.
+User-agent: Bingbot
+Allow: /
+
+# Applebot feeds Siri, Spotlight and Safari suggestions.
+User-agent: Applebot
+Allow: /
+
+# --- AI retrieval and citation ---------------------------------------------
+# These fetch a page when an assistant needs to answer or cite it. Blocking any
+# of them removes us from AI answers entirely.
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+# --- AI training -----------------------------------------------------------
+# Allowed on purpose. We are an unknown brand and this content exists to be
+# distributed; being in the weights is upside, not leakage.
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Meta-ExternalAgent
+Allow: /
+
+User-agent: CCBot
 Allow: /
 
 Sitemap: https://amrapwithfriends.com/sitemap.xml

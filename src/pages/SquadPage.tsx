@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { AppLink } from '@/components/AppLink';
+import { IdentityOverlay } from '@/components/onboarding/IdentityOverlay';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { useCopyFlash } from '@/hooks/useCopyFlash';
 import {
@@ -15,6 +16,9 @@ import {
   type SquadSearchHit,
 } from '@/lib/api/squad';
 import { buildSquadInviteUrl } from '@/lib/squad';
+import { useAthleteProfile } from '@/hooks/useAthleteProfile';
+import { isIntakeRequiredMessage } from '@/lib/auth/profileNeedsIntake';
+import { ogCardFromSex } from '@/lib/share/ogCard';
 
 function displayName(athlete: SquadAthlete): string {
   return athlete.nickname ?? athlete.username ?? 'Athlete';
@@ -31,6 +35,7 @@ function handleLabel(athlete: SquadAthlete): string | null {
 }
 
 export default function SquadPage() {
+  const { profile, saveIdentity } = useAthleteProfile();
   const [squad, setSquad] = useState<MySquad | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,18 +45,33 @@ export default function SquadPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [identityOpen, setIdentityOpen] = useState(false);
   const { copied, error: copyError, copy } = useCopyFlash();
+
+  const handleIntakeRequired = useCallback((message: string | undefined | null) => {
+    if (!isIntakeRequiredMessage(message)) {
+      return false;
+    }
+    setError(null);
+    setIdentityOpen(true);
+    return true;
+  }, []);
 
   const reload = useCallback(async () => {
     const result = await fetchMySquad();
     if (result.error || !result.data) {
+      if (handleIntakeRequired(result.error?.message)) {
+        setSquad(null);
+        setLoading(false);
+        return;
+      }
       setError(result.error?.message ?? 'Something went wrong. Please try again.');
       setSquad(null);
       return;
     }
     setError(null);
     setSquad(result.data);
-  }, []);
+  }, [handleIntakeRequired]);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,8 +80,14 @@ export default function SquadPage() {
         return;
       }
       if (result.error || !result.data) {
-        setError(result.error?.message ?? 'Something went wrong. Please try again.');
-        setSquad(null);
+        if (isIntakeRequiredMessage(result.error?.message)) {
+          setError(null);
+          setIdentityOpen(true);
+          setSquad(null);
+        } else {
+          setError(result.error?.message ?? 'Something went wrong. Please try again.');
+          setSquad(null);
+        }
       } else {
         setError(null);
         setSquad(result.data);
@@ -80,6 +106,9 @@ export default function SquadPage() {
     const result = await searchAthletes(query);
     setSearching(false);
     if (result.error) {
+      if (handleIntakeRequired(result.error.message)) {
+        return;
+      }
       setError(result.error.message);
       setHits([]);
       return;
@@ -94,6 +123,9 @@ export default function SquadPage() {
     setResetting(false);
     setConfirmReset(false);
     if (result.error || !result.data) {
+      if (handleIntakeRequired(result.error?.message)) {
+        return;
+      }
       setError(result.error?.message ?? 'Something went wrong. Please try again.');
       return;
     }
@@ -105,6 +137,9 @@ export default function SquadPage() {
     const result = await sendSquadInvite(userId);
     setBusyId(null);
     if (result.error) {
+      if (handleIntakeRequired(result.error.message)) {
+        return;
+      }
       setError(result.error.message);
       return;
     }
@@ -119,6 +154,9 @@ export default function SquadPage() {
     const result = await respondSquadInvite(requestId, accept);
     setBusyId(null);
     if (result.error) {
+      if (handleIntakeRequired(result.error.message)) {
+        return;
+      }
       setError(result.error.message);
       return;
     }
@@ -130,6 +168,9 @@ export default function SquadPage() {
     const result = await cancelSquadInvite(requestId);
     setBusyId(null);
     if (result.error) {
+      if (handleIntakeRequired(result.error.message)) {
+        return;
+      }
       setError(result.error.message);
       return;
     }
@@ -141,13 +182,22 @@ export default function SquadPage() {
     const result = await removeSquadFriend(userId);
     setBusyId(null);
     if (result.error) {
+      if (handleIntakeRequired(result.error.message)) {
+        return;
+      }
       setError(result.error.message);
       return;
     }
     await reload();
   }
 
-  const inviteUrl = squad ? buildSquadInviteUrl(squad.inviteCode, window.location.origin) : '';
+  const inviteUrl = squad
+    ? buildSquadInviteUrl(
+        squad.inviteCode,
+        window.location.origin,
+        ogCardFromSex(profile?.biologicalSex)
+      )
+    : '';
 
   if (loading) {
     return (
@@ -159,14 +209,42 @@ export default function SquadPage() {
 
   if (!squad) {
     return (
-      <NarrowPageLayout title="Your squad" contentMaxWidthClassName="max-w-3xl">
-        <p className="text-error">{error ?? 'Something went wrong. Please try again.'}</p>
-        <p className="text-center text-sm">
-          <Link className="link-accent" to="/">
-            Back home
-          </Link>
-        </p>
-      </NarrowPageLayout>
+      <>
+        <NarrowPageLayout title="Your squad" contentMaxWidthClassName="max-w-3xl">
+          {identityOpen ? (
+            <p className="text-sm text-secondary">
+              We need a name before you can invite people to your squad.
+            </p>
+          ) : (
+            <>
+              <p className="text-error">{error ?? 'Something went wrong. Please try again.'}</p>
+              <p className="text-center text-sm">
+                <AppLink className="link-accent" to="/">
+                  Back home
+                </AppLink>
+              </p>
+            </>
+          )}
+        </NarrowPageLayout>
+        {identityOpen ? (
+          <IdentityOverlay
+            acceptLabel="Continue"
+            dismissible={false}
+            onClose={() => undefined}
+            onAccept={async (input) => {
+              const result = await saveIdentity(input);
+              if (result.error) {
+                return result;
+              }
+              setIdentityOpen(false);
+              setLoading(true);
+              await reload();
+              setLoading(false);
+              return { error: null };
+            }}
+          />
+        ) : null}
+      </>
     );
   }
 
@@ -176,24 +254,35 @@ export default function SquadPage() {
         <h2 className="text-display text-xl text-ink">Invite someone in</h2>
         <p className="text-sm text-secondary">
           Share this link. After they create an account they can accept and join your squad. For a
-          workout tonight, send a rally link from the session instead.
+          workout tonight, send a rally link from the mission instead.
         </p>
-        <button
-          type="button"
-          className="btn-primary text-xs uppercase tracking-widest"
-          onClick={() =>
-            void copy(inviteUrl, `Could not copy. Share this link manually: ${inviteUrl}`)
-          }
-        >
-          {copied ? 'LINK COPIED' : 'COPY INVITE LINK'}
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            className="btn-primary text-xs uppercase tracking-widest"
+            onClick={() =>
+              void copy(inviteUrl, `Could not copy. Share this link manually: ${inviteUrl}`)
+            }
+          >
+            {copied ? 'LINK COPIED' : 'COPY INVITE LINK'}
+          </button>
+          {confirmReset ? null : (
+            <button
+              type="button"
+              className="text-sm font-semibold text-accent"
+              onClick={() => setConfirmReset(true)}
+            >
+              Reset link
+            </button>
+          )}
+        </div>
         {copyError ? <p className="text-error text-sm">{copyError}</p> : null}
 
         {confirmReset ? (
           <div className="space-y-2">
             <p className="text-sm text-secondary">
-              Reset the link? Anyone still holding the old one will not be able to
-              use it. People already on your squad stay.
+              Reset the link? Anyone still holding the old one will not be able to use it. People
+              already on your squad stay.
             </p>
             <div className="flex flex-wrap gap-3">
               <button
@@ -204,24 +293,12 @@ export default function SquadPage() {
               >
                 {resetting ? 'Resetting…' : 'Yes, reset it'}
               </button>
-              <button
-                type="button"
-                className="btn-outline"
-                onClick={() => setConfirmReset(false)}
-              >
+              <button type="button" className="btn-outline" onClick={() => setConfirmReset(false)}>
                 Keep it
               </button>
             </div>
           </div>
-        ) : (
-          <button
-            type="button"
-            className="text-sm font-semibold text-accent"
-            onClick={() => setConfirmReset(true)}
-          >
-            Reset link
-          </button>
-        )}
+        ) : null}
       </section>
 
       <section className="card space-y-4 p-6">
@@ -392,10 +469,26 @@ export default function SquadPage() {
       {error ? <p className="alert-error">{error}</p> : null}
 
       <p className="text-center text-sm">
-        <Link className="link-accent" to="/">
+        <AppLink className="link-accent" to="/">
           Back home
-        </Link>
+        </AppLink>
       </p>
+      {identityOpen ? (
+        <IdentityOverlay
+          acceptLabel="Continue"
+          dismissible={false}
+          onClose={() => undefined}
+          onAccept={async (input) => {
+            const result = await saveIdentity(input);
+            if (result.error) {
+              return result;
+            }
+            setIdentityOpen(false);
+            await reload();
+            return { error: null };
+          }}
+        />
+      ) : null}
     </NarrowPageLayout>
   );
 }

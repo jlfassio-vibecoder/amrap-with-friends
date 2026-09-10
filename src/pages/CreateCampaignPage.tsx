@@ -1,19 +1,21 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { AppLink } from '@/components/AppLink';
+import { useNavigate } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { CampaignSchedulePreview } from '@/components/campaign/CampaignSchedulePreview';
 import { CampaignSlotPicker } from '@/components/campaign/CampaignSlotPicker';
 import { CampaignTrackPicker } from '@/components/campaign/CampaignTrackPicker';
+import { campaignTrackLabel } from '@/components/campaign/campaignTrackLabel';
 import { createCampaign } from '@/lib/api/campaigns';
 import {
   CAMPAIGN_WEEK_COUNTS,
   CampaignValidationError,
-  assignCampaignWorkouts,
   buildCampaignCalendar,
   calendarDateToday,
   defaultCampaignStartDate,
   formatCampaignShape,
   formatCampaignSpan,
+  planCampaignWorkouts,
   suggestedSlots,
   type CampaignSlot,
   type CampaignTrack,
@@ -33,9 +35,7 @@ export default function CreateCampaignPage() {
   const [name, setName] = useState('');
   const [goal, setGoal] = useState('');
   const [weekCount, setWeekCount] = useState<CampaignWeekCount>(8);
-  const [startDate, setStartDate] = useState(() =>
-    defaultCampaignStartDate(calendarDateToday())
-  );
+  const [startDate, setStartDate] = useState(() => defaultCampaignStartDate(calendarDateToday()));
   const [slots, setSlots] = useState<CampaignSlot[]>(() => suggestedSlots(3));
   const [tracks, setTracks] = useState<CampaignTrack[]>([
     { durationMinutes: 10, category: 'blood-shunt' },
@@ -55,7 +55,7 @@ export default function CreateCampaignPage() {
       return {
         kind: 'ready',
         calendar,
-        occurrences: assignCampaignWorkouts({
+        occurrences: planCampaignWorkouts({
           occurrences: calendar.occurrences,
           tracks,
         }),
@@ -99,8 +99,8 @@ export default function CreateCampaignPage() {
 
       trackEvent('campaign_created', {
         week_count: weekCount,
-        sessions_per_week: planned.calendar.sessionsPerWeek,
-        total_sessions: planned.calendar.totalSessions,
+        missions_per_week: planned.calendar.missionsPerWeek,
+        total_missions: planned.calendar.totalMissions,
         track_count: tracks.length,
       });
       navigate(`/campaign/${result.data.campaignId}`);
@@ -189,21 +189,37 @@ export default function CreateCampaignPage() {
           <div className="space-y-1">
             <p className="text-sm font-semibold text-ink">The plan</p>
             {planned ? (
-              <p className="text-sm text-secondary">
-                {formatCampaignShape(weekCount, planned.calendar.sessionsPerWeek)} ·{' '}
-                {formatCampaignSpan(
-                  planned.calendar.firstSessionDate,
-                  planned.calendar.lastSessionDate
-                )}
-              </p>
+              <>
+                <p className="text-sm text-secondary">
+                  {formatCampaignShape(weekCount, planned.calendar.missionsPerWeek)} ·{' '}
+                  {formatCampaignSpan(
+                    planned.calendar.firstMissionDate,
+                    planned.calendar.lastMissionDate
+                  )}
+                </p>
+                {tracks[0] ? (
+                  <p className="text-sm text-secondary">
+                    Measured on {campaignTrackLabel(tracks[0])}.
+                  </p>
+                ) : null}
+              </>
             ) : (
-              <p className="text-sm text-error">
+              <p className="text-error text-sm">
                 {previewProblem ?? 'Pick your training days and workout styles to see the plan.'}
               </p>
             )}
           </div>
 
-          {planned ? <CampaignSchedulePreview occurrences={planned.occurrences} /> : null}
+          {planned ? (
+            <>
+              <p className="text-sm text-secondary">
+                The first mission is your benchmark. You run it again at the end, so the campaign
+                finishes with a number rather than a feeling. Everything in between gets steadily
+                harder.
+              </p>
+              <CampaignSchedulePreview occurrences={planned.occurrences} />
+            </>
+          ) : null}
         </div>
 
         {error ? <p className="alert-error">{error}</p> : null}
@@ -212,9 +228,9 @@ export default function CreateCampaignPage() {
           <button type="submit" className="btn-primary" disabled={!canSubmit}>
             {saving ? 'Creating…' : 'Create campaign'}
           </button>
-          <Link className="link-accent text-sm" to="/">
+          <AppLink className="link-accent text-sm" to="/">
             Cancel
-          </Link>
+          </AppLink>
         </div>
       </form>
     </NarrowPageLayout>

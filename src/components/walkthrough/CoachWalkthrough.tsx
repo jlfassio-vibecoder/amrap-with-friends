@@ -1,15 +1,12 @@
 import { useId, useLayoutEffect, useState } from 'react';
-import {
-  walkthroughTargetSelector,
-  type StagingWalkthroughStep,
-} from './stagingWalkthrough';
+import { walkthroughTargetSelector, type RallyPointWalkthroughStep } from './rallyPointWalkthrough';
 
 const HIGHLIGHT_PAD = 8;
 const BUBBLE_GAP = 12;
 const BUBBLE_WIDTH = 320;
 
 interface CoachWalkthroughProps {
-  step: StagingWalkthroughStep;
+  step: RallyPointWalkthroughStep;
   onNext: () => void;
   onSkip: () => void;
 }
@@ -73,9 +70,7 @@ function CoachChip() {
       >
         C
       </span>
-      <span className="text-xs font-semibold uppercase tracking-widest text-secondary">
-        Coach
-      </span>
+      <span className="text-xs font-semibold uppercase tracking-widest text-secondary">Coach</span>
     </div>
   );
 }
@@ -143,11 +138,7 @@ export function CoachWalkthrough({ step, onNext, onSkip }: CoachWalkthroughProps
           </h2>
           <p className="text-sm leading-relaxed text-secondary">{step.body}</p>
           <div className="flex gap-2">
-            <button
-              type="button"
-              className="btn-primary flex-1"
-              onClick={onNext}
-            >
+            <button type="button" className="btn-primary flex-1" onClick={onNext}>
               Next
             </button>
             <button type="button" className="btn-outline" onClick={onSkip}>

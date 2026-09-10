@@ -1,0 +1,116 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { breadcrumbList } from '@/lib/seo/structuredData';
+import { SITE_AUTHOR } from '@/lib/seo/author';
+
+const live = [
+  {
+    path: '/science/energy-systems',
+    title: 'Energy systems and the time cap',
+    blurb:
+      'Both systems run from the first second, the crossover sits around 75 seconds, and heart rate cannot tell a 4-minute AMRAP from a 17-minute one.',
+  },
+  {
+    path: '/science/lactate',
+    title: 'Lactate is not what makes an AMRAP hurt',
+    blurb:
+      'Lactate is fuel, not waste. It does not cause the burn or next-day soreness — and where the biochemistry is still genuinely argued over, this says so.',
+  },
+  {
+    path: '/science/fatigue',
+    title: 'Fatigue, holds and movement choice',
+    blurb:
+      'You slow down in an AMRAP, and part of that is a decision rather than failure. What the format comparison shows, and why holds belong early.',
+  },
+  {
+    path: '/science/pacing',
+    title: 'Pacing, and where our own metric sits',
+    blurb:
+      "Effort is regulated against an endpoint you know is coming. What the evidence supports, what the 2025 meta-analysis complicates, and which parts of our Pace Variance Index are ours rather than the literature's.",
+  },
+];
+
+const jsonLd = [
+  breadcrumbList([
+    { name: 'Home', path: '/' },
+    { name: 'Science', path: '/science' },
+  ]),
+];
+---
+
+<BaseLayout jsonLd={jsonLd}>
+  <div class="mx-auto w-full max-w-[44rem] space-y-12 px-6 py-12 lg:px-10 lg:py-16">
+    <header class="space-y-5">
+      <p class="eyebrow text-accent">Research</p>
+      <h1 class="text-display text-[clamp(2.5rem,7vw,4rem)] leading-[0.9] text-ink">
+        The science of AMRAP training
+      </h1>
+      <p class="border-l-2 border-accent pl-5 text-lg leading-[1.6] text-ink">
+        What the published research actually shows about AMRAP training, with every claim cited and
+        every gap admitted. Written by a certified Master Fitness Trainer working from the papers,
+        not summarised from other people's blog posts.
+      </p>
+    </header>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">How these pages are sourced</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        One rule governs this section: <strong class="font-semibold text-ink"
+          >a claim ships with a citation, or it does not ship.</strong
+        > Every number is linked to the paper it came from, so you can check it rather than take our word
+        for it.
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        Where the evidence is thin, the study is small, or the field genuinely disagrees, the page
+        says so. Exercise science around functional fitness is younger and smaller than the
+        confidence of most articles about it suggests — sample sizes of nine to twenty-two are
+        common, and participants are mostly trained men. Pretending otherwise would make these pages
+        less useful, not more.
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        These are practitioner syntheses of published work. They are not original research, they are
+        not peer reviewed, and they are not medical advice.
+      </p>
+    </section>
+
+    <section class="space-y-5">
+      <h2 class="text-display text-2xl text-ink">Published</h2>
+      <ul class="space-y-4">
+        {
+          live.map((page) => (
+            <li class="card space-y-2 p-5">
+              <a class="text-display text-xl text-ink hover:text-accent" href={page.path}>
+                {page.title}
+              </a>
+              <p class="text-sm leading-[1.6] text-secondary">{page.blurb}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">What is not here, and why</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        One page was planned and will not be published: sex differences in fatigue during functional
+        fitness training. The workout studies in this area run to nine, twelve, fourteen, twenty-two
+        participants, mostly men, with samples too small to analyse women separately. Writing that
+        page responsibly would mean extrapolating from research that does not exist yet.
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        It is a real question and it deserves an answer. It does not yet have one, and saying so is
+        more useful than filling the gap with confident prose. If the evidence arrives, the page
+        will.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Who writes this</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        <a class="link-accent" href={SITE_AUTHOR.path}>{SITE_AUTHOR.name}</a> — {
+          SITE_AUTHOR.shortBio
+        }
+      </p>
+    </section>
+  </div>
+</BaseLayout>

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   campaignProgress,
+  campaignScheduleStatusLabel,
+  campaignViewerCompletedCount,
   defaultCampaignStartDate,
   formatCampaignDate,
   formatCampaignShape,
@@ -8,6 +10,7 @@ import {
   formatOccurrenceDate,
   formatSlotLabel,
   groupOccurrencesByWeek,
+  selectCampaignPreviewWeekNumbers,
   suggestedSlots,
 } from './campaignPresentation';
 import type { CampaignOccurrence } from './types';
@@ -65,7 +68,7 @@ describe('formatSlotLabel', () => {
 });
 
 describe('groupOccurrencesByWeek', () => {
-  it('groups and orders weeks and sessions', () => {
+  it('groups and orders weeks and missions', () => {
     const groups = groupOccurrencesByWeek([
       occurrence(4, 2),
       occurrence(1, 1),
@@ -103,8 +106,91 @@ describe('campaignProgress', () => {
   });
 });
 
+describe('campaignViewerCompletedCount', () => {
+  const occurrenceIds = ['o1', 'o2', 'o3', 'o4'];
+
+  it('counts live scores for the viewer', () => {
+    expect(
+      campaignViewerCompletedCount({
+        occurrenceIds,
+        viewerUserId: 'u1',
+        scores: [
+          { occurrenceId: 'o1', userId: 'u1', finalScore: 40 },
+          { occurrenceId: 'o2', userId: 'u2', finalScore: 50 },
+        ],
+      })
+    ).toBe(1);
+  });
+
+  it('counts a makeup score on a skipped crew row', () => {
+    expect(
+      campaignViewerCompletedCount({
+        occurrenceIds,
+        viewerUserId: 'u1',
+        scores: [{ occurrenceId: 'o2', userId: 'u1', finalScore: 294 }],
+      })
+    ).toBe(1);
+  });
+
+  it('does not count null or non-finite scores', () => {
+    expect(
+      campaignViewerCompletedCount({
+        occurrenceIds,
+        viewerUserId: 'u1',
+        scores: [
+          { occurrenceId: 'o1', userId: 'u1', finalScore: null },
+          { occurrenceId: 'o2', userId: 'u1', finalScore: Number.NaN },
+        ],
+      })
+    ).toBe(0);
+  });
+
+  it('does not double-count the same occurrence', () => {
+    expect(
+      campaignViewerCompletedCount({
+        occurrenceIds,
+        viewerUserId: 'u1',
+        scores: [
+          { occurrenceId: 'o1', userId: 'u1', finalScore: 40 },
+          { occurrenceId: 'o1', userId: 'u1', finalScore: 41 },
+        ],
+      })
+    ).toBe(1);
+  });
+
+  it('ignores scores for occurrences outside the campaign', () => {
+    expect(
+      campaignViewerCompletedCount({
+        occurrenceIds,
+        viewerUserId: 'u1',
+        scores: [{ occurrenceId: 'other', userId: 'u1', finalScore: 10 }],
+      })
+    ).toBe(0);
+  });
+});
+
+describe('campaignScheduleStatusLabel', () => {
+  it('maps open statuses and treats unscored terminal rows as Missed', () => {
+    expect(campaignScheduleStatusLabel({ status: 'skipped', viewerCompleted: false })).toBe(
+      'Missed'
+    );
+    expect(campaignScheduleStatusLabel({ status: 'done', viewerCompleted: false })).toBe('Missed');
+    expect(campaignScheduleStatusLabel({ status: 'generated', viewerCompleted: false })).toBe(
+      'Mission open'
+    );
+    expect(campaignScheduleStatusLabel({ status: 'planned', viewerCompleted: false })).toBe(
+      'Planned'
+    );
+  });
+
+  it('shows Done once the viewer has a usable score, even when the crew missed', () => {
+    expect(campaignScheduleStatusLabel({ status: 'skipped', viewerCompleted: true })).toBe('Done');
+    expect(campaignScheduleStatusLabel({ status: 'done', viewerCompleted: true })).toBe('Done');
+  });
+});
+
 describe('defaultCampaignStartDate', () => {
-  it('starts tomorrow so the first session is still actionable', () => {
+  it('starts tomorrow so the first mission is still actionable', () => {
     expect(defaultCampaignStartDate('2026-10-05')).toBe('2026-10-06');
   });
 
@@ -119,7 +205,7 @@ describe('suggestedSlots', () => {
     expect(suggestedSlots(2).map((slot) => slot.weekday)).toEqual([1, 4]);
   });
 
-  it('returns one slot per session and never repeats a weekday', () => {
+  it('returns one slot per mission and never repeats a weekday', () => {
     for (let count = 1; count <= 5; count += 1) {
       const slots = suggestedSlots(count);
       expect(slots).toHaveLength(count);
@@ -138,10 +224,52 @@ describe('suggestedSlots', () => {
 
 describe('formatCampaignShape', () => {
   it('summarises the campaign in one line', () => {
-    expect(formatCampaignShape(8, 3)).toBe('24 sessions · 3 a week · 8 weeks');
+    expect(formatCampaignShape(8, 3)).toBe('24 missions · 3 a week · 8 weeks');
   });
 
   it('does not say "1 a week" ungrammatically', () => {
-    expect(formatCampaignShape(4, 1)).toBe('4 sessions · 1 a week · 4 weeks');
+    expect(formatCampaignShape(4, 1)).toBe('4 missions · 1 a week · 4 weeks');
+  });
+});
+
+describe('selectCampaignPreviewWeekNumbers', () => {
+  it('keeps opening weeks and the finale when there is no mid retest', () => {
+    expect(
+      selectCampaignPreviewWeekNumbers({
+        weekNumbers: [1, 2, 3, 4],
+        retestWeekNumbers: [4],
+        openingWeeks: 2,
+      })
+    ).toEqual([1, 2, 4]);
+  });
+
+  it('pulls mid-retest weeks into the preview', () => {
+    expect(
+      selectCampaignPreviewWeekNumbers({
+        weekNumbers: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        retestWeekNumbers: [6, 12],
+        openingWeeks: 2,
+      })
+    ).toEqual([1, 2, 6, 12]);
+  });
+
+  it('does not duplicate weeks that are already opening or finale', () => {
+    expect(
+      selectCampaignPreviewWeekNumbers({
+        weekNumbers: [1, 2],
+        retestWeekNumbers: [1, 2],
+        openingWeeks: 2,
+      })
+    ).toEqual([1, 2]);
+  });
+
+  it('returns an empty list for an empty calendar', () => {
+    expect(
+      selectCampaignPreviewWeekNumbers({
+        weekNumbers: [],
+        retestWeekNumbers: [3],
+        openingWeeks: 2,
+      })
+    ).toEqual([]);
   });
 });

@@ -21,7 +21,7 @@ describe('walkthroughPrefs', () => {
 
     expect(isWalkthroughDismissed('host')).toBe(true);
     expect(isWalkthroughDismissed('joiner')).toBe(false);
-    expect(walkthroughStorageKey('host')).toBe('amrap_staging_walkthrough_v1_host');
+    expect(walkthroughStorageKey('host')).toBe('amrap_rally_point_walkthrough_v1_host');
   });
 
   it('does not treat joiner dismiss as host dismiss', () => {

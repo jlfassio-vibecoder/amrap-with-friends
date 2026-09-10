@@ -1,17 +1,32 @@
 import { callRpc } from '@/lib/api/callRpc';
+import type { JourneyEntry, JourneyLifetime } from '@/lib/coach/journeyTimeline';
+import type { ToolConversionRow } from '@/lib/coach/toolConversion';
+import type {
+  MissionDropoffRow,
+  RetentionCell,
+  SocialLiftRow,
+} from '@/lib/coach/engagementInsights';
+import { isLinkableAnonId } from '@/lib/api/linkAnonIdentity';
+import { isGuestHistoryCohort, type ActivityCohortId } from '@/lib/coach/activityCohorts';
+import {
+  isGuestBrowsersWindow,
+  type GuestBrowsersGrain,
+  type GuestBrowsersWindow,
+} from '@/lib/coach/guestBrowsersWindows';
 import type { HudOvertraining } from '@/lib/hud/types';
 
 export type CoachApiError = { message: string };
 
 export interface CoachTopStrip {
-  sessionsCreated7d: number;
-  sessionsCreated30d: number;
-  sessionsFinished7d: number;
-  sessionsFinished30d: number;
+  missionsCreated7d: number;
+  missionsCreated30d: number;
+  missionsFinished7d: number;
+  missionsFinished30d: number;
+  guestBrowsers7d: number;
   uniqueAnonIds: number;
   registeredUsers: number;
-  practiceSessionsStarted: number;
-  liveSessionsCreated: number;
+  practiceMissionsStarted: number;
+  liveMissionsCreated: number;
 }
 
 export interface CoachClaimFunnel {
@@ -33,9 +48,9 @@ export interface CoachRallyConversion {
   conversionRatePct: number | null;
 }
 
-export interface CoachSessionAbandonment {
-  sessionsFinished: number;
-  sessionsWithAbandonmentEvent: number;
+export interface CoachMissionAbandonment {
+  missionsFinished: number;
+  missionsWithAbandonmentEvent: number;
   abandonmentRatePct: number | null;
 }
 
@@ -43,15 +58,15 @@ export interface CoachTemplatePerformanceRow {
   templateId: string;
   intensityTier: number | null;
   durationMinutes: number;
-  sessionsCreated: number;
-  sessionsCompleted: number;
+  missionsCreated: number;
+  missionsCompleted: number;
   completionRatePct: number | null;
 }
 
 export interface CoachHostVsJoinerRow {
   firstRole: string;
   userCount: number;
-  avgSessionsPerUser: number | null;
+  avgMissionsPerUser: number | null;
   avgActiveDaysPerUser: number | null;
 }
 
@@ -76,12 +91,126 @@ export interface CoachRealtimeReliabilityRow {
   p50SubscribeLatencyMs: number | null;
 }
 
+export const COACH_DASHBOARD_WINDOWS = ['7d', '30d', '90d', 'all'] as const;
+
+export type CoachDashboardWindow = (typeof COACH_DASHBOARD_WINDOWS)[number];
+
+export function coachDashboardWindowLabel(window: CoachDashboardWindow): string {
+  switch (window) {
+    case '7d':
+      return 'Last 7 days';
+    case '30d':
+      return 'Last 30 days';
+    case '90d':
+      return 'Last 90 days';
+    default:
+      return 'All time';
+  }
+}
+
+export interface CoachAcquisitionRow {
+  channel: string;
+  source: string;
+  campaign: string;
+  browsers: number;
+  signedUp: number;
+  signupRatePct: number | null;
+  trained: number;
+  completed: number;
+  completionRatePct: number | null;
+}
+
+export interface CoachContentEngagementRow {
+  path: string;
+  sessions: number;
+  medianScrollPct: number | null;
+  medianDwellSec: number | null;
+  readToEnd: number;
+  bounced: number;
+  bounceRatePct: number | null;
+}
+
+export interface CoachNotFoundRow {
+  path: string;
+  referrerHost: string;
+  hits: number;
+}
+
+export interface CoachCtaPlacementRow {
+  cta: string;
+  fromPath: string;
+  toPath: string;
+  clicks: number;
+  visitors: number;
+  signedUp: number;
+}
+
+export interface CoachContentPageRow {
+  path: string;
+  views: number;
+  entryViews: number;
+  visitors: number;
+  ctaClicks: number;
+  ctaRatePct: number | null;
+  signedUp: number;
+}
+
+export interface CoachSignupFunnelRow {
+  method: string;
+  attempts: number;
+  /** Null for google: the OAuth redirect loses the link between an attempt and the sign-in it produces. */
+  completions: number | null;
+  awaitingConfirmation: number | null;
+  failures: number;
+  completionRatePct: number | null;
+}
+
+export interface CoachAuthFailureRow {
+  stage: string;
+  reason: string;
+  failureCount: number;
+  pctOfFailures: number | null;
+}
+
+export interface CoachCampaignFunnel {
+  campaignsCreated: number;
+  campaignsInFlight: number;
+  campaignsConcluded: number;
+  campaignsStarted: number;
+  campaignsReachedHalfway: number;
+  campaignsFinished: number;
+  finishRatePct: number | null;
+  occurrenceAdherencePct: number | null;
+}
+
+export interface CoachCampaignLengthRow {
+  weekCount: number;
+  campaigns: number;
+  campaignsFinished: number;
+  occurrenceAdherencePct: number | null;
+}
+
 export interface CoachDashboard {
+  /** Echoed back by the RPC, so the rendered numbers always name the window they came from. */
+  window: CoachDashboardWindow;
   topStrip: CoachTopStrip;
   claimFunnel: CoachClaimFunnel;
   intakeFunnel: CoachIntakeFunnel;
   rallyConversion: CoachRallyConversion;
-  sessionAbandonment: CoachSessionAbandonment;
+  missionAbandonment: CoachMissionAbandonment;
+  missionDropoff: MissionDropoffRow[];
+  socialLift: SocialLiftRow[];
+  weeklyRetention: RetentionCell[];
+  acquisition: CoachAcquisitionRow[];
+  contentPerformance: CoachContentPageRow[];
+  toolConversion: ToolConversionRow[];
+  ctaPlacement: CoachCtaPlacementRow[];
+  contentEngagement: CoachContentEngagementRow[];
+  notFound: CoachNotFoundRow[];
+  signupFunnel: CoachSignupFunnelRow[];
+  authFailureReasons: CoachAuthFailureRow[];
+  campaignFunnel: CoachCampaignFunnel;
+  campaignLengthAdherence: CoachCampaignLengthRow[];
   templatePerformance: CoachTemplatePerformanceRow[];
   hostVsJoinerRetention: CoachHostVsJoinerRow[];
   audioUnlockRate: CoachAudioUnlockRow[];
@@ -93,12 +222,21 @@ export interface CoachEventRow {
   id: string;
   eventName: string;
   occurredAt: string;
-  sessionId: string | null;
+  missionId: string | null;
   participantId: string | null;
   userId: string | null;
   anonId: string | null;
   route: string | null;
   props: Record<string, unknown>;
+}
+
+export interface CoachAnonSummary {
+  lastOccurredAt: string | null;
+  lastRoute: string | null;
+  eventCount: number;
+  eventNameCounts: Record<string, number>;
+  linkedUserId: string | null;
+  linkedNickname: string | null;
 }
 
 export interface CoachUserListRow {
@@ -109,7 +247,56 @@ export interface CoachUserListRow {
   perceivedClassification: string;
   accountCreatedAt: string;
   lastActiveAt: string | null;
-  totalSessions: number;
+  totalMissions: number;
+}
+
+export interface CoachGuestListRow {
+  anonId: string;
+  lastOccurredAt: string;
+}
+
+export interface CoachOnlineNow {
+  userIds: string[];
+  anonIds: string[];
+}
+
+export interface CoachGuestBrowsersPoint {
+  bucketStart: string;
+  count: number;
+}
+
+export interface CoachGuestBrowsersSeries {
+  window: GuestBrowsersWindow;
+  grain: GuestBrowsersGrain;
+  total: number;
+  points: CoachGuestBrowsersPoint[];
+}
+
+export interface CoachChartNote {
+  bucketStart: string;
+  body: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export type CoachOnboardingStuckStatus = 'needs_profile' | 'intake_incomplete';
+
+export interface CoachOnboardingStuckRow {
+  userId: string;
+  email: string;
+  status: CoachOnboardingStuckStatus;
+  accountCreatedAt: string;
+  lastSignInAt: string | null;
+  providers: string[];
+}
+
+export function coachOnboardingStuckStatusLabel(status: CoachOnboardingStuckStatus): string {
+  switch (status) {
+    case 'needs_profile':
+      return 'Signed up — profile not started';
+    case 'intake_incomplete':
+      return 'Profile started — finish your details';
+  }
 }
 
 export interface CoachUserProfile {
@@ -132,8 +319,8 @@ export interface CoachUserClassificationEvent {
   occurredAt: string;
 }
 
-export interface CoachUserSessionRow {
-  sessionId: string;
+export interface CoachUserMissionRow {
+  missionId: string;
   role: string;
   templateId: string | null;
   intensityTier: number | null;
@@ -145,10 +332,10 @@ export interface CoachUserSessionRow {
 }
 
 export interface CoachUserSummary {
-  sessionsAsHost: number;
-  sessionsAsJoiner: number;
-  totalSessions: number;
-  practiceSessionsStarted: number;
+  missionsAsHost: number;
+  missionsAsJoiner: number;
+  totalMissions: number;
+  practiceMissionsStarted: number;
   firstSeenAt: string | null;
   lastActiveAt: string | null;
 }
@@ -156,7 +343,7 @@ export interface CoachUserSummary {
 export interface CoachUserDetail {
   profile: CoachUserProfile;
   classificationHistory: CoachUserClassificationEvent[];
-  sessions: CoachUserSessionRow[];
+  missions: CoachUserMissionRow[];
   summary: CoachUserSummary;
   overtraining: HudOvertraining;
 }
@@ -167,6 +354,13 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function asArray(value: unknown): Record<string, unknown>[] {
   return Array.isArray(value) ? value.map(asRecord) : [];
+}
+
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((item): item is string => typeof item === 'string' && item.length > 0);
 }
 
 function num(row: Record<string, unknown>, key: string): number {
@@ -209,14 +403,15 @@ function mapCoachError(message: string | undefined): string {
 
 function parseTopStrip(row: Record<string, unknown>): CoachTopStrip {
   return {
-    sessionsCreated7d: num(row, 'sessionsCreated7d'),
-    sessionsCreated30d: num(row, 'sessionsCreated30d'),
-    sessionsFinished7d: num(row, 'sessionsFinished7d'),
-    sessionsFinished30d: num(row, 'sessionsFinished30d'),
+    missionsCreated7d: num(row, 'missionsCreated7d'),
+    missionsCreated30d: num(row, 'missionsCreated30d'),
+    missionsFinished7d: num(row, 'missionsFinished7d'),
+    missionsFinished30d: num(row, 'missionsFinished30d'),
+    guestBrowsers7d: num(row, 'guestBrowsers7d'),
     uniqueAnonIds: num(row, 'uniqueAnonIds'),
     registeredUsers: num(row, 'registeredUsers'),
-    practiceSessionsStarted: num(row, 'practiceSessionsStarted'),
-    liveSessionsCreated: num(row, 'liveSessionsCreated'),
+    practiceMissionsStarted: num(row, 'practiceMissionsStarted'),
+    liveMissionsCreated: num(row, 'liveMissionsCreated'),
   };
 }
 
@@ -245,11 +440,159 @@ function parseRallyConversion(row: Record<string, unknown>): CoachRallyConversio
   };
 }
 
-function parseSessionAbandonment(row: Record<string, unknown>): CoachSessionAbandonment {
+function parseMissionAbandonment(row: Record<string, unknown>): CoachMissionAbandonment {
   return {
-    sessionsFinished: num(row, 'sessions_finished'),
-    sessionsWithAbandonmentEvent: num(row, 'sessions_with_abandonment_event'),
+    missionsFinished: num(row, 'missions_finished'),
+    missionsWithAbandonmentEvent: num(row, 'missions_with_abandonment_event'),
     abandonmentRatePct: numOrNull(row, 'abandonment_rate_pct'),
+  };
+}
+
+function parseSignupFunnelRow(row: Record<string, unknown>): CoachSignupFunnelRow {
+  return {
+    method: str(row, 'method'),
+    attempts: num(row, 'attempts'),
+    completions: numOrNull(row, 'completions'),
+    awaitingConfirmation: numOrNull(row, 'awaiting_confirmation'),
+    failures: num(row, 'failures'),
+    completionRatePct: numOrNull(row, 'completion_rate_pct'),
+  };
+}
+
+function parseAuthFailureRow(row: Record<string, unknown>): CoachAuthFailureRow {
+  return {
+    stage: str(row, 'stage'),
+    reason: str(row, 'reason'),
+    failureCount: num(row, 'failure_count'),
+    pctOfFailures: numOrNull(row, 'pct_of_failures'),
+  };
+}
+
+function parseCampaignFunnel(row: Record<string, unknown>): CoachCampaignFunnel {
+  return {
+    campaignsCreated: num(row, 'campaigns_created'),
+    campaignsInFlight: num(row, 'campaigns_in_flight'),
+    campaignsConcluded: num(row, 'campaigns_concluded'),
+    campaignsStarted: num(row, 'campaigns_started'),
+    campaignsReachedHalfway: num(row, 'campaigns_reached_halfway'),
+    campaignsFinished: num(row, 'campaigns_finished'),
+    finishRatePct: numOrNull(row, 'finish_rate_pct'),
+    occurrenceAdherencePct: numOrNull(row, 'occurrence_adherence_pct'),
+  };
+}
+
+function parseCampaignLengthRow(row: Record<string, unknown>): CoachCampaignLengthRow {
+  return {
+    weekCount: num(row, 'week_count'),
+    campaigns: num(row, 'campaigns'),
+    campaignsFinished: num(row, 'campaigns_finished'),
+    occurrenceAdherencePct: numOrNull(row, 'occurrence_adherence_pct'),
+  };
+}
+
+function parseContentEngagementRow(row: Record<string, unknown>): CoachContentEngagementRow {
+  return {
+    path: str(row, 'path'),
+    sessions: num(row, 'sessions'),
+    medianScrollPct: numOrNull(row, 'median_scroll_pct'),
+    medianDwellSec: numOrNull(row, 'median_dwell_sec'),
+    readToEnd: num(row, 'read_to_end'),
+    bounced: num(row, 'bounced'),
+    bounceRatePct: numOrNull(row, 'bounce_rate_pct'),
+  };
+}
+
+function parseNotFoundRow(row: Record<string, unknown>): CoachNotFoundRow {
+  return {
+    path: str(row, 'path'),
+    referrerHost: str(row, 'referrer_host'),
+    hits: num(row, 'hits'),
+  };
+}
+
+function parseCtaPlacementRow(row: Record<string, unknown>): CoachCtaPlacementRow {
+  return {
+    cta: str(row, 'cta'),
+    fromPath: str(row, 'from_path'),
+    toPath: str(row, 'to_path'),
+    clicks: num(row, 'clicks'),
+    visitors: num(row, 'visitors'),
+    signedUp: num(row, 'signed_up'),
+  };
+}
+
+function parseToolConversionRow(row: Record<string, unknown>): ToolConversionRow {
+  return {
+    cohortOrder: num(row, 'cohort_order'),
+    cohort: str(row, 'cohort'),
+    browsers: num(row, 'browsers'),
+    ctaClicks: num(row, 'cta_clicks'),
+    signedUp: num(row, 'signed_up'),
+    signupRatePct: numOrNull(row, 'signup_rate_pct'),
+    trained: num(row, 'trained'),
+    completedMission: num(row, 'completed_mission'),
+    completedRatePct: numOrNull(row, 'completed_rate_pct'),
+  };
+}
+
+function parseContentPageRow(row: Record<string, unknown>): CoachContentPageRow {
+  return {
+    path: str(row, 'path'),
+    views: num(row, 'views'),
+    entryViews: num(row, 'entry_views'),
+    visitors: num(row, 'visitors'),
+    ctaClicks: num(row, 'cta_clicks'),
+    ctaRatePct: numOrNull(row, 'cta_rate_pct'),
+    signedUp: num(row, 'signed_up'),
+  };
+}
+
+function parseAcquisitionRow(row: Record<string, unknown>): CoachAcquisitionRow {
+  return {
+    channel: str(row, 'channel'),
+    source: str(row, 'source'),
+    campaign: str(row, 'campaign'),
+    browsers: num(row, 'browsers'),
+    signedUp: num(row, 'signed_up'),
+    signupRatePct: numOrNull(row, 'signup_rate_pct'),
+    trained: num(row, 'trained'),
+    completed: num(row, 'completed'),
+    completionRatePct: numOrNull(row, 'completion_rate_pct'),
+  };
+}
+
+function parseMissionDropoffRow(row: Record<string, unknown>): MissionDropoffRow {
+  return {
+    bucketOrder: num(row, 'bucket_order'),
+    elapsedBucket: str(row, 'elapsed_bucket'),
+    abandons: num(row, 'abandons'),
+    pctOfAbandons: numOrNull(row, 'pct_of_abandons'),
+    medianElapsedPct: numOrNull(row, 'median_elapsed_pct'),
+    medianRounds: numOrNull(row, 'median_rounds'),
+  };
+}
+
+function parseSocialLiftRow(row: Record<string, unknown>): SocialLiftRow {
+  return {
+    cohort: str(row, 'cohort'),
+    participations: num(row, 'participations'),
+    athletes: num(row, 'athletes'),
+    completed: num(row, 'completed'),
+    completionRatePct: numOrNull(row, 'completion_rate_pct'),
+    returnEligible: num(row, 'return_eligible'),
+    returnedWithin14d: num(row, 'returned_within_14d'),
+    returnRatePct: numOrNull(row, 'return_rate_pct'),
+    avgGroupSize: numOrNull(row, 'avg_group_size'),
+  };
+}
+
+function parseRetentionCell(row: Record<string, unknown>): RetentionCell {
+  return {
+    cohortWeek: str(row, 'cohort_week'),
+    cohortSize: num(row, 'cohort_size'),
+    weekOffset: num(row, 'week_offset'),
+    retained: num(row, 'retained'),
+    retainedPct: numOrNull(row, 'retained_pct'),
   };
 }
 
@@ -258,8 +601,8 @@ function parseTemplateRow(row: Record<string, unknown>): CoachTemplatePerformanc
     templateId: str(row, 'template_id'),
     intensityTier: numOrNull(row, 'intensity_tier'),
     durationMinutes: num(row, 'duration_minutes'),
-    sessionsCreated: num(row, 'sessions_created'),
-    sessionsCompleted: num(row, 'sessions_completed'),
+    missionsCreated: num(row, 'missions_created'),
+    missionsCompleted: num(row, 'missions_completed'),
     completionRatePct: numOrNull(row, 'completion_rate_pct'),
   };
 }
@@ -268,7 +611,7 @@ function parseHostVsJoinerRow(row: Record<string, unknown>): CoachHostVsJoinerRo
   return {
     firstRole: str(row, 'first_role'),
     userCount: num(row, 'user_count'),
-    avgSessionsPerUser: numOrNull(row, 'avg_sessions_per_user'),
+    avgMissionsPerUser: numOrNull(row, 'avg_missions_per_user'),
     avgActiveDaysPerUser: numOrNull(row, 'avg_active_days_per_user'),
   };
 }
@@ -300,6 +643,34 @@ function parseRealtimeReliabilityRow(row: Record<string, unknown>): CoachRealtim
   };
 }
 
+function parseEventNameCounts(value: unknown): Record<string, number> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+  const counts: Record<string, number> = {};
+  for (const [name, count] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof count === 'number' && Number.isFinite(count)) {
+      counts[name] = count;
+    }
+  }
+  return counts;
+}
+
+export function parseCoachAnonSummary(value: unknown): CoachAnonSummary | null {
+  const raw = asRecord(value);
+  if (raw.ok !== true) {
+    return null;
+  }
+  return {
+    lastOccurredAt: strOrNull(raw, 'lastOccurredAt'),
+    lastRoute: strOrNull(raw, 'lastRoute'),
+    eventCount: nonNegativeNum(raw, 'eventCount'),
+    eventNameCounts: parseEventNameCounts(raw.eventNameCounts),
+    linkedUserId: strOrNull(raw, 'linkedUserId'),
+    linkedNickname: strOrNull(raw, 'linkedNickname'),
+  };
+}
+
 function parseEventRow(row: Record<string, unknown>): CoachEventRow | null {
   const id = strOrNull(row, 'id');
   const eventName = strOrNull(row, 'event_name');
@@ -311,7 +682,7 @@ function parseEventRow(row: Record<string, unknown>): CoachEventRow | null {
     id,
     eventName,
     occurredAt,
-    sessionId: strOrNull(row, 'session_id'),
+    missionId: strOrNull(row, 'mission_id'),
     participantId: strOrNull(row, 'participant_id'),
     userId: strOrNull(row, 'user_id'),
     anonId: strOrNull(row, 'anon_id'),
@@ -335,7 +706,48 @@ function parseUserListRow(row: Record<string, unknown>): CoachUserListRow | null
     perceivedClassification: str(row, 'perceived_classification'),
     accountCreatedAt: str(row, 'account_created_at'),
     lastActiveAt: strOrNull(row, 'last_active_at'),
-    totalSessions: num(row, 'total_sessions'),
+    totalMissions: num(row, 'total_missions'),
+  };
+}
+
+function parseGuestListRow(row: Record<string, unknown>): CoachGuestListRow | null {
+  const anonId = strOrNull(row, 'anon_id');
+  const lastOccurredAt = strOrNull(row, 'last_occurred_at');
+  if (!anonId || !lastOccurredAt) {
+    return null;
+  }
+  return { anonId, lastOccurredAt };
+}
+
+function parseOnboardingStuckStatus(value: unknown): CoachOnboardingStuckStatus | null {
+  if (value === 'needs_profile' || value === 'intake_incomplete') {
+    return value;
+  }
+  return null;
+}
+
+function parseProviders(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((item): item is string => typeof item === 'string' && item.length > 0);
+}
+
+function parseOnboardingStuckRow(row: Record<string, unknown>): CoachOnboardingStuckRow | null {
+  const userId = strOrNull(row, 'user_id');
+  const email = strOrNull(row, 'email');
+  const status = parseOnboardingStuckStatus(row.status);
+  const accountCreatedAt = strOrNull(row, 'account_created_at');
+  if (!userId || !email || !status || !accountCreatedAt) {
+    return null;
+  }
+  return {
+    userId,
+    email,
+    status,
+    accountCreatedAt,
+    lastSignInAt: strOrNull(row, 'last_sign_in_at'),
+    providers: parseProviders(row.providers),
   };
 }
 
@@ -377,15 +789,15 @@ function parseClassificationEvent(
   };
 }
 
-function parseUserSessionRow(row: Record<string, unknown>): CoachUserSessionRow | null {
-  const sessionId = strOrNull(row, 'session_id');
+function parseUserMissionRow(row: Record<string, unknown>): CoachUserMissionRow | null {
+  const missionId = strOrNull(row, 'mission_id');
   const joinedAt = strOrNull(row, 'joined_at');
   const createdAt = strOrNull(row, 'created_at');
-  if (!sessionId || !joinedAt || !createdAt) {
+  if (!missionId || !joinedAt || !createdAt) {
     return null;
   }
   return {
-    sessionId,
+    missionId,
     role: str(row, 'role'),
     templateId: strOrNull(row, 'template_id'),
     intensityTier: numOrNull(row, 'intensity_tier'),
@@ -402,15 +814,20 @@ function parseOvertraining(row: Record<string, unknown>): HudOvertraining {
     acuteLoad7d: nonNegativeNum(row, 'acuteLoad7d'),
     chronicWeeklyLoad28d: nonNegativeNum(row, 'chronicWeeklyLoad28d'),
     consecutiveHighIntensityDays: nonNegativeNum(row, 'consecutiveHighIntensityDays'),
+    acuteMinutes7d: nonNegativeNum(row, 'acuteMinutes7d'),
+    chronicWeeklyMinutes28d: nonNegativeNum(row, 'chronicWeeklyMinutes28d'),
+    // 0 would read as "no history at all"; absent means a payload predating the
+    // migration, which should behave as a settled baseline.
+    observedDays: nonNegativeNum(row, 'observedDays') || 28,
   };
 }
 
 function parseUserSummary(row: Record<string, unknown>): CoachUserSummary {
   return {
-    sessionsAsHost: num(row, 'sessionsAsHost'),
-    sessionsAsJoiner: num(row, 'sessionsAsJoiner'),
-    totalSessions: num(row, 'totalSessions'),
-    practiceSessionsStarted: num(row, 'practiceSessionsStarted'),
+    missionsAsHost: num(row, 'missionsAsHost'),
+    missionsAsJoiner: num(row, 'missionsAsJoiner'),
+    totalMissions: num(row, 'totalMissions'),
+    practiceMissionsStarted: num(row, 'practiceMissionsStarted'),
     firstSeenAt: strOrNull(row, 'firstSeenAt'),
     lastActiveAt: strOrNull(row, 'lastActiveAt'),
   };
@@ -443,6 +860,58 @@ export async function fetchCoachUsersList(input: {
   return { data: users, error: null };
 }
 
+export async function fetchCoachGuestList(input: {
+  activityBucket: string;
+  limit?: number;
+}): Promise<{ data: CoachGuestListRow[] | null; error: CoachApiError | null }> {
+  if (!isGuestHistoryCohort(input.activityBucket as ActivityCohortId)) {
+    return { data: null, error: { message: 'Invalid activity bucket.' } };
+  }
+
+  const { data, error } = await callRpc('coach_guest_list', {
+    p_activity_bucket: input.activityBucket,
+    p_limit: input.limit ?? 200,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const guests = asArray(raw.guests)
+    .map(parseGuestListRow)
+    .filter((row): row is CoachGuestListRow => row !== null);
+
+  return { data: guests, error: null };
+}
+
+export async function fetchCoachOnboardingStuckList(input?: {
+  limit?: number;
+}): Promise<{ data: CoachOnboardingStuckRow[] | null; error: CoachApiError | null }> {
+  const { data, error } = await callRpc('coach_onboarding_stuck_list', {
+    p_limit: input?.limit ?? 100,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const users = asArray(raw.users)
+    .map(parseOnboardingStuckRow)
+    .filter((row): row is CoachOnboardingStuckRow => row !== null);
+
+  return { data: users, error: null };
+}
+
 export async function fetchCoachUserDetail(userId: string): Promise<{
   data: CoachUserDetail | null;
   error: CoachApiError | null;
@@ -467,15 +936,15 @@ export async function fetchCoachUserDetail(userId: string): Promise<{
     .map(parseClassificationEvent)
     .filter((row): row is CoachUserClassificationEvent => row !== null);
 
-  const sessions = asArray(raw.sessions)
-    .map(parseUserSessionRow)
-    .filter((row): row is CoachUserSessionRow => row !== null);
+  const missions = asArray(raw.missions)
+    .map(parseUserMissionRow)
+    .filter((row): row is CoachUserMissionRow => row !== null);
 
   return {
     data: {
       profile,
       classificationHistory,
-      sessions,
+      missions,
       summary: parseUserSummary(asRecord(raw.summary)),
       overtraining: parseOvertraining(asRecord(raw.overtraining)),
     },
@@ -483,11 +952,17 @@ export async function fetchCoachUserDetail(userId: string): Promise<{
   };
 }
 
-export async function fetchCoachDashboard(): Promise<{
+function parseWindow(value: unknown): CoachDashboardWindow {
+  return COACH_DASHBOARD_WINDOWS.includes(value as CoachDashboardWindow)
+    ? (value as CoachDashboardWindow)
+    : 'all';
+}
+
+export async function fetchCoachDashboard(window: CoachDashboardWindow = 'all'): Promise<{
   data: CoachDashboard | null;
   error: CoachApiError | null;
 }> {
-  const { data, error } = await callRpc('coach_dashboard');
+  const { data, error } = await callRpc('coach_dashboard', { p_window: window });
 
   if (error) {
     return { data: null, error: { message: mapCoachError(error.message) } };
@@ -500,11 +975,25 @@ export async function fetchCoachDashboard(): Promise<{
 
   return {
     data: {
+      window: parseWindow(raw.window),
       topStrip: parseTopStrip(asRecord(raw.topStrip)),
       claimFunnel: parseClaimFunnel(asRecord(raw.claimFunnel)),
       intakeFunnel: parseIntakeFunnel(asRecord(raw.intakeFunnel)),
       rallyConversion: parseRallyConversion(asRecord(raw.rallyConversion)),
-      sessionAbandonment: parseSessionAbandonment(asRecord(raw.sessionAbandonment)),
+      missionAbandonment: parseMissionAbandonment(asRecord(raw.missionAbandonment)),
+      missionDropoff: asArray(raw.missionDropoff).map(parseMissionDropoffRow),
+      socialLift: asArray(raw.socialLift).map(parseSocialLiftRow),
+      weeklyRetention: asArray(raw.weeklyRetention).map(parseRetentionCell),
+      acquisition: asArray(raw.acquisition).map(parseAcquisitionRow),
+      contentPerformance: asArray(raw.contentPerformance).map(parseContentPageRow),
+      toolConversion: asArray(raw.toolConversion).map(parseToolConversionRow),
+      ctaPlacement: asArray(raw.ctaPlacement).map(parseCtaPlacementRow),
+      contentEngagement: asArray(raw.contentEngagement).map(parseContentEngagementRow),
+      notFound: asArray(raw.notFound).map(parseNotFoundRow),
+      signupFunnel: asArray(raw.signupFunnel).map(parseSignupFunnelRow),
+      authFailureReasons: asArray(raw.authFailureReasons).map(parseAuthFailureRow),
+      campaignFunnel: parseCampaignFunnel(asRecord(raw.campaignFunnel)),
+      campaignLengthAdherence: asArray(raw.campaignLengthAdherence).map(parseCampaignLengthRow),
       templatePerformance: asArray(raw.templatePerformance).map(parseTemplateRow),
       hostVsJoinerRetention: asArray(raw.hostVsJoinerRetention).map(parseHostVsJoinerRow),
       audioUnlockRate: asArray(raw.audioUnlockRate).map(parseAudioUnlockRow),
@@ -515,15 +1004,47 @@ export async function fetchCoachDashboard(): Promise<{
   };
 }
 
+export async function fetchCoachAnonSummary(anonId: string): Promise<{
+  data: CoachAnonSummary | null;
+  error: CoachApiError | null;
+}> {
+  if (!isLinkableAnonId(anonId)) {
+    return { data: null, error: { message: 'This browser id is not valid.' } };
+  }
+
+  const { data, error } = await callRpc('coach_anon_summary', { p_anon_id: anonId });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    if (raw.reason === 'invalid_anon_id') {
+      return { data: null, error: { message: 'This browser id is not valid.' } };
+    }
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const summary = parseCoachAnonSummary(raw);
+  if (!summary) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  return { data: summary, error: null };
+}
+
 export async function fetchCoachRecentEvents(input: {
   eventName?: string | null;
   limit?: number;
   userId?: string | null;
+  anonId?: string | null;
 }): Promise<{ data: CoachEventRow[] | null; error: CoachApiError | null }> {
   const { data, error } = await callRpc('coach_events_recent', {
     p_event_name: input.eventName ?? null,
     p_limit: input.limit ?? 100,
     p_user_id: input.userId ?? null,
+    p_anon_id: input.anonId ?? null,
   });
 
   if (error) {
@@ -540,4 +1061,292 @@ export async function fetchCoachRecentEvents(input: {
     .filter((row): row is CoachEventRow => row !== null);
 
   return { data: events, error: null };
+}
+
+export async function fetchCoachOnlineNow(): Promise<{
+  data: CoachOnlineNow | null;
+  error: CoachApiError | null;
+}> {
+  const { data, error } = await callRpc('coach_online_now');
+
+  if (error) {
+    return { data: null, error: { message: mapCoachError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  return {
+    data: {
+      userIds: asStringArray(raw.userIds),
+      anonIds: asStringArray(raw.anonIds),
+    },
+    error: null,
+  };
+}
+
+function parseGuestBrowsersPoint(row: Record<string, unknown>): CoachGuestBrowsersPoint | null {
+  const bucketStart = str(row, 'bucketStart');
+  if (!bucketStart) {
+    return null;
+  }
+  return {
+    bucketStart,
+    count: nonNegativeNum(row, 'count'),
+  };
+}
+
+export async function fetchCoachGuestBrowsersSeries(
+  window: GuestBrowsersWindow
+): Promise<{ data: CoachGuestBrowsersSeries | null; error: CoachApiError | null }> {
+  if (!isGuestBrowsersWindow(window)) {
+    return { data: null, error: { message: 'Invalid activity window.' } };
+  }
+
+  const { data, error } = await callRpc('coach_guest_browsers_series', { p_window: window });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    if (raw.reason === 'invalid_window') {
+      return { data: null, error: { message: 'Invalid activity window.' } };
+    }
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const grainRaw = str(raw, 'grain');
+  const grain: GuestBrowsersGrain = grainRaw === 'hour' ? 'hour' : 'day';
+  const windowRaw = str(raw, 'window');
+  const resolvedWindow = isGuestBrowsersWindow(windowRaw) ? windowRaw : window;
+
+  return {
+    data: {
+      window: resolvedWindow,
+      grain,
+      total: nonNegativeNum(raw, 'total'),
+      points: asArray(raw.points)
+        .map(parseGuestBrowsersPoint)
+        .filter((row): row is CoachGuestBrowsersPoint => row !== null),
+    },
+    error: null,
+  };
+}
+
+function parseCoachChartNote(row: Record<string, unknown>): CoachChartNote | null {
+  const bucketStart = str(row, 'bucketStart');
+  const body = str(row, 'body');
+  const updatedAt = str(row, 'updatedAt');
+  const updatedBy = str(row, 'updatedBy');
+  if (!bucketStart || !body || !updatedAt || !updatedBy) {
+    return null;
+  }
+  return { bucketStart, body, updatedAt, updatedBy };
+}
+
+export async function fetchCoachChartNotesForRange(input: {
+  metric: string;
+  grain: GuestBrowsersGrain;
+  from: string;
+  to: string;
+}): Promise<{ data: CoachChartNote[] | null; error: CoachApiError | null }> {
+  const { data, error } = await callRpc('coach_chart_notes_for_range', {
+    p_metric: input.metric,
+    p_grain: input.grain,
+    p_from: input.from,
+    p_to: input.to,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    if (raw.reason === 'invalid_args') {
+      return { data: null, error: { message: 'Invalid chart note request.' } };
+    }
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  return {
+    data: asArray(raw.notes)
+      .map(parseCoachChartNote)
+      .filter((row): row is CoachChartNote => row !== null),
+    error: null,
+  };
+}
+
+export async function upsertCoachChartNote(input: {
+  metric: string;
+  grain: GuestBrowsersGrain;
+  bucketStart: string;
+  body: string;
+}): Promise<{
+  data: { deleted: boolean; note: CoachChartNote | null } | null;
+  error: CoachApiError | null;
+}> {
+  const { data, error } = await callRpc('coach_chart_note_upsert', {
+    p_metric: input.metric,
+    p_grain: input.grain,
+    p_bucket_start: input.bucketStart,
+    p_body: input.body,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    if (raw.reason === 'body_too_long') {
+      return { data: null, error: { message: 'Note is too long (500 characters max).' } };
+    }
+    if (raw.reason === 'invalid_args') {
+      return { data: null, error: { message: 'Invalid chart note request.' } };
+    }
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  if (raw.deleted === true) {
+    return { data: { deleted: true, note: null }, error: null };
+  }
+
+  const note = parseCoachChartNote(asRecord(raw.note));
+  if (!note) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  return { data: { deleted: false, note }, error: null };
+}
+
+export interface CoachJourneyIdentity {
+  userId: string | null;
+  anonIds: string[];
+  nickname: string | null;
+  accountCreatedAt: string | null;
+  signedUpAt: string | null;
+  firstSeenAt: string | null;
+  lastSeenAt: string | null;
+}
+
+export interface CoachIdentityJourney {
+  identity: CoachJourneyIdentity;
+  lifetime: JourneyLifetime;
+  eventCounts: Record<string, number>;
+  timeline: JourneyEntry[];
+}
+
+function parseJourneyEntry(row: Record<string, unknown>): JourneyEntry | null {
+  const at = str(row, 'at');
+  const payload = asRecord(row.payload);
+  if (!at) {
+    return null;
+  }
+  if (str(row, 'kind') === 'mission') {
+    return {
+      at,
+      kind: 'mission',
+      payload: {
+        missionId: str(payload, 'missionId'),
+        role: str(payload, 'role'),
+        state: str(payload, 'state'),
+        templateId: strOrNull(payload, 'templateId'),
+        durationMinutes: numOrNull(payload, 'durationMinutes'),
+        intensityTier: numOrNull(payload, 'intensityTier'),
+        finalScore: numOrNull(payload, 'finalScore'),
+        completed: payload.completed === true,
+        guest: payload.guest === true,
+      },
+    };
+  }
+  return {
+    at,
+    kind: 'event',
+    payload: {
+      eventName: str(payload, 'eventName'),
+      route: strOrNull(payload, 'route'),
+      missionId: strOrNull(payload, 'missionId'),
+      anonId: strOrNull(payload, 'anonId'),
+      signedIn: payload.signedIn === true,
+      props: asRecord(payload.props),
+    },
+  };
+}
+
+function parseEventCounts(value: unknown): Record<string, number> {
+  const raw = asRecord(value);
+  const counts: Record<string, number> = {};
+  for (const [key, count] of Object.entries(raw)) {
+    if (typeof count === 'number' && Number.isFinite(count)) {
+      counts[key] = count;
+    }
+  }
+  return counts;
+}
+
+/** One person's whole history, guest era included. Pass either half of the identity. */
+export async function fetchCoachIdentityJourney(input: {
+  userId?: string | null;
+  anonId?: string | null;
+  limit?: number;
+}): Promise<{ data: CoachIdentityJourney | null; error: CoachApiError | null }> {
+  const { data, error } = await callRpc('coach_identity_journey', {
+    p_user_id: input.userId ?? null,
+    p_anon_id: input.anonId ?? null,
+    p_limit: input.limit ?? 300,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return {
+      data: null,
+      error: {
+        message:
+          raw.reason === 'identity_required'
+            ? 'Pick a user or a guest to see their journey.'
+            : 'Something went wrong. Please try again.',
+      },
+    };
+  }
+
+  const identity = asRecord(raw.identity);
+  const lifetime = asRecord(raw.lifetime);
+
+  return {
+    data: {
+      identity: {
+        userId: strOrNull(identity, 'userId'),
+        anonIds: asStringArray(identity.anonIds),
+        nickname: strOrNull(identity, 'nickname'),
+        accountCreatedAt: strOrNull(identity, 'accountCreatedAt'),
+        signedUpAt: strOrNull(identity, 'signedUpAt'),
+        firstSeenAt: strOrNull(identity, 'firstSeenAt'),
+        lastSeenAt: strOrNull(identity, 'lastSeenAt'),
+      },
+      lifetime: {
+        missionsHosted: num(lifetime, 'missionsHosted'),
+        missionsJoined: num(lifetime, 'missionsJoined'),
+        missionsTotal: num(lifetime, 'missionsTotal'),
+        missionsCompleted: num(lifetime, 'missionsCompleted'),
+        missionsFinishedState: num(lifetime, 'missionsFinishedState'),
+        bestScore: numOrNull(lifetime, 'bestScore'),
+        totalWorkoutMinutes: num(lifetime, 'totalWorkoutMinutes'),
+        activeDays: num(lifetime, 'activeDays'),
+      },
+      eventCounts: parseEventCounts(raw.eventCounts),
+      timeline: asArray(raw.timeline)
+        .map(parseJourneyEntry)
+        .filter((entry): entry is JourneyEntry => entry !== null),
+    },
+    error: null,
+  };
 }

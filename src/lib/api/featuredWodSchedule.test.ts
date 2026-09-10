@@ -100,7 +100,8 @@ describe('setCoachFeaturedSchedule', () => {
     callRpcMock.mockResolvedValue({
       data: null,
       error: {
-        message: 'A featured WOD is already scheduled by another coach. Ask them to pause it first.',
+        message:
+          'A featured WOD is already scheduled by another coach. Ask them to pause it first.',
       },
     });
 
@@ -155,9 +156,9 @@ describe('pauseCoachFeaturedSchedule', () => {
 });
 
 describe('fetchCoachFeaturedWodAttendees', () => {
-  it('returns an empty list and null sessionId when nothing is live', async () => {
+  it('returns an empty list and null missionId when nothing is live', async () => {
     callRpcMock.mockResolvedValue({
-      data: { ok: true, sessionId: null, attendees: [] },
+      data: { ok: true, missionId: null, attendees: [] },
       error: null,
     });
 
@@ -165,14 +166,14 @@ describe('fetchCoachFeaturedWodAttendees', () => {
 
     expect(callRpcMock).toHaveBeenCalledWith('coach_featured_wod_attendees', {});
     expect(result.error).toBeNull();
-    expect(result.data).toEqual({ sessionId: null, attendees: [] });
+    expect(result.data).toEqual({ missionId: null, attendees: [] });
   });
 
-  it('parses attendee rows for a live session', async () => {
+  it('parses attendee rows for a live mission', async () => {
     callRpcMock.mockResolvedValue({
       data: {
         ok: true,
-        sessionId: '33333333-3333-4333-8333-333333333333',
+        missionId: '33333333-3333-4333-8333-333333333333',
         attendees: [
           { nickname: 'Coach', role: 'host', joined_at: '2026-08-31T10:00:00.000Z' },
           { nickname: 'Alice', role: 'joiner', joined_at: '2026-08-31T10:01:00.000Z' },
@@ -184,7 +185,7 @@ describe('fetchCoachFeaturedWodAttendees', () => {
     const result = await fetchCoachFeaturedWodAttendees();
 
     expect(result.error).toBeNull();
-    expect(result.data?.sessionId).toBe('33333333-3333-4333-8333-333333333333');
+    expect(result.data?.missionId).toBe('33333333-3333-4333-8333-333333333333');
     expect(result.data?.attendees).toEqual([
       { nickname: 'Coach', role: 'host', joinedAt: '2026-08-31T10:00:00.000Z' },
       { nickname: 'Alice', role: 'joiner', joinedAt: '2026-08-31T10:01:00.000Z' },
@@ -195,7 +196,7 @@ describe('fetchCoachFeaturedWodAttendees', () => {
     callRpcMock.mockResolvedValue({
       data: {
         ok: true,
-        sessionId: '33333333-3333-4333-8333-333333333333',
+        missionId: '33333333-3333-4333-8333-333333333333',
         attendees: [{ nickname: '', role: 'joiner', joined_at: '2026-08-31T10:01:00.000Z' }],
       },
       error: null,

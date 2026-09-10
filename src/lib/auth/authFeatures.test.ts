@@ -6,10 +6,10 @@ describe('isMagicLinkAuthEnabled', () => {
     vi.resetModules();
   });
 
-  it('defaults to true when unset', async () => {
+  it('defaults to false when unset', async () => {
     vi.stubEnv('VITE_AUTH_MAGIC_LINK_ENABLED', '');
     const { isMagicLinkAuthEnabled } = await import('./authFeatures');
-    expect(isMagicLinkAuthEnabled()).toBe(true);
+    expect(isMagicLinkAuthEnabled()).toBe(false);
   });
 
   it('returns false when explicitly disabled', async () => {
@@ -24,5 +24,45 @@ describe('isMagicLinkAuthEnabled', () => {
     vi.resetModules();
     const { isMagicLinkAuthEnabled } = await import('./authFeatures');
     expect(isMagicLinkAuthEnabled()).toBe(true);
+  });
+});
+
+describe('isPasswordResetEnabled', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it('defaults to false when unset', async () => {
+    vi.stubEnv('VITE_AUTH_PASSWORD_RESET_ENABLED', '');
+    const { isPasswordResetEnabled } = await import('./authFeatures');
+    expect(isPasswordResetEnabled()).toBe(false);
+  });
+
+  it('returns true when explicitly enabled', async () => {
+    vi.stubEnv('VITE_AUTH_PASSWORD_RESET_ENABLED', 'true');
+    vi.resetModules();
+    const { isPasswordResetEnabled } = await import('./authFeatures');
+    expect(isPasswordResetEnabled()).toBe(true);
+  });
+});
+
+describe('isGoogleAuthEnabled', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it('defaults to false when unset', async () => {
+    vi.stubEnv('VITE_AUTH_GOOGLE_ENABLED', '');
+    const { isGoogleAuthEnabled } = await import('./authFeatures');
+    expect(isGoogleAuthEnabled()).toBe(false);
+  });
+
+  it('returns true when explicitly enabled', async () => {
+    vi.stubEnv('VITE_AUTH_GOOGLE_ENABLED', 'true');
+    vi.resetModules();
+    const { isGoogleAuthEnabled } = await import('./authFeatures');
+    expect(isGoogleAuthEnabled()).toBe(true);
   });
 });

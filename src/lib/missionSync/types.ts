@@ -1,0 +1,195 @@
+import type { WorkoutExercise } from '@/lib/api/missionTypes';
+import type { ScoreBreakdown } from '@/lib/scoring/types';
+
+export type LiveMissionPhase = 'waiting' | 'setup' | 'work' | 'finished';
+
+export interface MissionRow {
+  id: string;
+  duration_minutes: number;
+  workout: WorkoutExercise[];
+  template_id: string | null;
+  state: LiveMissionPhase;
+  time_left_sec: number;
+  is_paused: boolean;
+  started_at: string | null;
+  scheduled_at: string | null;
+  rally_point_countdown_ends_at: string | null;
+  segment_index: number;
+  created_at: string;
+  is_featured: boolean;
+  rally_point_id: string | null;
+}
+
+export interface ParticipantRow {
+  id: string;
+  mission_id: string;
+  nickname: string;
+  role: 'host' | 'joiner';
+  joined_at: string;
+}
+
+export interface RoundRow {
+  id: string;
+  mission_id: string;
+  participant_id: string;
+  round_index: number;
+  elapsed_sec_at_round: number;
+  segment_index: number;
+  /** Reps into the next round when the athlete noticed; null when logged live. */
+  missed_log_reps: number | null;
+  created_at: string;
+}
+
+export interface MessageRow {
+  id: string;
+  mission_id: string;
+  participant_id: string;
+  nickname: string;
+  body: string;
+  segment_index: number;
+  created_at: string;
+}
+
+export interface UpdateMissionStateInput {
+  missionId: string;
+  hostToken: string;
+  state: LiveMissionPhase;
+  timeLeftSec: number;
+  isPaused: boolean;
+  startedAt?: string | null;
+}
+
+export interface UpdateMissionStateSuccess {
+  ok: true;
+  missionId: string;
+  state: LiveMissionPhase;
+  timeLeftSec: number;
+  isPaused: boolean;
+  startedAt: string | null;
+  segmentIndex: number;
+}
+
+export interface UpdateMissionStateFailure {
+  ok: false;
+  reason: string;
+}
+
+export type UpdateMissionStateResult = UpdateMissionStateSuccess | UpdateMissionStateFailure;
+
+export interface LogRoundInput {
+  missionId: string;
+  participantId: string;
+  claimToken: string;
+  roundIndex: number;
+  elapsedSecAtRound: number;
+  segmentIndex: number;
+  /**
+   * Set only when reconstructing a missed log: how many reps of the next round
+   * the athlete had done when they noticed. Flags the round as corrected and
+   * makes the server bound the back-dating.
+   */
+  missedLogReps?: number | null;
+}
+
+export interface LogRoundSuccess {
+  ok: true;
+  roundId: string;
+  roundIndex: number;
+  elapsedSecAtRound: number;
+  segmentIndex: number;
+}
+
+export interface LogRoundFailure {
+  ok: false;
+  reason: string;
+}
+
+export type LogRoundResult = LogRoundSuccess | LogRoundFailure;
+
+export interface ParticipantSegmentResultRow {
+  participant_id: string;
+  segment_index: number;
+  partial_reps: number;
+  final_score: number | null;
+  score_breakdown: ScoreBreakdown | null;
+  /** Movements the athlete performed differently from the programmed version. */
+  modified_movements: string[] | null;
+  /** `{ movement name: scaling option id }` when the scaling was named. */
+  movement_variants: Record<string, string> | null;
+  /*
+   * No rpe / session_notes / check_ins here on purpose. A live payload is
+   * every participant's rows, delivered to every participant and to guests, so
+   * anything on it is shared with the mission. Check-ins are private to their
+   * author and reach them through my_missions, which is scoped to their own
+   * user id. See 20260909200000_check_in_is_private.sql.
+   */
+  updated_at: string;
+}
+
+export interface SubmitParticipantResultInput {
+  missionId: string;
+  participantId: string;
+  claimToken: string;
+  partialReps: number;
+  segmentIndex: number;
+  /** Movements the athlete marked as modified. Absent means as programmed. */
+  modifiedMovements?: string[];
+  /** `{ movement name: scaling option id }` for any scaling they named. */
+  movementVariants?: Record<string, string>;
+  /** Optional session RPE 1–10. Absent / null means not logged. */
+  rpe?: number | null;
+  /** Optional free-text notes (≤280). */
+  sessionNotes?: string;
+  /** Optional structured check-in chips `{ dimensionId: optionId }`. */
+  checkIns?: Record<string, string>;
+}
+
+export interface SubmitParticipantResultSuccess {
+  ok: true;
+  participantId: string;
+  segmentIndex: number;
+  partialReps: number;
+  repsPerRound: number;
+  finalScore: number;
+  scoreBreakdown: ScoreBreakdown;
+}
+
+export interface SubmitParticipantResultFailure {
+  ok: false;
+  reason: string;
+}
+
+export type SubmitParticipantResultResult =
+  SubmitParticipantResultSuccess | SubmitParticipantResultFailure;
+
+export interface MissionPresenceEntry {
+  participantId: string;
+  nickname: string;
+  isOnline: boolean;
+}
+
+export interface LeaderboardRoundEntry {
+  roundNumber: number;
+  durationSec: number;
+}
+
+export interface LeaderboardEntry {
+  participantId: string;
+  nickname: string;
+  roundCount: number;
+  partialReps: number;
+  repsPerRound: number;
+  baseScore: number;
+  pvi: number | null;
+  pviMultiplier: number;
+  pviClassification: string;
+  pviVerdict: string;
+  domainWeight: number;
+  finalScore: number;
+  rounds: LeaderboardRoundEntry[];
+  isSelf: boolean;
+  /** Empty when the mission was performed as programmed. */
+  modifiedMovements: string[];
+  /** `{ movement name: scaling option id }` for any scaling the athlete named. */
+  movementVariants: Record<string, string>;
+}

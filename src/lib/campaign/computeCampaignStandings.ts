@@ -24,6 +24,10 @@ export type CampaignStandingsScore = {
   occurrenceId: string;
   userId: string;
   finalScore: number | null;
+  /** True when the score came from a makeup mission. */
+  madeUp?: boolean;
+  /** True when the athlete modified a movement in that mission. */
+  modified?: boolean;
 };
 
 export type CampaignStandingsInput = {
@@ -40,19 +44,30 @@ export type CampaignStandingRow = {
   attended: number;
   eligible: number;
   left: boolean;
+  /** True when at least one counted score came from a makeup mission. */
+  hasMadeUp: boolean;
   /** 1-based rank on normalised average; null averages sort last. */
   rank: number;
 };
 
-function scoreValue(finalScore: number | null | undefined): number {
+/**
+ * A usable score, or null when the row carries no evidence the athlete
+ * trained. The scheduler seeds a host participant into every generated
+ * mission, so a row without a real score means "absent", not "scored zero" —
+ * counting those as attendance overstated attendance and averaged the
+ * absences in as zeros.
+ */
+function scoreValue(finalScore: number | null | undefined): number | null {
   if (typeof finalScore !== 'number' || !Number.isFinite(finalScore)) {
-    return 0;
+    return null;
   }
   return Math.max(0, finalScore);
 }
 
 function isCountableStatus(status: CampaignStandingsOccurrence['status']): boolean {
-  return status === 'generated' || status === 'done';
+  // Skipped missions are still makeable; once settled they must count toward
+  // eligibility and attendance the same way a done mission does.
+  return status === 'generated' || status === 'done' || status === 'skipped';
 }
 
 /**
@@ -61,13 +76,25 @@ function isCountableStatus(status: CampaignStandingsOccurrence['status']): boole
  */
 export function computeCampaignStandings(input: CampaignStandingsInput): CampaignStandingRow[] {
   const scoresByOccurrence = new Map<string, Map<string, number>>();
+  const madeUpByOccurrence = new Map<string, Map<string, boolean>>();
   for (const entry of input.scores) {
+    const value = scoreValue(entry.finalScore);
+    if (value === null) {
+      continue;
+    }
     let byUser = scoresByOccurrence.get(entry.occurrenceId);
     if (!byUser) {
       byUser = new Map();
       scoresByOccurrence.set(entry.occurrenceId, byUser);
     }
-    byUser.set(entry.userId, scoreValue(entry.finalScore));
+    byUser.set(entry.userId, value);
+
+    let madeUpByUser = madeUpByOccurrence.get(entry.occurrenceId);
+    if (!madeUpByUser) {
+      madeUpByUser = new Map();
+      madeUpByOccurrence.set(entry.occurrenceId, madeUpByUser);
+    }
+    madeUpByUser.set(entry.userId, entry.madeUp === true);
   }
 
   const bestByOccurrence = new Map<string, number>();
@@ -85,6 +112,7 @@ export function computeCampaignStandings(input: CampaignStandingsInput): Campaig
     let attended = 0;
     let eligible = 0;
     let ratioSum = 0;
+    let hasMadeUp = false;
 
     for (const occurrence of input.occurrences) {
       if (occurrence.localDate < member.joinedLocalDate) {
@@ -102,6 +130,9 @@ export function computeCampaignStandings(input: CampaignStandingsInput): Campaig
       }
 
       attended += 1;
+      if (madeUpByOccurrence.get(occurrence.occurrenceId)?.get(member.userId)) {
+        hasMadeUp = true;
+      }
       const athlete = byUser.get(member.userId) ?? 0;
       const best = bestByOccurrence.get(occurrence.occurrenceId) ?? 0;
       // Single attendee (or everyone at zero): they are the best → 1.0.
@@ -120,6 +151,7 @@ export function computeCampaignStandings(input: CampaignStandingsInput): Campaig
       attended,
       eligible,
       left: member.left,
+      hasMadeUp,
     };
   });
 

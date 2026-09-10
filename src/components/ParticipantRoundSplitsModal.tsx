@@ -1,7 +1,7 @@
 import {
   formatSplitDuration,
   type ParticipantSplitEntry,
-} from '@/lib/sessionSync/computeParticipantSplits';
+} from '@/lib/missionSync/computeParticipantSplits';
 
 interface ParticipantRoundSplitsModalProps {
   nickname: string;
@@ -53,6 +53,14 @@ export function ParticipantRoundSplitsModal({
               >
                 <span className="text-xs font-medium text-muted">
                   Round {split.roundNumber}
+                  {split.wasMissedLog ? (
+                    <span
+                      className="ml-2 text-xs uppercase tracking-widest text-accent"
+                      title="Logged late and corrected from the reps you had banked"
+                    >
+                      Adjusted
+                    </span>
+                  ) : null}
                 </span>
                 <span className="text-display text-lg text-accent">
                   {formatSplitDuration(split.durationSec)}

@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { buildGoogleCalendarUrl, buildIcsFileContent } from './buildCalendarEvent';
 
 const BASE_INPUT = {
-  uid: 'session-123',
+  uid: 'mission-123',
   title: 'The Undertow',
-  description: 'Core rotational endurance. Join: https://example.com/join?s=session-123',
+  description: 'Core rotational endurance. Join: https://example.com/join?m=mission-123',
   startsAt: new Date('2026-08-29T16:00:00.000Z'),
   durationMinutes: 15,
 };
@@ -22,7 +22,7 @@ describe('buildIcsFileContent', () => {
 
     expect(ics).toContain('BEGIN:VCALENDAR');
     expect(ics).toContain('BEGIN:VEVENT');
-    expect(ics).toMatch(/UID:session-123@amrapwithfriends/);
+    expect(ics).toMatch(/UID:mission-123@amrapwithfriends/);
     expect(ics).toMatch(/DTSTAMP:\d{8}T\d{6}Z/);
     expect(ics).toContain('END:VEVENT');
     expect(ics).toContain('END:VCALENDAR');

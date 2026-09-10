@@ -2,14 +2,34 @@ import { computeBaseScore } from '@/lib/scoring/computeBaseScore';
 import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
 import { computeScoreBreakdown } from '@/lib/scoring/computeScoreBreakdown';
 import type { ScoreBreakdown } from '@/lib/scoring/types';
-import type { WorkoutExercise } from '@/lib/api/sessionTypes';
+import type { WorkoutExercise } from '@/lib/api/missionTypes';
+import {
+  normalizeCheckIns,
+  normalizeRpe,
+  normalizeSessionNotes,
+  type MissionCheckIns,
+} from '@/lib/mission/missionCheckIn';
 
 export interface SubmitParticipantResultRequest {
-  sessionId: string;
+  missionId: string;
   participantId: string;
   claimToken: string;
   partialReps: number;
   segmentIndex: number;
+  /**
+   * Movements the athlete performed differently from the programmed version.
+   * Recorded for comparability only — it takes no part in the score, which is
+   * why it is absent from computeLockedScore's inputs entirely.
+   */
+  modifiedMovements: string[];
+  /** `{ movement name: scaling option id }` when the scaling was named. */
+  movementVariants: Record<string, string>;
+  /** Optional session RPE 1–10. Null when not logged. */
+  rpe: number | null;
+  /** Optional free-text notes. */
+  sessionNotes: string;
+  /** Optional structured check-in chips. */
+  checkIns: MissionCheckIns;
 }
 
 export interface SubmitParticipantResultResponse {
@@ -30,11 +50,11 @@ export interface RoundRow {
 
 export interface ParticipantRecord {
   claim_token_hash: string | null;
-  session_id: string;
+  mission_id: string;
   user_id: string | null;
 }
 
-export interface SessionRecord {
+export interface MissionRecord {
   state: string;
   segment_index: number;
   workout: WorkoutExercise[];
@@ -45,22 +65,109 @@ export interface ExistingSegmentResult {
   score_breakdown: ScoreBreakdown | null;
 }
 
+/** Accept missionId (current) or legacy sessionId from older clients. */
+export function normalizeSubmitRequest(
+  body: Record<string, unknown>
+): SubmitParticipantResultRequest {
+  const missionId =
+    (typeof body.missionId === 'string' && body.missionId) ||
+    (typeof body.sessionId === 'string' && body.sessionId) ||
+    '';
+
+  return {
+    missionId,
+    participantId: typeof body.participantId === 'string' ? body.participantId : '',
+    claimToken: typeof body.claimToken === 'string' ? body.claimToken : '',
+    partialReps: typeof body.partialReps === 'number' ? body.partialReps : Number.NaN,
+    segmentIndex: typeof body.segmentIndex === 'number' ? body.segmentIndex : Number.NaN,
+    modifiedMovements: normalizeModifiedMovementNames(body.modifiedMovements),
+    movementVariants: normalizeMovementVariantMap(body.movementVariants),
+    rpe: normalizeRpe(body.rpe),
+    sessionNotes: normalizeSessionNotes(body.sessionNotes),
+    checkIns: normalizeCheckIns(body.checkIns),
+  };
+}
+
+/** Longest movement name stored, matching the workout validator's own limit. */
+const MAX_MOVEMENT_NAME_LENGTH = 120;
+/** Longest frozen scaling option id a client may submit. */
+const MAX_MOVEMENT_VARIANT_OPTION_ID_LENGTH = 120;
+/** Upper bound so a malformed client cannot write an unbounded array. */
+const MAX_MODIFIED_MOVEMENTS = 12;
+
+/**
+ * Bound and de-duplicate the marks a client sent.
+ *
+ * The client already filters these against the workout it rendered; this is the
+ * server refusing to store anything unbounded, not a second source of truth.
+ */
+/**
+ * Bound the variant map the client sent. The client already checks each choice
+ * against the movement's own ladder; this only refuses to store something
+ * unbounded or the wrong shape.
+ */
+export function normalizeMovementVariantMap(value: unknown): Record<string, string> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+
+  const cleaned: Record<string, string> = {};
+  for (const [name, optionId] of Object.entries(value as Record<string, unknown>)) {
+    if (
+      typeof optionId !== 'string' ||
+      !optionId ||
+      optionId.length > MAX_MOVEMENT_VARIANT_OPTION_ID_LENGTH
+    ) {
+      continue;
+    }
+    cleaned[name.slice(0, MAX_MOVEMENT_NAME_LENGTH)] = optionId;
+    if (Object.keys(cleaned).length >= MAX_MODIFIED_MOVEMENTS) {
+      break;
+    }
+  }
+
+  return cleaned;
+}
+
+export function normalizeModifiedMovementNames(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+  const cleaned: string[] = [];
+
+  for (const entry of value) {
+    if (typeof entry !== 'string') {
+      continue;
+    }
+    const name = entry.trim().slice(0, MAX_MOVEMENT_NAME_LENGTH);
+    const key = name.toLowerCase();
+    if (!name || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    cleaned.push(name);
+    if (cleaned.length >= MAX_MODIFIED_MOVEMENTS) {
+      break;
+    }
+  }
+
+  return cleaned;
+}
+
 export function deriveRoundDurationsSec(rounds: RoundRow[]): number[] {
   const sorted = [...rounds].sort((a, b) => a.round_index - b.round_index);
 
   return sorted.map((round, index) => {
-    const previousElapsed =
-      index > 0 ? sorted[index - 1].elapsed_sec_at_round : 0;
+    const previousElapsed = index > 0 ? sorted[index - 1].elapsed_sec_at_round : 0;
 
     return Math.max(0, round.elapsed_sec_at_round - previousElapsed);
   });
 }
 
 export async function hashClaimToken(claimToken: string): Promise<string> {
-  const digest = await crypto.subtle.digest(
-    'SHA-256',
-    new TextEncoder().encode(claimToken)
-  );
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(claimToken));
 
   return Array.from(new Uint8Array(digest))
     .map((byte) => byte.toString(16).padStart(2, '0'))
@@ -69,11 +176,11 @@ export async function hashClaimToken(claimToken: string): Promise<string> {
 
 export function isAuthorizedParticipant(
   participant: ParticipantRecord,
-  sessionId: string,
+  missionId: string,
   claimTokenHash: string | null,
   authUserId: string | null
 ): boolean {
-  if (participant.session_id !== sessionId) {
+  if (participant.mission_id !== missionId) {
     return false;
   }
 
@@ -85,17 +192,13 @@ export function isAuthorizedParticipant(
     return true;
   }
 
-  return (
-    authUserId !== null &&
-    participant.user_id !== null &&
-    participant.user_id === authUserId
-  );
+  return authUserId !== null && participant.user_id !== null && participant.user_id === authUserId;
 }
 
 export function validateSubmitRequest(
   body: SubmitParticipantResultRequest
 ): SubmitParticipantResultResponse | null {
-  if (!body.sessionId || !body.participantId) {
+  if (!body.missionId || !body.participantId) {
     return { ok: false, reason: 'participant_not_found' };
   }
 
@@ -128,28 +231,33 @@ export function computeLockedScore(
   durationMinutes: number,
   partialReps: number
 ): { repsPerRound: number; breakdown: ScoreBreakdown } | SubmitParticipantResultResponse {
-  let repsPerRound: number;
+  const roundCount = rounds.length;
+  const roundDurationsSec = deriveRoundDurationsSec(rounds);
 
+  let repsPerRound: number;
   try {
     repsPerRound = computeRepsPerRound(workout);
   } catch {
-    return { ok: false, reason: 'invalid_workout' };
+    // Name-only / unscorable prescriptions (some AMQAP text round-trips) still
+    // need a locked score_breakdown so HUD volume, lastLockedAt, and Active
+    // Recovery can count the finished mission. Score as completed rounds.
+    const baseScore = roundCount;
+    const breakdown = {
+      ...computeScoreBreakdown(roundDurationsSec, durationMinutes, 'finished', baseScore),
+      roundCount,
+      roundSplits: roundDurationsSec,
+    };
+    return { repsPerRound: 0, breakdown };
   }
 
-  if (partialReps >= repsPerRound) {
+  if (repsPerRound > 0 && partialReps >= repsPerRound) {
     return { ok: false, reason: 'partial_reps_too_high' };
   }
 
-  const roundCount = rounds.length;
-  const baseScore = computeBaseScore(roundCount, partialReps, repsPerRound);
-  const roundDurationsSec = deriveRoundDurationsSec(rounds);
+  const baseScore =
+    repsPerRound > 0 ? computeBaseScore(roundCount, partialReps, repsPerRound) : roundCount;
   const breakdown = {
-    ...computeScoreBreakdown(
-      roundDurationsSec,
-      durationMinutes,
-      'finished',
-      baseScore
-    ),
+    ...computeScoreBreakdown(roundDurationsSec, durationMinutes, 'finished', baseScore),
     roundCount,
     roundSplits: roundDurationsSec,
   };
@@ -161,24 +269,24 @@ export async function handleSubmitParticipantResult(
   body: SubmitParticipantResultRequest,
   deps: {
     authUserId: string | null;
-    fetchParticipant: (
-      participantId: string
-    ) => Promise<ParticipantRecord | null>;
-    fetchSession: (sessionId: string) => Promise<SessionRecord | null>;
+    fetchParticipant: (participantId: string) => Promise<ParticipantRecord | null>;
+    fetchMission: (missionId: string) => Promise<MissionRecord | null>;
     fetchExistingResult: (
       participantId: string,
       segmentIndex: number
     ) => Promise<ExistingSegmentResult | null>;
-    fetchRounds: (
-      participantId: string,
-      segmentIndex: number
-    ) => Promise<RoundRow[]>;
+    fetchRounds: (participantId: string, segmentIndex: number) => Promise<RoundRow[] | null>;
     persistResult: (input: {
       participantId: string;
       segmentIndex: number;
       partialReps: number;
       finalScore: number;
       scoreBreakdown: ScoreBreakdown;
+      modifiedMovements: string[];
+      movementVariants: Record<string, string>;
+      rpe: number | null;
+      sessionNotes: string;
+      checkIns: MissionCheckIns;
     }) => Promise<{ ok: true } | { ok: false; reason: string }>;
   }
 ): Promise<SubmitParticipantResultResponse> {
@@ -187,49 +295,44 @@ export async function handleSubmitParticipantResult(
     return validationError;
   }
 
-  const claimTokenHash =
-    body.claimToken.length > 0 ? await hashClaimToken(body.claimToken) : null;
+  const claimTokenHash = body.claimToken.length > 0 ? await hashClaimToken(body.claimToken) : null;
 
   const participant = await deps.fetchParticipant(body.participantId);
   if (
     !participant ||
-    !isAuthorizedParticipant(
-      participant,
-      body.sessionId,
-      claimTokenHash,
-      deps.authUserId
-    )
+    !isAuthorizedParticipant(participant, body.missionId, claimTokenHash, deps.authUserId)
   ) {
     return { ok: false, reason: 'invalid_claim_token' };
   }
 
-  const session = await deps.fetchSession(body.sessionId);
-  if (!session) {
-    return { ok: false, reason: 'session_not_found' };
+  const mission = await deps.fetchMission(body.missionId);
+  if (!mission) {
+    return { ok: false, reason: 'mission_not_found' };
   }
 
-  if (session.state !== 'finished') {
-    return { ok: false, reason: 'session_not_submittable' };
+  if (mission.state !== 'finished') {
+    return { ok: false, reason: 'mission_not_submittable' };
   }
 
-  if (body.segmentIndex !== session.segment_index) {
+  if (body.segmentIndex !== mission.segment_index) {
     return { ok: false, reason: 'stale_segment_index' };
   }
 
-  const existing = await deps.fetchExistingResult(
-    body.participantId,
-    body.segmentIndex
-  );
+  const existing = await deps.fetchExistingResult(body.participantId, body.segmentIndex);
 
   if (existing?.score_breakdown !== null && existing?.score_breakdown !== undefined) {
     return { ok: false, reason: 'score_already_locked' };
   }
 
   const rounds = await deps.fetchRounds(body.participantId, body.segmentIndex);
+  if (rounds === null) {
+    return { ok: false, reason: 'rounds_unavailable' };
+  }
+
   const computed = computeLockedScore(
     rounds,
-    session.workout,
-    session.duration_minutes,
+    mission.workout,
+    mission.duration_minutes,
     body.partialReps
   );
 
@@ -248,6 +351,11 @@ export async function handleSubmitParticipantResult(
     partialReps: body.partialReps,
     finalScore: breakdown.finalScore,
     scoreBreakdown: breakdown,
+    modifiedMovements: body.modifiedMovements,
+    movementVariants: body.movementVariants,
+    rpe: body.rpe,
+    sessionNotes: body.sessionNotes,
+    checkIns: body.checkIns,
   });
 
   if (!persisted.ok) {

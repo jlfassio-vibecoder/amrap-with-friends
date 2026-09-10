@@ -1,0 +1,350 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PacingCalculator from '../../islands/PacingCalculator';
+import { breadcrumbList, faqPage, referenceArticle } from '@/lib/seo/structuredData';
+import { referencesFor } from '@/lib/seo/scienceReferences';
+import { SITE_AUTHOR } from '@/lib/seo/author';
+
+const PATH = '/science/pacing';
+const PUBLISHED = '2026-09-05';
+const CHECKED = '2026-09-05';
+
+const refs = referencesFor([
+  'ulmer1996',
+  'noakes2012',
+  'shephard2009',
+  'abbiss2008',
+  'ramosCampo2025',
+  'terra2021',
+  'tibana2018',
+  'kliszczewicz2014',
+]);
+const n = Object.fromEntries(refs.map((reference, index) => [reference.id, index + 1]));
+
+const faqs = [
+  {
+    question: 'What is the best pacing strategy for an AMRAP?',
+    answer:
+      'Nobody can tell you with certainty. A 2025 network meta-analysis of imposed pacing strategies found no universally superior one and flagged conflicting findings across the literature. For efforts over a couple of minutes, distributing effort fairly evenly is a sound default — but it is a default, not a proven law.',
+  },
+  {
+    question: 'Why does the first round always feel easy?',
+    answer:
+      'Because pacing is regulated against the endpoint you know is coming, not against how you feel right now. Your first round is run with full reserves and no feedback yet, so it is almost always your fastest. Except on the shortest missions, five minutes and under, we exclude it from the variance calculation for that reason.',
+  },
+  {
+    question: 'Does knowing the clock change how hard you work?',
+    answer:
+      'Yes, measurably. Studies that secretly manipulate the clock athletes can see change how they distribute effort, which is direct evidence that pacing is a decision made against perceived time remaining rather than a purely physiological limit.',
+  },
+];
+
+const jsonLd = [
+  referenceArticle({
+    title: 'AMRAP Pacing: What the Research Supports',
+    description:
+      'What published research supports about pacing in AMRAP training, and where our own Pace Variance Index goes beyond it.',
+    path: PATH,
+    datePublished: PUBLISHED,
+    dateModified: CHECKED,
+    citations: refs.map((reference) => ({ title: reference.title, url: reference.url })),
+    about: ['Pacing', 'Teleoanticipation', 'Exercise physiology', 'AMRAP training'],
+  }),
+  faqPage(faqs),
+  breadcrumbList([
+    { name: 'Home', path: '/' },
+    { name: 'Science', path: '/science' },
+    { name: 'Pacing', path: PATH },
+  ]),
+];
+---
+
+<BaseLayout jsonLd={jsonLd}>
+  <article class="mx-auto w-full max-w-[44rem] space-y-12 px-6 py-12 lg:px-10 lg:py-16">
+    <nav aria-label="Breadcrumb" class="text-xs text-muted">
+      <a class="link-accent" href="/science">Science</a> / Pacing
+    </nav>
+
+    <header class="space-y-5">
+      <p class="eyebrow text-accent">Sourced review</p>
+      <h1 class="text-display text-[clamp(2.25rem,6vw,3.5rem)] leading-[0.95] text-ink">
+        AMRAP pacing: what the research supports
+      </h1>
+      <p class="border-l-2 border-accent pl-5 text-lg leading-[1.6] text-ink">
+        Pacing is a decision your nervous system makes against an endpoint it knows is coming, not a
+        wall you hit. That much is well supported. What is not settled is which distribution of
+        effort is best — the most recent synthesis found no universally superior strategy. An even
+        split is a sound default, and a default is all it is.
+      </p>
+      <p class="text-sm text-muted">
+        By <a class="link-accent" href={SITE_AUTHOR.path} rel="author">{SITE_AUTHOR.name}</a> · Sources
+        last checked <time datetime={CHECKED}>5 September 2026</time>
+      </p>
+    </header>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Pacing is anticipatory, not reactive</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        The idea is called <strong class="font-semibold text-ink">teleoanticipation</strong>: work
+        rate during heavy exercise is regulated by a feedback system that takes the finishing point
+        into account, rather than simply responding to how bad things feel right now.<sup
+          >{n.ulmer1996}</sup
+        >
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        You already know this is true from experience. You do not run the last minute of a
+        twenty-minute AMRAP the way you ran minute twelve, and nothing physiological changed at
+        minute nineteen to permit it. What changed is that the end became close enough to spend
+        against.
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        The direct evidence comes from lying to people about the clock. When researchers manipulated
+        the time feedback athletes could see, without their knowledge, pacing strategy changed.<sup
+          >{n.terra2021}</sup
+        > If effort were governed purely by the state of the muscle, a false clock would make no difference.
+        It does.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">
+        The central governor is a model, and it is disputed
+      </h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        The best-known account built on teleoanticipation is the central governor model, which
+        proposes the brain regulates performance by modulating how much muscle it recruits, using
+        the sensation of fatigue to keep you inside your physiological capacity.<sup
+          >{n.noakes2012}</sup
+        >
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        It is also a model plenty of physiologists want retired. A 2009 rebuttal in the same journal
+        family went through the supporting claims and argued the case had not been made.<sup
+          >{n.shephard2009}</sup
+        > The argument has continued since.
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        Take from that what is safe to take: <strong class="font-semibold text-ink"
+          >effort in a self-paced workout is regulated centrally and in anticipation.</strong
+        > Whether there is a discrete "governor" doing it is a live question, and any article that hands
+        you the mechanism without mentioning the argument is selling a tidier story than exists.
+      </p>
+    </section>
+
+    <section class="space-y-5">
+      <h2 class="text-display text-2xl text-ink">Is even pacing actually best?</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        This is where I have to be careful, because the answer is less convenient than the coaching
+        consensus.
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        The standard reference defines the pacing strategies — all-out, positive, even, negative,
+        parabolic, variable — and reports that very short events (30 seconds or less) suit an
+        all-out approach, while events beyond about two minutes tend to produce better times when
+        the pace is distributed more evenly.<sup>{n.abbiss2008}</sup> That is the basis for most pacing
+        advice you will read, including most of mine.
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        But a 2025 systematic review and network meta-analysis comparing imposed pacing strategies
+        found <strong class="font-semibold text-ink">no universally superior one</strong>, reported
+        that comparative effects remain unclear because of conflicting findings and methodological
+        variability, and concluded that self-pacing has real value as a flexible, context-adaptive
+        strategy.<sup>{n.ramosCampo2025}</sup>
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        So the honest position is narrower than "even pacing wins": pacing distribution matters, an
+        even split is a reasonable default for anything past a couple of minutes, and imposing a
+        strategy on an athlete is not reliably better than letting a trained one self-pace. If you
+        have been told the science settles this, it does not.
+      </p>
+    </section>
+
+    <section class="space-y-5">
+      <h2 class="text-display text-2xl text-ink">Where our Pace Variance Index sits</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        AMRAP With Friends computes a number we call the Pace Variance Index from your round times:
+      </p>
+      <p class="card p-5 text-center text-base text-ink">
+        <strong class="font-semibold">(slowest round − fastest round) ÷ average round × 100</strong>
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        Except on the shortest missions — five minutes and under — the first round is excluded, for
+        the reason above: an opening round run with full reserves and no feedback would otherwise
+        mark honest pacing as a collapse.<sup>{n.ulmer1996}</sup> On a five-minute clock every round counts,
+        because with only a handful of rounds in the workout, dropping one discards too much of the evidence.
+      </p>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[30rem] border-collapse text-left text-sm">
+          <thead>
+            <tr class="border-b border-border">
+              <th class="py-3 pr-4 font-semibold text-ink">Variance</th>
+              <th class="py-3 pr-4 font-semibold text-ink">We call it</th>
+              <th class="py-3 font-semibold text-ink">Reading</th>
+            </tr>
+          </thead>
+          <tbody class="text-secondary">
+            <tr class="border-b border-divider">
+              <td class="py-3 pr-4 font-semibold text-ink">Under 10%</td>
+              <td class="py-3 pr-4">Elite pacing</td>
+              <td class="py-3">Rounds looked alike from start to finish.</td>
+            </tr>
+            <tr class="border-b border-divider">
+              <td class="py-3 pr-4 font-semibold text-ink">10–20%</td>
+              <td class="py-3 pr-4">Standard</td>
+              <td class="py-3">Normal degradation.</td>
+            </tr>
+            <tr class="border-b border-divider">
+              <td class="py-3 pr-4 font-semibold text-ink">20–30%</td>
+              <td class="py-3 pr-4">Power leak</td>
+              <td class="py-3">The back half is noticeably slower than the front.</td>
+            </tr>
+            <tr>
+              <td class="py-3 pr-4 font-semibold text-ink">Over 30%</td>
+              <td class="py-3 pr-4">Collapse</td>
+              <td class="py-3">The two halves are barely the same workout.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card space-y-3 p-6">
+        <h3 class="font-semibold text-ink">What this metric is, and what it is not</h3>
+        <p class="text-base leading-[1.7] text-secondary">
+          <strong class="font-semibold text-ink">It is a description, not a verdict.</strong> It measures
+          how evenly you split a workout. It is a plain coefficient of spread, not a published index,
+          and <strong class="font-semibold text-ink"
+            >the four band thresholds are ours — they come from coaching judgement, not from a
+            study.</strong
+          >
+        </p>
+        <p class="text-base leading-[1.7] text-secondary">
+          No published research validates these cut-offs against AMRAP performance, because as far
+          as I can find nobody has done that work. We have not done it either: we do not yet have
+          enough recorded missions for the analysis to mean anything. When we do, it goes on
+          <a class="link-accent" href="/stats">the data page</a>, including if it shows the
+          thresholds are wrong.
+        </p>
+        <p class="text-base leading-[1.7] text-secondary">
+          What justifies publishing it anyway is narrower and defensible: round-time distribution is
+          a thing the pacing literature treats as consequential,<sup>{n.abbiss2008}</sup> it is free to
+          measure, and it responds to something you can actually change tomorrow. Treat the bands as a
+          coach's rule of thumb with a number attached.
+        </p>
+      </div>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Why pacing matters more in an AMRAP</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        Two features of the format make the pacing decision unusually costly. There is no prescribed
+        rest, so every recovery you take is paid for out of your own score. And the endpoint is
+        fixed in time rather than in work, so unlike a race you cannot finish early by going faster
+        — you can only do more.
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        The instrumentation says the intensity is high throughout and does not discriminate much. In
+        a direct comparison, roughly 4-minute and roughly 17-minute sessions both sat near 90% of
+        maximum heart rate with no significant difference between them.<sup>{n.tibana2018}</sup> In a
+        20-minute AMRAP, mean heart rate was around 171 bpm while oxygen uptake was only about 64% of
+        maximum.<sup>{n.kliszczewicz2014}</sup>
+      </p>
+      <p class="text-base leading-[1.7] text-secondary">
+        Both of those say the same thing for the athlete: <strong class="font-semibold text-ink"
+          >your heart rate will be high whatever you do, so it cannot tell you whether your pacing
+          was any good.</strong
+        > Round times can. That is the whole argument for measuring them, and it is covered further on
+        <a class="link-accent" href="/science/energy-systems">energy systems and the time cap</a>.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">What the research does not show</h2>
+      <ul class="space-y-3 text-base leading-[1.7] text-secondary">
+        <li>
+          <strong class="font-semibold text-ink">That any one pacing strategy is best.</strong> The most
+          recent synthesis says the opposite — conflicting findings, unclear comparative effects.<sup
+            >{n.ramosCampo2025}</sup
+          >
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">That the central governor model is correct.</strong
+          >
+          It is a contested model, not an established mechanism.<sup>{n.shephard2009}</sup>
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">That our variance bands predict anything.</strong>
+          They are unvalidated coaching thresholds. Said again here because it is the single easiest thing
+          on this page to misread.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">
+            That pacing research on cyclists and runners transfers cleanly to AMRAP.
+          </strong>
+          Most of this literature is continuous single-mode exercise. An AMRAP is multi-movement, self-scaled
+          and interrupted by transitions. The principles should carry; the specifics have not been tested
+          here.
+        </li>
+      </ul>
+    </section>
+
+    <section class="space-y-8">
+      <h2 class="text-display text-2xl text-ink">Related questions</h2>
+      {
+        faqs.map((faq) => (
+          <div class="space-y-3">
+            <h3 class="text-base font-semibold text-ink">{faq.question}</h3>
+            <p class="text-base leading-[1.7] text-secondary">{faq.answer}</p>
+          </div>
+        ))
+      }
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-display text-2xl text-ink">Measure your own splits</h2>
+      <p class="text-base leading-[1.7] text-secondary">
+        Whatever the literature settles on, the useful move is the same: log every round so you can
+        see the distribution instead of guessing at it. Type your round times below and this runs
+        the same functions the app runs — including the band thresholds this page has just told you
+        are unvalidated.
+      </p>
+      <PacingCalculator client:visible />
+      <p class="text-base leading-[1.7] text-secondary">
+        The practical version of this page is
+        <a class="link-accent" href="/guides/amrap-pacing">the pacing guide</a>.
+      </p>
+      <div class="flex flex-wrap gap-3">
+        <a
+          class="rounded-card bg-accent px-6 py-3.5 font-semibold text-on-accent hover:bg-accent-hover"
+          href="/create">Run a mission and log your rounds</a
+        >
+        <a
+          class="rounded-card border border-border bg-surface px-6 py-3.5 font-semibold text-ink"
+          href="/science/fatigue">How fatigue shows up in your movement</a
+        >
+      </div>
+    </section>
+
+    <section class="space-y-4 border-t border-border pt-8">
+      <h2 class="text-display text-2xl text-ink">References</h2>
+      <ol class="space-y-4 text-sm leading-[1.6] text-secondary">
+        {
+          refs.map((reference) => (
+            <li id={`ref-${reference.id}`}>
+              {reference.authors} ({reference.year}). {reference.title}. <em>{reference.source}</em>
+              .{' '}
+              <a class="link-accent" href={reference.url} rel="noopener" target="_blank">
+                {reference.url.replace(/^https?:\/\//, '')}
+              </a>
+              <span class="mt-1 block text-muted">{reference.note}</span>
+            </li>
+          ))
+        }
+      </ol>
+      <p class="text-sm leading-[1.6] text-muted">
+        This page is a practitioner's synthesis of published research, not original research and not
+        peer reviewed. Every claim above is sourced; where the evidence is thin, specialists
+        disagree, or a number is ours rather than the literature's, it says so. It is not medical
+        advice — see <a class="link-accent" href="/terms">our terms</a>.
+      </p>
+    </section>
+  </article>
+</BaseLayout>

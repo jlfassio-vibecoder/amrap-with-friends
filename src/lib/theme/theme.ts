@@ -2,7 +2,20 @@ export type Theme = 'light' | 'dark';
 
 export const THEME_STORAGE_KEY = 'theme';
 
-// Copilot suggestion ignored: theme helpers are thin DOM/localStorage wrappers; behavior is covered by App.test ThemeProvider integration.
+/** UA color-scheme for the active theme. `only light` opts out of Chrome Auto Dark. */
+export function colorSchemeForTheme(theme: Theme): 'only light' | 'dark' {
+  return theme === 'dark' ? 'dark' : 'only light';
+}
+
+export function syncColorScheme(theme: Theme): void {
+  const scheme = colorSchemeForTheme(theme);
+  document.documentElement.style.colorScheme = scheme;
+  const meta = document.querySelector('meta[name="color-scheme"]');
+  if (meta) {
+    meta.setAttribute('content', scheme);
+  }
+}
+
 export function getStoredTheme(): Theme {
   try {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
@@ -19,6 +32,7 @@ export function getAppliedTheme(): Theme {
 
 export function applyTheme(theme: Theme): void {
   document.documentElement.setAttribute('data-theme', theme);
+  syncColorScheme(theme);
   try {
     localStorage.setItem(THEME_STORAGE_KEY, theme);
   } catch {

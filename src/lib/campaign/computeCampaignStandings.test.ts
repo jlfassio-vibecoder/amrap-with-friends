@@ -31,9 +31,10 @@ function occurrence(
 function score(
   occurrenceId: string,
   userId: string,
-  finalScore: number | null
+  finalScore: number | null,
+  madeUp = false
 ): CampaignStandingsScore {
-  return { occurrenceId, userId, finalScore };
+  return { occurrenceId, userId, finalScore, madeUp: madeUp || undefined };
 }
 
 function input(partial: Partial<CampaignStandingsInput>): CampaignStandingsInput {
@@ -76,6 +77,39 @@ describe('computeCampaignStandings', () => {
       attended: 2,
       eligible: 2,
     });
+  });
+
+  it('does not treat an unscored row as attendance', () => {
+    // The scheduler seeds a host participant into every generated mission, so
+    // the host used to ship a score row for missions they skipped. Counting
+    // those overstated attendance and averaged the absences in as zeros.
+    const rows = computeCampaignStandings(
+      input({
+        members: [member('host'), member('b')],
+        occurrences: [
+          occurrence('o1', '2026-10-05'),
+          occurrence('o2', '2026-10-07'),
+          occurrence('o3', '2026-10-09'),
+        ],
+        scores: [
+          score('o1', 'host', 90),
+          score('o1', 'b', 100),
+          score('o2', 'b', 100),
+          score('o3', 'b', 100),
+          // Host was enrolled in o2/o3 but never trained them.
+          { occurrenceId: 'o2', userId: 'host', finalScore: null },
+          { occurrenceId: 'o3', userId: 'host', finalScore: null },
+        ],
+      })
+    );
+
+    const host = rows.find((row) => row.userId === 'host');
+    expect(host).toMatchObject({ attended: 1, eligible: 3 });
+    expect(host?.normalisedAverage).toBeCloseTo(0.9, 5);
+    // Trained once and trained it well: ahead of nobody here, but not last on
+    // a 0.3 average dragged down by two absences.
+    expect(rows[0].userId).toBe('b');
+    expect(rows[1].userId).toBe('host');
   });
 
   it('gives a member who attended nothing a null average and ranks them last', () => {
@@ -147,7 +181,7 @@ describe('computeCampaignStandings', () => {
     });
   });
 
-  it('treats a missing final_score as zero for that occurrence', () => {
+  it('treats a missing final_score as absence, not as a zero score', () => {
     const rows = computeCampaignStandings(
       input({
         members: [member('a'), member('b')],
@@ -160,8 +194,8 @@ describe('computeCampaignStandings', () => {
     expect(rows[0].normalisedAverage).toBe(1);
     expect(rows[1]).toMatchObject({
       userId: 'a',
-      normalisedAverage: 0,
-      attended: 1,
+      normalisedAverage: null,
+      attended: 0,
     });
   });
 
@@ -181,7 +215,7 @@ describe('computeCampaignStandings', () => {
     expect(rows[1]).toMatchObject({ userId: 'active', left: false, rank: 2 });
   });
 
-  it('only counts generated and done occurrences toward eligibility', () => {
+  it('counts generated, done, and skipped occurrences toward eligibility', () => {
     const rows = computeCampaignStandings(
       input({
         members: [member('a')],
@@ -195,6 +229,24 @@ describe('computeCampaignStandings', () => {
       })
     );
 
-    expect(rows[0]).toMatchObject({ attended: 1, eligible: 2 });
+    expect(rows[0]).toMatchObject({ attended: 1, eligible: 3 });
+  });
+
+  it('flags members who have at least one makeup score', () => {
+    const rows = computeCampaignStandings(
+      input({
+        members: [member('a'), member('b')],
+        occurrences: [occurrence('o1', '2026-10-05'), occurrence('o2', '2026-10-07')],
+        scores: [
+          score('o1', 'a', 100, true),
+          score('o1', 'b', 90),
+          score('o2', 'a', 80),
+          score('o2', 'b', 80),
+        ],
+      })
+    );
+
+    expect(rows.find((row) => row.userId === 'a')).toMatchObject({ hasMadeUp: true });
+    expect(rows.find((row) => row.userId === 'b')).toMatchObject({ hasMadeUp: false });
   });
 });

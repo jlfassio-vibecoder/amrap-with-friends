@@ -1,11 +1,11 @@
-import { Link } from 'react-router-dom';
+import { AppLink } from '@/components/AppLink';
 import { AuthHeaderActions } from '@/components/AuthHeaderActions';
 import type { HeaderTone } from '@/components/headerTone';
 
 interface AppHeaderProps {
   title: string;
   subtitle?: string;
-  /** When true, the desktop header center title is the page's sole h1 (Session). */
+  /** When true, the desktop header center title is the page's sole h1 (Mission). */
   desktopTitleAsPageHeading?: boolean;
   /**
    * Hide the header title on every breakpoint, leaving only the brand link and
@@ -41,9 +41,9 @@ export function AppHeader({
       <header
         className={`hidden items-center justify-between gap-4 px-8 py-4 lg:flex ${desktopBarClassName}`}
       >
-        <Link className={brandClassName} to="/">
+        <AppLink className={brandClassName} to="/">
           AMRAP With Friends
-        </Link>
+        </AppLink>
         <div className="text-center">
           {!hidePageTitle ? (
             desktopTitleAsPageHeading ? (

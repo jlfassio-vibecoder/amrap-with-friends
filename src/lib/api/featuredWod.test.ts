@@ -22,7 +22,7 @@ describe('fetchCurrentFeaturedWod', () => {
     expect(result.data).toBeNull();
   });
 
-  it('parses a next-occurrence featured wod with no session yet', async () => {
+  it('parses a next-occurrence featured wod with no mission yet', async () => {
     callRpcMock.mockResolvedValue({
       data: {
         ok: true,
@@ -33,7 +33,7 @@ describe('fetchCurrentFeaturedWod', () => {
           intensityTier: 3,
           tags: ['functional fitness'],
           scheduledAt: '2026-09-01T13:00:00.000Z',
-          sessionId: null,
+          missionId: null,
           state: null,
           attendeeCount: null,
         },
@@ -45,7 +45,7 @@ describe('fetchCurrentFeaturedWod', () => {
 
     expect(result.error).toBeNull();
     expect(result.data?.workoutName).toBe('Sunrise AMRAP');
-    expect(result.data?.sessionId).toBeNull();
+    expect(result.data?.missionId).toBeNull();
     expect(result.data?.state).toBeNull();
     expect(result.data?.attendeeCount).toBeNull();
   });
@@ -61,7 +61,7 @@ describe('fetchCurrentFeaturedWod', () => {
           intensityTier: 3,
           tags: [],
           scheduledAt: '2026-09-01T13:00:00.000Z',
-          sessionId: '22222222-2222-4222-8222-222222222222',
+          missionId: '22222222-2222-4222-8222-222222222222',
           state: 'waiting',
           startedAt: null,
           attendeeCount: 4,
@@ -72,13 +72,13 @@ describe('fetchCurrentFeaturedWod', () => {
 
     const result = await fetchCurrentFeaturedWod();
 
-    expect(result.data?.sessionId).toBe('22222222-2222-4222-8222-222222222222');
+    expect(result.data?.missionId).toBe('22222222-2222-4222-8222-222222222222');
     expect(result.data?.state).toBe('waiting');
     expect(result.data?.startedAt).toBeNull();
     expect(result.data?.attendeeCount).toBe(4);
   });
 
-  it('parses setup/finished/startedAt on a generated session', async () => {
+  it('parses setup/finished/startedAt on a generated mission', async () => {
     callRpcMock.mockResolvedValue({
       data: {
         ok: true,
@@ -89,7 +89,7 @@ describe('fetchCurrentFeaturedWod', () => {
           intensityTier: 3,
           tags: [],
           scheduledAt: '2026-09-01T13:00:00.000Z',
-          sessionId: '22222222-2222-4222-8222-222222222222',
+          missionId: '22222222-2222-4222-8222-222222222222',
           state: 'setup',
           startedAt: null,
           attendeeCount: 2,
@@ -112,7 +112,7 @@ describe('fetchCurrentFeaturedWod', () => {
           intensityTier: 3,
           tags: [],
           scheduledAt: '2026-09-01T13:00:00.000Z',
-          sessionId: '22222222-2222-4222-8222-222222222222',
+          missionId: '22222222-2222-4222-8222-222222222222',
           state: 'finished',
           startedAt: null,
           attendeeCount: 2,

@@ -1,0 +1,103 @@
+---
+/**
+ * Isabel energy split (Rios et al. 2024) as a part-to-whole bar.
+ *
+ * Static SVG, rendered at build time: the science pages are zero-JS so a
+ * crawler that never runs JavaScript still gets the figure, and every value is
+ * direct-labelled, so there is nothing a hover layer would reveal. Colours are
+ * the validated chart tokens, never the avatar hues.
+ */
+interface Segment {
+  name: string;
+  percent: number;
+  token: string;
+}
+
+const segments: Segment[] = [
+  { name: 'Phosphagen', percent: 15, token: 'var(--color-chart-1)' },
+  { name: 'Glycolytic', percent: 45, token: 'var(--color-chart-2)' },
+  { name: 'Oxidative', percent: 40, token: 'var(--color-chart-3)' },
+];
+
+const WIDTH = 640;
+const GAP = 2; // the surface gap the design system puts between adjacent fills
+const BAR_Y = 0;
+const BAR_H = 52;
+const R = 4;
+
+const plot = WIDTH - GAP * (segments.length - 1);
+let cursor = 0;
+const laid = segments.map((segment, index) => {
+  const w = (segment.percent / 100) * plot;
+  const x = cursor;
+  cursor += w + GAP;
+  return { ...segment, x, w, first: index === 0, last: index === segments.length - 1 };
+});
+
+/** Rounded on the outer ends only — the interior joins are butt ends with a gap. */
+function segmentPath(x: number, w: number, first: boolean, last: boolean): string {
+  const y = BAR_Y;
+  const h = BAR_H;
+  const left = first ? R : 0;
+  const right = last ? R : 0;
+  return [
+    `M ${x + left} ${y}`,
+    `H ${x + w - right}`,
+    right ? `a ${R} ${R} 0 0 1 ${R} ${R}` : '',
+    `V ${y + h - right}`,
+    right ? `a ${R} ${R} 0 0 1 ${-R} ${R}` : '',
+    `H ${x + left}`,
+    left ? `a ${R} ${R} 0 0 1 ${-R} ${-R}` : '',
+    `V ${y + left}`,
+    left ? `a ${R} ${R} 0 0 1 ${R} ${-R}` : '',
+    'Z',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+---
+
+<figure class="my-8 space-y-4">
+  <figcaption class="space-y-1">
+    <p class="text-display text-lg text-ink">Where the energy came from in a ~117-second workout</p>
+    <p class="text-sm text-secondary">
+      "Isabel" — 30 snatches for time, 245 ± 25 kJ total. Percentages of total energy turnover.
+    </p>
+  </figcaption>
+
+  <svg
+    viewBox={`0 0 ${WIDTH} ${BAR_H + 44}`}
+    class="h-auto w-full"
+    role="img"
+    aria-label="Phosphagen 15 percent, glycolytic 45 percent, oxidative 40 percent of total energy."
+  >
+    {
+      laid.map((segment) => (
+        <path
+          d={segmentPath(segment.x, segment.w, segment.first, segment.last)}
+          fill={segment.token}
+        >
+          <title>{`${segment.name}: ${segment.percent}%`}</title>
+        </path>
+      ))
+    }
+    {
+      laid.map((segment) => (
+        <g>
+          <rect x={segment.x} y={BAR_H + 14} width="9" height="9" rx="2" fill={segment.token} />
+          <text
+            x={segment.x + 14}
+            y={BAR_H + 22}
+            class="fill-ink text-[13px] font-semibold"
+            style="font-size:13px"
+          >
+            {segment.percent}%
+          </text>
+          <text x={segment.x} y={BAR_H + 40} class="fill-secondary" style="font-size:12px">
+            {segment.name}
+          </text>
+        </g>
+      ))
+    }
+  </svg>
+</figure>

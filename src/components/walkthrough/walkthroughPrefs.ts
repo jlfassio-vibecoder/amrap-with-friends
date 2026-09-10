@@ -1,8 +1,8 @@
-import type { WalkthroughRole } from './stagingWalkthrough';
+import type { WalkthroughRole } from './rallyPointWalkthrough';
 
 const STORAGE_KEYS: Record<WalkthroughRole, string> = {
-  host: 'amrap_staging_walkthrough_v1_host',
-  joiner: 'amrap_staging_walkthrough_v1_joiner',
+  host: 'amrap_rally_point_walkthrough_v1_host',
+  joiner: 'amrap_rally_point_walkthrough_v1_joiner',
 };
 
 const DISMISSED_VALUE = 'dismissed';

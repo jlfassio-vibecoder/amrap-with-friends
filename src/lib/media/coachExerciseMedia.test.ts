@@ -65,7 +65,7 @@ describe('uploadCoachExercisePhoto', () => {
     expect(uploadMock).not.toHaveBeenCalled();
   });
 
-  it('uploads a valid image as ArrayBuffer on the session-scoped path', async () => {
+  it('uploads a valid image as ArrayBuffer on the mission-scoped path', async () => {
     uploadMock.mockResolvedValue({ error: null });
     const file = makeFile('photo.jpeg', 'image/jpeg', 1024);
 
@@ -83,7 +83,7 @@ describe('uploadCoachExercisePhoto', () => {
     expect(result.path).toBe('coach-1/ex-1/photo-1.jpeg');
   });
 
-  it('rejects when there is no auth session', async () => {
+  it('rejects when there is no auth mission', async () => {
     getSessionMock.mockResolvedValue({ data: { session: null }, error: null });
     const file = makeFile('photo.jpeg', 'image/jpeg', 1024);
 
@@ -95,7 +95,9 @@ describe('uploadCoachExercisePhoto', () => {
   });
 
   it('surfaces a storage upload failure', async () => {
-    uploadMock.mockResolvedValue({ error: { message: 'new row violates row-level security policy' } });
+    uploadMock.mockResolvedValue({
+      error: { message: 'new row violates row-level security policy' },
+    });
     const file = makeFile('photo.jpeg', 'image/jpeg', 1024);
 
     const result = await uploadCoachExercisePhoto('coach-1', 'ex-1', 'photo-1', file);

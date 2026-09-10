@@ -1,13 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 import {
   handleSubmitParticipantResult,
+  normalizeSubmitRequest,
   type SubmitParticipantResultRequest,
 } from './handler.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -34,12 +34,14 @@ Deno.serve(async (req) => {
     return jsonResponse({ ok: false, reason: 'server_misconfigured' }, 500);
   }
 
-  let body: SubmitParticipantResultRequest;
+  let rawBody: Record<string, unknown>;
   try {
-    body = await req.json();
+    rawBody = await req.json();
   } catch {
     return jsonResponse({ ok: false, reason: 'invalid_json' }, 400);
   }
+
+  const body: SubmitParticipantResultRequest = normalizeSubmitRequest(rawBody);
 
   const authHeader = req.headers.get('Authorization');
   let authUserId: string | null = null;
@@ -62,7 +64,7 @@ Deno.serve(async (req) => {
     fetchParticipant: async (participantId) => {
       const { data, error } = await adminClient
         .from('participants')
-        .select('claim_token_hash, session_id, user_id')
+        .select('claim_token_hash, mission_id, user_id')
         .eq('id', participantId)
         .maybeSingle();
 
@@ -72,11 +74,11 @@ Deno.serve(async (req) => {
 
       return data;
     },
-    fetchSession: async (sessionId) => {
+    fetchMission: async (missionId) => {
       const { data, error } = await adminClient
-        .from('sessions')
+        .from('missions')
         .select('state, segment_index, workout, duration_minutes')
-        .eq('id', sessionId)
+        .eq('id', missionId)
         .maybeSingle();
 
       if (error || !data) {
@@ -113,19 +115,26 @@ Deno.serve(async (req) => {
         .order('round_index', { ascending: true });
 
       if (error || !data) {
-        return [];
+        return null;
       }
 
       return data;
     },
     persistResult: async (input) => {
+      const lockedAt = new Date().toISOString();
       const { data: updated, error: updateError } = await adminClient
         .from('participant_segment_results')
         .update({
           partial_reps: input.partialReps,
           final_score: input.finalScore,
           score_breakdown: input.scoreBreakdown,
-          updated_at: new Date().toISOString(),
+          modified_movements: input.modifiedMovements,
+          movement_variants: input.movementVariants,
+          rpe: input.rpe,
+          session_notes: input.sessionNotes.length > 0 ? input.sessionNotes : null,
+          check_ins: Object.keys(input.checkIns).length > 0 ? input.checkIns : null,
+          locked_at: lockedAt,
+          updated_at: lockedAt,
         })
         .eq('participant_id', input.participantId)
         .eq('segment_index', input.segmentIndex)
@@ -149,6 +158,12 @@ Deno.serve(async (req) => {
           partial_reps: input.partialReps,
           final_score: input.finalScore,
           score_breakdown: input.scoreBreakdown,
+          modified_movements: input.modifiedMovements,
+          movement_variants: input.movementVariants,
+          rpe: input.rpe,
+          session_notes: input.sessionNotes.length > 0 ? input.sessionNotes : null,
+          check_ins: Object.keys(input.checkIns).length > 0 ? input.checkIns : null,
+          locked_at: lockedAt,
         })
         .select('participant_id')
         .maybeSingle();
@@ -172,5 +187,6 @@ Deno.serve(async (req) => {
     },
   });
 
-  return jsonResponse(result, result.ok ? 200 : 400);
+  // Always 200 so supabase-js surfaces `{ ok, reason }` instead of FunctionsHttpError.
+  return jsonResponse(result, 200);
 });

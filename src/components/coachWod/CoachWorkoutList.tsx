@@ -63,9 +63,7 @@ export function CoachWorkoutList({
     return Array.from(tags).sort();
   }, [workouts]);
 
-  const visibleWorkouts = activeTag
-    ? workouts.filter((w) => w.tags.includes(activeTag))
-    : workouts;
+  const visibleWorkouts = activeTag ? workouts.filter((w) => w.tags.includes(activeTag)) : workouts;
 
   async function handleDelete(workout: CoachWorkoutSummary) {
     const result = await deleteCoachWorkout(workout.id);
@@ -146,7 +144,7 @@ export function CoachWorkoutList({
                   {workout.isLocked ? (
                     <span
                       className="ml-2 rounded-card border border-border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary"
-                      title="Locked — has a completed session"
+                      title="Locked — has a completed mission"
                     >
                       Locked
                     </span>
@@ -163,8 +161,9 @@ export function CoachWorkoutList({
                   ) : null}
                 </p>
                 <p className="text-xs text-secondary">
-                  {workout.durationMinutes}m · {INTENSITY_LABEL[workout.intensityTier] ?? workout.intensityTier}{' '}
-                  · {workout.movementCount} movement{workout.movementCount === 1 ? '' : 's'}
+                  {workout.durationMinutes}m ·{' '}
+                  {INTENSITY_LABEL[workout.intensityTier] ?? workout.intensityTier} ·{' '}
+                  {workout.movementCount} movement{workout.movementCount === 1 ? '' : 's'}
                   {workout.tags.length > 0 ? ` · ${workout.tags.join(', ')}` : ''}
                 </p>
               </button>

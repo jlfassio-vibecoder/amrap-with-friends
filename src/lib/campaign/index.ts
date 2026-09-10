@@ -1,8 +1,10 @@
 export {
   CAMPAIGN_WEEK_COUNTS,
   MAX_CAMPAIGN_OCCURRENCES,
-  MAX_SESSIONS_PER_WEEK,
-  MIN_SESSIONS_PER_WEEK,
+  MAX_CAMPAIGN_TESTS,
+  MAX_MISSIONS_PER_WEEK,
+  MIN_MISSIONS_PER_WEEK,
+  MIN_WEEKS_FOR_DELOAD,
 } from './constants';
 export {
   addCalendarDays,
@@ -17,6 +19,8 @@ export {
   WEEKDAY_LABELS,
   WEEKDAY_SHORT,
   campaignProgress,
+  campaignScheduleStatusLabel,
+  campaignViewerCompletedCount,
   defaultCampaignStartDate,
   formatCampaignDate,
   formatCampaignShape,
@@ -24,15 +28,36 @@ export {
   formatOccurrenceDate,
   formatSlotLabel,
   groupOccurrencesByWeek,
+  selectCampaignPreviewWeekNumbers,
   suggestedSlots,
 } from './campaignPresentation';
 export type {
   CampaignProgress,
   CampaignWeekGroup,
+  ViewerCompletedScore,
   WeekGroupable,
 } from './campaignPresentation';
-export { assignCampaignWorkouts } from './assignCampaignWorkouts';
-export type { AssignCampaignWorkoutsInput } from './assignCampaignWorkouts';
+export { planCampaignWorkouts } from './planCampaignWorkouts';
+export type { PlanCampaignWorkoutsInput } from './planCampaignWorkouts';
+export { BENCHMARK_FINGERPRINTS, fingerprintWorkoutTemplate } from './benchmarkFingerprints';
+export {
+  allBenchmarkTemplateIds,
+  allBenchmarkTrackKeys,
+  benchmarkTemplateIdFor,
+  campaignTrackKey,
+} from './campaignBenchmarks';
+export { orderPoolByVolume, repsPerRound } from './campaignVolume';
+export { campaignRoleDescription, campaignRoleLabel, deriveCampaignRoles } from './campaignRoles';
+export type { CampaignOccurrenceRole, RoleReadableOccurrence } from './campaignRoles';
+export {
+  canDeleteCampaign,
+  canEditCampaign,
+  canEndCampaign,
+  canRescheduleOccurrence,
+  hasCampaignStarted,
+  isCampaignClosed,
+} from './campaignLifecycle';
+export type { CampaignLifecycleInput, LifecycleOccurrence } from './campaignLifecycle';
 export { computeCampaignStandings } from './computeCampaignStandings';
 export type {
   CampaignStandingRow,
@@ -41,6 +66,35 @@ export type {
   CampaignStandingsOccurrence,
   CampaignStandingsScore,
 } from './computeCampaignStandings';
+export {
+  campaignSquadProgressStatusLabel,
+  computeCampaignSquadProgress,
+} from './computeCampaignSquadProgress';
+export type {
+  CampaignSquadProgressInput,
+  CampaignSquadProgressRow,
+  SquadProgressForfeit,
+  SquadProgressOccurrence,
+} from './computeCampaignSquadProgress';
+export {
+  campaignTestComparisonNote,
+  computeCampaignTestProgress,
+  formatCampaignRepDelta,
+  formatCampaignRepScore,
+} from './computeCampaignTestProgress';
+export type {
+  CampaignTestProgress,
+  CampaignTestProgressInput,
+  CampaignTestProgressRow,
+  TestProgressOccurrence,
+} from './computeCampaignTestProgress';
+export { campaignMakeupQueue, campaignMakeupQueueHead } from './campaignMakeupQueue';
+export type {
+  MakeupQueueInput,
+  MakeupQueueMakeup,
+  MakeupQueueOccurrence,
+  MakeupQueueScore,
+} from './campaignMakeupQueue';
 export {
   CampaignValidationError,
   type CampaignCalendar,

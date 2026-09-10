@@ -3,7 +3,7 @@ import { computeBaseScore } from '@/lib/scoring/computeBaseScore';
 import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
 
 export interface GhostRunRef {
-  sessionId: string;
+  missionId: string;
   participantId: string;
   nickname: string;
   finalScore: number;
@@ -12,7 +12,17 @@ export interface GhostRunRef {
 }
 
 export interface AvailableGhosts {
+  /** Best standard run. Never a modified one — a scaled score is not a target. */
   personalBest: GhostRunRef | null;
+  /**
+   * Best previous run of the exact version the athlete is about to perform.
+   *
+   * Null when no version was named, or when they have not done this workout
+   * that way before. Additive to `personalBest` rather than replacing it: their
+   * own standard best is theirs to see, it is just not the like-for-like
+   * comparison when they have said they are scaling.
+   */
+  variantBest: GhostRunRef | null;
   friends: GhostRunRef[];
 }
 
@@ -22,7 +32,7 @@ export interface GhostCurveRound {
 }
 
 export interface GhostCurveData {
-  sessionId: string;
+  missionId: string;
   participantId: string;
   segmentIndex: number;
   durationSec: number;
@@ -48,13 +58,13 @@ function readNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
-function parseGhostRunRef(raw: unknown): GhostRunRef | null {
+export function parseGhostRunRef(raw: unknown): GhostRunRef | null {
   if (!raw || typeof raw !== 'object') {
     return null;
   }
 
   const row = raw as Record<string, unknown>;
-  const sessionId = readString(row.session_id);
+  const missionId = readString(row.mission_id);
   const participantId = readString(row.participant_id);
   const nickname = readString(row.nickname);
   const finalScore = readNumber(row.final_score);
@@ -62,7 +72,7 @@ function parseGhostRunRef(raw: unknown): GhostRunRef | null {
   const createdAt = readString(row.created_at);
 
   if (
-    !sessionId ||
+    !missionId ||
     !participantId ||
     !nickname ||
     finalScore === null ||
@@ -73,7 +83,7 @@ function parseGhostRunRef(raw: unknown): GhostRunRef | null {
   }
 
   return {
-    sessionId,
+    missionId,
     participantId,
     nickname,
     finalScore,
@@ -100,11 +110,16 @@ function parseGhostCurveRound(raw: unknown): GhostCurveRound | null {
 
 export async function fetchAvailableGhosts(
   templateId: string,
-  durationMinutes: number
+  durationMinutes: number,
+  forMissionId?: string | null,
+  /** From `versionKeyFor`; empty or omitted asks for the standard best only. */
+  versionKey?: string | null
 ): Promise<{ data: AvailableGhosts | null; error: GhostApiError | null }> {
   const { data, error } = await callRpc('available_ghosts', {
     p_template_id: templateId,
     p_duration_minutes: durationMinutes,
+    p_for_mission_id: forMissionId ?? null,
+    p_version_key: versionKey || null,
   });
 
   if (error) {
@@ -127,23 +142,24 @@ export async function fetchAvailableGhosts(
   }
 
   const personalBest = parseGhostRunRef(raw.personal_best);
+  const variantBest = parseGhostRunRef(raw.variant_best);
   const friendsRaw = Array.isArray(raw.friends) ? raw.friends : [];
   const friends = friendsRaw
     .map((entry) => parseGhostRunRef(entry))
     .filter((entry): entry is GhostRunRef => entry !== null);
 
   return {
-    data: { personalBest, friends },
+    data: { personalBest, variantBest, friends },
     error: null,
   };
 }
 
 export async function fetchGhostCurveData(
-  sessionId: string,
+  missionId: string,
   participantId: string
 ): Promise<{ data: GhostCurveData | null; error: GhostApiError | null }> {
   const { data, error } = await callRpc('ghost_curve_data', {
-    p_session_id: sessionId,
+    p_mission_id: missionId,
     p_participant_id: participantId,
   });
 
@@ -164,7 +180,7 @@ export async function fetchGhostCurveData(
     if (reason === 'forbidden') {
       return { data: null, error: { message: 'You cannot access this ghost run.' } };
     }
-    if (reason === 'participant_not_found' || reason === 'session_not_found') {
+    if (reason === 'participant_not_found' || reason === 'mission_not_found') {
       return { data: null, error: { message: 'Ghost run not found.' } };
     }
     return {
@@ -173,14 +189,14 @@ export async function fetchGhostCurveData(
     };
   }
 
-  const parsedSessionId = readString(raw.session_id);
+  const parsedMissionId = readString(raw.mission_id);
   const parsedParticipantId = readString(raw.participant_id);
   const segmentIndex = readNumber(raw.segment_index) ?? 0;
   const durationMinutes = readNumber(raw.duration_minutes);
   const partialReps = readNumber(raw.partial_reps) ?? 0;
   const workout = raw.workout;
 
-  if (!parsedSessionId || !parsedParticipantId || durationMinutes === null) {
+  if (!parsedMissionId || !parsedParticipantId || durationMinutes === null) {
     return {
       data: null,
       error: { message: 'Something went wrong. Please try again.' },
@@ -213,7 +229,7 @@ export async function fetchGhostCurveData(
 
   return {
     data: {
-      sessionId: parsedSessionId,
+      missionId: parsedMissionId,
       participantId: parsedParticipantId,
       segmentIndex,
       durationSec: durationMinutes * 60,

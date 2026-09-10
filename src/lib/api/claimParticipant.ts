@@ -9,7 +9,7 @@ export interface ClaimParticipantInput {
 export interface ClaimParticipantSuccess {
   ok: true;
   participantId: string;
-  sessionId: string;
+  missionId: string;
   userId: string;
   alreadyClaimed: boolean;
 }
@@ -38,26 +38,21 @@ function mapRpcError(message: string | undefined): string {
     return 'Something went wrong. Please try again.';
   }
   if (message.includes('Authentication required')) {
-    return 'Sign in to save this session to your account.';
+    return 'Sign in to save this mission to your account.';
   }
   if (message.includes('Participant not found')) {
     return 'Participant not found.';
   }
   if (message.includes('Invalid claim')) {
-    return 'Could not save session. Try again.';
+    return 'Could not save mission. Try again.';
   }
-  if (
-    message.includes('Could not find the function') ||
-    message.includes('PGRST202')
-  ) {
+  if (message.includes('Could not find the function') || message.includes('PGRST202')) {
     return 'Claim status check is unavailable on this Supabase project.';
   }
   return message;
 }
 
-export async function claimParticipant(
-  input: ClaimParticipantInput
-): Promise<{
+export async function claimParticipant(input: ClaimParticipantInput): Promise<{
   data: ClaimParticipantResult | null;
   error: ClaimParticipantApiError | null;
 }> {
@@ -70,8 +65,7 @@ export async function claimParticipant(
     return { data: null, error: { message: mapRpcError(error.message) } };
   }
 
-  const raw =
-    data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
   const ok = raw.ok === true;
 
   if (!ok) {
@@ -83,10 +77,10 @@ export async function claimParticipant(
   }
 
   const participantId = readString(raw.participant_id);
-  const sessionId = readString(raw.session_id);
+  const missionId = readString(raw.mission_id);
   const userId = readString(raw.user_id);
 
-  if (!participantId || !sessionId || !userId) {
+  if (!participantId || !missionId || !userId) {
     return {
       data: null,
       error: { message: 'Something went wrong. Please try again.' },
@@ -97,7 +91,7 @@ export async function claimParticipant(
     data: {
       ok: true,
       participantId,
-      sessionId,
+      missionId,
       userId,
       alreadyClaimed: raw.already_claimed === true,
     },
@@ -114,13 +108,8 @@ function readClaimStatus(value: unknown): ResolvedClaimStatus | null {
   return null;
 }
 
-export async function fetchParticipantClaimStatus(
-  participantId: string
-): Promise<{
-  data:
-    | { ok: true; status: ResolvedClaimStatus }
-    | { ok: false; reason: string }
-    | null;
+export async function fetchParticipantClaimStatus(participantId: string): Promise<{
+  data: { ok: true; status: ResolvedClaimStatus } | { ok: false; reason: string } | null;
   error: ClaimParticipantApiError | null;
 }> {
   const { data, error } = await callRpc('get_participant_claim_status', {
@@ -131,8 +120,7 @@ export async function fetchParticipantClaimStatus(
     return { data: null, error: { message: mapRpcError(error.message) } };
   }
 
-  const raw =
-    data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
 
   if (raw.ok !== true) {
     const reason = readString(raw.reason) ?? 'unknown';

@@ -1,19 +1,47 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { AppLink } from '@/components/AppLink';
+import { useNavigate, useParams } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
+import { CampaignEditForm } from '@/components/campaign/CampaignEditForm';
+import { CampaignScheduleSection } from '@/components/campaign/CampaignScheduleSection';
+import { AddSquadFriendToCampaign } from '@/components/campaign/AddSquadFriendToCampaign';
 import { CopyCampaignInvite } from '@/components/campaign/CopyCampaignInvite';
+import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import {
+  deleteCampaign,
+  endCampaign,
   fetchCampaignDetail,
   fetchCampaignStandings,
   leaveCampaign,
+  rescheduleCampaignOccurrence,
+  startCampaignMakeup,
+  skipCampaignMakeup,
+  updateCampaign,
   type CampaignDetail,
-  type CampaignStandingRow,
+  type CampaignStandingsMember,
+  type CampaignStandingsScore,
 } from '@/lib/api/campaigns';
 import {
+  campaignMakeupQueue,
   campaignProgress,
+  campaignViewerCompletedCount,
+  campaignRoleDescription,
+  campaignRoleLabel,
+  campaignSquadProgressStatusLabel,
+  canDeleteCampaign,
+  canEditCampaign,
+  canEndCampaign,
+  canRescheduleOccurrence,
+  computeCampaignSquadProgress,
+  computeCampaignTestProgress,
+  deriveCampaignRoles,
+  campaignTestComparisonNote,
+  formatCampaignRepDelta,
+  formatCampaignRepScore,
   formatCampaignShape,
   formatOccurrenceDate,
-  groupOccurrencesByWeek,
+  type CampaignOccurrenceRole,
+  type CampaignTestProgress,
 } from '@/lib/campaign';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -23,29 +51,26 @@ const STATUS_LABEL: Record<string, string> = {
   abandoned: 'Ended early',
 };
 
-const OCCURRENCE_LABEL: Record<string, string> = {
-  planned: 'Planned',
-  generated: 'Staging area open',
-  done: 'Done',
-  skipped: 'Skipped',
-};
-
-function formatNormalisedAverage(value: number | null): string {
-  if (value === null) {
-    return '—';
-  }
-  return `${Math.round(value * 100)}%`;
-}
-
 export default function CampaignDetailPage() {
   const { campaignId } = useParams<{ campaignId: string }>();
   const navigate = useNavigate();
+  const { user } = useAmrapAuth();
   const [detail, setDetail] = useState<CampaignDetail | null>(null);
-  const [standings, setStandings] = useState<CampaignStandingRow[]>([]);
+  const [standingsMembers, setStandingsMembers] = useState<CampaignStandingsMember[]>([]);
+  const [standingsScores, setStandingsScores] = useState<CampaignStandingsScore[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loadedId, setLoadedId] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [confirmHostAction, setConfirmHostAction] = useState<'end' | 'delete' | null>(null);
+  const [hostActionBusy, setHostActionBusy] = useState(false);
+  // Kept apart from `error`, which blanks the whole page: a refused end or
+  // delete should leave the campaign readable.
+  const [hostActionError, setHostActionError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [editingDetails, setEditingDetails] = useState(false);
+  const [makeupBusy, setMakeupBusy] = useState(false);
+  const [makeupError, setMakeupError] = useState<string | null>(null);
 
   useEffect(() => {
     // A missing id is a routing problem, not a load — it is rendered below
@@ -63,12 +88,19 @@ export default function CampaignDetailPage() {
         if (detailResult.error || !detailResult.data) {
           setError(detailResult.error?.message ?? 'That campaign is not available.');
           setDetail(null);
-          setStandings([]);
+          setStandingsMembers([]);
+          setStandingsScores([]);
         } else {
           setError(null);
           setDetail(detailResult.data);
           // Standings ACL mirrors detail; a soft failure leaves the rest of the page usable.
-          setStandings(standingsResult.error ? [] : standingsResult.data);
+          if (standingsResult.error) {
+            setStandingsMembers([]);
+            setStandingsScores([]);
+          } else {
+            setStandingsMembers(standingsResult.data.members);
+            setStandingsScores(standingsResult.data.scores);
+          }
         }
         setLoadedId(campaignId);
       })
@@ -78,14 +110,15 @@ export default function CampaignDetailPage() {
         }
         setError('That campaign is not available.');
         setDetail(null);
-        setStandings([]);
+        setStandingsMembers([]);
+        setStandingsScores([]);
         setLoadedId(campaignId);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [campaignId]);
+  }, [campaignId, reloadKey]);
 
   // Treat a mismatched loaded id as loading so a route change never flashes
   // the previous campaign while the next fetch is in flight.
@@ -104,9 +137,9 @@ export default function CampaignDetailPage() {
       <NarrowPageLayout title="Campaign" contentMaxWidthClassName="max-w-3xl">
         <p className="text-error">{error ?? 'That campaign is not available.'}</p>
         <p className="text-center text-sm">
-          <Link className="link-accent" to="/">
+          <AppLink className="link-accent" to="/">
             Back home
-          </Link>
+          </AppLink>
         </p>
       </NarrowPageLayout>
     );
@@ -127,19 +160,199 @@ export default function CampaignDetailPage() {
     navigate('/');
   }
 
+  async function handleSaveDetails(next: { name: string; goal: string }) {
+    if (!campaignId) {
+      return 'Something went wrong. Please try again.';
+    }
+    const result = await updateCampaign(campaignId, next);
+    if (result.error) {
+      return result.error.message;
+    }
+    setEditingDetails(false);
+    setReloadKey((key) => key + 1);
+    return null;
+  }
+
+  async function handleMove(occurrenceId: string, localDate: string, localTime: string) {
+    const result = await rescheduleCampaignOccurrence(occurrenceId, localDate, localTime);
+    if (result.error) {
+      return result.error.message;
+    }
+    setReloadKey((key) => key + 1);
+    return null;
+  }
+
+  async function handleEnd() {
+    if (!campaignId) {
+      return;
+    }
+    setHostActionBusy(true);
+    const result = await endCampaign(campaignId);
+    setHostActionBusy(false);
+    setConfirmHostAction(null);
+    if (result.error) {
+      setHostActionError(result.error.message);
+      return;
+    }
+    // Stay put and reload: seeing the campaign marked "Ended early" is better
+    // confirmation than being dropped back on the home page.
+    setHostActionError(null);
+    setReloadKey((key) => key + 1);
+  }
+
+  async function handleDelete() {
+    if (!campaignId) {
+      return;
+    }
+    setHostActionBusy(true);
+    const result = await deleteCampaign(campaignId);
+    setHostActionBusy(false);
+    if (result.error) {
+      setConfirmHostAction(null);
+      setHostActionError(result.error.message);
+      return;
+    }
+    navigate('/');
+  }
+
+  async function handleMakeUp(occurrenceId: string) {
+    setMakeupBusy(true);
+    setMakeupError(null);
+    const result = await startCampaignMakeup(occurrenceId);
+    setMakeupBusy(false);
+    if (result.error || !result.data) {
+      setMakeupError(result.error?.message ?? 'Something went wrong. Please try again.');
+      return;
+    }
+    navigate(`/mission/${result.data.missionId}`);
+  }
+
+  async function handleSkipMakeup(occurrenceId: string) {
+    if (!window.confirm('Skip this mission? You will not make it up, and you cannot undo this.')) {
+      return;
+    }
+    setMakeupBusy(true);
+    setMakeupError(null);
+    const result = await skipCampaignMakeup(occurrenceId);
+    setMakeupBusy(false);
+    if (result.error) {
+      setMakeupError(result.error.message);
+      return;
+    }
+    setReloadKey((key) => key + 1);
+  }
+
   const progress = campaignProgress(
-    detail.occurrences.filter((occurrence) => occurrence.status === 'done').length,
+    user?.id
+      ? campaignViewerCompletedCount({
+          occurrenceIds: detail.occurrences.map((occurrence) => occurrence.occurrenceId),
+          viewerUserId: user.id,
+          scores: standingsScores,
+        })
+      : 0,
     detail.occurrences.length
   );
-  const weeks = groupOccurrencesByWeek(detail.occurrences);
-  const hasCountableSessions = detail.occurrences.some(
-    (occurrence) => occurrence.status === 'generated' || occurrence.status === 'done'
+
+  // The role is read back out of the schedule rather than stored, so a
+  // campaign created before this existed still labels its tests correctly.
+  const roleBySequence = new Map<number, CampaignOccurrenceRole>();
+  deriveCampaignRoles(detail.occurrences).forEach((role, index) => {
+    roleBySequence.set(detail.occurrences[index].sequence, role);
+  });
+  const lifecycle = {
+    viewerRole: detail.viewerRole,
+    status: detail.status,
+    occurrences: detail.occurrences.map((occurrence) => ({
+      status: occurrence.status,
+      missionId: occurrence.missionId,
+    })),
+    activeMemberCount: detail.members.length,
+  };
+  const showEnd = canEndCampaign(lifecycle);
+  const showDelete = canDeleteCampaign(lifecycle);
+  const showEdit = canEditCampaign(lifecycle);
+
+  const hasCountableMissions = detail.occurrences.some(
+    (occurrence) =>
+      occurrence.status === 'generated' ||
+      occurrence.status === 'done' ||
+      occurrence.status === 'skipped'
   );
+  const hasMadeUpScores = standingsScores.some((score) => score.madeUp === true);
+  const madeUpFootnote =
+    'Made up means they scored it alone after missing the live mission with the crew. It still counts.';
+
+  const testProgress: CampaignTestProgress | null = computeCampaignTestProgress({
+    occurrences: detail.occurrences.map((occurrence) => ({
+      occurrenceId: occurrence.occurrenceId,
+      weekNumber: occurrence.weekNumber,
+      templateId: occurrence.templateId,
+      localDate: occurrence.localDate,
+    })),
+    members: standingsMembers,
+    scores: standingsScores,
+    campaignStatus: detail.status,
+  });
+
+  const squadProgress = computeCampaignSquadProgress({
+    members: standingsMembers,
+    occurrences: detail.occurrences.map((occurrence) => ({
+      occurrenceId: occurrence.occurrenceId,
+      sequence: occurrence.sequence,
+      localDate: occurrence.localDate,
+      status: occurrence.status,
+    })),
+    scores: standingsScores,
+    forfeits: detail.forfeits,
+  });
+
+  const viewerMember = detail.members.find((member) => member.userId === user?.id);
+  const viewerJoinedLocalDate = viewerMember
+    ? new Date(viewerMember.joinedAt).toLocaleDateString('en-CA', {
+        timeZone: detail.timezone,
+      })
+    : null;
+  const owedQueue =
+    detail.status === 'active' && user?.id && viewerJoinedLocalDate
+      ? campaignMakeupQueue({
+          occurrences: detail.occurrences,
+          viewerJoinedLocalDate,
+          viewerUserId: user.id,
+          scores: standingsScores,
+          makeups: detail.makeups,
+          forfeits: detail.forfeits
+            .filter((row) => row.userId === user.id)
+            .map((row) => ({ occurrenceId: row.occurrenceId })),
+        })
+      : [];
+  const owedHead = owedQueue[0] ?? null;
+  const owedOccurrenceIds = new Set(owedQueue.map((row) => row.occurrenceId));
+  const viewerCompletedOccurrenceIds = new Set(
+    standingsScores
+      .filter(
+        (score) =>
+          score.userId === user?.id &&
+          typeof score.finalScore === 'number' &&
+          Number.isFinite(score.finalScore)
+      )
+      .map((score) => score.occurrenceId)
+  );
+  const viewerMakeupMissionByOccurrenceId = new Map(
+    detail.makeups.map((row) => [row.occurrenceId, row.missionId])
+  );
+  const headHasOpenMakeup = Boolean(
+    owedHead && detail.makeups.some((row) => row.occurrenceId === owedHead.occurrenceId)
+  );
+  const headRole = owedHead
+    ? roleBySequence.get(
+        detail.occurrences.find((row) => row.occurrenceId === owedHead.occurrenceId)?.sequence ?? -1
+      )
+    : null;
 
   return (
     <NarrowPageLayout
       title={detail.name}
-      subtitle={formatCampaignShape(detail.weekCount, detail.sessionsPerWeek)}
+      subtitle={formatCampaignShape(detail.weekCount, detail.missionsPerWeek)}
       contentMaxWidthClassName="max-w-3xl"
     >
       <section className="card space-y-4 p-6">
@@ -148,7 +361,7 @@ export default function CampaignDetailPage() {
             {STATUS_LABEL[detail.status] ?? detail.status}
           </span>
           <span className="text-sm text-secondary">
-            {progress.done} of {progress.total} sessions done
+            {progress.done} of {progress.total} missions done
           </span>
         </div>
 
@@ -163,30 +376,162 @@ export default function CampaignDetailPage() {
           <div className="h-full bg-accent" style={{ width: `${progress.percent}%` }} />
         </div>
 
-        {detail.goal ? <p className="text-sm text-secondary">{detail.goal}</p> : null}
+        {editingDetails ? (
+          <CampaignEditForm
+            name={detail.name}
+            goal={detail.goal ?? ''}
+            onSave={handleSaveDetails}
+            onCancel={() => setEditingDetails(false)}
+          />
+        ) : (
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+            {detail.goal ? (
+              <p className="text-sm text-secondary">{detail.goal}</p>
+            ) : (
+              <p className="text-sm text-muted">No goal set.</p>
+            )}
+            {showEdit ? (
+              <button
+                type="button"
+                className="text-sm font-semibold text-accent"
+                onClick={() => setEditingDetails(true)}
+              >
+                Edit name and goal
+              </button>
+            ) : null}
+          </div>
+        )}
       </section>
 
+      {owedQueue.length > 0 && owedHead ? (
+        <section className="card space-y-4 p-6">
+          <div>
+            <h2 className="text-display text-xl text-ink">
+              {owedQueue.length === 1
+                ? 'You owe 1 mission'
+                : `You owe ${owedQueue.length} missions`}
+            </h2>
+            <p className="text-sm text-secondary">
+              Make them up oldest first. Live campaign missions stay open — this only settles what
+              you missed.
+            </p>
+          </div>
+          <p className="text-sm text-ink">
+            Next up: {formatOccurrenceDate(owedHead.localDate)}
+            {headRole && campaignRoleLabel(headRole) ? ` · ${campaignRoleLabel(headRole)}` : null}
+          </p>
+          {makeupError ? <p className="text-error text-sm">{makeupError}</p> : null}
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={makeupBusy}
+              onClick={() => void handleMakeUp(owedHead.occurrenceId)}
+            >
+              {makeupBusy ? 'Opening…' : headHasOpenMakeup ? 'Continue makeup' : 'Make this up'}
+            </button>
+            <button
+              type="button"
+              className="btn-outline"
+              disabled={makeupBusy}
+              onClick={() => void handleSkipMakeup(owedHead.occurrenceId)}
+            >
+              Skip
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      {testProgress ? (
+        <section className="card space-y-4 p-6">
+          <div>
+            <h2 className="text-display text-xl text-ink">The test</h2>
+            <p className="text-sm text-secondary">{campaignRoleDescription('retest')}</p>
+          </div>
+          {!testProgress.hasBenchmarkScore ? (
+            <p className="text-sm text-secondary">Scores show up after the opening benchmark.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[20rem] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-divider text-xs uppercase tracking-widest text-muted">
+                    <th className="pb-2 pr-3 font-semibold">Athlete</th>
+                    <th className="pb-2 pr-3 font-semibold">Week 1</th>
+                    <th className="pb-2 pr-3 font-semibold">Latest retest</th>
+                    <th className="pb-2 font-semibold">Change</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {testProgress.rows.map((row) => (
+                    <tr key={row.userId} className="border-b border-divider last:border-0">
+                      <td className="py-2.5 pr-3 text-ink">
+                        {row.nickname ?? 'Athlete'}
+                        {row.left ? (
+                          <span className="ml-2 text-xs uppercase tracking-widest text-muted">
+                            Left
+                          </span>
+                        ) : null}
+                        {row.benchmarkMadeUp || row.retestMadeUp ? (
+                          <span className="ml-2 text-xs uppercase tracking-widest text-muted">
+                            Made up
+                          </span>
+                        ) : null}
+                        {row.benchmarkModified || row.retestModified ? (
+                          <span className="ml-2 text-xs uppercase tracking-widest text-muted">
+                            Modified
+                          </span>
+                        ) : null}
+                        {campaignTestComparisonNote(row) ? (
+                          <p className="mt-1 text-xs font-normal normal-case text-secondary">
+                            {campaignTestComparisonNote(row)}
+                          </p>
+                        ) : null}
+                      </td>
+                      <td className="py-2.5 pr-3 tabular-nums text-ink">
+                        {formatCampaignRepScore(row.benchmarkScore)}
+                      </td>
+                      <td className="py-2.5 pr-3 tabular-nums text-ink">
+                        {formatCampaignRepScore(row.retestScore)}
+                      </td>
+                      <td className="py-2.5 tabular-nums text-ink">
+                        {formatCampaignRepDelta(row.delta)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {hasMadeUpScores ? (
+                <p className="mt-3 text-sm text-secondary">{madeUpFootnote}</p>
+              ) : null}
+            </div>
+          )}
+        </section>
+      ) : null}
+
       <section className="card space-y-4 p-6">
-        <h2 className="text-display text-xl text-ink">Standings</h2>
-        {!hasCountableSessions ? (
+        <div>
+          <h2 className="text-display text-xl text-ink">Squad progress</h2>
           <p className="text-sm text-secondary">
-            Standings show up once the first campaign session is generated.
+            Who's caught up, and who still has missions to make up.
+          </p>
+        </div>
+        {!hasCountableMissions ? (
+          <p className="text-sm text-secondary">
+            Squad progress shows up once the first campaign mission is open.
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[20rem] text-left text-sm">
               <thead>
                 <tr className="border-b border-divider text-xs uppercase tracking-widest text-muted">
-                  <th className="pb-2 pr-3 font-semibold">Rank</th>
                   <th className="pb-2 pr-3 font-semibold">Athlete</th>
-                  <th className="pb-2 pr-3 font-semibold">Average</th>
-                  <th className="pb-2 font-semibold">Sessions attended</th>
+                  <th className="pb-2 pr-3 font-semibold">Status</th>
+                  <th className="pb-2 font-semibold">So far</th>
                 </tr>
               </thead>
               <tbody>
-                {standings.map((row) => (
+                {squadProgress.map((row) => (
                   <tr key={row.userId} className="border-b border-divider last:border-0">
-                    <td className="py-2.5 pr-3 tabular-nums text-secondary">{row.rank}</td>
                     <td className="py-2.5 pr-3 text-ink">
                       {row.nickname ?? 'Athlete'}
                       {row.left ? (
@@ -195,8 +540,8 @@ export default function CampaignDetailPage() {
                         </span>
                       ) : null}
                     </td>
-                    <td className="py-2.5 pr-3 tabular-nums text-ink">
-                      {formatNormalisedAverage(row.normalisedAverage)}
+                    <td className="py-2.5 pr-3 text-ink">
+                      {campaignSquadProgressStatusLabel(row.owedCount)}
                     </td>
                     <td className="py-2.5 tabular-nums text-secondary">
                       {row.attended} of {row.eligible}
@@ -232,18 +577,91 @@ export default function CampaignDetailPage() {
         </ul>
 
         {detail.viewerRole === 'host' && detail.inviteCode ? (
-          <CopyCampaignInvite
-            inviteCode={detail.inviteCode}
+          <CopyCampaignInvite inviteCode={detail.inviteCode} campaignId={detail.campaignId} />
+        ) : null}
+
+        {detail.viewerRole === 'host' &&
+        detail.status !== 'complete' &&
+        detail.status !== 'abandoned' ? (
+          <AddSquadFriendToCampaign
             campaignId={detail.campaignId}
+            memberUserIds={detail.members.map((member) => member.userId)}
+            onAdded={() => setReloadKey((key) => key + 1)}
           />
+        ) : null}
+
+        {showEnd || showDelete ? (
+          <div className="space-y-3 border-t border-divider pt-4">
+            {confirmHostAction === null ? (
+              <div className="flex flex-wrap items-center gap-4">
+                {showEnd ? (
+                  <button
+                    type="button"
+                    className="text-sm font-semibold text-accent"
+                    onClick={() => {
+                      setHostActionError(null);
+                      setConfirmHostAction('end');
+                    }}
+                  >
+                    End campaign
+                  </button>
+                ) : null}
+                {showDelete ? (
+                  <button
+                    type="button"
+                    className="text-sm font-semibold text-secondary hover:text-ink"
+                    onClick={() => {
+                      setHostActionError(null);
+                      setConfirmHostAction('delete');
+                    }}
+                  >
+                    Delete campaign
+                  </button>
+                ) : null}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-secondary">
+                  {confirmHostAction === 'delete'
+                    ? 'Delete this campaign? Nothing has run yet, so there is nothing to keep. This cannot be undone.'
+                    : 'End this campaign? The missions still to come are cancelled, everyone keeps the ones they finished, and you get the slot back to start something else.'}
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={hostActionBusy}
+                    onClick={() =>
+                      void (confirmHostAction === 'delete' ? handleDelete() : handleEnd())
+                    }
+                  >
+                    {hostActionBusy
+                      ? 'Working…'
+                      : confirmHostAction === 'delete'
+                        ? 'Yes, delete it'
+                        : 'Yes, end it'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-outline"
+                    disabled={hostActionBusy}
+                    onClick={() => setConfirmHostAction(null)}
+                  >
+                    Keep it
+                  </button>
+                </div>
+              </div>
+            )}
+            {hostActionError ? <p className="alert-error">{hostActionError}</p> : null}
+          </div>
         ) : null}
 
         {detail.viewerRole === 'member' ? (
           confirmLeave ? (
             <div className="space-y-2">
               <p className="text-sm text-secondary">
-                Leave this campaign? Your finished sessions stay on your record,
-                and the host can invite you back.
+                Leave this campaign? Your finished missions stay on your record, and the host can
+                invite you back.
               </p>
               <div className="flex flex-wrap gap-3">
                 <button
@@ -275,48 +693,30 @@ export default function CampaignDetailPage() {
         ) : null}
       </section>
 
-      <section className="space-y-4">
-        <h2 className="text-display text-xl text-ink">The schedule</h2>
-        {weeks.map((week) => (
-          <div key={week.weekNumber} className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-widest text-secondary">
-              Week {week.weekNumber}
-            </p>
-            <ul className="divide-y divide-divider rounded-card border border-border bg-surface">
-              {week.occurrences.map((occurrence) => (
-                <li
-                  key={occurrence.occurrenceId}
-                  className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3"
-                >
-                  <span className="text-sm font-semibold text-ink">
-                    {formatOccurrenceDate(occurrence.localDate)}
-                    <span className="ml-2 font-normal text-secondary">
-                      {occurrence.localTime}
-                    </span>
-                  </span>
-                  <span className="flex items-baseline gap-3 text-sm text-secondary">
-                    <span>{occurrence.durationMinutes} min</span>
-                    {occurrence.sessionId ? (
-                      <Link className="link-accent" to={`/session/${occurrence.sessionId}`}>
-                        {OCCURRENCE_LABEL[occurrence.status] ?? occurrence.status}
-                      </Link>
-                    ) : (
-                      <span className="text-xs uppercase tracking-widest text-muted">
-                        {OCCURRENCE_LABEL[occurrence.status] ?? occurrence.status}
-                      </span>
-                    )}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </section>
+      <CampaignScheduleSection
+        occurrences={detail.occurrences}
+        roleBySequence={roleBySequence}
+        owedOccurrenceIds={owedOccurrenceIds}
+        owedHeadOccurrenceId={owedHead?.occurrenceId ?? null}
+        viewerCompletedOccurrenceIds={viewerCompletedOccurrenceIds}
+        viewerMakeupMissionByOccurrenceId={viewerMakeupMissionByOccurrenceId}
+        makeupBusy={makeupBusy}
+        headHasOpenMakeup={headHasOpenMakeup}
+        onMakeUp={(occurrenceId) => void handleMakeUp(occurrenceId)}
+        onSkip={(occurrenceId) => void handleSkipMakeup(occurrenceId)}
+        canMove={(occurrence) =>
+          canRescheduleOccurrence(lifecycle, {
+            status: occurrence.status,
+            missionId: occurrence.missionId,
+          })
+        }
+        onMove={handleMove}
+      />
 
       <p className="text-center text-sm">
-        <Link className="link-accent" to="/">
+        <AppLink className="link-accent" to="/">
           Back home
-        </Link>
+        </AppLink>
       </p>
     </NarrowPageLayout>
   );

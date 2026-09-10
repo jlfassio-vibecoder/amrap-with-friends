@@ -1,12 +1,16 @@
 import { callRpc } from '@/lib/api/callRpc';
-import type { WorkoutExercise } from '@/lib/api/sessionTypes';
+import { parseGhostRunRef } from '@/lib/api/ghost';
+import type { WorkoutExercise } from '@/lib/api/missionTypes';
 import {
   computeCampaignStandings,
   type CampaignStandingRow,
+  type CampaignStandingsMember,
   type CampaignStandingsOccurrence,
+  type CampaignStandingsScore,
   type CampaignWeekCount,
   type PlannedCampaignOccurrence,
 } from '@/lib/campaign';
+import { persistMissionIdentity, setStoredGhostSelection } from '@/lib/missionIdentity';
 
 export type CampaignApiError = { message: string };
 
@@ -19,15 +23,16 @@ export interface CampaignSummary {
   name: string;
   goal: string | null;
   weekCount: number;
-  sessionsPerWeek: number;
+  missionsPerWeek: number;
   startDate: string;
   timezone: string;
   status: CampaignStatus;
   role: CampaignRole;
   /** Host-only: null for members, so they cannot re-share the campaign. */
   inviteCode: string | null;
-  totalSessions: number;
-  completedSessions: number;
+  totalMissions: number;
+  /** Occurrences the signed-in athlete has a usable live or makeup score for. */
+  completedMissions: number;
   memberCount: number;
 }
 
@@ -42,7 +47,7 @@ export interface CampaignOccurrenceEntry {
   durationMinutes: number;
   intensityTier: number | null;
   workout: WorkoutExercise[];
-  sessionId: string | null;
+  missionId: string | null;
   status: CampaignOccurrenceStatus;
 }
 
@@ -53,12 +58,22 @@ export interface CampaignMemberEntry {
   joinedAt: string;
 }
 
+export interface CampaignMakeupEntry {
+  occurrenceId: string;
+  missionId: string;
+}
+
+export interface CampaignForfeitEntry {
+  occurrenceId: string;
+  userId: string;
+}
+
 export interface CampaignDetail {
   campaignId: string;
   name: string;
   goal: string | null;
   weekCount: number;
-  sessionsPerWeek: number;
+  missionsPerWeek: number;
   startDate: string;
   timezone: string;
   status: CampaignStatus;
@@ -66,6 +81,10 @@ export interface CampaignDetail {
   inviteCode: string | null;
   occurrences: CampaignOccurrenceEntry[];
   members: CampaignMemberEntry[];
+  /** Viewer's makeup rows for this campaign — feeds the owed queue. */
+  makeups: CampaignMakeupEntry[];
+  /** All members' forfeits (explicit Skip) — queue filters to the viewer. */
+  forfeits: CampaignForfeitEntry[];
 }
 
 export interface CreateCampaignInput {
@@ -79,8 +98,8 @@ export interface CreateCampaignInput {
 export interface CreateCampaignResult {
   campaignId: string;
   inviteCode: string;
-  totalSessions: number;
-  sessionsPerWeek: number;
+  totalMissions: number;
+  missionsPerWeek: number;
 }
 
 const ERROR_COPY: Record<string, string> = {
@@ -90,7 +109,25 @@ const ERROR_COPY: Record<string, string> = {
   'Campaign closed': 'This campaign has already finished.',
   'Campaign full': 'This campaign is full.',
   'Host cannot leave': 'You are running this campaign, so you cannot leave it.',
+  'Campaign already started':
+    'This campaign has already started, so it cannot be deleted. End it instead.',
+  'Campaign has other athletes':
+    'Other athletes have joined, so it cannot be deleted. End it instead — their finished missions stay on their record.',
+  'Not next to make up': 'Make up the oldest mission you owe first.',
+  'Already making this up': 'You already started making this mission up.',
+  'Mission skipped': 'You already skipped this mission.',
+  'Host mission limit reached':
+    'You already have three missions open. Finish one before starting a makeup.',
+  'Name the campaign in 80 characters or fewer': 'Name the campaign in 80 characters or fewer.',
+  'Keep the goal to 280 characters or fewer': 'Keep the goal to 280 characters or fewer.',
+  'Mission already scheduled': 'That mission is already open, so its time cannot be changed now.',
+  'Pick a date and a time': 'Pick a date and a time.',
+  'Pick a time in the future': 'Pick a time that has not passed yet.',
+  'Move it after the mission before it': 'Move it later than the mission before it.',
+  'Move it before the mission after it': 'Move it earlier than the mission after it.',
   'Campaign not found': 'That campaign is not available.',
+  'Pick a squad friend to add': 'Pick a squad friend to add.',
+  'Squad friend has no profile': 'That athlete no longer has a profile.',
   invalid_timezone: 'We could not read your timezone. Try again from this device.',
 };
 
@@ -140,14 +177,14 @@ function parseSummary(raw: unknown): CampaignSummary | null {
     name,
     goal: readString(row.goal),
     weekCount: readNumber(row.week_count),
-    sessionsPerWeek: readNumber(row.sessions_per_week),
+    missionsPerWeek: readNumber(row.missions_per_week),
     startDate: readString(row.start_date) ?? '',
     timezone: readString(row.timezone) ?? '',
     status: (readString(row.status) ?? 'active') as CampaignStatus,
     role: (readString(row.role) ?? 'member') as CampaignRole,
     inviteCode: readString(row.invite_code),
-    totalSessions: readNumber(row.total_sessions),
-    completedSessions: readNumber(row.completed_sessions),
+    totalMissions: readNumber(row.total_missions),
+    completedMissions: readNumber(row.completed_missions),
     memberCount: readNumber(row.member_count),
   };
 }
@@ -169,7 +206,7 @@ function parseOccurrence(raw: unknown): CampaignOccurrenceEntry | null {
     durationMinutes: readNumber(row.duration_minutes),
     intensityTier: row.intensity_tier === null ? null : readNumber(row.intensity_tier),
     workout: Array.isArray(row.workout) ? (row.workout as WorkoutExercise[]) : [],
-    sessionId: readString(row.session_id),
+    missionId: readString(row.mission_id),
     status: (readString(row.status) ?? 'planned') as CampaignOccurrenceStatus,
   };
 }
@@ -186,6 +223,26 @@ function parseMember(raw: unknown): CampaignMemberEntry | null {
     nickname: readString(row.nickname),
     joinedAt: readString(row.joined_at) ?? '',
   };
+}
+
+function parseMakeup(raw: unknown): CampaignMakeupEntry | null {
+  const row = readRecord(raw);
+  const occurrenceId = readString(row.occurrence_id);
+  const missionId = readString(row.mission_id);
+  if (!occurrenceId || !missionId) {
+    return null;
+  }
+  return { occurrenceId, missionId };
+}
+
+function parseForfeit(raw: unknown): CampaignForfeitEntry | null {
+  const row = readRecord(raw);
+  const occurrenceId = readString(row.occurrence_id);
+  const userId = readString(row.user_id);
+  if (!occurrenceId || !userId) {
+    return null;
+  }
+  return { occurrenceId, userId };
 }
 
 /**
@@ -239,8 +296,8 @@ export async function createCampaign(
     data: {
       campaignId,
       inviteCode,
-      totalSessions: readNumber(row.total_sessions),
-      sessionsPerWeek: readNumber(row.sessions_per_week),
+      totalMissions: readNumber(row.total_missions),
+      missionsPerWeek: readNumber(row.missions_per_week),
     },
     error: null,
   };
@@ -282,6 +339,8 @@ export async function fetchCampaignDetail(
 
   const occurrences = Array.isArray(root.occurrences) ? root.occurrences : [];
   const members = Array.isArray(root.members) ? root.members : [];
+  const makeups = Array.isArray(root.makeups) ? root.makeups : [];
+  const forfeits = Array.isArray(root.forfeits) ? root.forfeits : [];
 
   return {
     data: {
@@ -289,7 +348,7 @@ export async function fetchCampaignDetail(
       name,
       goal: readString(campaign.goal),
       weekCount: readNumber(campaign.week_count),
-      sessionsPerWeek: readNumber(campaign.sessions_per_week),
+      missionsPerWeek: readNumber(campaign.missions_per_week),
       startDate: readString(campaign.start_date) ?? '',
       timezone: readString(campaign.timezone) ?? '',
       status: (readString(campaign.status) ?? 'active') as CampaignStatus,
@@ -301,6 +360,12 @@ export async function fetchCampaignDetail(
       members: members
         .map(parseMember)
         .filter((entry): entry is CampaignMemberEntry => entry !== null),
+      makeups: makeups
+        .map(parseMakeup)
+        .filter((entry): entry is CampaignMakeupEntry => entry !== null),
+      forfeits: forfeits
+        .map(parseForfeit)
+        .filter((entry): entry is CampaignForfeitEntry => entry !== null),
     },
     error: null,
   };
@@ -310,13 +375,13 @@ export interface CampaignInvitePreview {
   name: string;
   goal: string | null;
   weekCount: number;
-  sessionsPerWeek: number;
+  missionsPerWeek: number;
   status: CampaignStatus;
   hostNickname: string | null;
   memberCount: number;
   memberLimit: number;
-  firstSessionDate: string | null;
-  lastSessionDate: string | null;
+  firstMissionDate: string | null;
+  lastMissionDate: string | null;
 }
 
 export interface JoinCampaignResult {
@@ -357,13 +422,13 @@ export async function fetchCampaignInvitePreview(
       name,
       goal: readString(row.goal),
       weekCount: readNumber(row.week_count),
-      sessionsPerWeek: readNumber(row.sessions_per_week),
+      missionsPerWeek: readNumber(row.missions_per_week),
       status: (readString(row.status) ?? 'active') as CampaignStatus,
       hostNickname: readString(row.host_nickname),
       memberCount: readNumber(row.member_count),
       memberLimit: readNumber(row.member_limit),
-      firstSessionDate: readString(row.first_session_date),
-      lastSessionDate: readString(row.last_session_date),
+      firstMissionDate: readString(row.first_mission_date),
+      lastMissionDate: readString(row.last_mission_date),
     },
     error: null,
   };
@@ -398,6 +463,44 @@ export async function joinCampaign(
   };
 }
 
+export interface AddSquadFriendResult {
+  userId: string;
+  nickname: string | null;
+  alreadyMember: boolean;
+}
+
+/**
+ * Puts a squad friend straight onto a campaign roster. Reach is enforced in
+ * Postgres against squad_friends, the same rule that governs sending a workout;
+ * this only offers the people it will accept.
+ */
+export async function addSquadFriendToCampaign(
+  campaignId: string,
+  userId: string
+): Promise<{ data: AddSquadFriendResult | null; error: CampaignApiError | null }> {
+  if (!userId) {
+    return { data: null, error: { message: 'Pick a squad friend to add.' } };
+  }
+
+  const { data, error } = await callRpc('add_squad_friend_to_campaign', {
+    p_campaign_id: campaignId,
+    p_user_id: userId,
+  });
+  if (error) {
+    return { data: null, error: { message: mapError(error.message) } };
+  }
+
+  const row = readRecord(data);
+  return {
+    data: {
+      userId: readString(row.user_id) ?? userId,
+      nickname: readString(row.nickname),
+      alreadyMember: row.already_member === true,
+    },
+    error: null,
+  };
+}
+
 export async function leaveCampaign(
   campaignId: string
 ): Promise<{ error: CampaignApiError | null }> {
@@ -408,20 +511,173 @@ export async function leaveCampaign(
   return { error: null };
 }
 
-export type { CampaignStandingRow };
+/**
+ * Renames a campaign or rewrites its goal. Deliberately cannot touch the
+ * workouts: the benchmark is what every result is measured against, so it is
+ * not the host's to swap after the fact.
+ */
+export async function updateCampaign(
+  campaignId: string,
+  input: { name: string; goal: string }
+): Promise<{ error: CampaignApiError | null }> {
+  const name = input.name.trim();
+  if (!name) {
+    return { error: { message: 'Name the campaign.' } };
+  }
+  const { error } = await callRpc('update_campaign', {
+    p_campaign_id: campaignId,
+    p_name: name,
+    p_goal: input.goal.trim() || null,
+  });
+  if (error) {
+    return { error: { message: mapError(error.message) } };
+  }
+  return { error: null };
+}
+
+/**
+ * Moves one mission that has not run yet. The new time has to stay between the
+ * missions either side of it — the whole app reads a campaign in sequence
+ * order, so a mission that jumped its neighbours would render out of order.
+ */
+export async function rescheduleCampaignOccurrence(
+  occurrenceId: string,
+  localDate: string,
+  localTime: string
+): Promise<{ error: CampaignApiError | null }> {
+  const { error } = await callRpc('reschedule_campaign_occurrence', {
+    p_occurrence_id: occurrenceId,
+    p_local_date: localDate,
+    p_local_time: localTime,
+  });
+  if (error) {
+    return { error: { message: mapError(error.message) } };
+  }
+  return { error: null };
+}
+
+/**
+ * Ends a campaign early. The row survives so members keep their finished
+ * missions and can see why the calendar stopped; remaining planned missions
+ * become skipped, and the host gets their campaign slot back.
+ */
+export async function endCampaign(campaignId: string): Promise<{ error: CampaignApiError | null }> {
+  const { error } = await callRpc('end_campaign', { p_campaign_id: campaignId });
+  if (error) {
+    return { error: { message: mapError(error.message) } };
+  }
+  return { error: null };
+}
+
+/**
+ * Deletes a campaign outright. Only possible while nothing has run and nobody
+ * else has joined, so there is no history to lose — anything further along
+ * ends instead.
+ */
+export async function deleteCampaign(
+  campaignId: string
+): Promise<{ error: CampaignApiError | null }> {
+  const { error } = await callRpc('delete_campaign', { p_campaign_id: campaignId });
+  if (error) {
+    return { error: { message: mapError(error.message) } };
+  }
+  return { error: null };
+}
+
+/**
+ * Starts (or resumes) a solo makeup mission for the oldest owed occurrence.
+ * The mission never sets campaign_occurrence_id — the link lives in
+ * campaign_makeups so the live-mission unique index stays intact.
+ * When a crewmate recording is available, seeds the ghost pacer selection
+ * before navigation so the strip is armed at the rally point.
+ */
+export async function startCampaignMakeup(
+  occurrenceId: string
+): Promise<{ data: { missionId: string } | null; error: CampaignApiError | null }> {
+  const { data, error } = await callRpc('start_campaign_makeup', {
+    p_occurrence_id: occurrenceId,
+  });
+  if (error) {
+    return { data: null, error: { message: mapError(error.message) } };
+  }
+  const row = readRecord(data);
+  const missionId = readString(row.mission_id);
+  const hostToken = readString(row.host_token);
+  const participantId = readString(row.participant_id);
+  const claimToken = readString(row.claim_token);
+  const nickname = readString(row.nickname) ?? 'Athlete';
+  if (!missionId || !participantId) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  persistMissionIdentity(missionId, {
+    nickname,
+    participantId,
+    hostToken: hostToken ?? undefined,
+    claimToken: claimToken ?? undefined,
+  });
+
+  const pacer = parseGhostRunRef(row.pacer);
+  if (pacer) {
+    const date = new Date(pacer.createdAt);
+    const dateLabel = Number.isNaN(date.getTime())
+      ? ''
+      : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const label = dateLabel
+      ? `${pacer.nickname} · ${pacer.finalScore} reps · ${dateLabel}`
+      : `${pacer.nickname} · ${pacer.finalScore} reps`;
+    setStoredGhostSelection(missionId, {
+      missionId: pacer.missionId,
+      participantId: pacer.participantId,
+      label,
+      nickname: pacer.nickname,
+      finalScore: pacer.finalScore,
+      baseScore: pacer.baseScore,
+      createdAt: pacer.createdAt,
+    });
+  }
+
+  return { data: { missionId }, error: null };
+}
+
+/**
+ * Permanently forfeits makeup for the oldest owed occurrence. Standings still
+ * count the miss against attendance; the athlete cannot undo this.
+ */
+export async function skipCampaignMakeup(
+  occurrenceId: string
+): Promise<{ error: CampaignApiError | null }> {
+  const { error } = await callRpc('skip_campaign_makeup', {
+    p_occurrence_id: occurrenceId,
+  });
+  if (error) {
+    return { error: { message: mapError(error.message) } };
+  }
+  return { error: null };
+}
+
+export type { CampaignStandingRow, CampaignStandingsMember, CampaignStandingsScore };
+
+export type CampaignStandingsPayload = {
+  standings: CampaignStandingRow[];
+  members: CampaignStandingsMember[];
+  scores: CampaignStandingsScore[];
+};
 
 /**
  * Fetches the raw standings matrix from Postgres and ranks in TypeScript so
- * the aggregation rules stay unit-tested in one place.
+ * the aggregation rules stay unit-tested in one place. Also returns the matrix
+ * so the detail page can compute benchmark → retest progress without a second RPC.
  */
 export async function fetchCampaignStandings(
   campaignId: string
-): Promise<{ data: CampaignStandingRow[]; error: CampaignApiError | null }> {
+): Promise<{ data: CampaignStandingsPayload; error: CampaignApiError | null }> {
+  const empty: CampaignStandingsPayload = { standings: [], members: [], scores: [] };
   const { data, error } = await callRpc('campaign_standings', {
     p_campaign_id: campaignId,
   });
   if (error) {
-    return { data: [], error: { message: mapError(error.message) } };
+    return { data: empty, error: { message: mapError(error.message) } };
   }
 
   const root = readRecord(data);
@@ -444,7 +700,7 @@ export async function fetchCampaignStandings(
         left: readString(row.status) === 'left',
       };
     })
-    .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+    .filter((entry): entry is CampaignStandingsMember => entry !== null);
 
   const occurrences = occurrencesRaw
     .map((raw): CampaignStandingsOccurrence | null => {
@@ -468,7 +724,7 @@ export async function fetchCampaignStandings(
     .filter((entry): entry is CampaignStandingsOccurrence => entry !== null);
 
   const scores = scoresRaw
-    .map((raw) => {
+    .map((raw): CampaignStandingsScore | null => {
       const row = readRecord(raw);
       const occurrenceId = readString(row.occurrence_id);
       const userId = readString(row.user_id);
@@ -479,12 +735,22 @@ export async function fetchCampaignStandings(
         row.final_score === null || row.final_score === undefined
           ? null
           : readNumber(row.final_score);
-      return { occurrenceId, userId, finalScore };
+      return {
+        occurrenceId,
+        userId,
+        finalScore,
+        madeUp: row.made_up === true,
+        modified: row.modified === true,
+      };
     })
-    .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+    .filter((entry): entry is CampaignStandingsScore => entry !== null);
 
   return {
-    data: computeCampaignStandings({ members, occurrences, scores }),
+    data: {
+      standings: computeCampaignStandings({ members, occurrences, scores }),
+      members,
+      scores,
+    },
     error: null,
   };
 }

@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}', './site/**/*.{astro,ts,tsx}'],
   theme: {
     extend: {
       colors: {
@@ -47,6 +47,11 @@ export default {
           slate: 'var(--color-avatar-slate)',
           plum: 'var(--color-avatar-plum)',
           teal: 'var(--color-avatar-teal)',
+        },
+        chart: {
+          1: 'var(--color-chart-1)',
+          2: 'var(--color-chart-2)',
+          3: 'var(--color-chart-3)',
         },
       },
       fontFamily: {

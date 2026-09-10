@@ -1,6 +1,7 @@
 interface CoachFunnelStep {
   label: string;
-  value: number;
+  /** Null renders as an em dash — a step the funnel genuinely cannot observe, not a zero. */
+  value: number | null;
 }
 
 interface CoachFunnelCardProps {
@@ -13,14 +14,12 @@ interface CoachFunnelCardProps {
 export function CoachFunnelCard({ title, steps, ratePct, rateLabel }: CoachFunnelCardProps) {
   return (
     <div className="card space-y-3 p-4">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-secondary">
-        {title}
-      </h3>
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-secondary">{title}</h3>
       <div className="flex flex-wrap gap-4">
         {steps.map((step) => (
           <div key={step.label}>
             <p className="text-xl font-bold tabular-nums text-ink">
-              {step.value.toLocaleString()}
+              {step.value === null ? '—' : step.value.toLocaleString()}
             </p>
             <p className="text-xs text-secondary">{step.label}</p>
           </div>
@@ -28,9 +27,7 @@ export function CoachFunnelCard({ title, steps, ratePct, rateLabel }: CoachFunne
       </div>
       <p className="text-sm text-secondary">
         {rateLabel}:{' '}
-        <span className="font-semibold text-ink">
-          {ratePct === null ? '—' : `${ratePct}%`}
-        </span>
+        <span className="font-semibold text-ink">{ratePct === null ? '—' : `${ratePct}%`}</span>
       </p>
     </div>
   );

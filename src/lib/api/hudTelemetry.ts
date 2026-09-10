@@ -2,9 +2,13 @@ import { callRpc } from '@/lib/api/callRpc';
 import type {
   ClassificationProgress,
   ClassificationRank,
+  HudActivity7d,
   HudClassification,
   HudDomainMinutes,
+  HudHistoryWeek,
   HudOvertraining,
+  HudWeekMission,
+  HudWeekPviMission,
   HUDTelemetryPayload,
 } from '@/lib/hud/types';
 
@@ -74,18 +78,31 @@ function readDomainMinutes(value: unknown): HudDomainMinutes | null {
   const fifteen = readNonNegativeInt(row['15']);
   const twenty = readNonNegativeInt(row['20']);
   const other = readNonNegativeInt(row.other);
+  // Missing until 20260909550000 lands: older hud_telemetry omits the key.
+  const activeRecovery = readNonNegativeInt(row.activeRecovery) ?? 0;
 
-  if (
-    five === null ||
-    ten === null ||
-    fifteen === null ||
-    twenty === null ||
-    other === null
-  ) {
+  if (five === null || ten === null || fifteen === null || twenty === null || other === null) {
     return null;
   }
 
-  return { 5: five, 10: ten, 15: fifteen, 20: twenty, other };
+  return { 5: five, 10: ten, 15: fifteen, 20: twenty, other, activeRecovery };
+}
+
+/** Pre-domain-windows RPC responses omit 72h / 7d; treat as empty rather than failing the HUD. */
+const EMPTY_DOMAIN_MINUTES: HudDomainMinutes = {
+  5: 0,
+  10: 0,
+  15: 0,
+  20: 0,
+  other: 0,
+  activeRecovery: 0,
+};
+
+function readDomainMinutesOrEmpty(value: unknown): HudDomainMinutes | null {
+  if (value === null || value === undefined) {
+    return EMPTY_DOMAIN_MINUTES;
+  }
+  return readDomainMinutes(value);
 }
 
 function readClassificationRank(value: unknown): ClassificationRank | null {
@@ -98,9 +115,7 @@ function readClassificationRank(value: unknown): ClassificationRank | null {
   return value as ClassificationRank;
 }
 
-function readClassificationProgress(
-  value: unknown
-): ClassificationProgress | null {
+function readClassificationProgress(value: unknown): ClassificationProgress | null {
   if (!value || typeof value !== 'object') {
     return null;
   }
@@ -136,9 +151,7 @@ function readOvertraining(value: unknown): HudOvertraining | null {
   const row = value as Record<string, unknown>;
   const acuteLoad7d = readNonNegativeNumber(row.acuteLoad7d);
   const chronicWeeklyLoad28d = readNonNegativeNumber(row.chronicWeeklyLoad28d);
-  const consecutiveHighIntensityDays = readNonNegativeInt(
-    row.consecutiveHighIntensityDays
-  );
+  const consecutiveHighIntensityDays = readNonNegativeInt(row.consecutiveHighIntensityDays);
 
   if (
     acuteLoad7d === null ||
@@ -148,7 +161,47 @@ function readOvertraining(value: unknown): HudOvertraining | null {
     return null;
   }
 
-  return { acuteLoad7d, chronicWeeklyLoad28d, consecutiveHighIntensityDays };
+  // Tolerated as missing so a client running ahead of the migration degrades to
+  // the old load-only card rather than dropping the whole telemetry payload.
+  return {
+    acuteLoad7d,
+    chronicWeeklyLoad28d,
+    consecutiveHighIntensityDays,
+    acuteMinutes7d: readNonNegativeNumber(row.acuteMinutes7d) ?? 0,
+    chronicWeeklyMinutes28d: readNonNegativeNumber(row.chronicWeeklyMinutes28d) ?? 0,
+    observedDays: readNonNegativeInt(row.observedDays) ?? 28,
+  };
+}
+
+function readActivity7d(value: unknown): HudActivity7d | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const row = value as Record<string, unknown>;
+  const missionCount = readNonNegativeInt(row.missionCount);
+  const minutes = readNonNegativeInt(row.minutes);
+  const avgRaw = row.avgIntensity;
+
+  if (missionCount === null || minutes === null) {
+    return null;
+  }
+
+  let avgIntensity: number | null;
+  if (avgRaw === null || avgRaw === undefined) {
+    avgIntensity = null;
+  } else {
+    avgIntensity = readNonNegativeNumber(avgRaw);
+    if (avgIntensity === null) {
+      return null;
+    }
+  }
+
+  if (missionCount === 0 && avgIntensity !== null) {
+    return null;
+  }
+
+  return { missionCount, minutes, avgIntensity };
 }
 
 function readClassification(value: unknown): HudClassification | null {
@@ -168,9 +221,187 @@ function readClassification(value: unknown): HudClassification | null {
   return { current, previous, progress };
 }
 
-export function parseHudTelemetryPayload(
-  value: unknown
-): HUDTelemetryPayload | null {
+function readWeekPviMission(value: unknown): HudWeekPviMission | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const row = value as Record<string, unknown>;
+  const missionId = readString(row.missionId);
+  const pvi = readNumber(row.pvi);
+  const durationMinutes = readNonNegativeInt(row.durationMinutes);
+  const lockedAt = readString(row.lockedAt);
+  const templateRaw = row.templateId;
+
+  if (missionId === null || pvi === null || durationMinutes === null || lockedAt === null) {
+    return null;
+  }
+
+  let templateId: string | null;
+  if (templateRaw === null || templateRaw === undefined) {
+    templateId = null;
+  } else {
+    templateId = readString(templateRaw);
+    if (templateId === null) {
+      return null;
+    }
+  }
+
+  return { missionId, pvi, durationMinutes, templateId, lockedAt };
+}
+
+/** Missing or malformed list → [] so an older RPC does not null the payload. */
+function readWeekPviMissions(value: unknown): HudWeekPviMission[] {
+  if (value === null || value === undefined) {
+    return [];
+  }
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const missions: HudWeekPviMission[] = [];
+  for (const item of value) {
+    const parsed = readWeekPviMission(item);
+    if (parsed === null) {
+      return [];
+    }
+    missions.push(parsed);
+  }
+  return missions;
+}
+
+function readWeekMission(value: unknown): HudWeekMission | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const row = value as Record<string, unknown>;
+  const missionId = readString(row.missionId);
+  const durationMinutes = readNonNegativeInt(row.durationMinutes);
+  const lockedAt = readString(row.lockedAt);
+  const templateRaw = row.templateId;
+
+  // History missions include locked workouts whose PVI is JSON null — a normal
+  // ScoreBreakdown value when pacing cannot be computed. Do not reuse
+  // readWeekPviMission, which requires a numeric pvi for the weekly PVI card.
+  let pvi: number | null;
+  if (row.pvi === null || row.pvi === undefined) {
+    pvi = null;
+  } else {
+    pvi = readNumber(row.pvi);
+    if (pvi === null) {
+      return null;
+    }
+  }
+
+  if (missionId === null || durationMinutes === null || lockedAt === null) {
+    return null;
+  }
+
+  let templateId: string | null;
+  if (templateRaw === null || templateRaw === undefined) {
+    templateId = null;
+  } else {
+    templateId = readString(templateRaw);
+    if (templateId === null) {
+      return null;
+    }
+  }
+
+  const rawScore = row.finalScore;
+  if (rawScore === null || rawScore === undefined) {
+    return { missionId, pvi, durationMinutes, templateId, lockedAt, finalScore: null };
+  }
+
+  const finalScore = readNumber(rawScore);
+  if (finalScore === null) {
+    return null;
+  }
+  return { missionId, pvi, durationMinutes, templateId, lockedAt, finalScore };
+}
+
+function readHistoryWeek(value: unknown): HudHistoryWeek | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const row = value as Record<string, unknown>;
+  const weekStart = readString(row.weekStart);
+  const minutes = readNonNegativeInt(row.minutes);
+  const missionCount = readNonNegativeInt(row.missionCount);
+  const score = readNumber(row.score);
+
+  if (
+    weekStart === null ||
+    minutes === null ||
+    missionCount === null ||
+    score === null ||
+    typeof row.compliant !== 'boolean'
+  ) {
+    return null;
+  }
+
+  const rawPvi = row.pviAverage;
+  let pviAverage: number | null;
+  if (rawPvi === null || rawPvi === undefined) {
+    pviAverage = null;
+  } else {
+    pviAverage = readNumber(rawPvi);
+    if (pviAverage === null) {
+      return null;
+    }
+  }
+
+  const rawMissions = row.missions;
+  // SQL always emits an array (coalesced to []). Anything else is payload drift
+  // — fail the week so readHistoryWeeks drops the whole window rather than
+  // rendering missionCount without missions.
+  if (!Array.isArray(rawMissions)) {
+    return null;
+  }
+
+  const missions: HudWeekMission[] = [];
+  for (const item of rawMissions) {
+    const mission = readWeekMission(item);
+    if (mission === null) {
+      return null;
+    }
+    missions.push(mission);
+  }
+
+  return {
+    weekStart,
+    minutes,
+    compliant: row.compliant,
+    missionCount,
+    score,
+    pviAverage,
+    missions,
+  };
+}
+
+/**
+ * Missing or malformed → `[]`, the same tolerance `readWeekPviMissions` uses:
+ * a client running ahead of the week-history migration keeps its telemetry and
+ * degrades to the read-only attrition grid rather than losing the whole HUD.
+ */
+function readHistoryWeeks(value: unknown): HudHistoryWeek[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const weeks: HudHistoryWeek[] = [];
+  for (const item of value) {
+    const parsed = readHistoryWeek(item);
+    if (parsed === null) {
+      return [];
+    }
+    weeks.push(parsed);
+  }
+  return weeks;
+}
+
+export function parseHudTelemetryPayload(value: unknown): HUDTelemetryPayload | null {
   if (!value || typeof value !== 'object') {
     return null;
   }
@@ -181,8 +412,11 @@ export function parseHudTelemetryPayload(
   const pviRaw = row.weekPviAverage;
   const lastLockedRaw = row.lastLockedAt;
   const attrition = readAttrition(row.attrition);
+  const domainMinutes72h = readDomainMinutesOrEmpty(row.domainMinutes72h);
+  const domainMinutes7d = readDomainMinutesOrEmpty(row.domainMinutes7d);
   const domainMinutes30d = readDomainMinutes(row.domainMinutes30d);
   const classification = readClassification(row.classification);
+  const activity7d = readActivity7d(row.activity7d);
   const overtraining = readOvertraining(row.overtraining);
 
   if (
@@ -190,15 +424,17 @@ export function parseHudTelemetryPayload(
     weekMinutes < 0 ||
     !weekEndsAt ||
     attrition === null ||
+    domainMinutes72h === null ||
+    domainMinutes7d === null ||
     domainMinutes30d === null ||
     classification === null ||
+    activity7d === null ||
     overtraining === null
   ) {
     return null;
   }
 
-  const weekPviAverage =
-    pviRaw === null || pviRaw === undefined ? null : readNumber(pviRaw);
+  const weekPviAverage = pviRaw === null || pviRaw === undefined ? null : readNumber(pviRaw);
 
   if (pviRaw !== null && pviRaw !== undefined && weekPviAverage === null) {
     return null;
@@ -217,11 +453,16 @@ export function parseHudTelemetryPayload(
   return {
     weekMinutes,
     weekPviAverage,
+    weekPviMissions: readWeekPviMissions(row.weekPviMissions),
     weekEndsAt,
     lastLockedAt,
     attrition,
+    weeks: readHistoryWeeks(row.weeks),
+    domainMinutes72h,
+    domainMinutes7d,
     domainMinutes30d,
     classification,
+    activity7d,
     overtraining,
   };
 }
@@ -252,8 +493,7 @@ export async function fetchHudTelemetry(): Promise<{
     return { data: null, error: { message: mapHudTelemetryError(error.message) } };
   }
 
-  const raw =
-    data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
 
   if (raw.ok === false && raw.reason === 'invalid_timezone') {
     return {

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { ParticipantsPanel } from './ParticipantsPanel';
-import type { LeaderboardEntry } from '@/lib/sessionSync/types';
+import type { LeaderboardEntry } from '@/lib/missionSync/types';
 
 const SELF_ID = '11111111-1111-4111-8111-111111111111';
 
@@ -25,6 +25,8 @@ function leaderboardEntry(
     finalScore: roundCount * 20,
     rounds: [],
     isSelf: participantId === SELF_ID,
+    modifiedMovements: [],
+    movementVariants: {},
   };
 }
 
@@ -33,6 +35,19 @@ afterEach(() => {
 });
 
 describe('ParticipantsPanel', () => {
+  it('renders a centered Leaderboard heading', () => {
+    render(
+      <ParticipantsPanel
+        leaderboard={[leaderboardEntry(SELF_ID, 'Justin', 1)]}
+        presence={[]}
+        selfParticipantId={SELF_ID}
+        phase="work"
+      />
+    );
+
+    expect(screen.getByRole('heading', { name: 'Leaderboard' })).toBeTruthy();
+  });
+
   it('renders overflow footer when roster exceeds display limit', () => {
     const leaderboard = Array.from({ length: 99 }, (_, index) =>
       leaderboardEntry(
@@ -72,5 +87,28 @@ describe('ParticipantsPanel', () => {
     expect(screen.queryByLabelText('Your rank')).toBeNull();
     expect(screen.getByText('Justin (you)')).toBeTruthy();
     expect(screen.getByText('1')).toBeTruthy();
+  });
+
+  it('shows the reps actually done once finished, not finalScore', () => {
+    // baseScore and finalScore deliberately differ (a P.V.I./Domain
+    // multiplier applied) — the leaderboard row must show the 200 reps this
+    // athlete performed, never the adjusted 230.
+    const entry = {
+      ...leaderboardEntry(SELF_ID, 'Justin', 10),
+      baseScore: 200,
+      finalScore: 230,
+    };
+
+    render(
+      <ParticipantsPanel
+        leaderboard={[entry]}
+        presence={[]}
+        selfParticipantId={SELF_ID}
+        phase="finished"
+      />
+    );
+
+    expect(screen.getByText('200 reps')).toBeTruthy();
+    expect(screen.queryByText('230 reps')).toBeNull();
   });
 });

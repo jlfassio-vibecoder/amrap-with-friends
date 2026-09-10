@@ -1,4 +1,4 @@
-import type { WorkoutExercise } from '@/lib/api/sessionTypes';
+import type { WorkoutExercise } from '@/lib/api/missionTypes';
 
 const UNIT_SUFFIX_PATTERN = /^[a-z]+$/i;
 

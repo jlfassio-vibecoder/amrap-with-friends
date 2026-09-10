@@ -1,0 +1,114 @@
+---
+import GuideLayout from '../../layouts/GuideLayout.astro';
+
+const answer =
+  'All three are timed formats, but the clock does a different job in each. In an AMRAP you work continuously for a fixed cap and score total work. In an EMOM the clock hands you a new set every minute and your rest is whatever is left. Tabata is a fixed 4-minute interval of 20 seconds on, 10 seconds off.';
+
+const faqs = [
+  {
+    question: 'Which is better for conditioning, AMRAP or EMOM?',
+    answer:
+      'AMRAP builds the ability to keep working while tired, because nothing forces you to stop. EMOM builds repeatable power, because the rest is guaranteed and each set should look like the last. Most programmes want both — AMRAP for the engine, EMOM for the quality.',
+  },
+  {
+    question: 'Is Tabata an AMRAP?',
+    answer:
+      'No. Tabata is a fixed interval structure — eight rounds of 20 seconds on and 10 seconds off, four minutes total — and the intervals do not change. An AMRAP has one continuous cap and no prescribed rest. You can do as many reps as possible inside a Tabata interval, but the format is not an AMRAP.',
+  },
+  {
+    question: 'Can you combine them?',
+    answer:
+      'Yes, and most well-built sessions do. A common shape is an EMOM for skill or strength while you are fresh, then a short AMRAP as the finisher. Running them the other way round tends to wreck the EMOM, because a fatigued athlete cannot hold the set quality the format depends on.',
+  },
+];
+---
+
+<GuideLayout heading="AMRAP vs EMOM vs Tabata" answer={answer} faqs={faqs}>
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">The three formats side by side</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[36rem] border-collapse text-left text-sm">
+        <thead>
+          <tr class="border-b border-border">
+            <th class="py-3 pr-4 font-semibold text-ink">&nbsp;</th>
+            <th class="py-3 pr-4 font-semibold text-ink">AMRAP</th>
+            <th class="py-3 pr-4 font-semibold text-ink">EMOM</th>
+            <th class="py-3 font-semibold text-ink">Tabata</th>
+          </tr>
+        </thead>
+        <tbody class="text-secondary">
+          <tr class="border-b border-divider">
+            <td class="py-3 pr-4 font-semibold text-ink">The clock</td>
+            <td class="py-3 pr-4">One cap, counts down</td>
+            <td class="py-3 pr-4">Repeating one-minute windows</td>
+            <td class="py-3">20s on, 10s off, ×8</td>
+          </tr>
+          <tr class="border-b border-divider">
+            <td class="py-3 pr-4 font-semibold text-ink">Rest</td>
+            <td class="py-3 pr-4">Whatever you take, at your own cost</td>
+            <td class="py-3 pr-4">Whatever is left in the minute</td>
+            <td class="py-3">Fixed 10 seconds</td>
+          </tr>
+          <tr class="border-b border-divider">
+            <td class="py-3 pr-4 font-semibold text-ink">Score</td>
+            <td class="py-3 pr-4">Rounds + reps</td>
+            <td class="py-3 pr-4">Usually pass or fail per minute</td>
+            <td class="py-3">Lowest round's reps</td>
+          </tr>
+          <tr class="border-b border-divider">
+            <td class="py-3 pr-4 font-semibold text-ink">Typical length</td>
+            <td class="py-3 pr-4">5–20 minutes</td>
+            <td class="py-3 pr-4">6–20 minutes</td>
+            <td class="py-3">4 minutes</td>
+          </tr>
+          <tr>
+            <td class="py-3 pr-4 font-semibold text-ink">Trains</td>
+            <td class="py-3 pr-4">Working while fatigued; pacing</td>
+            <td class="py-3 pr-4">Repeatable power; set quality</td>
+            <td class="py-3">Anaerobic capacity</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">What each one actually asks of you</h2>
+    <p class="text-base leading-[1.7] text-secondary">
+      <strong class="font-semibold text-ink">AMRAP</strong> asks you to make a decision and hold it. Nothing
+      stops you, so the whole workout is a bet on a pace. Go out too fast and the back half punishes you;
+      go out too slow and you leave rounds on the floor. That is why round-time consistency predicts the
+      score so well —
+      <a class="link-accent" href="/guides/amrap-pacing">more on that here</a>.
+    </p>
+    <p class="text-base leading-[1.7] text-secondary">
+      <strong class="font-semibold text-ink">EMOM</strong> takes the decision away. The minute starts
+      whether you are ready or not, so the only question is whether you can finish the set in time and
+      still be able to do it again. It is a quality format wearing a conditioning costume.
+    </p>
+    <p class="text-base leading-[1.7] text-secondary">
+      <strong class="font-semibold text-ink">Tabata</strong> is short enough that pacing is nearly irrelevant
+      and long enough to hurt. Scored properly — by your worst round, not your best — it punishes anyone
+      who sprints the first interval and falls apart by the fourth.
+    </p>
+  </section>
+
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">When to pick which</h2>
+    <p class="text-base leading-[1.7] text-secondary">
+      Pick an AMRAP when you want a number you can chase again later, or when you are training with
+      other people — it is the only one of the three where everyone finishes together regardless of
+      fitness. Pick an EMOM when the movement quality matters more than the total volume. Pick
+      Tabata when you have four minutes.
+    </p>
+  </section>
+
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">Start with an AMRAP</h2>
+    <p class="text-base leading-[1.7] text-secondary">
+      Our library has 150 bodyweight AMRAPs across
+      <a class="link-accent" href="/amrap-workouts">four time domains</a>, and the
+      <a class="link-accent" href="/amrap-timer">free timer</a> runs any of them.
+    </p>
+  </section>
+</GuideLayout>

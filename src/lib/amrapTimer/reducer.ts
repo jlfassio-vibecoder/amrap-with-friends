@@ -18,10 +18,7 @@ export function selectElapsedSec(state: AmrapTimerState): number {
     return 0;
   }
 
-  return Math.max(
-    0,
-    Math.min(state.workDurationSec, state.workDurationSec - state.timeLeftSec)
-  );
+  return Math.max(0, Math.min(state.workDurationSec, state.workDurationSec - state.timeLeftSec));
 }
 
 export function selectRoundCount(state: AmrapTimerState): number {
@@ -86,7 +83,7 @@ export function amrapTimerReducer(
         return state;
       }
 
-      const elapsedSecAtRound = computeElapsedSecForLogRound({
+      const loggedElapsedSec = computeElapsedSecForLogRound({
         workDurationSec: state.workDurationSec,
         timeLeftSec: state.timeLeftSec,
         phase: state.phase,
@@ -96,6 +93,10 @@ export function amrapTimerReducer(
         nowMs: action.nowMs,
       });
 
+      // A missed log carries its own reconstructed boundary; an ordinary log
+      // takes the clock as it stands.
+      const elapsedSecAtRound = action.elapsedSecOverride ?? loggedElapsedSec;
+
       return {
         ...state,
         rounds: [
@@ -104,17 +105,14 @@ export function amrapTimerReducer(
             roundIndex: state.rounds.length,
             elapsedSecAtRound,
             loggedAtMs: action.nowMs,
+            missedLogReps: action.missedLogReps ?? null,
           },
         ],
       };
     }
 
     case 'tick':
-      if (
-        state.phase === 'idle' ||
-        state.phase === 'finished' ||
-        state.isPaused
-      ) {
+      if (state.phase === 'idle' || state.phase === 'finished' || state.isPaused) {
         return state;
       }
 

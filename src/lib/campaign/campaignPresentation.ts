@@ -84,10 +84,38 @@ export function groupOccurrencesByWeek<T extends WeekGroupable>(
     }));
 }
 
+/**
+ * Which weeks to show in the create-campaign schedule preview.
+ *
+ * Always keeps the opening stretch, the finale, and every week that holds a
+ * retest — otherwise a mid-campaign checkpoint vanishes into "N more weeks".
+ */
+export function selectCampaignPreviewWeekNumbers(input: {
+  weekNumbers: number[];
+  retestWeekNumbers: Iterable<number>;
+  openingWeeks: number;
+}): number[] {
+  const { weekNumbers, openingWeeks } = input;
+  if (weekNumbers.length === 0) {
+    return [];
+  }
+
+  const selected = new Set<number>();
+  for (const weekNumber of weekNumbers.slice(0, Math.max(0, openingWeeks))) {
+    selected.add(weekNumber);
+  }
+  selected.add(weekNumbers[weekNumbers.length - 1]);
+  for (const weekNumber of input.retestWeekNumbers) {
+    selected.add(weekNumber);
+  }
+
+  return weekNumbers.filter((weekNumber) => selected.has(weekNumber));
+}
+
 export interface CampaignProgress {
   done: number;
   total: number;
-  /** 0-100, rounded. 0 when the campaign has no sessions rather than NaN. */
+  /** 0-100, rounded. 0 when the campaign has no missions rather than NaN. */
   percent: number;
 }
 
@@ -97,6 +125,59 @@ export function campaignProgress(done: number, total: number): CampaignProgress 
   }
   const clamped = Math.max(0, Math.min(done, total));
   return { done: clamped, total, percent: Math.round((clamped / total) * 100) };
+}
+
+export type ViewerCompletedScore = {
+  occurrenceId: string;
+  userId: string;
+  finalScore: number | null;
+};
+
+/**
+ * How many campaign missions the signed-in athlete has a usable score for
+ * (live or makeup). Counts distinct occurrence ids so a live + makeup pair
+ * for the same row cannot double-count. Forfeits never produce a score, so
+ * they are already excluded by the usable-score filter.
+ */
+export function campaignViewerCompletedCount(input: {
+  occurrenceIds: Iterable<string>;
+  viewerUserId: string;
+  scores: ViewerCompletedScore[];
+}): number {
+  const occurrenceIds = new Set(input.occurrenceIds);
+  const scored = new Set<string>();
+  for (const row of input.scores) {
+    if (row.userId !== input.viewerUserId) {
+      continue;
+    }
+    if (typeof row.finalScore !== 'number' || !Number.isFinite(row.finalScore)) {
+      continue;
+    }
+    if (!occurrenceIds.has(row.occurrenceId)) {
+      continue;
+    }
+    scored.add(row.occurrenceId);
+  }
+  return scored.size;
+}
+
+/**
+ * Schedule row status for the signed-in athlete.
+ *
+ * Done only when the viewer has a usable score. A crew `done` or `skipped`
+ * without their score is Missed — personal progress, not the crew calendar.
+ */
+export function campaignScheduleStatusLabel(input: {
+  status: string;
+  viewerCompleted: boolean;
+}): string {
+  if (input.viewerCompleted) {
+    return 'Done';
+  }
+  if (input.status === 'planned') return 'Planned';
+  if (input.status === 'generated') return 'Mission open';
+  if (input.status === 'done' || input.status === 'skipped') return 'Missed';
+  return input.status;
 }
 
 /**
@@ -119,17 +200,14 @@ const SUGGESTED_WEEKDAYS: Record<number, number[]> = {
   5: [1, 2, 3, 4, 5],
 };
 
-export function suggestedSlots(sessionsPerWeek: number, timeLocal = '18:00'): CampaignSlot[] {
-  const weekdays = SUGGESTED_WEEKDAYS[sessionsPerWeek] ?? SUGGESTED_WEEKDAYS[3];
+export function suggestedSlots(missionsPerWeek: number, timeLocal = '18:00'): CampaignSlot[] {
+  const weekdays = SUGGESTED_WEEKDAYS[missionsPerWeek] ?? SUGGESTED_WEEKDAYS[3];
   return weekdays.map((weekday) => ({ weekday, timeLocal }));
 }
 
-/** "24 sessions · 3 a week · 8 weeks" */
-export function formatCampaignShape(
-  weekCount: number,
-  sessionsPerWeek: number
-): string {
-  const total = weekCount * sessionsPerWeek;
-  const perWeek = sessionsPerWeek === 1 ? '1 a week' : `${sessionsPerWeek} a week`;
-  return `${total} sessions · ${perWeek} · ${weekCount} weeks`;
+/** "24 missions · 3 a week · 8 weeks" */
+export function formatCampaignShape(weekCount: number, missionsPerWeek: number): string {
+  const total = weekCount * missionsPerWeek;
+  const perWeek = missionsPerWeek === 1 ? '1 a week' : `${missionsPerWeek} a week`;
+  return `${total} missions · ${perWeek} · ${weekCount} weeks`;
 }

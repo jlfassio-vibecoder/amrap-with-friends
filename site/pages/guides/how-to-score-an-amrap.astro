@@ -1,0 +1,79 @@
+---
+import GuideLayout from '../../layouts/GuideLayout.astro';
+
+const answer =
+  'Count every complete round, then add the reps you finished of the round you were partway through when the clock hit zero. Write it as rounds plus reps: seven full rounds and twelve reps is 7+12. A rep counts only when the movement is finished to full range.';
+
+const faqs = [
+  {
+    question: 'What counts as a completed rep?',
+    answer:
+      'A rep counts when the movement reaches full range at both ends — hips fully open at the top of a squat, chest touching the floor on a push-up. A rep you stopped short of range is not a rep. This matters most in the last minute, which is exactly when range collapses.',
+  },
+  {
+    question: 'How do you break a tie in an AMRAP?',
+    answer:
+      'Two athletes on the same rounds and reps are tied. Some competitions add a tiebreak time — the moment you finished your last complete round — so the athlete who got there sooner wins. Unless the workout says otherwise, treat equal scores as equal.',
+  },
+  {
+    question: 'What if you lose count mid-workout?',
+    answer:
+      'Count rounds rather than reps, and log each round as you finish it rather than trying to remember at the end. If you do lose the thread, take the lower number. An inflated score you cannot trust is worse than an honest one that is slightly low.',
+  },
+];
+---
+
+<GuideLayout heading="How to score an AMRAP" answer={answer} faqs={faqs}>
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">The partial round</h2>
+    <p class="text-base leading-[1.7] text-secondary">
+      Almost nobody finishes exactly on a round boundary, so the partial round is part of the score
+      rather than an afterthought. Count the reps you actually completed, in order, across the
+      movements of the unfinished round. If the round is 10 air squats then 10 push-ups and you got
+      through the squats and four push-ups, that is +14.
+    </p>
+    <p class="text-base leading-[1.7] text-secondary">
+      You do not get credit for a rep in progress when the clock stops. The rep either finished or
+      it did not.
+    </p>
+  </section>
+
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">Why you should log each round as you go</h2>
+    <p class="text-base leading-[1.7] text-secondary">
+      Counting from memory at the end is where scores get soft. Logging each round the moment you
+      finish it fixes that, and it gives you something the final number cannot: the time each round
+      took. Round times are the only honest record of how you paced the workout, and pacing is what
+      you can actually change next time.
+    </p>
+    <p class="text-base leading-[1.7] text-secondary">
+      In AMRAP With Friends, logging a round is one tap, and a missed tap is recoverable — you tell
+      it how far into the next round you already were and it puts the boundary back rather than
+      inflating one split and deflating the next.
+    </p>
+  </section>
+
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">Recording it so it means something later</h2>
+    <p class="text-base leading-[1.7] text-secondary">
+      A score with no workout attached is a number with no units. Always record the movements, the
+      rep counts and the time cap alongside the score, because
+      <a class="link-accent" href="/guides/what-is-a-good-amrap-score">
+        a score only means something against the same workout</a
+      >. "14+8" tells you nothing in six months. "14+8 on a 10-minute AMRAP of 10 air squats and 10
+      hand-release push-ups" tells you everything.
+    </p>
+  </section>
+
+  <section class="space-y-4">
+    <h2 class="text-display text-2xl text-ink">Scoring a group AMRAP</h2>
+    <p class="text-base leading-[1.7] text-secondary">
+      Scoring gets harder with more people, because it depends on everyone counting the same way at
+      the same time. A shared clock removes half the problem: nobody's timer drifts, so nobody's
+      last round is worth more seconds than anyone else's.
+      <a class="link-accent" href="/guides/group-workouts-remotely">
+        Working out with friends remotely</a
+      > covers the rest.
+    </p>
+  </section>
+</GuideLayout>

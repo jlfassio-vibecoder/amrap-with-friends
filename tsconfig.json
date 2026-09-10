@@ -1,7 +1,11 @@
 {
   "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ]
+  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.node.json" }],
+  "compilerOptions": {
+    // Not used for compilation (files is empty); this is here so tools that read
+    // the nearest tsconfig for path resolution — tsx, running the build scripts —
+    // resolve `@/` the same way vite, vitest and astro do.
+    "baseUrl": ".",
+    "paths": { "@/*": ["./src/*"] }
+  }
 }

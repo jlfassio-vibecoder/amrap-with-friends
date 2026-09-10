@@ -12,6 +12,8 @@ const cancelMock = vi.fn();
 const removeMock = vi.fn();
 const rotateMock = vi.fn();
 
+const saveIdentityMock = vi.fn();
+
 vi.mock('@/lib/api/squad', () => ({
   fetchMySquad: (...args: unknown[]) => fetchMock(...args),
   searchAthletes: (...args: unknown[]) => searchMock(...args),
@@ -30,7 +32,13 @@ vi.mock('@/hooks/useAmrapAuth', () => ({
   }),
 }));
 vi.mock('@/hooks/useAthleteProfile', () => ({
-  useAthleteProfile: () => ({ profile: null, missing: false, loading: false, error: null }),
+  useAthleteProfile: () => ({
+    profile: null,
+    missing: false,
+    loading: false,
+    error: null,
+    saveIdentity: saveIdentityMock,
+  }),
 }));
 
 function squad(overrides = {}) {
@@ -63,6 +71,8 @@ beforeEach(() => {
   cancelMock.mockReset();
   removeMock.mockReset();
   rotateMock.mockReset();
+  saveIdentityMock.mockReset();
+  saveIdentityMock.mockResolvedValue({ error: null });
   fetchMock.mockResolvedValue({ data: squad(), error: null });
   searchMock.mockResolvedValue({ data: [], error: null });
   sendMock.mockResolvedValue({ error: null });
@@ -175,5 +185,30 @@ describe('SquadPage', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Accept' })).toBeTruthy());
     fireEvent.click(screen.getByRole('button', { name: 'Accept' }));
     await waitFor(() => expect(respondMock).toHaveBeenCalledWith('req-9', true));
+  });
+
+  it('opens the identity overlay when fetchMySquad requires intake, then reloads', async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        data: null,
+        error: { message: 'Complete your profile before inviting people to your squad.' },
+      })
+      .mockResolvedValueOnce({ data: squad(), error: null });
+
+    renderPage();
+
+    expect(await screen.findByRole('heading', { name: 'Your name' })).toBeTruthy();
+    expect(
+      screen.queryByText('Complete your profile before inviting people to your squad.')
+    ).toBeNull();
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Continue' })).toHaveProperty('disabled', false)
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+
+    await waitFor(() => expect(saveIdentityMock).toHaveBeenCalled());
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.getByText(/Nobody is on your squad yet/)).toBeTruthy());
   });
 });

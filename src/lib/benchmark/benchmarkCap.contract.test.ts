@@ -1,0 +1,176 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { describe, expect, it } from 'vitest';
+import { TIME_DOMAINS } from '@/data/workoutTemplates';
+import { MAX_ACTIVE_BENCHMARKS } from '@/lib/benchmark/benchmarkCap';
+import { MAX_TIME_CAP, MIN_TIME_CAP, capsForDomain, domainForCap } from '@/lib/timeDomains';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '../../..');
+const migration = readFileSync(
+  join(root, 'supabase/migrations/20260909210000_athlete_benchmarks.sql'),
+  'utf8'
+);
+/** designate_benchmark was re-created here when it gained the variants column. */
+const variantsMigration = readFileSync(
+  join(root, 'supabase/migrations/20260909230000_benchmark_movement_variants.sql'),
+  'utf8'
+);
+/** …and again here, when it learned that the clock and the domain are one fact. */
+const liveDesignate = readFileSync(
+  join(root, 'supabase/migrations/20260909240000_benchmark_domain_matches_cap.sql'),
+  'utf8'
+);
+
+/**
+ * The cap exists twice: in TypeScript, where the UI decides whether to offer
+ * the control, and in SQL, where the insert actually has to hold.
+ *
+ * They are allowed to differ in one specific way — SQL does not know about
+ * campaign benchmarks, for the reason written at the call site — but everything
+ * they do share has to agree. A number that drifts here does not error; it just
+ * lets an athlete keep one benchmark more than the product says they can, which
+ * nobody would notice until the HUD card stopped fitting.
+ */
+describe('the SQL floor matches the TypeScript cap', () => {
+  it('stops at the same number of active benchmarks', () => {
+    const limit =
+      /IF v_active >= (\d+) THEN\s+RETURN jsonb_build_object\('ok',\s+false,\s+'reason',\s+'at_limit'\)/.exec(
+        migration
+      );
+    expect(limit, 'the at_limit guard is missing').not.toBeNull();
+    expect(Number(limit![1])).toBe(MAX_ACTIVE_BENCHMARKS);
+  });
+
+  it('recognises the same four time domains', () => {
+    const check =
+      /CONSTRAINT athlete_benchmarks_domain_valid CHECK \(time_domain IN \(([^)]+)\)\)/.exec(
+        migration
+      );
+    expect(check, 'the domain CHECK is missing').not.toBeNull();
+    const sqlDomains = check![1].split(',').map((part) => Number(part.trim()));
+    expect(sqlDomains).toEqual([...TIME_DOMAINS]);
+  });
+
+  it('accepts exactly the clocks the library offers', () => {
+    const range = /CONSTRAINT athlete_benchmarks_duration_range CHECK \(([\s\S]*?)\n {2}\)/.exec(
+      migration
+    );
+    expect(range, 'the duration CHECK is missing').not.toBeNull();
+
+    const arms = [...range![1].matchAll(/duration_minutes BETWEEN (\d+) AND (\d+)/g)].map(
+      (match) => ({ min: Number(match[1]), max: Number(match[2]) })
+    );
+    expect(arms).toHaveLength(TIME_DOMAINS.length);
+
+    const accepts = (cap: number) => arms.some((arm) => cap >= arm.min && cap <= arm.max);
+
+    for (const domain of TIME_DOMAINS) {
+      for (const cap of capsForDomain(domain)) {
+        expect(accepts(cap), `SQL rejects the legal cap ${cap}`).toBe(true);
+      }
+    }
+    // The gaps between domains, which have no domain to hold a slot.
+    for (const cap of [6, 11, 16, 17]) {
+      expect(accepts(cap), `SQL accepts the gap cap ${cap}`).toBe(false);
+    }
+    for (const cap of [MIN_TIME_CAP - 1, MAX_TIME_CAP + 1]) {
+      expect(accepts(cap), `SQL accepts the out-of-range cap ${cap}`).toBe(false);
+    }
+  });
+
+  it('refuses a coach workout, the same rule isBenchmarkableTemplate applies', () => {
+    // Asserted on the live definition. The function has been re-created twice;
+    // every guard has to survive each rewrite, which is exactly what a
+    // re-created function is likely to quietly drop.
+    expect(liveDesignate).toContain("IF v_template LIKE 'coach:%' THEN");
+    expect(liveDesignate).toContain("'reason', 'coach_workout'");
+  });
+
+  it('still refuses a coach workout in the intermediate definition', () => {
+    expect(variantsMigration).toContain("IF v_template LIKE 'coach:%' THEN");
+  });
+
+  it('agrees with domainForCap about which domain a clock belongs to', () => {
+    // The clock and the domain are one fact, and the RPC now checks the pair.
+    // Its arms are read out of the migration and run against the TypeScript
+    // table over every legal clock and both gap clocks.
+    const arms = [
+      ...liveDesignate.matchAll(/WHEN p_duration_minutes BETWEEN (\d+) AND (\d+) THEN (\d+)/g),
+    ].map((match) => ({
+      min: Number(match[1]),
+      max: Number(match[2]),
+      domain: Number(match[3]),
+    }));
+    expect(arms, 'the domain/cap agreement check is missing').toHaveLength(TIME_DOMAINS.length);
+
+    const sqlDomainFor = (cap: number) =>
+      arms.find((arm) => cap >= arm.min && cap <= arm.max)?.domain ?? null;
+
+    for (const domain of TIME_DOMAINS) {
+      for (const cap of capsForDomain(domain)) {
+        expect(sqlDomainFor(cap), `SQL puts ${cap} in the wrong domain`).toBe(domainForCap(cap));
+      }
+    }
+    for (const cap of [6, 11, 16, 17, MIN_TIME_CAP - 1, MAX_TIME_CAP + 1]) {
+      expect(sqlDomainFor(cap)).toBeNull();
+      expect(domainForCap(cap)).toBeNull();
+    }
+  });
+
+  it('rejects a mismatched pair rather than filing it against the wrong slot', () => {
+    expect(liveDesignate).toContain("'reason', 'domain_mismatch'");
+    expect(liveDesignate).toMatch(
+      /v_expected_domain IS NULL OR v_expected_domain <> p_time_domain/
+    );
+  });
+
+  it('keeps the limit through every re-creation of designate_benchmark', () => {
+    for (const [name, sql] of [
+      ['variants', variantsMigration],
+      ['domain match', liveDesignate],
+    ] as const) {
+      const limit = /IF v_active >= (\d+) THEN/.exec(sql);
+      expect(limit, `the ${name} rewrite lost its at_limit guard`).not.toBeNull();
+      expect(Number(limit![1])).toBe(MAX_ACTIVE_BENCHMARKS);
+    }
+  });
+
+  it('drops the old signature rather than leaving an ambiguous overload', () => {
+    // Two overloads differing only in a defaulted trailing argument make every
+    // call ambiguous, and Postgres raises at call time, not at migrate time.
+    expect(variantsMigration).toContain(
+      'DROP FUNCTION IF EXISTS public.designate_benchmark(text, int, int, text);'
+    );
+    expect(variantsMigration).toContain(
+      'GRANT EXECUTE ON FUNCTION public.designate_benchmark(text, int, int, text, jsonb) TO authenticated;'
+    );
+  });
+
+  it('enforces one live benchmark per domain in an index, not only in a check', () => {
+    // Two concurrent designates both pass a SELECT-then-INSERT check. Only the
+    // partial unique index actually stops the second one.
+    expect(migration).toMatch(
+      /CREATE UNIQUE INDEX[\s\S]*?ON public\.athlete_benchmarks \(user_id, time_domain\)\s+WHERE retired_at IS NULL/
+    );
+    expect(migration).toContain('WHEN unique_violation THEN');
+  });
+
+  it('locks the table down like every other table in this schema', () => {
+    expect(migration).toContain('ALTER TABLE public.athlete_benchmarks ENABLE ROW LEVEL SECURITY;');
+    expect(migration).toContain(
+      'REVOKE ALL ON public.athlete_benchmarks FROM PUBLIC, anon, authenticated;'
+    );
+  });
+
+  it('grants each RPC to authenticated only', () => {
+    for (const signature of [
+      'public.designate_benchmark(text, int, int, text)',
+      'public.retire_benchmark(uuid)',
+      'public.my_benchmarks()',
+    ]) {
+      expect(migration).toContain(`REVOKE EXECUTE ON FUNCTION ${signature} FROM PUBLIC, anon;`);
+      expect(migration).toContain(`GRANT EXECUTE ON FUNCTION ${signature} TO authenticated;`);
+    }
+  });
+});

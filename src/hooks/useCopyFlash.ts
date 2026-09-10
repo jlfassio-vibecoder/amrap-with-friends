@@ -5,8 +5,8 @@ const FLASH_MS = 2000;
 /**
  * Copies text and flashes a confirmation for two seconds.
  *
- * `useCopySessionInvite` predates this and still has its own copy of the
- * mechanism plus session-specific analytics; it is left alone rather than
+ * `useCopyMissionInvite` predates this and still has its own copy of the
+ * mechanism plus mission-specific analytics; it is left alone rather than
  * refactored, since it is shipped and covered by its own tests.
  */
 export function useCopyFlash() {

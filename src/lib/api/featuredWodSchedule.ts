@@ -161,7 +161,7 @@ function parseAttendee(row: Record<string, unknown>): FeaturedWodAttendee | null
 }
 
 export async function fetchCoachFeaturedWodAttendees(): Promise<{
-  data: { sessionId: string | null; attendees: FeaturedWodAttendee[] } | null;
+  data: { missionId: string | null; attendees: FeaturedWodAttendee[] } | null;
   error: FeaturedWodScheduleApiError | null;
 }> {
   const { data, error } = await callRpc('coach_featured_wod_attendees', {});
@@ -182,7 +182,7 @@ export async function fetchCoachFeaturedWodAttendees(): Promise<{
     : [];
 
   return {
-    data: { sessionId: readString(raw.sessionId), attendees },
+    data: { missionId: readString(raw.missionId), attendees },
     error: null,
   };
 }

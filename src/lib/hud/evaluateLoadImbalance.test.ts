@@ -7,9 +7,10 @@ function domains(
   ten: number,
   fifteen: number,
   twenty: number,
-  other = 0
+  other = 0,
+  activeRecovery = 0
 ): HudDomainMinutes {
-  return { 5: five, 10: ten, 15: fifteen, 20: twenty, other };
+  return { 5: five, 10: ten, 15: fifteen, 20: twenty, other, activeRecovery };
 }
 
 describe('evaluateLoadImbalance', () => {
@@ -40,7 +41,7 @@ describe('evaluateLoadImbalance', () => {
       imbalanced: true,
       dominant: 5,
       share: 61,
-      warning: 'System Warning: Imbalanced Load. 20-Minute Marathon required.',
+      warning: 'System Warning: Imbalanced Load. 18–25-Minute Marathon required.',
     });
   });
 
@@ -49,7 +50,7 @@ describe('evaluateLoadImbalance', () => {
       imbalanced: true,
       dominant: 5,
       share: 80,
-      warning: 'System Warning: Imbalanced Load. 20-Minute Marathon required.',
+      warning: 'System Warning: Imbalanced Load. 18–25-Minute Marathon required.',
     });
   });
 
@@ -59,7 +60,7 @@ describe('evaluateLoadImbalance', () => {
       dominant: 20,
       share: 80,
       warning:
-        'System Warning: Imbalanced Load. You never touch the redline. 5-Minute Sprint required.',
+        'System Warning: Imbalanced Load. You never touch the redline. 3–5-Minute Sprint required.',
     });
   });
 
@@ -68,8 +69,7 @@ describe('evaluateLoadImbalance', () => {
       imbalanced: true,
       dominant: 10,
       share: 80,
-      warning:
-        'System Warning: Imbalanced Load. Extend the domain. 15-Minute Grind required.',
+      warning: 'System Warning: Imbalanced Load. Extend the domain. 12–15-Minute Grind required.',
     });
   });
 
@@ -88,7 +88,22 @@ describe('evaluateLoadImbalance', () => {
       imbalanced: true,
       dominant: 5,
       share: 80,
-      warning: 'System Warning: Imbalanced Load. 20-Minute Marathon required.',
+      warning: 'System Warning: Imbalanced Load. 18–25-Minute Marathon required.',
+    });
+  });
+
+  it('excludes Active Recovery from the imbalance denominator', () => {
+    expect(evaluateLoadImbalance(domains(80, 10, 10, 0, 0, 500))).toEqual({
+      imbalanced: true,
+      dominant: 5,
+      share: 80,
+      warning: 'System Warning: Imbalanced Load. 18–25-Minute Marathon required.',
+    });
+  });
+
+  it('returns false when only Active Recovery has volume', () => {
+    expect(evaluateLoadImbalance(domains(0, 0, 0, 0, 0, 90))).toEqual({
+      imbalanced: false,
     });
   });
 });

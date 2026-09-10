@@ -1,3 +1,6 @@
+import { EXERCISE_PATTERN_TAGS } from '@/lib/smartRecovery/exercisePatternTags';
+import type { MovementPattern } from '@/lib/smartRecovery/movementPatterns';
+
 export interface ExercisePhoto {
   /**
    * Relative path in the `exercise-media` Storage bucket.
@@ -12,6 +15,8 @@ export interface ExercisePhoto {
 }
 
 export interface ExerciseInfo {
+  /** Primary movement patterns this exercise loads. At least one required. */
+  primaryPatterns: MovementPattern[];
   id: string;
   name: string;
   setupAndExecution: string[];
@@ -25,9 +30,7 @@ export interface ExerciseInfo {
 
 /** Default sequence still path: `{id}/sequence.jpeg` in the exercise-media bucket. */
 function sequencePhotos(id: string, caption?: string): ExercisePhoto[] {
-  return caption
-    ? [{ url: `${id}/sequence.jpeg`, caption }]
-    : [{ url: `${id}/sequence.jpeg` }];
+  return caption ? [{ url: `${id}/sequence.jpeg`, caption }] : [{ url: `${id}/sequence.jpeg` }];
 }
 
 function findByNormalizedName(normalized: string): ExerciseInfo | undefined {
@@ -54,8 +57,16 @@ export function getExerciseInfo(name: string): ExerciseInfo | undefined {
   return undefined;
 }
 
+function libEntry(entry: Omit<ExerciseInfo, 'primaryPatterns'>): ExerciseInfo {
+  const primaryPatterns = EXERCISE_PATTERN_TAGS[entry.id];
+  if (!primaryPatterns?.length) {
+    throw new Error(`Missing primaryPatterns for exercise id "${entry.id}"`);
+  }
+  return { ...entry, primaryPatterns };
+}
+
 export const EXERCISE_LIBRARY: ExerciseInfo[] = [
-  {
+  libEntry({
     id: 'burpees',
     name: 'Burpees',
     setupAndExecution: [
@@ -70,919 +81,1421 @@ export const EXERCISE_LIBRARY: ExerciseInfo[] = [
     amrapTip:
       'Find a breathing cadence. Exhale on the drop, inhale on the floor, exhale on the jump. If you hold your breath on burpees, you will redline in 45 seconds.',
     photos: sequencePhotos('burpees'),
-  },
-  {
+  }),
+  libEntry({
     id: 'air-squat',
     name: 'Air Squats',
     setupAndExecution: [
       'Stance is shoulder-width. Hips descend back and down until the hip crease is below the top of the knee. Stand completely tall, locking out the hips and knees at the top.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Cutting the depth once the legs burn, so the hip crease stops above the knee.',
+      'Standing up only part-way between reps, leaving the hips short of lockout.',
+      'Letting the heels lift as the hips drop, shifting the weight onto the toes.',
+    ],
     coachingCue:
       '"Tear the floor apart with your feet." This externally rotates the femur, activating the glutes and preventing the knees from caving in.',
     amrapTip:
       'Let gravity do the work on the way down. Pull yourself into the bottom quickly, then explode up. Use your arms for rhythm.',
-    photos: sequencePhotos(
-      'air-squat',
-      'Full squat sequence — stand, descent, ascent'
-    ),
-  },
-  {
+    photos: sequencePhotos('air-squat', 'Full squat sequence — stand, descent, ascent'),
+  }),
+  libEntry({
     id: 'alternating-lunges',
     name: 'Alternating Lunges',
     setupAndExecution: [
       'Step backward or forward. The trailing knee must gently kiss the floor. The front shin remains relatively vertical. Push back to a full standing position with feet together.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Letting the front knee travel past the toes as the torso pitches forward.',
+      'Slamming the trailing knee into the floor rather than tapping it.',
+      'Stopping short of a full stand, so the hips never lock out between reps.',
+    ],
     coachingCue:
       '"Ride the elevator, not the escalator." Drop straight down. Do not shift your bodyweight aggressively forward over your toes.',
     amrapTip:
       'Reverse lunges are superior for AMRAPs. They protect the deceleration forces on the knee and allow for a faster, springier return to the standing position.',
     photos: sequencePhotos('alternating-lunges'),
-  },
-  {
+  }),
+  libEntry({
     id: 'surrenders',
     name: 'Surrenders',
     setupAndExecution: [
       'Start standing with hands behind your head. Step down to the right knee, then the left knee. Step up with the right foot, then the left foot. Stand tall.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Letting the hands come off the head to help you stand.',
+      'Planting the second knee before the first is settled, collapsing sideways.',
+      'Always leading with the same leg, so one side does most of the work.',
+    ],
     coachingCue:
       '"Keep a proud chest." The moment you fold forward at the waist, you transfer the load from your quads to your lower back.',
     amrapTip:
       "Alternate your lead leg every round, not every rep, so you don't have to waste mental energy remembering which leg goes first.",
     photos: sequencePhotos('surrenders'),
-  },
-  {
+  }),
+  libEntry({
     id: 'glute-bridges',
     name: 'Glute Bridges',
     setupAndExecution: [
       'Lie on your back, knees bent, feet flat on the floor near your hips. Drive through your heels to bridge your hips upward until your shoulders, hips, and knees form a straight line.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Driving through the toes rather than the heels, which brings the quads in.',
+      'Setting the feet too far from the hips, so the hamstrings take over.',
+    ],
     coachingCue:
       '"Pinch a coin between your glutes at the top." If you just thrust your hips recklessly, you will hyper-extend your lumbar spine.',
     amrapTip:
       'Keep your toes slightly elevated off the floor to force the drive exclusively through your heels and hamstrings.',
     photos: sequencePhotos('glute-bridges'),
-  },
-  {
+  }),
+  libEntry({
     id: 'standard-push-ups',
     name: 'Standard Push-ups',
     setupAndExecution: [
       'Start in a high plank. Lower your body until your chest physically touches the floor. Press back up to full elbow extension. The body moves as a single, rigid plank.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Letting the hips sag so the chest reaches the floor before the shoulders do.',
+      'Stopping short of the floor once fatigue sets in.',
+      'Pressing the head and shoulders up first and leaving the hips behind.',
+    ],
     coachingCue:
       '"Screw your hands into the floor." Point your index fingers straight ahead and twist outward to create torque in the shoulder capsule.',
     amrapTip:
       'Breathe in on the descent, aggressively exhale on the press. Do not hold your breath, or your heart rate will redline instantly.',
     photos: sequencePhotos('standard-push-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'wide-grip-push-ups',
     name: 'Wide-Grip Push-ups',
     setupAndExecution: [
       'Same as the standard push-up, with hands placed outside shoulder width. Lower your body until your chest touches the floor and press back to full elbow extension, moving as a single rigid plank.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Flaring the elbows to a right angle, so the shoulders take the load.',
+      'Shortening the range as the set goes on, dropping only a few inches.',
+    ],
     coachingCue:
       '"Screw your hands into the floor." Point your index fingers straight ahead and twist outward to create torque in the shoulder capsule.',
     amrapTip:
       'Breathe in on the descent, aggressively exhale on the press. Do not hold your breath, or your heart rate will redline instantly.',
     photos: sequencePhotos('wide-grip-push-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'hand-release-push-ups',
     name: 'Hand-Release Push-ups',
     setupAndExecution: [
       'Lower into a standard push-up. At the bottom, when the chest is on the floor, briefly lift both hands off the ground. Place them back and press up.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Resting the whole body on the floor instead of releasing and pressing straight away.',
+      'Lifting only one hand, or barely clearing the floor with the fingers.',
+    ],
     coachingCue:
       '"Squeeze the shoulder blades together." Lifting the hands isn\'t a rest; it\'s an active contraction of the upper back.',
     amrapTip:
       'This enforces a dead-stop and prevents cheating the depth. Use this variation to humble users who claim they can do 50 push-ups unbroken.',
     photos: sequencePhotos('hand-release-push-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'diamond-push-ups',
     name: 'Diamond Push-ups',
     setupAndExecution: [
       'Hands form a diamond shape directly under the sternum. Keep elbows tucked tight to the ribcage as you lower the chest to the hands.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Letting the elbows drift outward as the set gets hard.',
+      'Setting the hands under the face rather than the sternum, pushing the shoulders forward.',
+    ],
     coachingCue:
       '"Shave your ribs with your elbows." If your elbows flare out on a diamond push-up, you will destroy your rotator cuff.',
-    amrapTip: 'Muscular failure happens suddenly here. Break your sets earlier than you think you need to.',
+    amrapTip:
+      'Muscular failure happens suddenly here. Break your sets earlier than you think you need to.',
     photos: sequencePhotos('diamond-push-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'pike-push-ups',
     name: 'Pike Push-ups',
     setupAndExecution: [
       'Start in a downward dog position (hips high, body forming an inverted V). Lower the crown of your head to the floor slightly in front of your hands, forming a tripod. Press back to the inverted V.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Walking the feet out until the hips drop and it becomes an ordinary push-up.',
+      'Lowering the head behind the hands rather than in front of them.',
+    ],
     coachingCue:
       '"Look at your toes, not the floor." Tucking the chin keeps the cervical spine neutral and targets the deltoids correctly.',
     amrapTip:
       'Keep your legs straight. If your hamstrings are tight, widen your foot stance to maintain the high hip position.',
     photos: sequencePhotos('pike-push-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'dive-bomber-push-ups',
     name: 'Dive-Bomber Push-ups',
     setupAndExecution: [
       'Start in a downward dog. Swoop the chest down just above the floor, passing through your hands, and finish with the chest proud and hips near the floor (upward dog). Reverse the exact same swoop backward.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Skipping the return swoop and pressing straight back to the start.',
+      'Dragging the hips along the floor instead of clearing it on the way through.',
+    ],
     coachingCue: '"Slide under the barbed wire, then back out." It is a two-way fluid motion.',
     amrapTip:
       'This is a slow, tension-heavy movement. Focus on continuous, unbroken motion rather than speed.',
     photos: sequencePhotos('dive-bomber-push-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 't-push-ups',
     name: 'T-Push-ups',
     setupAndExecution: [
       'Perform a standard push-up. At the top, lift one hand off the floor, rotate your torso, and reach that hand toward the ceiling, forming a "T" shape. Return to the plank and repeat on the other side.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Rotating from the arm alone while the hips stay flat to the floor.',
+      'Letting the feet shuffle apart to steady the rotation.',
+      'Rushing the turn so the reaching arm never gets to vertical.',
+    ],
     coachingCue:
       '"Eyes follow the hand." Tracking your reaching hand with your eyes ensures your thoracic spine rotates fully.',
     amrapTip:
       'Widen your foot stance slightly to provide a more stable base during the rotational phase.',
     photos: sequencePhotos('t-push-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'plank-shoulder-taps',
     name: 'Plank Shoulder Taps',
     setupAndExecution: [
       'From a high plank, tap your left shoulder with your right hand, then alternate.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Widening the feet to steady the hips instead of holding them still.',
+      'Snatching the tap so the hand barely leaves the floor.',
+    ],
     coachingCue:
       '"Balance a glass of water on your lower back." Your hips should not rock side-to-side.',
     amrapTip:
       'Widen your feet. A wider base of support kills the rotation in the hips, making the core work harder but the movement faster.',
     photos: sequencePhotos('plank-shoulder-taps'),
-  },
-  {
+  }),
+  libEntry({
     id: 'commando-planks',
     name: 'Commando Planks',
     setupAndExecution: [
       'High plank, drop to right forearm, left forearm (low plank). Press up with right hand, left hand (high plank).',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Always leading with the same arm, so one shoulder does most of the work.',
+      'Letting the hips swing wide each time an arm changes position.',
+    ],
     coachingCue:
       '"Balance a glass of water on your lower back." Your hips should not rock side-to-side.',
     amrapTip:
       'Widen your feet. A wider base of support kills the rotation in the hips, making the core work harder but the movement faster.',
     photos: sequencePhotos('commando-planks'),
-  },
-  {
+  }),
+  libEntry({
     id: 'plank-jacks',
     name: 'Plank Jacks',
     setupAndExecution: [
       'Hold a high or low plank. Jump both feet out wide, then jump them back together, maintaining a rigid core.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Shuffling the feet out rather than jumping them.',
+      'Landing heavily, so the whole plank shakes on every rep.',
+    ],
     coachingCue: '"Lock the hips in space." Do not let the hips bounce up and down with the jumps.',
     amrapTip:
       'Keep the jumps small and fast. A massive lateral jump slows down the transition and compromises the spine.',
     photos: sequencePhotos('plank-jacks'),
-  },
-  {
+  }),
+  libEntry({
     id: 'jump-squats',
     name: 'Jump Squats',
     setupAndExecution: [
       'Perform a standard air squat. At the bottom, explode upward, leaving the floor. Land softly and immediately descend into the next rep.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Landing with straight legs instead of absorbing the impact into a bend.',
+      'Dipping only a few inches before jumping, which turns the squat into a hop.',
+    ],
     coachingCue:
       '"Land like a ninja." Absorb the impact by landing on the mid-foot and instantly bending the knees. Never land with locked joints.',
     amrapTip:
       "You only need an inch of air to make it plyometric. Don't waste energy jumping for the ceiling.",
     photos: sequencePhotos('jump-squats'),
-  },
-  {
+  }),
+  libEntry({
     id: 'jumping-lunges',
     name: 'Jumping Lunges',
     setupAndExecution: [
       'Start in the bottom of a lunge. Explode upward, switch legs in the air, and land softly in a lunge on the opposite side.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Landing on a stiff front leg rather than absorbing into the lunge.',
+      'Switching the feet late, so you land half-square instead of in a lunge.',
+      'Cutting the depth until the back knee no longer approaches the floor.',
+    ],
     coachingCue:
       '"Vertical force, not horizontal." Drive straight up. If you travel forward, you lose balance and waste time.',
     amrapTip:
       'Use your arms as a counterweight. Pumping the opposite arm forward provides stability and upward momentum.',
     photos: sequencePhotos('jumping-lunges'),
-  },
-  {
+  }),
+  libEntry({
     id: 'skater-jumps',
     name: 'Skater Jumps',
     setupAndExecution: [
       'Bound laterally off the right foot, landing softly on the left foot while sweeping the right leg behind you. Explode back to the right.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Bounding forward instead of laterally, so the hips never load sideways.',
+      'Letting the trailing leg touch down for balance on every landing.',
+    ],
     coachingCue:
       '"Load the hip, explode off the edge." Think of a speed skater pushing off the ice.',
-    amrapTip: 'Keep the chest up. Looking down at the floor rounds the back and cuts off your airway.',
+    amrapTip:
+      'Keep the chest up. Looking down at the floor rounds the back and cuts off your airway.',
     photos: sequencePhotos('skater-jumps'),
-  },
-  {
+  }),
+  libEntry({
     id: 'tuck-jumps',
     name: 'Tuck Jumps',
     setupAndExecution: [
       'From a standing position, jump powerfully straight up and pull both knees violently toward your chest. Land softly and repeat.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Landing flat-footed with the knees locked.',
+      'Dropping the knees before the peak, so the tuck happens on the way down.',
+    ],
     coachingCue:
       '"Bring the knees to the chest, not the chest to the knees." Do not fold forward in the air.',
     amrapTip:
       'This is incredibly demanding neurologically. Do these in small, unbroken bursts (e.g., 5 reps) and take a two-second reset.',
     photos: sequencePhotos('tuck-jumps'),
-  },
-  {
+  }),
+  libEntry({
     id: 'broad-jumps',
     name: 'Broad Jumps',
     setupAndExecution: [
       'Stand with feet shoulder-width. Hinge at the hips, throw the arms forward, and jump horizontally as far as possible. Land in a partial squat.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Landing stiff-legged rather than sinking into a partial squat.',
+      'Cutting the arm swing short, which costs distance for no saved effort.',
+      'Setting up for the next rep before regaining balance from the last landing.',
+    ],
     coachingCue:
       '"Extend the hips fully in the air." The power comes from the glutes firing, not just the quads.',
     amrapTip:
       'For an AMRAP, do not aim for maximum distance on every jump. Aim for a consistent, sustainable 4-5 foot bound that allows for rapid turnarounds.',
     photos: sequencePhotos('broad-jumps'),
-  },
-  {
+  }),
+  libEntry({
     id: 'bottom-squat-hold',
     name: 'Bottom Squat Hold',
     setupAndExecution: [
       'Descend until the hip crease is below the knee. Maintain an upright torso and keep the weight evenly distributed across the full foot.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Sinking onto the joints and letting the chest fold toward the floor.',
+      'Rolling forward onto the toes so the heels float off the ground.',
+      'Bouncing in the bottom to relieve the burn instead of holding still.',
+    ],
     coachingCue:
       '"Pry the floor apart." Do not rest passively on your joints; maintain violent muscular tension in the glutes and quads.',
     amrapTip:
       'Lactic acid floods the legs rapidly here. Breathe deep into your diaphragm to delay the panic reflex.',
     photos: sequencePhotos('bottom-squat-hold'),
-  },
-  {
+  }),
+  libEntry({
     id: 'sphinx-push-ups',
     name: 'Sphinx Push-ups',
     setupAndExecution: [
       'Begin in a forearm plank. Press both palms into the floor and extend the elbows simultaneously to rise into a high plank.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Dropping the knees to the floor to make the press easier.',
+      'Walking the elbows in toward the body first, which shortens the range.',
+    ],
     coachingCue:
       '"Move as one sheet of glass." If your hips sag or you press up one arm at a time, you are leaking kinetic energy.',
     amrapTip:
       'Keep your elbows tucked tight to your ribs to maximize triceps recruitment and protect the shoulder joint.',
     photos: sequencePhotos('sphinx-push-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'floor-dips',
     name: 'Floor Dips',
     setupAndExecution: [
       'Sit on the floor with knees bent and hands behind you, fingers facing the heels. Elevate hips slightly, bend elbows to lower, and press to lockout.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Sliding the hips forward away from the hands, turning the dip into a shrug.',
+      'Bending the elbows only slightly, so the arms never really load.',
+    ],
     coachingCue:
       '"Pin your shoulder blades into your back pockets." Rolling shoulders forward transfers load to the vulnerable anterior shoulder capsule.',
     amrapTip:
       'Keep your hips planted close to your wrists to prevent shifting the workload away from the arms.',
     photos: sequencePhotos('floor-dips'),
-  },
-  {
+  }),
+  libEntry({
     id: 'hollow-hold',
     name: 'Hollow Hold',
     setupAndExecution: [
       'Lie supine. Squeeze the legs together, lift the shoulders, and elevate the heels six inches, creating a rigid crescent moon shape.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Letting the lower back arch away from the floor as the legs tire.',
+      'Raising the heels high to relieve the abs, which shortens the lever.',
+    ],
     coachingCue:
       '"Crush the floorboard with your lower back." If any daylight passes beneath your lumbar spine, the hold is void.',
     amrapTip:
       'Fatigue causes the back to arch. Regress the movement immediately by tucking your knees toward your chest when this happens.',
     photos: sequencePhotos('hollow-hold'),
-  },
-  {
+  }),
+  libEntry({
     id: 'reverse-lunges',
     name: 'Reverse Lunges',
     setupAndExecution: [
       'From a standing position, step one foot directly backward. Lower your hips straight down until the trailing knee gently kisses the floor. The front shin remains vertical. Drive powerfully through the front heel to return to a standing position.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Stepping back too short, which forces the front shin to angle over the toe.',
+      'Twisting the hips open as the leg goes back, so the torso stops facing forward.',
+    ],
     coachingCue:
       '"Pull yourself up with the front hamstring." Do not just push off the back toe; use the front leg to actively drag your bodyweight back to the starting position.',
     amrapTip:
       'Keep your torso completely upright. Leaning forward shifts the load to the lower back and robs the quads of the intended tension.',
     photos: sequencePhotos('reverse-lunges'),
-  },
-  {
+  }),
+  libEntry({
     id: 'single-leg-glute-bridges',
     name: 'Single-Leg Glute Bridges',
     setupAndExecution: [
       'Lie supine with one knee bent and that foot flat on the floor. Extend the opposite leg completely straight. Drive through the planted heel to lift the hips until the shoulders, hips, and knees form a straight line. Lower with control.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Letting one hip drop lower than the other at the top.',
+      'Swinging the free leg for momentum rather than holding it still.',
+    ],
     coachingCue:
       '"Punch the ceiling with your floating heel." This keeps the extended leg active and prevents the pelvis from violently twisting under the unilateral load.',
     amrapTip:
       'Keep both thighs parallel to each other throughout the entire movement. Do not let the extended leg drift up or drop down.',
     photos: sequencePhotos('single-leg-glute-bridges'),
-  },
-  {
+  }),
+  libEntry({
     id: 'standard-glute-bridges',
     name: 'Standard Glute Bridges',
     setupAndExecution: [
       'Lie on your back, knees bent, feet flat on the floor hip-width apart. Drive through your heels to bridge your hips upward. Hold for a micro-second at maximum extension, then lower under tension.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Rushing the reps so there is no pause at full extension.',
+      'Lowering all the way to rest on the floor between reps.',
+    ],
     coachingCue:
       '"Crack a walnut between your glutes at the top." We are chasing maximum muscular contraction, not just mindless hip thrusting.',
     amrapTip:
       'If you begin to feel a deep ache in your lower back, your abdominals have turned off. Brace your core tightly before initiating the bridge.',
     photos: sequencePhotos('standard-glute-bridges'),
-  },
-  {
+  }),
+  libEntry({
     id: 'wide-push-ups',
     name: 'Wide Push-ups',
     setupAndExecution: [
       'Start in a high plank with hands placed significantly wider than shoulder-width. Lower the chest to the floor, keeping the body in a rigid line, then press back to full lockout.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Setting the hands so wide that the elbows cannot reach a right angle.',
+      'Letting the ribcage flare and the lower back arch as the chest lowers.',
+    ],
     coachingCue:
       '"Try to tear the floor apart horizontally." Actively pulling your hands away from each other creates massive tension across the pectoral muscles.',
     amrapTip:
       'This angle completely isolates the chest and removes the triceps from the equation. When pectoral failure hits, it hits instantly. Break your sets into 3s or 4s before the muscle completely shuts down.',
     photos: sequencePhotos('wide-push-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'side-plank-dips',
     name: 'Side Plank Dips',
     setupAndExecution: [
       'Prop yourself up on one forearm, stacking your feet so your body forms a straight, diagonal line. Lower your bottom hip until it lightly taps the floor, then aggressively contract the obliques to lift the hip back up to the starting position (or slightly higher).',
     ],
-    commonMistakes: [],
-    coachingCue:
-      '"Imagine a heavy cable pulling your top hip directly to the ceiling."',
+    commonMistakes: [
+      'Bouncing the hip off the floor to start the next rep.',
+      'Rolling the chest toward the mat as the hip lowers.',
+    ],
+    coachingCue: '"Imagine a heavy cable pulling your top hip directly to the ceiling."',
     amrapTip:
       'Do not let the top shoulder roll forward toward the floor. Keep the chest completely open to keep the tension locked entirely on the obliques.',
     photos: sequencePhotos('side-plank-dips'),
-  },
-  {
+  }),
+  libEntry({
     id: 'pogo-jumps',
     name: 'Pogo Jumps',
     setupAndExecution: [
       'Stand tall with feet together. Keeping the knees nearly locked (only a micro-bend), bounce rapidly off the balls of the feet. The power is generated exclusively from the ankles and calves.',
     ],
-    commonMistakes: [],
-    coachingCue:
-      '"Your ankles are steel springs. Punch the ground away."',
+    commonMistakes: [
+      'Bending the knees deeply, which turns it into a squat jump.',
+      'Landing back on the heels rather than staying on the balls of the feet.',
+    ],
+    coachingCue: '"Your ankles are steel springs. Punch the ground away."',
     amrapTip:
       'Minimize ground contact time. The heels should never touch the floor. The moment the ball of the foot strikes the mat, rebound instantly.',
     photos: sequencePhotos('pogo-jumps'),
-  },
-  {
+  }),
+  libEntry({
     id: 'fast-calf-raises',
     name: 'Fast Calf Raises',
     setupAndExecution: [
       'Stand perfectly tall with feet shoulder-width. Explosively drive up onto the balls of the feet, lifting the heels as high as mechanically possible, then rapidly drop back down, stopping just millimeters before the heels touch the floor.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Cutting the lift short, so the heels never reach full height.',
+      'Letting the heels bang down instead of stopping just above the floor.',
+      'Bending the knees to bounce, which takes the calves out of it.',
+    ],
     coachingCue:
       '"Spike the heels up, control the crash down." Do not just bounce mindlessly; force full plantar flexion at the top of every single rep.',
     amrapTip:
       'As the calves fill with lactic acid, your body will naturally try to shorten the range of motion. Fight for maximum height on the 20th rep just like you did on the 1st rep.',
     photos: sequencePhotos('fast-calf-raises'),
-  },
-  {
+  }),
+  libEntry({
     id: 'sprawls',
     name: 'Sprawls',
     setupAndExecution: [
       'Plant hands on the floor and jump feet back into a rigid high plank position. Immediately jump the feet back toward the hands and stand fully upright, opening the hips completely.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Landing the plank with the hips high instead of level with the shoulders.',
+      'Standing up without opening the hips fully at the top.',
+    ],
     coachingCue:
       '"Lock the plank." When you kick back, your core must act as a sudden brake to prevent the lower back from hyperextending and sagging toward the floor.',
     amrapTip:
       'Keep a wide stance. Landing with your feet outside your hands reduces the distance your hips have to travel and speeds up the transition to standing.',
     photos: sequencePhotos('sprawls'),
-  },
-  {
+  }),
+  libEntry({
     id: 'combat-sprawls',
     name: 'Combat Sprawls',
     setupAndExecution: [
       'From a wide, low defensive crouch, plant both hands on the floor. Violently kick both feet back into a rigid high plank. Instantly pull the knees forward, jumping the feet wide to land flat-footed on the outside of your hands. Lift your hands and chest to return to the defensive crouch, never fully standing or locking out the hips.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Landing the feet inside the hands, leaving no room to lift the chest.',
+      'Stepping the feet back one at a time instead of kicking both together.',
+    ],
     coachingCue:
       '"Drop to evade, recover to defend." The hips must remain low; if you stand all the way up, you are giving your quads an unearned rest. You must live in the tension.',
     amrapTip:
       'You must land with your entire foot completely flat on the mat when returning from the plank. Landing on your toes in this wide stance places severe shearing force on the knee capsule and kills your ability to rebound.',
     photos: sequencePhotos('combat-sprawls'),
-  },
-  {
+  }),
+  libEntry({
     id: 'down-ups',
     name: 'Down-Ups',
     setupAndExecution: [
       'Similar to the sprawl, but start standing, drop to the floor until your chest touches (like a burpee), then snap back up to a standing position without the jump and clap at the top.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Popping the chest up before the hips, so the body peels off the floor in sections.',
+      'Failing to get the chest all the way to the floor once the pace drops.',
+    ],
     coachingCue:
       '"Stand tall and proud." The rep is not complete until your knees and hips are locked out and your shoulders are behind your collarbone.',
     amrapTip:
       'This movement is all about hip-hinge efficiency. Minimize the time spent with your hands on the floor.',
     photos: sequencePhotos('down-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'half-burpees',
     name: 'Half-Burpees',
     setupAndExecution: [
       'Start in a high plank. Jump both feet forward so they land flat outside your hands in a low squat position. Immediately jump them back to the rigid high plank. You never stand up.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Letting the hips pike upward on the jump back.',
+      'Landing the feet behind the hands, so the squat position is never reached.',
+    ],
     coachingCue:
       '"Stay in the tunnel." Your hips should never rise above your shoulders. It is a rapid, horizontal piston motion.',
     amrapTip:
       'Your quads will burn intensely. Keep your weight shifted slightly forward over your shoulders to give your legs a mechanical advantage.',
     photos: sequencePhotos('half-burpees'),
-  },
-  {
+  }),
+  libEntry({
     id: 'mountain-climbers',
     name: 'Mountain Climbers',
     setupAndExecution: [
       'Start in a high plank. Drive one knee aggressively toward the chest, then rapidly switch legs in mid-air. The hips must remain low and level.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Landing the driving foot short, so the knee never gets near the chest.',
+      'Creeping the hands forward as the pace increases.',
+    ],
     coachingCue:
       '"Run on the wall." Imagine you are sprinting vertically. Do not let your hips bounce up and down like a seesaw.',
     amrapTip:
       'Keep your shoulders stacked directly over your wrists. If you drift backward, you lose leverage and the movement slows down completely.',
     photos: sequencePhotos('mountain-climbers'),
-  },
-  {
+  }),
+  libEntry({
     id: 'cross-body-mountain-climbers',
     name: 'Cross-Body Mountain Climbers',
     setupAndExecution: [
       'From a high plank, violently drive the right knee across the body to tap the left elbow, then switch.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Reaching the elbow down to the knee instead of driving the knee across.',
+      'Skipping the rotation and driving the knee straight forward.',
+    ],
     coachingCue:
       '"Wring out the towel." Force a deep rotational twist in the torso on every single rep to maximize oblique engagement.',
     amrapTip:
       'Because of the rotation, these are slightly slower than standard mountain climbers. Focus on the hard muscular contraction rather than pure foot speed.',
     photos: sequencePhotos('cross-body-mountain-climbers'),
-  },
-  {
+  }),
+  libEntry({
     id: 'high-knees',
     name: 'High Knees',
     setupAndExecution: [
       'Run in place, driving the knees upward. The knee must break the horizontal plane of the hip crease for the rep to count. Keep the torso perfectly upright.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Leaning back to swing the knees higher instead of keeping the torso stacked.',
+      'Letting the knees drop below hip height as the pace picks up.',
+    ],
     coachingCue:
       '"Punch the glass ceiling." Pump your arms in perfect synchronization with your legs to drive the upward momentum.',
     amrapTip:
       'Land lightly on the balls of your feet. If you are stomping flat-footed, you are destroying your momentum and your knees.',
     photos: sequencePhotos('high-knees'),
-  },
-  {
+  }),
+  libEntry({
     id: 'butt-kicks',
     name: 'Butt Kicks',
     setupAndExecution: [
       'Run in place, violently pulling the heels up to physically strike the glutes. The knees point down toward the floor, not forward.',
     ],
-    commonMistakes: [],
-    coachingCue:
-      '"Flick the dirt off your heels." This is rapid hamstring contraction.',
+    commonMistakes: [
+      'Kicking the heels out behind rather than straight up to the glutes.',
+      'Letting the knees travel forward, which turns it into a jog in place.',
+    ],
+    coachingCue: '"Flick the dirt off your heels." This is rapid hamstring contraction.',
     amrapTip:
       'Lean slightly forward from the ankles (not the waist) to maintain an aggressive, forward-driving posture even while stationary.',
     photos: sequencePhotos('butt-kicks'),
-  },
-  {
+  }),
+  libEntry({
     id: 'jumping-jacks',
     name: 'Jumping Jacks',
     setupAndExecution: [
       'Start standing. Jump feet wide while simultaneously sweeping arms out and overhead until hands touch. Jump back to the starting position.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Bending the elbows so the hands never meet overhead.',
+      'Bringing the arms only to shoulder height once the shoulders tire.',
+    ],
     coachingCue:
       '"Long arms, rigid legs." Do not do lazy, bent-elbow jumping jacks. Force full range of motion in the shoulder capsule.',
     amrapTip:
       'Use this movement for active recovery. When paired with burpees or mountain climbers, the jumping jack is your opportunity to catch your breath.',
     photos: sequencePhotos('jumping-jacks'),
-  },
-  {
+  }),
+  libEntry({
     id: 'lateral-line-hops',
     name: 'Lateral Line Hops',
     setupAndExecution: [
       'Pick a literal or imaginary line on the floor. Keep feet glued together and jump rapidly side-to-side over the line.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Letting the feet come apart in the air and landing one at a time.',
+      'Drifting away from the line, so the hops get shorter and shorter.',
+    ],
     coachingCue:
       '"Pogo stick tension." The knees remain only slightly bent. All the power is generated from the calves and ankles.',
     amrapTip:
       'Keep your eyes up. Looking down at the line naturally rounds the shoulders and constricts the airway.',
     photos: sequencePhotos('lateral-line-hops'),
-  },
-  {
+  }),
+  libEntry({
     id: 'double-tap-jumps',
     name: 'Double-Tap Jumps',
     setupAndExecution: [
       'Jump straight up into the air. While airborne, rapidly slap your outer thighs twice with your hands before your feet touch the ground.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Bending forward to reach the thighs instead of jumping higher.',
+      'Getting only one slap in and counting the rep anyway.',
+    ],
     coachingCue:
       '"Tap at the apex." The slaps must happen at the absolute highest point of the jump to enforce the correct hang-time.',
     amrapTip:
       'This perfectly simulates the neurological timing of a double-under with a jump rope. Keep the torso completely hollow and rigid in the air.',
     photos: sequencePhotos('double-tap-jumps'),
-  },
-  {
+  }),
+  libEntry({
     id: 'v-ups',
     name: 'V-Ups',
     setupAndExecution: [
       'Lie supine, snapping straight arms and legs up simultaneously to touch toes over the midline.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Bending the knees to bring the feet closer to the hands.',
+      'Rocking backward first to generate momentum for the fold.',
+    ],
     coachingCue: '"Fold like a steel trapdoor."',
-    amrapTip:
-      'If you bend your knees to reach your toes, you are cheating the lower abdominals.',
+    amrapTip: 'If you bend your knees to reach your toes, you are cheating the lower abdominals.',
     photos: sequencePhotos('v-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'strict-sit-ups',
     name: 'Strict Sit-Ups',
     setupAndExecution: [
       'Butterfly the feet. Touch the floor behind your head, then sit up to touch your toes.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Anchoring the feet under something to pull yourself up.',
+      'Skipping the touch behind the head and starting each rep from half-way.',
+    ],
     coachingCue: '"Roll up one vertebra at a time."',
     amrapTip:
       'Do not throw your arms forward to generate momentum; force the core to pull the weight.',
     photos: sequencePhotos('strict-sit-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'leg-raises',
     name: 'Leg Raises',
     setupAndExecution: [
       'Lie supine, raising straight legs to a 90-degree angle, then lowering with absolute control.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Dropping the legs fast and letting the lower back arch off the floor.',
+      'Bending at the knees as the legs lower.',
+    ],
     coachingCue: '"Pin the ribcage to the floor."',
-    amrapTip:
-      'Stop lowering your legs the exact millisecond your lower back arches off the mat.',
+    amrapTip: 'Stop lowering your legs the exact millisecond your lower back arches off the mat.',
     photos: sequencePhotos('leg-raises'),
-  },
-  {
+  }),
+  libEntry({
     id: 'russian-twists',
     name: 'Russian Twists',
     setupAndExecution: [
       'Balance on the sit bones with feet elevated. Violently rotate the torso to physically touch the floor on each side.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Swinging the arms across the body while the shoulders stay square.',
+      'Letting the feet drop to the floor to make the balance easier.',
+    ],
     coachingCue: '"Your eyes must track your hands."',
     amrapTip:
       'Cross your ankles to lock the lower body and isolate the rotation to the thoracic spine.',
     photos: sequencePhotos('russian-twists'),
-  },
-  {
+  }),
+  libEntry({
     id: 'bicycle-crunches',
     name: 'Bicycle Crunches',
     setupAndExecution: [
       'Lie supine, twisting to drive the elbow to the opposite knee while fully extending the other leg.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Pulling on the back of the head to bring the elbow across.',
+      'Cycling the legs quickly without ever fully extending one.',
+    ],
     coachingCue: '"Rotate from the sternum, not by pulling the neck."',
-    amrapTip:
-      'Keep elbows pinned wide; pulling on the back of your head is a fake rep.',
+    amrapTip: 'Keep elbows pinned wide; pulling on the back of your head is a fake rep.',
     photos: sequencePhotos('bicycle-crunches'),
-  },
-  {
+  }),
+  libEntry({
     id: 'plank-knee-to-elbows',
     name: 'Plank Knee-to-Elbows',
     setupAndExecution: [
       'From a high plank, drive the knee outside the body to physically touch the triceps.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Dropping the hip toward the floor to help the knee travel.',
+      'Bringing the elbow back to meet the knee instead of driving the knee forward.',
+    ],
     coachingCue: '"Crunch the obliques sideways."',
-    amrapTip:
-      'Keep hips completely level to avoid shifting the workload to the hip flexors.',
+    amrapTip: 'Keep hips completely level to avoid shifting the workload to the hip flexors.',
     photos: sequencePhotos('plank-knee-to-elbows'),
-  },
-  {
+  }),
+  libEntry({
     id: 'dead-bugs',
     name: 'Dead Bugs',
     setupAndExecution: [
       'Supine with knees bent at 90 degrees. Slowly extend opposite arm and leg toward the floor.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Letting the extended arm and leg drop fast rather than lowering slowly.',
+      'Allowing the lower back to lift off the floor as the limbs extend.',
+    ],
     coachingCue: '"Crush a grape under your lumbar spine."',
-    amrapTip:
-      'Speed is your enemy here. Move deliberately to maximize time under tension.',
+    amrapTip: 'Speed is your enemy here. Move deliberately to maximize time under tension.',
     photos: sequencePhotos('dead-bugs'),
-  },
-  {
+  }),
+  libEntry({
     id: 'flutter-kicks',
     name: 'Flutter Kicks',
-    setupAndExecution: [
-      'Supine, legs six inches off the floor, rapidly kicking up and down.',
+    setupAndExecution: ['Supine, legs six inches off the floor, rapidly kicking up and down.'],
+    commonMistakes: [
+      'Letting the heels touch down at the bottom of each kick.',
+      'Kicking from the knees rather than keeping the legs long.',
     ],
-    commonMistakes: [],
     coachingCue: '"Point the toes, lock the quads."',
     amrapTip:
       'Tuck your chin firmly to your chest to lock down the upper abdominals and protect the neck.',
     photos: sequencePhotos('flutter-kicks'),
-  },
-  {
+  }),
+  libEntry({
     id: 'superman-raises',
     name: 'Superman Raises',
     setupAndExecution: [
       'Prone on the floor, simultaneously lift the chest and thighs off the mat.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Throwing the chest up and letting it drop straight back down.',
+      'Lifting the chest while the thighs stay on the mat.',
+    ],
     coachingCue: '"Fly, do not jerk."',
     amrapTip:
       'Aggressively squeeze the glutes before lifting the chest to protect the lower back from hyperextension.',
     photos: sequencePhotos('superman-raises'),
-  },
-  {
+  }),
+  libEntry({
     id: 'alternating-bird-dogs',
     name: 'Alternating Bird-Dogs',
     setupAndExecution: [
       'From a quadruped position (hands under shoulders, knees under hips), slowly extend the right arm forward and the left leg backward until both are parallel to the floor. Return and switch.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Lifting the arm and leg above the line of the back, which arches the spine.',
+      'Rushing the switch, so neither limb reaches parallel to the floor.',
+    ],
     coachingCue:
       '"Balance a glass of water on your lower back." There should be zero spinal rotation.',
     amrapTip:
       'Reach long, not high. Hyperextending the back to get your leg higher defeats the core stabilization purpose entirely.',
     photos: sequencePhotos('alternating-bird-dogs'),
-  },
-  {
+  }),
+  libEntry({
     id: 'bear-crawl-hover',
     name: 'Bear Crawl Hover',
     setupAndExecution: [
       'Set up in a quadruped position. Press your toes into the mat and lift both knees exactly one inch off the floor. Freeze.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Letting the knees drift up until the hips rise into a pike.',
+      'Holding the breath to keep the position rigid.',
+    ],
     coachingCue: '"Your shins are parallel to the deck."',
     amrapTip:
       'As your quads burn, your hips will naturally try to pike up toward the ceiling to relieve the tension. Pin them down.',
     photos: sequencePhotos('bear-crawl-hover'),
-  },
-  {
+  }),
+  libEntry({
     id: 'high-plank-hold',
     name: 'High Plank Hold',
     setupAndExecution: [
       'Assume the top of a push-up position. Hands directly under shoulders, legs perfectly straight, core braced.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Letting the shoulders drift behind the hands as the hold goes on.',
+      'Locking the elbows and hanging on the joints rather than holding tension.',
+    ],
     coachingCue:
       '"Actively push the floor away from you." This protracts the shoulder blades and engages the serratus anterior.',
     amrapTip:
       'Squeeze your glutes. A plank is not just a shoulder exercise; it is a full-body isometric lock.',
     photos: sequencePhotos('high-plank-hold'),
-  },
-  {
+  }),
+  libEntry({
     id: 'hollow-rocks',
     name: 'Hollow Rocks',
     setupAndExecution: [
       'Assume the hollow hold position (supine, lower back crushed into the floor, shoulders and heels elevated). Generate a tiny rocking motion head-to-toe without breaking the structural shape.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Breaking at the hips so the rock turns into a crunch.',
+      'Rocking from the head and shoulders instead of the whole body.',
+    ],
     coachingCue: '"Maintain the rigid crescent moon."',
     amrapTip:
       'The rocking motion should be miniature. If your lower back peels off the floor, you are using momentum, not your core.',
     photos: sequencePhotos('hollow-rocks'),
-  },
-  {
+  }),
+  libEntry({
     id: 'plank-hold',
     name: 'Plank Hold',
     setupAndExecution: [
       'Rest on your forearms with elbows stacked under shoulders. Body forms a perfectly straight line from the crown of the head to the heels.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Letting the hips creep upward into an easier tent shape.',
+      'Dropping the head so the neck falls out of line with the spine.',
+    ],
     coachingCue:
       '"Drag your elbows toward your toes." (This is an isometric intention—they won\'t actually move, but the tension in your lats and core will double).',
     amrapTip:
       'Keep your forearms parallel. Do not interlock your fingers, which internally rotates the shoulders and compromises the posture.',
     photos: sequencePhotos('plank-hold'),
-  },
-  {
+  }),
+  libEntry({
     id: 'plank-reaches',
     name: 'Plank Reaches',
     setupAndExecution: [
       'From a high plank, slowly reach one arm straight out in front of you until it is parallel to the floor. Place it back, then switch arms.',
     ],
-    commonMistakes: [],
-    coachingCue:
-      '"Do not let the hips spill." Your torso must remain perfectly square to the mat.',
+    commonMistakes: [
+      'Shifting weight onto the planted arm and letting that shoulder collapse.',
+      'Reaching only half-way, so the arm never comes parallel to the floor.',
+    ],
+    coachingCue: '"Do not let the hips spill." Your torso must remain perfectly square to the mat.',
     amrapTip:
       'Widen your feet slightly wider than shoulder-width to create a tripod base before you lift a hand.',
     photos: sequencePhotos('plank-reaches'),
-  },
-  {
+  }),
+  libEntry({
     id: 'side-plank-hold',
     name: 'Side Plank Hold',
     setupAndExecution: [
       'Prop yourself on one forearm, stack your feet, and lift your hips until your body forms a straight line.',
     ],
-    commonMistakes: [],
-    coachingCue:
-      '"Imagine a steel cable pulling your top hip directly into the ceiling."',
-    amrapTip:
-      'Squeeze the bottom glute aggressively to prevent the hips from hinging backward.',
+    commonMistakes: [
+      'Letting the hips settle backward so the body is no longer in one plane.',
+      'Stacking the supporting elbow ahead of or behind the shoulder.',
+    ],
+    coachingCue: '"Imagine a steel cable pulling your top hip directly into the ceiling."',
+    amrapTip: 'Squeeze the bottom glute aggressively to prevent the hips from hinging backward.',
     photos: sequencePhotos('side-plank-hold'),
-  },
-  {
+  }),
+  libEntry({
     id: 'v-sit-hold',
     name: 'V-Sit Hold',
     setupAndExecution: [
       'Balance entirely on your sit bones. Elevate straight legs to a 45-degree angle and lean your torso back slightly, reaching your arms forward parallel to the floor.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Bending the knees to hold the legs up as the hold goes on.',
+      'Rounding the lower back and settling behind the sit bones.',
+    ],
     coachingCue: '"Balance on the razor\'s edge."',
     amrapTip:
       'If your lower back rounds, the hold is broken. Pull your knees slightly toward your chest to reset the flat spine.',
     photos: sequencePhotos('v-sit-hold'),
-  },
-  {
+  }),
+  libEntry({
     id: 'butterfly-sit-ups',
     name: 'Butterfly Sit-ups',
     setupAndExecution: [
       'Lie supine, bring the soles of your feet together, and let your knees fall open. Touch the floor behind your head, then sit all the way up and touch your toes.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Letting the knees rise off the floor to help the torso up.',
+      'Reaching for the shins rather than all the way to the toes.',
+    ],
     coachingCue: '"Roll up one vertebra at a time."',
     amrapTip:
       'The butterfly leg position mechanically disables the hip flexors, forcing pure abdominal contraction. Do not use your arms to swing forward.',
     photos: sequencePhotos('butterfly-sit-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'cross-body-climbers',
     name: 'Cross-Body Climbers',
     setupAndExecution: [
       'From a high plank, violently drive the right knee across the body under the torso to physically tap the left elbow, then switch.',
     ],
-    commonMistakes: [],
-    coachingCue:
-      '"Wring out the towel." Force a deep rotational twist in the torso on every rep.',
-    amrapTip:
-      'Focus on the hard muscular contraction and the twist rather than pure foot speed.',
+    commonMistakes: [
+      'Slowing the switch until both feet are on the floor between reps.',
+      'Letting the supporting shoulder roll forward under the twist.',
+    ],
+    coachingCue: '"Wring out the towel." Force a deep rotational twist in the torso on every rep.',
+    amrapTip: 'Focus on the hard muscular contraction and the twist rather than pure foot speed.',
     photos: sequencePhotos('cross-body-climbers'),
-  },
-  {
+  }),
+  libEntry({
     id: 'bodyweight-good-mornings',
     name: 'Bodyweight Good Mornings',
     setupAndExecution: [
       'Stand tall, hands lightly behind your head. With a micro-bend in the knees, hinge your hips straight back until your torso is nearly parallel to the floor. Stand back up aggressively.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Bending the knees to reach depth instead of hinging back at the hips.',
+      'Rounding the upper back as the torso lowers.',
+      'Leading the stand-up with the chest, so the hips trail behind.',
+    ],
     coachingCue: '"Push your hips through the wall behind you."',
     amrapTip:
       'The moment your lower back starts to round, you have gone too deep. The stretch must be felt entirely in the hamstrings.',
     photos: sequencePhotos('bodyweight-good-mornings'),
-  },
-  {
+  }),
+  libEntry({
     id: 'glute-bridge-hold',
     name: 'Glute Bridge Hold',
     setupAndExecution: [
       'Lie supine, knees bent, feet flat. Drive the hips up into full extension and freeze the position.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Letting the hips drift down over the hold without noticing.',
+      'Pushing through the toes, so the heels lift off the floor.',
+    ],
     coachingCue: '"Crack a walnut." Uncompromising glute tension.',
     amrapTip:
       'Drive through your heels, not your toes. Pressing through the toes shifts the load to the quads.',
     photos: sequencePhotos('glute-bridge-hold'),
-  },
-  {
+  }),
+  libEntry({
     id: 'glute-bridge-walkouts',
     name: 'Glute Bridge Walkouts',
     setupAndExecution: [
       'Hold the top of a glute bridge. Slowly walk your heels out away from your body in small, alternating steps until your legs are nearly straight. Walk them back in.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Letting the hips sink as the feet travel outward.',
+      'Taking large steps, so the walk becomes two strides rather than several.',
+    ],
     coachingCue: '"Dig your heels into the dirt."',
     amrapTip:
       'If you rush this, your hamstrings will instantly cramp. Move in slow, deliberate micro-steps.',
     photos: sequencePhotos('glute-bridge-walkouts'),
-  },
-  {
+  }),
+  libEntry({
     id: 'reverse-snow-angels',
     name: 'Reverse Snow Angels',
     setupAndExecution: [
       'Lie prone (face down). Keep your chest hovering slightly off the floor. Keep your arms totally straight and sweep them from your hips all the way overhead in a wide arc.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Letting the arms bend as they pass the shoulders.',
+      'Resting the chest on the floor between sweeps.',
+    ],
     coachingCue: '"Scrape your knuckles across the ceiling."',
     amrapTip:
       'Do not let your hands rest on the floor during the sweep. Keep constant tension on the upper back and rear deltoids.',
     photos: sequencePhotos('reverse-snow-angels'),
-  },
-  {
+  }),
+  libEntry({
+    id: 'back-widow',
+    name: 'Back Widow',
+    setupAndExecution: [
+      'Lie flat on your back with your knees bent and feet flat on the floor. Position your upper arms at a 45-degree angle from your torso with your elbows bent and forearms pointing up. Drive your elbows forcefully down into the floor to lift your upper back and shoulders completely off the ground. Squeeze your shoulder blades together at the peak, then lower with control.',
+    ],
+    commonMistakes: [
+      'Turning the lift into a crunch so the lower back and hips leave the floor.',
+      'Leaving the shoulder blades open at the top instead of finishing the squeeze.',
+    ],
+    coachingCue:
+      '"Punch the floor with your elbows." Pinch a coin between your shoulder blades at the top.',
+    amrapTip:
+      'Do not turn this into a core crunch. Your lower back and glutes must stay anchored to the floor. The only reason your torso lifts is because your lats and rhomboids are pressing the earth away.',
+    photos: sequencePhotos('back-widow'),
+  }),
+  libEntry({
+    id: 'w-press-ups',
+    name: 'W-Press Ups',
+    setupAndExecution: [
+      'Lie flat on your back and place your arms on the floor in a W shape — elbows bent and tucked close to your ribs, hands pointing upward. Brace your core to keep your lumbar spine neutral. Drive your elbows and the backs of your arms straight down into the floor to pop your chest up and elevate your upper back off the mat. Hold the top tension for one second before returning to the floor.',
+    ],
+    commonMistakes: [
+      'Arching the lower back until the hips leave the floor to fake extra range.',
+      'Flaring the elbows away from the ribs and losing mid-back isolation.',
+    ],
+    coachingCue: '"Pin your elbows to your ribs." Drive your triceps through the mat.',
+    amrapTip:
+      'Avoid excessively arching your lower back to cheat the range of motion. If your hips pop off the floor, you are losing the isolation in your mid-back. Keep your neck relaxed and look straight up.',
+    photos: sequencePhotos('w-press-ups'),
+  }),
+  libEntry({
+    id: 't-press-ups',
+    name: 'T-Press Ups',
+    setupAndExecution: [
+      'Lie flat on your back with your legs extended or knees bent. Extend your arms straight out to your sides to form a T against the floor, palms facing the ceiling. Keeping your arms completely straight, drive the backs of your shoulders, elbows, and wrists down into the floor. Lift your upper torso off the ground using only the tension from your rear deltoids and upper back.',
+    ],
+    commonMistakes: [
+      'Craning the neck to force the chest higher than the rear delts can drive.',
+      'Bending the elbows so the press becomes a shove instead of a straight-arm drive.',
+    ],
+    coachingCue: '"Make your arms heavy." Crush the floor with the backs of your hands.',
+    amrapTip:
+      'The range of motion on this is naturally very short. Do not force your chest higher by straining your neck. Focus entirely on the squeeze in the back of your shoulders.',
+    photos: sequencePhotos('t-press-ups'),
+  }),
+  libEntry({
+    id: 'supine-floor-scapular-shrugs',
+    name: 'Supine Floor Scapular Shrugs',
+    setupAndExecution: [
+      'Lie flat on your back with your arms completely straight down by your sides, palms facing up. Without bending your elbows, press the backs of your shoulders and arms into the ground. Retract your shoulder blades and depress them toward your hips to lift your chest slightly forward. Release the tension and let your shoulders flatten back out against the mat.',
+    ],
+    commonMistakes: [
+      'Bending the elbows so the triceps steal the work from the scapula.',
+      'Turning a micro-shrug into a big torso lift by thrusting the chest.',
+    ],
+    coachingCue:
+      '"Slide your shoulder blades into your back pockets." Press the floor away with straight arms.',
+    amrapTip:
+      'This is a micro-movement. Your torso will barely leave the floor. If your elbows bend, your triceps are taking over the work. Keep the arms locked and force the scapula to do the job.',
+    photos: sequencePhotos('supine-floor-scapular-shrugs'),
+  }),
+  libEntry({
     id: 'superman-hold',
     name: 'Superman Hold',
     setupAndExecution: [
       'Lie prone. Simultaneously lift your chest, arms, and thighs off the floor and hold the rigid, arched position.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Holding with only the chest raised and the thighs still down.',
+      'Craning the neck upward rather than lifting from the upper back.',
+    ],
     coachingCue: '"Fly, do not bend."',
     amrapTip:
       'Aggressively squeeze the glutes before you lift the chest to protect the lower back from absorbing all the force.',
     photos: sequencePhotos('superman-hold'),
-  },
-  {
+  }),
+  libEntry({
     id: 'superman-pull-downs',
     name: 'Superman Pull-downs',
     setupAndExecution: [
       'Hold the top of the Superman position with arms extended forward. Pull your elbows back and down toward your ribs, squeezing the lats, then press the arms back forward.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Letting the chest drop toward the floor as the elbows pull back.',
+      'Pulling the elbows out wide instead of down toward the ribs.',
+    ],
     coachingCue: '"Pull a heavy cable down to your ribs."',
     amrapTip:
       'You must create artificial tension. If you just wave your arms in the air, you are wasting your time.',
     photos: sequencePhotos('superman-pull-downs'),
-  },
-  {
+  }),
+  libEntry({
     id: 'supermans',
     name: 'Supermans',
     setupAndExecution: [
       'Lie prone. Simultaneously lift the chest and thighs off the mat, pause for a micro-second, then lower with control.',
     ],
-    commonMistakes: [],
-    coachingCue:
-      '"Controlled flight." Do not jerk the torso off the floor violently.',
+    commonMistakes: [
+      'Bending the knees to get the thighs higher.',
+      'Pressing the hands into the floor to help the chest rise.',
+    ],
+    coachingCue: '"Controlled flight." Do not jerk the torso off the floor violently.',
     amrapTip:
       'The pause at the top of every rep is mandatory to ensure muscular contraction, not momentum.',
     photos: sequencePhotos('supermans'),
-  },
-  {
+  }),
+  libEntry({
     id: 'bear-crawl-to-broad-jumps',
     name: 'Bear Crawl to Broad Jumps',
     setupAndExecution: [
       'Drop into a bear crawl position (hips low). Move forward four paces. Plant the feet, stand rapidly, and execute a horizontal broad jump.',
     ],
-    commonMistakes: [],
-    coachingCue:
-      '"Stay in the tunnel during the crawl; explode out of it on the jump."',
+    commonMistakes: [
+      'Letting the hips rise during the crawl until it becomes a walk on all fours.',
+      'Standing up slowly between the crawl and the jump, which kills the momentum.',
+    ],
+    coachingCue: '"Stay in the tunnel during the crawl; explode out of it on the jump."',
     amrapTip:
       'Use the momentum of standing up from the crawl to instantly launch into the broad jump. Do not stutter-step.',
     photos: sequencePhotos('bear-crawl-to-broad-jumps'),
-  },
-  {
+  }),
+  libEntry({
     id: 'fast-air-squats',
     name: 'Fast Air Squats',
     setupAndExecution: [
       'A standard bodyweight squat executed at maximum velocity. The hip crease must still break the plane of the knee, and the hips must fully lock out at the top.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Trading depth for turnover, so the reps get quicker and shallower together.',
+      'Bouncing out of the bottom on the joints instead of driving with the legs.',
+    ],
     coachingCue: '"Piston action. Drop and fire."',
     amrapTip:
       'Speed often ruins depth. The moment your squats become "half-squats," your round time is invalid.',
     photos: sequencePhotos('fast-air-squats'),
-  },
-  {
+  }),
+  libEntry({
     id: 'push-ups',
     name: 'Push-ups',
     setupAndExecution: [
       'Start in a high plank. Lower the body until the chest touches the floor, keeping elbows tracking back at a 45-degree angle. Press back to full lockout.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Bouncing the chest off the floor to get out of the bottom.',
+      'Letting the elbows flare wide so they no longer track back at an angle.',
+    ],
     coachingCue: '"Your body is a single sheet of steel."',
-    amrapTip:
-      'Do not let your hips sag to touch the floor before your chest does.',
+    amrapTip: 'Do not let your hips sag to touch the floor before your chest does.',
     photos: sequencePhotos('push-ups'),
-  },
-  {
+  }),
+  libEntry({
     id: 'strict-reverse-lunges',
     name: 'Strict Reverse Lunges',
     setupAndExecution: [
       'Step one foot backward and lower the hips straight down until the trailing knee gently taps the floor. The front shin remains vertical.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Rushing the descent so the back knee crashes down rather than taps.',
+      'Leaning the torso forward to reach the floor instead of dropping the hips.',
+    ],
     coachingCue: '"Elevator, not an escalator. Straight down, straight up."',
     amrapTip:
       'Do not push off the back toe to stand up. Pull yourself up by driving through the heel of the front foot.',
     photos: sequencePhotos('strict-reverse-lunges'),
-  },
-  {
+  }),
+  libEntry({
     id: 'walking-lunges',
     name: 'Walking Lunges',
     setupAndExecution: [
       'Step forward into a lunge. Instead of pushing backward to return, drive off the front foot to immediately step forward into the next lunge on the opposite leg.',
     ],
-    commonMistakes: [],
+    commonMistakes: [
+      'Pausing to gather balance between steps, which breaks the forward rhythm.',
+      'Stepping too narrow, so every landing wobbles side to side.',
+    ],
     coachingCue: '"Smooth forward momentum."',
     amrapTip:
       'Keep your torso vertical. If you lean forward over your front knee as you walk, you are putting massive shear force on the patella.',
     photos: sequencePhotos('walking-lunges'),
-  },
+  }),
+  libEntry({
+    id: '90-90-hip-transitions',
+    name: '90/90 Hip Transitions',
+    setupAndExecution: [
+      'Sit tall with both knees bent to 90 degrees: one shin in front, the other trailing to the side. Heels stay pinned to the floor.',
+      'Keep the torso upright and slowly rotate the pelvis so the trail leg becomes the new lead leg. Land softly, then reverse.',
+    ],
+    commonMistakes: [
+      'Letting the heels lift so the knees yank the hips through instead of the pelvis rotating.',
+      'Rounding the low back to cheat the switch when one hip will not turn.',
+    ],
+    coachingCue: '"Heels stay, torso tall, hips do the turning."',
+    amrapTip:
+      'This is a quality pass, not a race. Pause in each 90/90 long enough to feel which hip is locked before you flip.',
+    photos: sequencePhotos('90-90-hip-transitions', 'Seated 90/90 switch — both leads'),
+  }),
+  libEntry({
+    id: 'spiderman-lunge-with-thoracic-reach',
+    name: 'Spiderman Lunge with Thoracic Reach',
+    setupAndExecution: [
+      'From a high plank, step one foot outside the matching hand into a deep lunge. The trail knee stays off the floor and the trail hip stays long.',
+      'Rotate the chest toward the front leg and reach that same-side arm to the ceiling. Let the eyes follow the hand, then plant and switch sides.',
+    ],
+    commonMistakes: [
+      'Spinning the hips with the arm so the reach comes from the low back, not the mid-back.',
+      'Collapsing the trail hip toward the floor instead of driving it long and open.',
+    ],
+    coachingCue: '"Square the hips, then unscrew the ribcage."',
+    amrapTip:
+      'Hold the reach for a breath. If you whip the arm up and down, you skip the thoracic rotation this movement is for.',
+    photos: sequencePhotos(
+      'spiderman-lunge-with-thoracic-reach',
+      'Lunge plus same-side reach to the ceiling'
+    ),
+  }),
+  libEntry({
+    id: 'downward-facing-dog-to-cobra',
+    name: 'Downward-Facing Dog to Cobra',
+    setupAndExecution: [
+      'Press into an inverted V: hips high, heels reaching toward the floor, shoulders away from the ears.',
+      'Swoop the chest forward and low, then lift into Cobra with the pelvis on the floor and the arms straight enough to open the front body. Flow back to the V without dumping the low back.',
+    ],
+    commonMistakes: [
+      'Crashing the hips to the floor on the swoop so the lumbar spine takes the whole wave.',
+      'Leaving the shoulders shrugged by the ears in the inverted V.',
+    ],
+    coachingCue: '"Wave the spine; do not slam the landing."',
+    amrapTip:
+      'Move slow enough that each vertebra participates. Fast dog-to-cobra is just a sloppy burpee without the jump.',
+    photos: sequencePhotos(
+      'downward-facing-dog-to-cobra',
+      'Inverted V into a controlled cobra wave'
+    ),
+  }),
+  libEntry({
+    id: 'quadruped-hip-circles',
+    name: 'Quadruped Hip Circles',
+    setupAndExecution: [
+      'Start on all fours with a quiet, neutral spine. Keep one knee bent near 90 degrees and lift it just off the floor.',
+      'Draw the largest slow circle you can without the pelvis rocking. Finish the set on that side before you switch.',
+    ],
+    commonMistakes: [
+      'Hiking the pelvis so the circle is a spinal wiggle instead of a hip path.',
+      'Rushing small, sloppy loops instead of owning the end of each arc.',
+    ],
+    coachingCue: '"The torso is a table. Only the knee draws the circle."',
+    amrapTip:
+      'Five honest circles beat fifteen scribbles. If the pelvis starts walking, shrink the circle until it is quiet again.',
+    photos: sequencePhotos('quadruped-hip-circles', 'All-fours hip circle with a still spine'),
+  }),
+  libEntry({
+    id: 'low-lunge',
+    name: 'Low Lunge',
+    setupAndExecution: [
+      'Step one foot forward between the hands. Drop the back knee toward the floor and stack the front knee over the ankle.',
+      'Lift the chest, square the hips to the front, and pulse or breathe in that long stance before you switch sides.',
+    ],
+    commonMistakes: [
+      'Letting the front knee cave inward as the hips sink.',
+      'Hinging the chest onto the front thigh instead of staying tall through the ribcage.',
+    ],
+    coachingCue: '"Long back leg, proud chest, hips square."',
+    amrapTip:
+      'Sink on the exhale. Bouncing the hips off the floor turns a hip-flexor opener into a bad split jump.',
+    photos: sequencePhotos('low-lunge', 'Long stance with the chest lifted'),
+  }),
+  libEntry({
+    id: 'half-moon-pose',
+    name: 'Half Moon Pose',
+    setupAndExecution: [
+      'From a low lunge, plant the front hand on the floor or a block just ahead of the front foot.',
+      'Rotate the torso open, lift the back leg parallel to the floor, and stack the top hip over the bottom. Reach the free arm to the sky and look up only if the neck is happy.',
+    ],
+    commonMistakes: [
+      'Letting the lifted hip roll toward the floor so the pose becomes a twisted lunge.',
+      'Locking the standing knee hard and dumping all the load into that joint.',
+    ],
+    coachingCue: '"Stack the hips like plates, then reach out of both ends."',
+    amrapTip:
+      'Find one still breath on each side. Wobbling through five rushed reps teaches panic, not balance.',
+    photos: sequencePhotos('half-moon-pose', 'Open torso with the back leg lifted'),
+  }),
+  libEntry({
+    id: 'prone-internal-rotation-windshield-wipers',
+    name: 'Prone Internal Rotation Windshield Wipers',
+    setupAndExecution: [
+      'Lie on your stomach with both knees bent to 90 degrees and the feet up toward the ceiling.',
+      'Keep the pelvis glued to the floor and slowly let both feet drift out to the sides. Pause where the hips want to lift, then return to vertical.',
+    ],
+    commonMistakes: [
+      'Peeling a hip bone off the floor to buy extra range the capsule does not have.',
+      'Kicking the feet out with momentum instead of lowering them under control.',
+    ],
+    coachingCue: '"Pelvis stays heavy. The feet only go as far as the hips allow."',
+    amrapTip:
+      'Stop the instant a hip lifts. That is the real end range — forcing past it just rotates the lumbar spine.',
+    photos: sequencePhotos(
+      'prone-internal-rotation-windshield-wipers',
+      'Face-down, knees bent, feet drifting out'
+    ),
+  }),
+  libEntry({
+    id: 'cobra-pose',
+    name: 'Cobra Pose',
+    setupAndExecution: [
+      'Lie face down with the tops of the feet on the floor and the hands under the shoulders.',
+      'Press the pubic bone down, then lift the chest using the back first. Straighten the arms only as far as the low back stays quiet.',
+    ],
+    commonMistakes: [
+      'Locking the elbows and hanging off the low back with the glutes asleep.',
+      'Craning the chin to the ceiling so the neck does the backbend.',
+    ],
+    coachingCue: '"Lead with the chest, not the chin."',
+    amrapTip:
+      'Five slow lifts beat one stuck hold. Lower with the same control you used to come up.',
+    photos: sequencePhotos('cobra-pose', 'Chest lifted, pelvis heavy on the floor'),
+  }),
+  libEntry({
+    id: 'childs-pose',
+    name: "Child's Pose",
+    setupAndExecution: [
+      'Kneel, sit the hips back toward the heels, and reach the arms forward or rest them by the sides.',
+      'Forehead to the floor. Breathe into the back of the ribs and let the shoulders drop away from the ears.',
+    ],
+    commonMistakes: [
+      'Perching on the knees with the hips high, so the pose never becomes a rest.',
+      'Holding the breath and gripping the jaw while the forehead is down.',
+    ],
+    coachingCue: '"Hips heavy, forehead heavy, breath wide."',
+    amrapTip:
+      'This is the down-shift. If you cut it short to chase another round, you missed the point of the flow.',
+    photos: sequencePhotos('childs-pose', 'Hips toward the heels, forehead down'),
+  }),
+  libEntry({
+    id: 'cat-and-cow',
+    name: 'Cat & Cow',
+    setupAndExecution: [
+      'On all fours, stack shoulders over wrists and hips over knees.',
+      'Inhale into Cow: belly drops, chest opens, gaze soft. Exhale into Cat: navel to spine, tailbone tucks, chin nods. Move one vertebra at a time.',
+    ],
+    commonMistakes: [
+      'Snapping from a full arch to a full round with no stations in between.',
+      'Dumping all the motion into the neck while the mid-back stays stiff.',
+    ],
+    coachingCue: '"Breathe the shape. Do not throw the shape."',
+    amrapTip:
+      'Eight slow cycles warm the discs. If you race them, you are just nodding your head on all fours.',
+    photos: sequencePhotos('cat-and-cow', 'Tabletop flexion and extension'),
+  }),
+  libEntry({
+    id: 'downward-facing-dog',
+    name: 'Downward-Facing Dog',
+    setupAndExecution: [
+      'From all fours, tuck the toes, lift the knees, and send the hips up and back into an inverted V.',
+      'Press the floor away, soften the knees if the hamstrings yank the spine, and reach the heels toward the floor without forcing them down.',
+    ],
+    commonMistakes: [
+      'Dumping the chest toward the feet so the shoulders collapse and the neck hangs.',
+      'Locking both knees to chase the heels down and rounding the low back to get there.',
+    ],
+    coachingCue: '"Hips high, arms long, neck soft."',
+    amrapTip:
+      'Bend the knees and keep the spine long. A pretty heel line with a rounded back is the wrong trade.',
+    photos: sequencePhotos('downward-facing-dog', 'Inverted V with long arms'),
+  }),
+  libEntry({
+    id: 'camel-pose',
+    name: 'Camel Pose',
+    setupAndExecution: [
+      'Kneel tall with the knees under the hips and the thighs vertical. Hands can stay on the low back or reach for the heels.',
+      'Lift the chest first, then ease the gaze up and back. Keep the hips over the knees — do not sit toward the heels.',
+    ],
+    commonMistakes: [
+      'Folding from the low back while the hips drift toward the heels.',
+      'Dropping the head back with no chest lift, so the neck takes the whole opener.',
+    ],
+    coachingCue: '"Hips stay over the knees. The chest goes first."',
+    amrapTip:
+      'Twenty seconds is enough. If you cannot breathe in the shape, come up an inch and open from the ribs instead.',
+    photos: sequencePhotos('camel-pose', 'Tall kneel with the chest opening back'),
+  }),
+  libEntry({
+    id: 'pigeon-pose',
+    name: 'Pigeon Pose',
+    setupAndExecution: [
+      'From Downward-Facing Dog, sweep one shin across the mat. The front knee points roughly toward the same-side wrist; the back leg stays long.',
+      'Square the hips toward the floor as much as they allow, then walk the hands forward or stay upright. Switch sides after the hold.',
+    ],
+    commonMistakes: [
+      'Letting the back hip roll open so you are sitting on the flesh instead of facing the floor.',
+      'Cranking the front shin parallel to the mat when the knee is already yelling.',
+    ],
+    coachingCue: '"Square what you can. Prop what you cannot."',
+    amrapTip:
+      'Twenty seconds a side is a quality pass, not a contest to fold the chest to the floor. Come up if the front knee complains.',
+    photos: sequencePhotos('pigeon-pose', 'Front shin across, back leg long'),
+  }),
+  libEntry({
+    id: '90-90-hip-internal-rotation-lift',
+    name: '90/90 Hip Internal Rotation Lift',
+    setupAndExecution: [
+      'Sit in 90/90. Shift onto the front hip so the trail shin is behind you and both knees stay near 90 degrees.',
+      'Keep the torso tall and lift the back foot off the floor without leaning away or cranking the lumbar spine. Lower slowly and switch sides.',
+    ],
+    commonMistakes: [
+      'Leaning the ribs away from the back leg to fake a higher lift.',
+      'Using a lumbar twist to get the foot up when the hip will not internally rotate.',
+    ],
+    coachingCue: '"Torso still. The back foot floats from the hip."',
+    amrapTip:
+      'A one-inch honest hover is the rep. Chasing height with the low back undoes the capsule work you just did in pigeon.',
+    photos: sequencePhotos('90-90-hip-internal-rotation-lift', '90/90 with the trail foot lifted'),
+  }),
 ];
 
 // Force a full reload when this data module changes — partial HMR can leave

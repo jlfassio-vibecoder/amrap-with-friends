@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/contexts/ThemeProvider';
 import IntakePage from './IntakePage';
 
 const saveMock = vi.fn();
+const saveIdentityMock = vi.fn();
 const updateEmailMock = vi.fn();
 const updatePasswordMock = vi.fn();
 const navigateMock = vi.fn();
@@ -17,14 +18,29 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+const authState = vi.hoisted(() => ({
+  isAuthenticated: true,
+}));
+
 vi.mock('@/hooks/useAmrapAuth', () => ({
   useAmrapAuth: () => ({
-    isAuthenticated: true,
+    isAuthenticated: authState.isAuthenticated,
     isAuthLoading: false,
     user: { id: 'user-1', email: 'athlete@example.com' },
     updateEmail: updateEmailMock,
     updatePassword: updatePasswordMock,
+    signInWithMagicLink: vi.fn(),
+    signInWithGoogle: vi.fn(),
+    signUpWithPassword: vi.fn(),
+    signInWithPassword: vi.fn(),
+    requestPasswordReset: vi.fn(),
   }),
+}));
+
+vi.mock('@/lib/auth/authFeatures', () => ({
+  isMagicLinkAuthEnabled: () => false,
+  isPasswordResetEnabled: () => false,
+  isGoogleAuthEnabled: () => false,
 }));
 
 vi.mock('@/hooks/useAthleteProfile', () => ({
@@ -34,12 +50,15 @@ vi.mock('@/hooks/useAthleteProfile', () => ({
     loading: false,
     error: null,
     save: saveMock,
+    saveIdentity: saveIdentityMock,
   }),
 }));
 
 afterEach(() => {
   cleanup();
+  authState.isAuthenticated = true;
   saveMock.mockReset();
+  saveIdentityMock.mockReset();
   updateEmailMock.mockReset();
   updatePasswordMock.mockReset();
   navigateMock.mockReset();
@@ -87,10 +106,7 @@ describe('IntakePage', () => {
     renderIntake();
     expect(screen.getByLabelText(/Height \(in\)/)).toBeTruthy();
     expect(screen.getByLabelText(/Weight \(lb\)/)).toBeTruthy();
-    expect(screen.getByLabelText(/^Email$/)).toHaveProperty(
-      'value',
-      'athlete@example.com'
-    );
+    expect(screen.getByLabelText(/^Email$/)).toHaveProperty('value', 'athlete@example.com');
     // New users get a username suggestion from the email local-part.
     expect(screen.getByLabelText(/^Username$/)).toHaveProperty('value', 'athlete');
 
@@ -146,9 +162,8 @@ describe('IntakePage', () => {
 
     expect(screen.getByLabelText(/^Username$/)).toHaveProperty('value', 'Justin Fassio');
     expect(
-      screen.getAllByText(
-        'No spaces — use letters, numbers, or underscore (e.g. Justin_Fassio).'
-      ).length
+      screen.getAllByText('No spaces — use letters, numbers, or underscore (e.g. Justin_Fassio).')
+        .length
     ).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
@@ -176,10 +191,51 @@ describe('IntakePage', () => {
       expect(document.activeElement).toBe(nicknameInput);
     });
     expect(scrollIntoView).toHaveBeenCalled();
-    expect(screen.getAllByText('Enter a nickname (1–50 characters).').length).toBeGreaterThan(
-      0
-    );
+    expect(screen.getAllByText('Enter a nickname (1–50 characters).').length).toBeGreaterThan(0);
     expect(saveMock).not.toHaveBeenCalled();
+  });
+
+  it('saves identity only when body metrics are left blank', async () => {
+    saveIdentityMock.mockResolvedValue({ error: null });
+    renderIntake();
+
+    fireEvent.change(screen.getByLabelText(/^Username$/), {
+      target: { value: 'ghost_ops' },
+    });
+    fireEvent.change(screen.getByLabelText(/^Nickname$/), {
+      target: { value: 'Ghost' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
+
+    await waitFor(() => {
+      expect(saveIdentityMock).toHaveBeenCalledWith({
+        username: 'ghost_ops',
+        nickname: 'Ghost',
+      });
+    });
+    expect(saveMock).not.toHaveBeenCalled();
+    expect(navigateMock).toHaveBeenCalledWith('/create', { state: { intakeNotices: [] } });
+  });
+
+  it('requires the full metric set when any body field is filled', async () => {
+    renderIntake();
+
+    fireEvent.change(screen.getByLabelText(/^Username$/), {
+      target: { value: 'ghost_ops' },
+    });
+    fireEvent.change(screen.getByLabelText(/^Nickname$/), {
+      target: { value: 'Ghost' },
+    });
+    fireEvent.change(screen.getByLabelText(/Height \(in\)/), {
+      target: { value: '71' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Enter a valid weight in pounds.').length).toBeGreaterThan(0);
+    });
+    expect(saveMock).not.toHaveBeenCalled();
+    expect(saveIdentityMock).not.toHaveBeenCalled();
   });
 
   it('converts imperial input to metric on save and includes identity fields', async () => {
@@ -222,7 +278,7 @@ describe('IntakePage', () => {
     fireEvent.change(screen.getByLabelText(/^Email$/), {
       target: { value: 'new@example.com' },
     });
-    fireEvent.change(screen.getByLabelText(/^Password$/), {
+    fireEvent.change(screen.getByPlaceholderText('Leave blank to keep current'), {
       target: { value: 'newpass1' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
@@ -277,9 +333,7 @@ describe('IntakePage', () => {
     await waitFor(() => {
       expect(navigateMock).toHaveBeenCalledWith('/create', {
         state: {
-          intakeNotices: [
-            'Your profile was saved. Email update failed: Email already registered',
-          ],
+          intakeNotices: ['Your profile was saved. Email update failed: Email already registered'],
         },
       });
     });
@@ -292,7 +346,7 @@ describe('IntakePage', () => {
     renderIntake();
 
     fillRequiredFields();
-    fireEvent.change(screen.getByLabelText(/^Password$/), {
+    fireEvent.change(screen.getByPlaceholderText('Leave blank to keep current'), {
       target: { value: 'weak' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
@@ -300,13 +354,24 @@ describe('IntakePage', () => {
     await waitFor(() => {
       expect(navigateMock).toHaveBeenCalledWith('/create', {
         state: {
-          intakeNotices: [
-            'Your profile was saved. Password update failed: Password is too weak',
-          ],
+          intakeNotices: ['Your profile was saved. Password update failed: Password is too weak'],
         },
       });
     });
     expect(screen.queryByText(/^Error:/)).toBeNull();
+  });
+
+  it('toggles password visibility and shows the length hint', () => {
+    renderIntake();
+
+    const passwordInput = screen.getByPlaceholderText('Leave blank to keep current');
+    expect(passwordInput.getAttribute('type')).toBe('password');
+    expect(screen.getByText(/At least \d+ characters/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show password' }));
+    expect(passwordInput.getAttribute('type')).toBe('text');
+    fireEvent.click(screen.getByRole('button', { name: 'Hide password' }));
+    expect(passwordInput.getAttribute('type')).toBe('password');
   });
 
   it('stays on the form when profile save fails', async () => {
@@ -341,5 +406,15 @@ describe('IntakePage', () => {
 
     expect(screen.getByLabelText(/Height \(in\)/)).toHaveProperty('value', '70');
     expect(screen.getByLabelText(/Weight \(lb\)/)).toHaveProperty('value', '176.4');
+  });
+
+  it('shows AuthForm when signed out', () => {
+    authState.isAuthenticated = false;
+    renderIntake();
+
+    expect(screen.getByText('Sign in to set up your profile.')).toBeTruthy();
+    expect(screen.getByRole('tablist', { name: 'Account action' })).toBeTruthy();
+    expect(screen.getByPlaceholderText('Email')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Save profile' })).toBeNull();
   });
 });

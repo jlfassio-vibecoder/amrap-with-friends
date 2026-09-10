@@ -1,0 +1,10 @@
+#!/bin/sh
+# Opt in with:  git config core.hooksPath .githooks
+#
+# Only the migration-version check runs here: it is the one mistake that is
+# silent in production and cheap to catch. Everything else belongs in
+# `npm run lint && npm run typecheck && npm run test`.
+npx tsx scripts/check-migration-versions.ts || {
+  echo "pre-commit: migration versions collide — see above."
+  exit 1
+}

@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppLink } from '@/components/AppLink';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AuthModal } from '@/components/AuthModal';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
+import { IdentityOverlay } from '@/components/onboarding/IdentityOverlay';
 import {
   fetchCampaignInvitePreview,
   joinCampaign,
@@ -9,18 +11,30 @@ import {
 } from '@/lib/api/campaigns';
 import { formatCampaignShape, formatCampaignSpan } from '@/lib/campaign';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
+import { useAthleteProfile } from '@/hooks/useAthleteProfile';
+import { useEnsureAthleteIdentity } from '@/hooks/useEnsureAthleteIdentity';
+import { isIntakeRequiredMessage } from '@/lib/auth/profileNeedsIntake';
 
 export default function JoinCampaignPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const inviteCode = (searchParams.get('c') ?? '').trim();
   const { isAuthenticated, isAuthLoading } = useAmrapAuth();
+  const { loading: profileLoading } = useAthleteProfile();
+  const {
+    ensureThen,
+    open: identityOpen,
+    overlayProps,
+  } = useEnsureAthleteIdentity({
+    acceptLabel: 'Accept & join',
+  });
 
   const [preview, setPreview] = useState<CampaignInvitePreview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
-  const [authOpen, setAuthOpen] = useState(false);
+  const [authOpenMode, setAuthOpenMode] = useState<'sign-in' | 'sign-up' | null>(null);
+  const joinAfterAuthRef = useRef(false);
 
   useEffect(() => {
     if (!inviteCode) {
@@ -45,27 +59,51 @@ export default function JoinCampaignPage() {
     };
   }, [inviteCode]);
 
-  async function handleJoin() {
-    setJoining(true);
-    setError(null);
-    const result = await joinCampaign(inviteCode);
-    setJoining(false);
+  const performJoin = useCallback(
+    async function runJoin(needsRetry = true) {
+      setJoining(true);
+      setError(null);
+      const result = await joinCampaign(inviteCode);
+      setJoining(false);
 
-    if (result.error || !result.data) {
-      setError(result.error?.message ?? 'Something went wrong. Please try again.');
+      if (result.error && isIntakeRequiredMessage(result.error.message) && needsRetry) {
+        ensureThen(() => {
+          void runJoin(false);
+        });
+        return;
+      }
+
+      if (result.error || !result.data) {
+        setError(result.error?.message ?? 'Something went wrong. Please try again.');
+        return;
+      }
+      navigate(`/campaign/${result.data.campaignId}`);
+    },
+    [ensureThen, inviteCode, navigate]
+  );
+
+  const handleJoin = useCallback(() => {
+    ensureThen(() => {
+      void performJoin();
+    });
+  }, [ensureThen, performJoin]);
+
+  useEffect(() => {
+    if (!joinAfterAuthRef.current || !isAuthenticated || isAuthLoading || profileLoading) {
       return;
     }
-    navigate(`/campaign/${result.data.campaignId}`);
-  }
+    joinAfterAuthRef.current = false;
+    handleJoin();
+  }, [handleJoin, isAuthenticated, isAuthLoading, profileLoading]);
 
   if (!inviteCode) {
     return (
       <NarrowPageLayout title="Join a campaign" subtitle="You’ve been invited">
         <p className="text-error">That invite link is not valid.</p>
         <p className="text-center text-sm">
-          <Link className="link-accent" to="/">
+          <AppLink className="link-accent" to="/">
             Back home
-          </Link>
+          </AppLink>
         </p>
       </NarrowPageLayout>
     );
@@ -84,9 +122,9 @@ export default function JoinCampaignPage() {
       <NarrowPageLayout title="Join a campaign" subtitle="You’ve been invited">
         <p className="text-error">{error ?? 'That campaign is not available.'}</p>
         <p className="text-center text-sm">
-          <Link className="link-accent" to="/">
+          <AppLink className="link-accent" to="/">
             Back home
-          </Link>
+          </AppLink>
         </p>
       </NarrowPageLayout>
     );
@@ -102,9 +140,9 @@ export default function JoinCampaignPage() {
         <div className="space-y-1">
           <h2 className="text-display text-3xl text-ink">{preview.name}</h2>
           <p className="text-sm text-secondary">
-            {formatCampaignShape(preview.weekCount, preview.sessionsPerWeek)}
-            {preview.firstSessionDate && preview.lastSessionDate
-              ? ` · ${formatCampaignSpan(preview.firstSessionDate, preview.lastSessionDate)}`
+            {formatCampaignShape(preview.weekCount, preview.missionsPerWeek)}
+            {preview.firstMissionDate && preview.lastMissionDate
+              ? ` · ${formatCampaignSpan(preview.firstMissionDate, preview.lastMissionDate)}`
               : ''}
           </p>
         </div>
@@ -134,24 +172,57 @@ export default function JoinCampaignPage() {
         ) : (
           <div className="space-y-2">
             <p className="text-sm text-secondary">
-              Sign in to join. A campaign runs for weeks, so it tracks your
-              sessions against your account.
+              Sign in to join. A campaign runs for weeks, so it tracks your missions against your
+              account.
             </p>
-            <button type="button" className="btn-primary" onClick={() => setAuthOpen(true)}>
-              Sign in to join
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => {
+                  joinAfterAuthRef.current = true;
+                  setAuthOpenMode('sign-in');
+                }}
+              >
+                Sign in to join
+              </button>
+              <button
+                type="button"
+                className="btn-neutral"
+                onClick={() => {
+                  joinAfterAuthRef.current = true;
+                  setAuthOpenMode('sign-up');
+                }}
+              >
+                Create account
+              </button>
+            </div>
           </div>
         )}
 
         {error ? <p className="alert-error">{error}</p> : null}
       </section>
 
-      {authOpen ? <AuthModal onClose={() => setAuthOpen(false)} /> : null}
+      {authOpenMode ? (
+        <AuthModal
+          onClose={() => {
+            joinAfterAuthRef.current = false;
+            setAuthOpenMode(null);
+          }}
+          initialPasswordMode={authOpenMode}
+          onAuthenticated={() => {
+            joinAfterAuthRef.current = true;
+            setAuthOpenMode(null);
+          }}
+          guestAllowed={false}
+        />
+      ) : null}
+      {identityOpen ? <IdentityOverlay {...overlayProps} /> : null}
 
       <p className="text-center text-sm">
-        <Link className="link-accent" to="/">
+        <AppLink className="link-accent" to="/">
           Back home
-        </Link>
+        </AppLink>
       </p>
     </NarrowPageLayout>
   );
