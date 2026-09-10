@@ -4,6 +4,7 @@ import { defaultCut, type CutId } from '@/lib/share/cuts';
 import {
   detectEncoderPath,
   isEncoderImplemented,
+  isRealTimeEncoder,
   readCapabilities,
 } from '@/lib/share/replay/encoderPath';
 import { renderReplay } from '@/lib/share/replay/renderReplay';
@@ -22,17 +23,46 @@ export interface UseReplayResult {
   cancel: () => void;
 }
 
-export function useReplay(data: ReplayData, draw: DrawFrameOptions): UseReplayResult {
-  const [status, setStatus] = useState<ReplayStatus>('idle');
-  const [progress, setProgress] = useState(0);
-  const [blob, setBlob] = useState<Blob | null>(null);
-  const [error, setError] = useState<string | null>(null);
+/**
+ * @param inputKey Identifies everything the render depends on that this hook
+ * cannot see — the card shape, the variant, which photo is loaded. When it
+ * changes, a finished replay no longer matches the card on screen, so it stops
+ * being offered rather than being handed over as if it did.
+ */
+export function useReplay(
+  data: ReplayData,
+  draw: DrawFrameOptions,
+  inputKey: string
+): UseReplayResult {
+  // Finished renders, kept by `${cut}:${inputKey}`. Re-tapping must not
+  // re-encode -- that is thirty seconds of work for a file already held -- and
+  // holding them in state rather than a ref is what lets everything below be
+  // derived during render instead of corrected afterwards in an effect.
+  const [renders, setRenders] = useState<Record<string, Blob>>({});
+  // The cut the athlete last asked for, so a change of shape looks for the
+  // matching render rather than starting from nothing.
+  const [cut, setCut] = useState<CutId | null>(null);
+  // What is happening, and which card it is happening to. Without the second
+  // half, a render started for one shape would still read as in-progress after
+  // switching to another.
+  const [phase, setPhase] = useState<{
+    key: string;
+    status: Exclude<ReplayStatus, 'ready'>;
+    progress: number;
+    error: string | null;
+  } | null>(null);
 
   const workerRef = useRef<Worker | null>(null);
   const cancelledRef = useRef(false);
-  // Re-tapping Share must not re-encode: thirty seconds of work for a file we
-  // already hold.
-  const cacheRef = useRef<Map<string, Blob>>(new Map());
+
+  // A replay belongs to one card. Derived, so a shape change cannot leave a
+  // stale "ready" on screen holding the file made for the previous one.
+  const activeKey = cut === null ? null : `${cut}:${inputKey}`;
+  const blob = activeKey === null ? null : (renders[activeKey] ?? null);
+  const current = phase !== null && phase.key === activeKey ? phase : null;
+  const status: ReplayStatus = blob ? 'ready' : (current?.status ?? 'idle');
+  const progress = current?.progress ?? 0;
+  const error = current?.error ?? null;
 
   const teardown = useCallback(() => {
     workerRef.current?.terminate();
@@ -44,19 +74,17 @@ export function useReplay(data: ReplayData, draw: DrawFrameOptions): UseReplayRe
   const cancel = useCallback(() => {
     cancelledRef.current = true;
     teardown();
-    setStatus('idle');
-    setProgress(0);
+    setPhase(null);
     track('replay_cancelled', { cut: draw.layout });
   }, [teardown, draw.layout]);
 
   const start = useCallback(
     (requested?: CutId) => {
       const cutId = requested ?? defaultCut(data.participants.length);
-      const key = `${cutId}:${draw.layout}`;
-      const cached = cacheRef.current.get(key);
-      if (cached) {
-        setBlob(cached);
-        setStatus('ready');
+      setCut(cutId);
+      const key = `${cutId}:${inputKey}`;
+      if (renders[key]) {
+        setPhase(null);
         return;
       }
 
@@ -65,22 +93,18 @@ export function useReplay(data: ReplayData, draw: DrawFrameOptions): UseReplayRe
       // failure a message rather than a throw from inside the encoder, on a
       // screen the athlete reached by finishing a workout.
       if (!isEncoderImplemented(path)) {
-        setError('This browser cannot make video.');
-        setStatus('error');
+        setPhase({ key, status: 'error', progress: 0, error: 'This browser cannot make video.' });
         return;
       }
 
       cancelledRef.current = false;
-      setStatus('rendering');
-      setProgress(0);
-      setError(null);
+      setPhase({ key, status: 'rendering', progress: 0, error: null });
       const startedAt = performance.now();
       track('replay_render_started', { cut: cutId, path, layout: draw.layout });
 
       const finish = (result: Blob) => {
-        cacheRef.current.set(key, result);
-        setBlob(result);
-        setStatus('ready');
+        setRenders((previous) => ({ ...previous, [key]: result }));
+        setPhase(null);
         track('replay_render_completed', {
           cut: cutId,
           path,
@@ -90,14 +114,23 @@ export function useReplay(data: ReplayData, draw: DrawFrameOptions): UseReplayRe
       };
 
       const fail = (message: string) => {
-        setError(message);
-        setStatus('error');
+        setPhase({ key, status: 'error', progress: 0, error: message });
       };
 
       // OffscreenCanvas is the whole reason for the worker; without it the
       // fallback runs the identical pipeline inline rather than shipping a
       // second implementation.
-      if (typeof Worker === 'function' && typeof OffscreenCanvas === 'function') {
+      //
+      // MediaRecorder never takes that route whatever the browser supports:
+      // it records a canvas through captureStream, which does not exist on
+      // OffscreenCanvas. That path stays on the main thread by necessity, and
+      // it janks less than WebCodecs would because it spends most of its time
+      // waiting for the playback clock rather than encoding.
+      const canUseWorker =
+        !isRealTimeEncoder(path) &&
+        typeof Worker === 'function' &&
+        typeof OffscreenCanvas === 'function';
+      if (canUseWorker) {
         const worker = new Worker(new URL('./replay.worker.ts', import.meta.url), {
           type: 'module',
         });
@@ -105,7 +138,10 @@ export function useReplay(data: ReplayData, draw: DrawFrameOptions): UseReplayRe
         worker.onmessage = (event: MessageEvent<ReplayWorkerMessage>) => {
           const message = event.data;
           if (message.type === 'progress') {
-            setProgress(message.frame / message.total);
+            const ratio = message.frame / message.total;
+            setPhase((previous) =>
+              previous && previous.key === key ? { ...previous, progress: ratio } : previous
+            );
           } else if (message.type === 'done') {
             finish(message.blob);
             teardown();
@@ -124,7 +160,11 @@ export function useReplay(data: ReplayData, draw: DrawFrameOptions): UseReplayRe
           data,
           cutId,
           draw,
-          onProgress: (frame, total) => setProgress(frame / total),
+          path,
+          onProgress: (frame, total) =>
+            setPhase((previous) =>
+              previous && previous.key === key ? { ...previous, progress: frame / total } : previous
+            ),
           isCancelled: () => cancelledRef.current,
         },
         (width, height) => {
@@ -141,7 +181,7 @@ export function useReplay(data: ReplayData, draw: DrawFrameOptions): UseReplayRe
           }
         });
     },
-    [data, draw, teardown]
+    [data, draw, inputKey, renders, teardown]
   );
 
   return { status, progress, blob, error, start, cancel };

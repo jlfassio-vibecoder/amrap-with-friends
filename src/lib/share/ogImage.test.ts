@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   MAX_OG_IMAGE_BYTES,
-  OG_IMAGE_TYPE,
+  OG_ENCODINGS,
   OG_LAYOUT,
-  OG_QUALITY_STEPS,
   extensionForType,
   fitsOgLimit,
 } from '@/lib/share/ogImage';
@@ -17,17 +16,33 @@ describe('the link-preview image', () => {
     expect(OG_LAYOUT).toBe('story');
   });
 
-  it('is webp, because a photo card as png cannot fit the bucket', () => {
-    // Measured: one photo card was 1,302,057 bytes as png against this limit.
-    expect(OG_IMAGE_TYPE).toBe('image/webp');
+  it('tries png first, because every renderer can decode it', () => {
+    // A card with no photo is flat colour and lands around 140 KB, so most
+    // cards never leave this rung. WebP is small but is the format a renderer
+    // is most likely to choke on.
+    expect(OG_ENCODINGS[0]).toEqual({ type: 'image/png' });
     expect(MAX_OG_IMAGE_BYTES).toBe(409600);
   });
 
+  it('falls back to webp, without which a photo card cannot fit the bucket', () => {
+    // Measured: one photo card was 1,302,057 bytes as png against this limit.
+    expect(OG_ENCODINGS.slice(1).every((step) => step.type === 'image/webp')).toBe(true);
+  });
+
   it('steps quality down rather than softening every card for the worst one', () => {
-    expect(OG_QUALITY_STEPS.length).toBeGreaterThan(1);
-    const descending = [...OG_QUALITY_STEPS].sort((a, b) => b - a);
-    expect(OG_QUALITY_STEPS).toEqual(descending);
-    expect(OG_QUALITY_STEPS[0]).toBeGreaterThan(0.8);
+    const qualities = OG_ENCODINGS.map((step) => step.quality).filter(
+      (quality): quality is number => typeof quality === 'number'
+    );
+    expect(qualities.length).toBeGreaterThan(1);
+    expect(qualities).toEqual([...qualities].sort((a, b) => b - a));
+    expect(qualities[0]).toBeGreaterThan(0.8);
+  });
+
+  it('only offers formats the storage policy accepts', () => {
+    // A path the policy will not match is a 403 at upload time.
+    for (const step of OG_ENCODINGS) {
+      expect(extensionForType(step.type)).not.toBeNull();
+    }
   });
 });
 

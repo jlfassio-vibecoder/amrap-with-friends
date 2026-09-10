@@ -15,6 +15,12 @@ export function shareImagePath(shareId: string, type = 'image/png'): string {
   return extension ? `${shareId}.${extension}` : `${shareId}.png`;
 }
 
+/** `{id}-wide.png`. The suffix is in the storage policy, not free-form. */
+export function shareWideImagePath(shareId: string, type = 'image/png'): string {
+  const extension = extensionForType(type);
+  return `${shareId}-wide.${extension ?? 'png'}`;
+}
+
 export function shareImageUrl(supabaseUrl: string, imagePath: string): string {
   return `${supabaseUrl}/storage/v1/object/public/${SHARE_BUCKET}/${imagePath}`;
 }
@@ -31,9 +37,23 @@ export function shareImageUrl(supabaseUrl: string, imagePath: string): string {
  * set_mission_share_image only fills an empty image_path — so the picture
  * behind a link already in circulation cannot be swapped.
  */
+async function putObject(path: string, blob: Blob): Promise<string | null> {
+  const { error } = await supabase.storage.from(SHARE_BUCKET).upload(path, blob, {
+    contentType: blob.type,
+    // Never overwrite: the image is what somebody already posted.
+    upsert: false,
+  });
+  // A duplicate means this card was already uploaded — the row still needs
+  // pointing at it, so this is success, not failure.
+  const alreadyThere = error?.message?.toLowerCase().includes('exists') === true;
+  return error && !alreadyThere ? error.message : null;
+}
+
 export async function uploadShareImage(input: {
   shareId: string;
   blob: Blob;
+  /** The landscape render for twitter:image. Optional: the portrait card is the one that matters. */
+  wideBlob?: Blob | null;
   participantId?: string | null;
   claimToken?: string | null;
   hostToken?: string | null;
@@ -46,22 +66,27 @@ export async function uploadShareImage(input: {
   }
 
   const path = shareImagePath(input.shareId, input.blob.type);
-  const { error } = await supabase.storage.from(SHARE_BUCKET).upload(path, input.blob, {
-    contentType: input.blob.type,
-    // Never overwrite: the image is what somebody already posted.
-    upsert: false,
-  });
+  const failure = await putObject(path, input.blob);
+  if (failure) {
+    return { ok: false, reason: failure };
+  }
 
-  // A duplicate means this card was already uploaded — the row still needs
-  // pointing at it, so this is success, not failure.
-  const alreadyThere = error?.message?.toLowerCase().includes('exists') === true;
-  if (error && !alreadyThere) {
-    return { ok: false, reason: error.message };
+  // The wide card is a bonus, not a precondition. If it does not upload, X
+  // falls back to the portrait card — which is what it showed before this
+  // existed, not a broken preview.
+  let widePath: string | null = null;
+  const wide = input.wideBlob;
+  if (wide && wide.size <= MAX_OG_IMAGE_BYTES && extensionForType(wide.type)) {
+    const candidate = shareWideImagePath(input.shareId, wide.type);
+    if ((await putObject(candidate, wide)) === null) {
+      widePath = candidate;
+    }
   }
 
   const { error: rpcError } = await callRpc('set_mission_share_image', {
     p_share_id: input.shareId,
     p_image_path: path,
+    p_wide_image_path: widePath,
     p_participant_id: input.participantId ?? null,
     p_claim_token: input.claimToken ?? null,
     p_host_token: input.hostToken ?? null,

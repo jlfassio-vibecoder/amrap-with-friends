@@ -60,3 +60,51 @@ function downloadFile(file: File): void {
   // disappears in the same frame as the click.
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
+
+/**
+ * Put the cards on the athlete's own device.
+ *
+ * Separate from shareArtifact because the intent is different: that one is
+ * "send this somewhere", this one is "keep this". An athlete who has just
+ * finished cannot tell that the card exists as a file they own — it looks like
+ * something the page is showing them — so the reassurance has to be an action
+ * they can see, not a fact stated in prose.
+ *
+ * A phone gets the share sheet with every card at once, because that is where
+ * "Save to Photos" lives. A desktop gets downloads, staggered: browsers treat
+ * a burst of programmatic downloads as a popup and block all but the first.
+ */
+export async function saveArtifacts(input: {
+  files: File[];
+  shareId: string;
+}): Promise<ShareArtifactResult> {
+  if (input.files.length === 0) {
+    return { outcome: 'cancelled' };
+  }
+  const context = { share_id: input.shareId, kind: 'card' as const, count: input.files.length };
+  track('share_opened', context);
+
+  const canShareFiles =
+    typeof navigator !== 'undefined' &&
+    typeof navigator.canShare === 'function' &&
+    navigator.canShare({ files: input.files });
+
+  if (canShareFiles) {
+    try {
+      await navigator.share({ files: input.files });
+      track('share_completed', { ...context, fallback: 'save' });
+      return { outcome: 'shared' };
+    } catch {
+      return { outcome: 'cancelled' };
+    }
+  }
+
+  for (const [index, file] of input.files.entries()) {
+    if (index > 0) {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+    downloadFile(file);
+  }
+  track('share_completed', { ...context, fallback: 'download' });
+  return { outcome: 'downloaded' };
+}

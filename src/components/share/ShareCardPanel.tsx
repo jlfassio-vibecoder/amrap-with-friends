@@ -3,17 +3,24 @@ import { track } from '@/lib/analytics/track';
 import { callRpc } from '@/lib/api/callRpc';
 import { buildCaption } from '@/lib/share/caption';
 import { cardFileName, renderCardBlob } from '@/lib/share/renderCard';
-import { OG_IMAGE_TYPE, OG_LAYOUT, OG_QUALITY_STEPS, fitsOgLimit } from '@/lib/share/ogImage';
+import { OG_ENCODINGS, OG_LAYOUT, OG_WIDE_LAYOUT, fitsOgLimit } from '@/lib/share/ogImage';
 import { createShareId, shareUrl } from '@/lib/share/shareId';
-import { shareArtifact } from '@/lib/share/shareSheet';
+import { saveArtifacts, shareArtifact } from '@/lib/share/shareSheet';
 import { uploadShareImage } from '@/lib/share/uploadShareImage';
 import { frameAt, myBar, resolveVariant } from '@/lib/share/timeline';
 import { cardMovements, roundSplits, shouldDrawBoard } from '@/lib/share/cardContent';
-import { photoRejectionReason } from '@/lib/share/photo';
-import { defaultCut } from '@/lib/share/cuts';
+import {
+  photoRejectionReason,
+  slotForLayout,
+  slotsForTarget,
+  type PhotoSlot,
+  type PhotoTarget,
+} from '@/lib/share/photo';
+import { CUTS, defaultCut, type CutId } from '@/lib/share/cuts';
 import {
   detectEncoderPath,
   isEncoderImplemented,
+  isRealTimeEncoder,
   readCapabilities,
   replayActionLabel,
   replayCaveat,
@@ -22,10 +29,29 @@ import { replayFileName } from '@/lib/share/replay/renderReplay';
 import { useReplay } from '@/lib/share/replay/useReplay';
 import type { ReplayData, ShareLayout, ShareVariant } from '@/lib/share/types';
 
+const PHOTO_TARGET_OPTIONS: { id: PhotoTarget; label: string }[] = [
+  { id: 'portrait', label: 'Tall card' },
+  { id: 'wide', label: 'Wide card' },
+  { id: 'both', label: 'Both' },
+];
+
+const PHOTO_SLOT_LABELS: { id: PhotoSlot; label: string }[] = [
+  { id: 'portrait', label: 'Tall card' },
+  { id: 'wide', label: 'Wide card' },
+];
+
+// The ratio alone was a translation step: the photo picker below calls these
+// the tall card and the wide card, and the same control naming them 9:16 and
+// 16:9 left the athlete to work out that those were the same two things.
+const REPLAY_LENGTHS: { id: CutId; label: string }[] = [
+  { id: 'story9', label: `${CUTS.story9.durationSeconds}s` },
+  { id: 'full20', label: `${CUTS.full20.durationSeconds}s` },
+];
+
 const LAYOUT_OPTIONS: { id: ShareLayout; label: string }[] = [
-  { id: 'story', label: '9:16' },
-  { id: 'square', label: '1:1' },
-  { id: 'landscape', label: '16:9' },
+  { id: 'story', label: 'Tall 9:16' },
+  { id: 'square', label: 'Square 1:1' },
+  { id: 'landscape', label: 'Wide 16:9' },
 ];
 
 interface ShareCardPanelProps {
@@ -48,12 +74,25 @@ export function ShareCardPanel({
   const [variant, setVariant] = useState<ShareVariant>('result');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // One slot, shared by every action in the panel, and nothing used to clear
+  // it — so "Caption and link copied." sat under the Share replay button as
+  // though the replay had produced it. Every action starts by wiping it.
   const [notice, setNotice] = useState<string | null>(null);
   // Detected once: the answer cannot change while the panel is open, and
   // probing per render would run a feature test on every keystroke.
   const [encoderPath] = useState(() => detectEncoderPath(readCapabilities()));
-  const [photo, setPhoto] = useState<ImageBitmap | null>(null);
-  // Bumped whenever the photo changes. Rendered blobs are cached by ratio and
+  // One photo per card shape. The wide card crops a 3:4 phone photo to a band
+  // out of its middle, so the shot that works on the tall card arrives on X as
+  // a torso — the athlete needs to be able to say which photo goes where, or
+  // to say one is fine for both and accept that knowingly.
+  const [photos, setPhotos] = useState<Record<PhotoSlot, ImageBitmap | null>>({
+    portrait: null,
+    wide: null,
+  });
+  // Which slots the next upload fills. Both by default: most athletes have one
+  // photo and one photo is the thing they expect to end up on their card.
+  const [photoTarget, setPhotoTarget] = useState<PhotoTarget>('both');
+  // Bumped whenever a photo changes. Rendered blobs are cached by ratio and
   // variant; without this in the key, adding a photo hands back the cached
   // photo-less card and nothing appears to happen.
   const [photoToken, setPhotoToken] = useState(0);
@@ -65,7 +104,7 @@ export function ShareCardPanel({
   // Decoded once into an ImageBitmap rather than kept as a File: the renderer
   // draws it on every ratio change, and re-decoding a 12MP photo each time is
   // what would make the toggle feel slow.
-  const handlePhoto = useCallback(async (file: File | undefined) => {
+  const handlePhoto = useCallback(async (file: File | undefined, target: PhotoTarget) => {
     if (!file) {
       return;
     }
@@ -78,31 +117,65 @@ export function ShareCardPanel({
     try {
       // from-image so a photo taken sideways is not drawn sideways.
       const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
-      setPhoto((previous) => {
-        previous?.close();
-        return bitmap;
+      const slots = slotsForTarget(target);
+      setPhotos((previous) => {
+        const next = { ...previous };
+        for (const slot of slots) {
+          // Closed only if nothing else still points at it: one bitmap fills
+          // both slots when the target is `both`, and closing it while the
+          // other slot holds it would blank that card.
+          const outgoing = previous[slot];
+          if (outgoing && !slots.some((other) => other !== slot && previous[other] === outgoing)) {
+            outgoing.close();
+          }
+          next[slot] = bitmap;
+        }
+        return next;
       });
-      setPhotoToken((previous) => previous + 1);
+      setPhotoToken((token) => token + 1);
     } catch {
       setPhotoError('That photo could not be read.');
     }
   }, []);
 
-  const clearPhoto = useCallback(() => {
-    setPhoto((previous) => {
-      previous?.close();
-      return null;
+  const clearPhoto = useCallback((slot: PhotoSlot) => {
+    setPhotos((previous) => {
+      const outgoing = previous[slot];
+      const other: PhotoSlot = slot === 'portrait' ? 'wide' : 'portrait';
+      // Shared bitmap: dropping one slot must not close it under the other.
+      if (outgoing && previous[other] !== outgoing) {
+        outgoing.close();
+      }
+      return { ...previous, [slot]: null };
     });
-    setPhotoToken((previous) => previous + 1);
+    setPhotoToken((token) => token + 1);
   }, []);
 
-  useEffect(() => () => photo?.close(), [photo]);
+  // Close on unmount, once per distinct bitmap. The ref is written in an
+  // effect rather than during render: reading or writing one while rendering
+  // is what the compiler bails out on, and a bailout here would cost the
+  // memoisation the whole preview depends on.
+  const photosRef = useRef(photos);
+  useEffect(() => {
+    photosRef.current = photos;
+  }, [photos]);
+  useEffect(
+    () => () => {
+      const open = new Set(Object.values(photosRef.current).filter(Boolean));
+      for (const bitmap of open) {
+        bitmap?.close();
+      }
+    },
+    []
+  );
 
   // One id for the life of the panel: re-rendering at another ratio is the
   // same share, and a new id per ratio would fragment the view count. Lazy
   // useState rather than a ref, because this is a stable value rather than
   // mutable state, and reading a ref during render is not allowed.
   const [shareId] = useState(createShareId);
+
+  const hasAnyPhoto = photos.portrait !== null || photos.wide !== null;
 
   const effectiveVariant = resolveVariant(data, variant);
   const blobRef = useRef<Map<string, Blob>>(new Map());
@@ -154,11 +227,13 @@ export function ShareCardPanel({
       totalReps: me ? me.finalRounds * repsPerRound + me.finalReps : null,
       finalScore: me?.finalScore ?? null,
       showBoard: shouldDrawBoard(data),
-      photo,
-      photoWidth: photo?.width,
-      photoHeight: photo?.height,
+      // The ratio on screen decides which photo is drawn, so flipping to 16:9
+      // shows the athlete what X will actually get rather than a promise.
+      photo: photos[slotForLayout(layout)],
+      photoWidth: photos[slotForLayout(layout)]?.width,
+      photoHeight: photos[slotForLayout(layout)]?.height,
     }),
-    [layout, effectiveVariant, workoutTitle, data, me, repsPerRound, shareId, photo]
+    [layout, effectiveVariant, workoutTitle, data, me, repsPerRound, shareId, photos]
   );
 
   // The link preview gets its own render, in landscape.
@@ -177,34 +252,51 @@ export function ShareCardPanel({
   // athlete actually saw before this: their result is not private, only
   // their face is.
   const uploadOgImage = useCallback(async (): Promise<void> => {
-    const withPhoto = photo && publishPhoto ? photo : null;
-    const ogOptions = {
-      ...drawOptions,
-      layout: OG_LAYOUT,
-      photo: withPhoto,
-      photoWidth: withPhoto?.width,
-      photoHeight: withPhoto?.height,
-    };
-    for (const quality of OG_QUALITY_STEPS) {
-      const blob = await renderCardBlob(data, ogOptions, {
-        type: OG_IMAGE_TYPE,
-        quality,
-      });
-      if (!blob) {
-        return;
+    // Encoded at the first format and quality that fits the bucket. Null if
+    // none do, which is a card that does not get uploaded rather than one that
+    // gets uploaded broken. Each layout draws its own slot's photo, so the
+    // wide card sent to X carries the photo chosen for it.
+    async function encode(layout: ShareLayout): Promise<Blob | null> {
+      const slotPhoto = publishPhoto ? photos[slotForLayout(layout)] : null;
+      for (const encoding of OG_ENCODINGS) {
+        const blob = await renderCardBlob(
+          data,
+          {
+            ...drawOptions,
+            layout,
+            photo: slotPhoto,
+            photoWidth: slotPhoto?.width,
+            photoHeight: slotPhoto?.height,
+          },
+          encoding
+        );
+        if (!blob) {
+          return null;
+        }
+        if (fitsOgLimit(blob.size)) {
+          return blob;
+        }
       }
-      if (fitsOgLimit(blob.size)) {
-        await uploadShareImage({
-          shareId,
-          blob,
-          participantId,
-          claimToken,
-          hostToken,
-        });
-        return;
-      }
+      return null;
     }
-  }, [data, drawOptions, photo, publishPhoto, shareId, participantId, claimToken, hostToken]);
+
+    const blob = await encode(OG_LAYOUT);
+    if (!blob) {
+      return;
+    }
+    // The wide card is for X, which crops a portrait one to a band out of its
+    // middle. Rendered after the portrait card, and its failure never blocks
+    // the upload of the one that matters.
+    const wideBlob = await encode(OG_WIDE_LAYOUT);
+    await uploadShareImage({
+      shareId,
+      blob,
+      wideBlob,
+      participantId,
+      claimToken,
+      hostToken,
+    });
+  }, [data, drawOptions, photos, publishPhoto, shareId, participantId, claimToken, hostToken]);
 
   // Recorded when a share actually happens, with what was actually shared.
   // On mount it always logged story/result regardless of the ratio chosen, and
@@ -297,13 +389,34 @@ export function ShareCardPanel({
     };
   }, []);
 
-  const replay = useReplay(data, drawOptions);
-  const cutId = defaultCut(data.participants.length);
+  // Keyed on the same thing the card blobs are: shape, variant and which photo
+  // is loaded. A replay made before any of those changed is not this card's.
+  const replay = useReplay(data, drawOptions, cacheKey(layout));
+
+  // The card has a preview; the replay had none, so the only way to see what
+  // was about to be posted was to post it. Revoked on replacement, because a
+  // twenty-second 1080p video is not something to leak per re-render.
+  const replayUrl = useMemo(
+    () => (replay.blob ? URL.createObjectURL(replay.blob) : null),
+    [replay.blob]
+  );
+  useEffect(
+    () => () => {
+      if (replayUrl) {
+        URL.revokeObjectURL(replayUrl);
+      }
+    },
+    [replayUrl]
+  );
+  // Chosen for the athlete, changeable by them. A two-person race does not
+  // need twenty seconds, but that is a default rather than a rule.
+  const [cutId, setCutId] = useState<CutId>(() => defaultCut(data.participants.length));
 
   const handleShareReplay = useCallback(async () => {
     if (!replay.blob) {
       return;
     }
+    setNotice(null);
     recordShare('replay');
     // Already encoded, so navigator.share is still inside this click. Awaiting
     // the encode here instead would make iOS refuse the sheet.
@@ -325,6 +438,7 @@ export function ShareCardPanel({
     if (!blob) {
       return;
     }
+    setNotice(null);
     setBusy(true);
     recordShare('card');
     // Already rendered, so navigator.share is still inside the click. Awaiting
@@ -337,7 +451,49 @@ export function ShareCardPanel({
     }
   }, [layout, cacheKey, shareId, caption, recordShare]);
 
+  // Both cards, so "save" means the tall one for a feed and the wide one for
+  // X rather than whichever ratio happened to be on screen.
+  const handleSaveImages = useCallback(async () => {
+    setNotice(null);
+    setBusy(true);
+    const wanted: ShareLayout[] = ['story', 'landscape'];
+    const files: File[] = [];
+    for (const ratio of wanted) {
+      const cached = blobRef.current.get(cacheKey(ratio));
+      const blob = cached ?? (await renderCardBlob(data, { ...drawOptions, layout: ratio }));
+      if (!blob) {
+        continue;
+      }
+      if (!cached) {
+        blobRef.current.set(cacheKey(ratio), blob);
+      }
+      files.push(new File([blob], cardFileName(shareId, ratio), { type: 'image/png' }));
+    }
+    const result = await saveArtifacts({ files, shareId });
+    setBusy(false);
+    if (result.outcome === 'downloaded') {
+      setNotice('Both cards saved to your downloads.');
+    } else if (result.outcome === 'shared') {
+      setNotice('Both cards handed to your device.');
+    }
+  }, [data, drawOptions, cacheKey, shareId]);
+
+  // Nothing but the URL. A texting app shows the card when the message is the
+  // link and nothing else; put a caption in front of it and most of them fall
+  // back to plain blue text.
+  const handleCopyPlainLink = useCallback(async () => {
+    setNotice(null);
+    recordShare('card');
+    try {
+      await navigator.clipboard.writeText(shareUrl(shareId));
+      setNotice('Link copied on its own — paste it into a text and the card appears.');
+    } catch {
+      setNotice(`Copy this: ${shareUrl(shareId)}`);
+    }
+  }, [shareId, recordShare]);
+
   const handleCopyLink = useCallback(async () => {
+    setNotice(null);
     recordShare('card');
     try {
       await navigator.clipboard.writeText(caption);
@@ -368,23 +524,36 @@ export function ShareCardPanel({
         <p className="text-sm text-secondary">Building your card…</p>
       )}
 
-      <div className="flex flex-wrap gap-2">
-        {LAYOUT_OPTIONS.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            aria-pressed={layout === option.id}
-            onClick={() => setLayout(option.id)}
-            className={`rounded-full border px-4 py-2 text-sm font-semibold ${
-              layout === option.id
-                ? 'border-accent bg-accent text-on-accent'
-                : 'border-border bg-surface text-secondary'
-            }`}
-          >
-            {option.label}
-          </button>
-        ))}
-        {data.participants.length > 1 ? (
+      {/* Labelled, and on its own row. These three used to sit unlabelled
+          beside the squad toggle, so the row read as four unrelated chips and
+          nothing said the numbers were choosing the card. The toggle is a
+          different kind of control — independent, not one of three — and a
+          label over the pair would have claimed it was one of them. */}
+      <div className="space-y-2" role="group" aria-label="Card shape">
+        <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
+          Card shape
+        </span>
+        <div className="flex flex-wrap gap-2">
+          {LAYOUT_OPTIONS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              aria-pressed={layout === option.id}
+              onClick={() => setLayout(option.id)}
+              className={`rounded-full border px-4 py-2 text-sm font-semibold ${
+                layout === option.id
+                  ? 'border-accent bg-accent text-on-accent'
+                  : 'border-border bg-surface text-secondary'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {data.participants.length > 1 ? (
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             aria-pressed={variant === 'squad'}
@@ -397,31 +566,73 @@ export function ShareCardPanel({
           >
             Squad board
           </button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <label className="btn-outline cursor-pointer text-sm">
-          {photo ? 'Change photo' : 'Add a photo'}
-          {/* `capture` opens the camera straight away on a phone, which is
-              where somebody is standing when they finish. */}
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="hidden"
-            onChange={(event) => void handlePhoto(event.target.files?.[0])}
-          />
-        </label>
-        {photo ? (
-          <button type="button" className="btn-outline text-sm" onClick={clearPhoto}>
-            Remove photo
-          </button>
+      {/* One upload, and the athlete says which card it is for. The tall card
+          and the wide card crop a phone photo differently — a head-and-shoulders
+          shot that works on the tall one arrives on the wide one as a torso —
+          so "both" is the default but never the only option. */}
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
+            Use this photo for
+          </span>
+          {PHOTO_TARGET_OPTIONS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              aria-pressed={photoTarget === option.id}
+              onClick={() => setPhotoTarget(option.id)}
+              className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                photoTarget === option.id
+                  ? 'border-accent bg-accent text-on-accent'
+                  : 'border-border bg-surface text-secondary'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="btn-outline cursor-pointer text-sm">
+            {hasAnyPhoto ? 'Add another photo' : 'Add a photo'}
+            {/* `capture` opens the camera straight away on a phone, which is
+                where somebody is standing when they finish. */}
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={(event) => {
+                void handlePhoto(event.target.files?.[0], photoTarget);
+                // Cleared so choosing the same file again still fires change.
+                event.target.value = '';
+              }}
+            />
+          </label>
+        </div>
+
+        {hasAnyPhoto ? (
+          <ul className="space-y-1">
+            {PHOTO_SLOT_LABELS.map((slot) => (
+              <li key={slot.id} className="flex items-center gap-2 text-xs text-secondary">
+                <span className="min-w-28">{slot.label}</span>
+                <span className="text-primary">{photos[slot.id] ? 'photo added' : 'no photo'}</span>
+                {photos[slot.id] ? (
+                  <button type="button" className="underline" onClick={() => clearPhoto(slot.id)}>
+                    Remove
+                  </button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
         ) : null}
       </div>
 
       {photoError ? <p className="text-xs text-secondary">{photoError}</p> : null}
-      {photo ? (
+      {hasAnyPhoto ? (
         <div className="space-y-2 rounded-card border border-border p-3">
           <label className="flex items-start gap-2 text-xs text-secondary">
             <input
@@ -442,6 +653,16 @@ export function ShareCardPanel({
         </div>
       ) : null}
 
+      {/* Two jobs, split into two rows, because they are not variations on one
+          another. The top row is the picture: it is the card itself, and what
+          lands is exactly what is on screen. The bottom row is the link: the
+          app on the other end builds its own preview from it, which is where
+          the shape stops being ours.
+
+          There is deliberately no "copy the wide card" / "copy the tall card"
+          pair. The ratio buttons above already choose which card this is, and
+          a second way to say the same thing makes two controls that can
+          disagree — and "Save images" hands over both regardless. */}
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
@@ -449,43 +670,124 @@ export function ShareCardPanel({
           disabled={!previewUrl || busy}
           onClick={handleShare}
         >
-          Share
+          Share the card
         </button>
+        <button
+          type="button"
+          className="btn-outline text-sm"
+          disabled={!previewUrl || busy}
+          onClick={handleSaveImages}
+        >
+          Save images
+        </button>
+      </div>
+      <p className="text-xs text-secondary">
+        The card posts as a picture, so it looks the same wherever it lands.{' '}
+        <strong className="font-semibold">Save images</strong> keeps both the tall and the wide card
+        on your device — they are yours to post whenever you like.
+      </p>
+
+      <div className="flex flex-wrap gap-2">
         <button type="button" className="btn-outline text-sm" onClick={handleCopyLink}>
           Copy link
         </button>
+        <button type="button" className="btn-outline text-sm" onClick={handleCopyPlainLink}>
+          Copy link for texting
+        </button>
       </div>
+      <p className="text-xs text-secondary">
+        A link shows a preview instead, and each app crops that its own way. In a text message the
+        card only appears when the message is the link and nothing else, which is what{' '}
+        <strong className="font-semibold">Copy link for texting</strong> gives you — the other one
+        copies your score alongside it.
+      </p>
 
       {isEncoderImplemented(encoderPath) ? (
-        <div className="space-y-2 border-t border-border pt-4">
-          {replay.status === 'idle' || replay.status === 'error' ? (
-            <button
-              type="button"
-              className="btn-outline text-sm"
-              onClick={() => replay.start(cutId)}
-            >
-              Make replay
-            </button>
-          ) : null}
+        <div className="space-y-3 border-t border-border pt-4">
+          <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
+            Replay
+          </span>
 
-          {replay.status === 'rendering' ? (
-            <div className="space-y-2">
-              <p className="text-sm text-secondary">
-                {replay.progress < 1
-                  ? `Rendering ${Math.round(replay.progress * 100)}%`
-                  : 'Encoding…'}
-              </p>
-              <button type="button" className="btn-outline text-sm" onClick={replay.cancel}>
-                Cancel
+          {/* Length is picked before the render, because changing it after
+              means throwing away thirty seconds of encoding. */}
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Replay length">
+            {REPLAY_LENGTHS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={cutId === option.id}
+                disabled={replay.status === 'rendering'}
+                onClick={() => setCutId(option.id)}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                  cutId === option.id
+                    ? 'border-accent bg-accent text-on-accent'
+                    : 'border-border bg-surface text-secondary'
+                }`}
+              >
+                {option.label}
               </button>
-            </div>
+            ))}
+          </div>
+
+          {/* Watch it before posting it. Muted and inline so a phone plays it
+              in place instead of throwing it into fullscreen. */}
+          {replay.status === 'ready' && replayUrl ? (
+            <video
+              key={replayUrl}
+              src={replayUrl}
+              controls
+              loop
+              muted
+              playsInline
+              className="w-full max-w-64 rounded-card border border-border"
+            />
           ) : null}
 
-          {replay.status === 'ready' ? (
-            <button type="button" className="btn-primary text-sm" onClick={handleShareReplay}>
-              {replayActionLabel(encoderPath)}
-            </button>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            {replay.status === 'idle' || replay.status === 'error' ? (
+              <button
+                type="button"
+                className="btn-outline text-sm"
+                onClick={() => replay.start(cutId)}
+              >
+                {isRealTimeEncoder(encoderPath)
+                  ? `Make replay (${CUTS[cutId].durationSeconds}s)`
+                  : 'Make replay'}
+              </button>
+            ) : null}
+
+            {replay.status === 'rendering' ? (
+              <>
+                {/* "Recording" for MediaRecorder, because that is what it is
+                    doing and why it is taking the length of the video. */}
+                <p className="text-sm text-secondary">
+                  {replay.progress < 1
+                    ? `${isRealTimeEncoder(encoderPath) ? 'Recording' : 'Rendering'} ${Math.round(
+                        replay.progress * 100
+                      )}%`
+                    : 'Finishing…'}
+                </p>
+                <button type="button" className="btn-outline text-sm" onClick={replay.cancel}>
+                  Cancel
+                </button>
+              </>
+            ) : null}
+
+            {replay.status === 'ready' ? (
+              <>
+                <button type="button" className="btn-primary text-sm" onClick={handleShareReplay}>
+                  {replayActionLabel(encoderPath)}
+                </button>
+                <button
+                  type="button"
+                  className="btn-outline text-sm"
+                  onClick={() => replay.start(cutId)}
+                >
+                  Make it again
+                </button>
+              </>
+            ) : null}
+          </div>
 
           {/* Said before a thirty-second render, not after it. */}
           {replayCaveat(encoderPath) ? (

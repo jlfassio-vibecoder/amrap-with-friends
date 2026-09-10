@@ -53,14 +53,18 @@ export function readCapabilities(): EncoderCapabilities {
 /**
  * Whether this path has an implementation behind it.
  *
- * detectEncoderPath reports what the *browser* can do; phase 2 only built the
- * WebCodecs sink. Keeping the two separate is deliberate — the detection stays
- * honest about the device, and this says what we have actually shipped, so the
- * MediaRecorder paths can be turned on by changing one line here when the sink
- * exists. Conflating them would have hidden which was missing.
+ * detectEncoderPath reports what the *browser* can do; this says what has
+ * actually been built. They stayed apart while only the WebCodecs sink
+ * existed, so it was always clear which was missing — and turning the
+ * MediaRecorder paths on really was the one-line change that was promised.
  */
 export function isEncoderImplemented(path: EncoderPath): boolean {
-  return path === 'webcodecs';
+  return path !== 'none';
+}
+
+/** Recording happens on the playback clock, so a 20s replay costs 20s of waiting. */
+export function isRealTimeEncoder(path: EncoderPath): boolean {
+  return path === 'mediarecorder-mp4' || path === 'mediarecorder-webm';
 }
 
 /** What the button should say. A WebM file is a download, not a share. */
@@ -70,10 +74,10 @@ export function replayActionLabel(path: EncoderPath): string {
 
 export function replayCaveat(path: EncoderPath): string | null {
   if (path === 'mediarecorder-webm') {
-    return 'This browser can only make WebM video, which Instagram will not accept from a phone. The file will download instead.';
+    return 'This browser records WebM, which Instagram will not accept from a phone — the file will download instead. It also records in real time, so it takes as long as the replay lasts.';
   }
-  if (!isEncoderImplemented(path) && path !== 'none') {
-    return 'Replays need a browser with video encoding support. Your card is ready to share now.';
+  if (path === 'mediarecorder-mp4') {
+    return 'This browser records in real time, so making the replay takes as long as the replay lasts.';
   }
   return null;
 }

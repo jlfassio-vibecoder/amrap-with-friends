@@ -9,6 +9,7 @@ import {
 const summary = {
   shareId: 'abc12345',
   imagePath: 'abc12345.png',
+  wideImagePath: null,
   templateId: 'blood-shunt',
   durationMinutes: 12,
   rounds: 7,
@@ -73,6 +74,7 @@ describe('shareOgImageSize', () => {
   const summary = {
     shareId: '4jppeegd',
     imagePath: '4jppeegd.webp',
+    wideImagePath: null,
     templateId: null,
     durationMinutes: 15,
     rounds: 10,
