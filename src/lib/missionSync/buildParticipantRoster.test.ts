@@ -72,6 +72,22 @@ function rosterDefaults(overrides: Record<string, unknown> = {}) {
 }
 
 describe('buildParticipantRoster', () => {
+  // The roster is the only ranking authority precisely because it is the only
+  // thing that has seen the athletes who are here but have not scored. Ranking
+  // off the leaderboard array instead put this athlete one place too high.
+  it('ranks an unscored athlete who is present ahead of nobody, and shifts the rest down', () => {
+    const roster = buildParticipantRoster(
+      [leaderboardEntry(ALICE_ID, 'Alice', 2, 40, 40), leaderboardEntry(SELF_ID, 'Zed', 1, 20, 20)],
+      [presenceEntry(BOB_ID, 'Bob', true)],
+      SELF_ID,
+      'absolute',
+      'work'
+    );
+
+    expect(roster.map((entry) => entry.nickname)).toEqual(['Alice', 'Zed', 'Bob']);
+    expect(roster.find((entry) => entry.isSelf)!.rank).toBe(2);
+  });
+
   it('sorts by final score descending', () => {
     const roster = buildParticipantRoster(
       [leaderboardEntry(ALICE_ID, 'Alice', 2, 40, 40), leaderboardEntry(BOB_ID, 'Bob', 2, 40, 69)],
@@ -143,7 +159,7 @@ describe('buildParticipantRoster', () => {
         isOnline: true,
         isSelf: false,
         modifiedMovements: [],
-    movementVariants: {},
+        movementVariants: {},
         rank: 1,
         ...rosterDefaults(),
       },
