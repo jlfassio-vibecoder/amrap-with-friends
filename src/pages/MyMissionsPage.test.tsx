@@ -252,7 +252,7 @@ describe('MyMissionsPage delete', () => {
       error: null,
     });
     deleteIncompleteMissionMock.mockImplementation(async () => ({ error: null }));
-    const confirmMock = vi.fn((_message?: string) => true);
+    const confirmMock = vi.fn<(message?: string) => boolean>(() => true);
     vi.stubGlobal('confirm', confirmMock);
 
     renderPage();
