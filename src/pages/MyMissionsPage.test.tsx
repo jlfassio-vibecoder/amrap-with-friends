@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@/contexts/ThemeProvider';
@@ -9,7 +9,7 @@ import type { MyMissionEntry } from '@/lib/api/myMissions';
 const fetchMyMissionsMock = vi.fn();
 const deleteIncompleteMissionMock = vi.fn();
 const fetchMyCampaignsMock = vi.fn();
-const getMissionChainMock = vi.fn();
+const fetchMyAssignedWorkoutsMock = vi.fn();
 const authUser = { id: 'user-1' };
 
 vi.mock('@/hooks/useAmrapAuth', () => ({
@@ -18,6 +18,10 @@ vi.mock('@/hooks/useAmrapAuth', () => ({
     isAuthLoading: false,
     user: authUser,
   }),
+}));
+
+vi.mock('@/hooks/useAthleteProfile', () => ({
+  useAthleteProfile: () => ({ profile: null, loading: false }),
 }));
 
 vi.mock('@/lib/api/myMissions', async () => {
@@ -38,12 +42,13 @@ vi.mock('@/lib/api/campaigns', async () => {
   };
 });
 
-vi.mock('@/lib/api/missionChain', async () => {
-  const actual =
-    await vi.importActual<typeof import('@/lib/api/missionChain')>('@/lib/api/missionChain');
+vi.mock('@/lib/api/assignedWorkouts', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/api/assignedWorkouts')>(
+    '@/lib/api/assignedWorkouts'
+  );
   return {
     ...actual,
-    getMissionChain: (...args: unknown[]) => getMissionChainMock(...args),
+    fetchMyAssignedWorkouts: (...args: unknown[]) => fetchMyAssignedWorkoutsMock(...args),
   };
 });
 
@@ -59,15 +64,16 @@ function entry(overrides: Partial<MyMissionEntry> = {}): MyMissionEntry {
     isFeatured: false,
     durationMinutes: 5,
     workout: [{ name: 'Mountain Climbers', target: 20, unit: 'reps' }],
+    movementCount: 1,
+    repsPerRound: 20,
     templateId: null,
     rallyPointId: null,
-    chainItemCount: 0,
-    chainUnstartedCount: 0,
     state: 'waiting',
     segmentIndex: 0,
     roundCount: 0,
     partialReps: 0,
     finalScore: null,
+    hasScoreBreakdown: false,
     scoreBreakdown: null,
     modifiedMovements: [],
     movementVariants: {},
@@ -103,16 +109,17 @@ afterEach(() => {
   fetchMyMissionsMock.mockReset();
   deleteIncompleteMissionMock.mockReset();
   fetchMyCampaignsMock.mockReset();
-  getMissionChainMock.mockReset();
+  fetchMyAssignedWorkoutsMock.mockReset();
   vi.unstubAllGlobals();
 });
 
-beforeEach(() => {
-  getMissionChainMock.mockResolvedValue({ data: [], error: null });
-});
-
 function renderPage() {
-  fetchMyCampaignsMock.mockResolvedValue({ data: [], error: null });
+  if (!fetchMyCampaignsMock.getMockImplementation()) {
+    fetchMyCampaignsMock.mockResolvedValue({ data: [], error: null });
+  }
+  if (!fetchMyAssignedWorkoutsMock.getMockImplementation()) {
+    fetchMyAssignedWorkoutsMock.mockResolvedValue({ data: [], error: null });
+  }
   return render(
     <MemoryRouter>
       <ThemeProvider>
@@ -132,10 +139,13 @@ describe('MyMissionsPage workout summary', () => {
             { name: 'Dead Hang', target: 30, unit: 'seconds' },
             { name: 'Pull-ups', target: 10, unit: 'reps' },
           ],
+          movementCount: 2,
+          repsPerRound: 40,
           state: 'finished',
           finalScore: 42,
         }),
       ],
+      chains: {},
       error: null,
     });
 
@@ -155,8 +165,11 @@ describe('MyMissionsPage workout summary', () => {
         entry({
           templateId: 'the-pendulum',
           workout: [{ name: 'Burpees', target: 10, unit: 'reps' }],
+          movementCount: 1,
+          repsPerRound: 10,
         }),
       ],
+      chains: {},
       error: null,
     });
 
@@ -184,6 +197,7 @@ describe('MyMissionsPage delete', () => {
           missionId: 's3',
           state: 'finished',
           finalScore: 100,
+          hasScoreBreakdown: true,
           scoreBreakdown: {
             baseScore: 100,
             pvi: null,
@@ -199,6 +213,7 @@ describe('MyMissionsPage delete', () => {
           roundCount: 6,
         }),
       ],
+      chains: {},
       error: null,
     });
 
@@ -212,13 +227,20 @@ describe('MyMissionsPage delete', () => {
     expect(screen.getByRole('button', { name: 'View breakdown' })).toBeTruthy();
   });
 
-  it('confirms then deletes and removes the row', async () => {
-    fetchMyMissionsMock.mockResolvedValue({
-      data: [entry()],
-      error: null,
-    });
+  it('confirms then deletes and reloads the list', async () => {
+    fetchMyMissionsMock
+      .mockResolvedValueOnce({
+        data: [entry()],
+        chains: {},
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: [],
+        chains: {},
+        error: null,
+      });
     deleteIncompleteMissionMock.mockImplementation(async () => ({ error: null }));
-    const confirmMock = vi.fn(() => true);
+    const confirmMock = vi.fn<(message?: string) => boolean>(() => true);
     vi.stubGlobal('confirm', confirmMock);
 
     renderPage();
@@ -235,6 +257,7 @@ describe('MyMissionsPage delete', () => {
       expect(deleteIncompleteMissionMock).toHaveBeenCalledWith(
         '22222222-2222-4222-8222-222222222222'
       );
+      expect(fetchMyMissionsMock).toHaveBeenCalledTimes(2);
       expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
       expect(screen.getByText(/No saved missions yet/)).toBeTruthy();
     });
@@ -249,10 +272,11 @@ describe('MyMissionsPage delete', () => {
           coachWorkoutName: 'THE UNDERTOW',
         }),
       ],
+      chains: {},
       error: null,
     });
     deleteIncompleteMissionMock.mockImplementation(async () => ({ error: null }));
-    const confirmMock = vi.fn(() => true);
+    const confirmMock = vi.fn<(message?: string) => boolean>(() => true);
     vi.stubGlobal('confirm', confirmMock);
 
     renderPage();
@@ -263,7 +287,11 @@ describe('MyMissionsPage delete', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
-    expect(confirmMock).toHaveBeenCalledWith(expect.stringMatching(/this date and time only/i));
+    expect(confirmMock).toHaveBeenCalledWith(
+      expect.stringMatching(/Cancel today's mission for this date and time only/i)
+    );
+    const message = String(confirmMock.mock.calls[0]?.[0] ?? '');
+    expect(message).not.toMatch(/WOD/i);
   });
 });
 
@@ -274,43 +302,42 @@ describe('MyMissionsPage chain groups', () => {
         entry({
           templateId: 'the-piston',
           rallyPointId: 'rp1',
-          chainItemCount: 3,
-          chainUnstartedCount: 2,
           workout: [{ name: 'Air Squats', target: 10 }],
+          movementCount: 1,
+          repsPerRound: 10,
         }),
       ],
-      error: null,
-    });
-    getMissionChainMock.mockResolvedValue({
-      data: [
-        {
-          id: 'c0',
-          position: 0,
-          durationMinutes: 5,
-          workout: [{ name: 'Air Squats', target: 10 }],
-          templateId: 'the-piston',
-          intensityTier: 3,
-          startedMissionId: '22222222-2222-4222-8222-222222222222',
-        },
-        {
-          id: 'c1',
-          position: 1,
-          durationMinutes: 5,
-          workout: [{ name: 'Fast Air Squats', target: 15 }],
-          templateId: 'the-metronome',
-          intensityTier: 3,
-          startedMissionId: null,
-        },
-        {
-          id: 'c2',
-          position: 2,
-          durationMinutes: 10,
-          workout: [{ name: 'Burpees', target: 10 }],
-          templateId: 'whiplash',
-          intensityTier: 3,
-          startedMissionId: null,
-        },
-      ],
+      chains: {
+        rp1: [
+          {
+            id: 'c0',
+            position: 0,
+            durationMinutes: 5,
+            workout: [],
+            templateId: 'the-piston',
+            intensityTier: 3,
+            startedMissionId: '22222222-2222-4222-8222-222222222222',
+          },
+          {
+            id: 'c1',
+            position: 1,
+            durationMinutes: 5,
+            workout: [{ name: 'Fast Air Squats', target: 15 }],
+            templateId: 'the-metronome',
+            intensityTier: 3,
+            startedMissionId: null,
+          },
+          {
+            id: 'c2',
+            position: 2,
+            durationMinutes: 10,
+            workout: [{ name: 'Burpees', target: 10 }],
+            templateId: 'whiplash',
+            intensityTier: 3,
+            startedMissionId: null,
+          },
+        ],
+      },
       error: null,
     });
 
@@ -345,6 +372,8 @@ describe('MyMissionsPage chain groups', () => {
           rallyPointId: 'rp1',
           templateId: 'the-piston',
           workout: [{ name: 'Air Squats', target: 10 }],
+          movementCount: 1,
+          repsPerRound: 10,
         }),
         entry({
           participantId: 'p-old',
@@ -353,8 +382,11 @@ describe('MyMissionsPage chain groups', () => {
           rallyPointId: 'rp1',
           templateId: 'the-metronome',
           workout: [{ name: 'Fast Air Squats', target: 15 }],
+          movementCount: 1,
+          repsPerRound: 15,
         }),
       ],
+      chains: {},
       error: null,
     });
 
@@ -376,7 +408,7 @@ describe('MyMissionsPage chain groups', () => {
 
 describe('MyMissionsPage CTAs', () => {
   it('links Plan mission and New campaign to their routes', async () => {
-    fetchMyMissionsMock.mockResolvedValue({ data: [], error: null });
+    fetchMyMissionsMock.mockResolvedValue({ data: [], chains: {}, error: null });
     renderPage();
 
     await waitFor(() => {
@@ -390,13 +422,64 @@ describe('MyMissionsPage CTAs', () => {
   });
 });
 
-describe('MyMissionsPage campaigns', () => {
-  it('lists campaigns with a link to the campaign detail', async () => {
-    fetchMyMissionsMock.mockResolvedValue({ data: [], error: null });
+describe('MyMissionsPage tabs', () => {
+  it('defaults to Missions and switches section panels', async () => {
+    fetchMyMissionsMock.mockResolvedValue({
+      data: [entry()],
+      chains: {},
+      error: null,
+    });
     fetchMyCampaignsMock.mockResolvedValue({
       data: [campaign()],
       error: null,
     });
+    fetchMyAssignedWorkoutsMock.mockResolvedValue({ data: [], error: null });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByRole('tablist', { name: 'My missions sections' })).toBeTruthy();
+      expect(screen.getByRole('tab', { name: 'Missions' }).getAttribute('aria-selected')).toBe(
+        'true'
+      );
+      expect(screen.getByRole('link', { name: 'View mission' })).toBeTruthy();
+    });
+
+    expect(screen.queryByText('Your campaigns')).toBeNull();
+    expect(screen.queryByText(/Nothing waiting from your squad/)).toBeNull();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Campaigns' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: 'Campaigns' }).getAttribute('aria-selected')).toBe(
+        'true'
+      );
+      expect(screen.getByText('Your campaigns')).toBeTruthy();
+      expect(screen.getByText('Spring Build')).toBeTruthy();
+      expect(screen.getByRole('link', { name: 'View campaign' }).getAttribute('href')).toBe(
+        '/campaign/33333333-3333-4333-8333-333333333333'
+      );
+    });
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Sent to you' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: 'Sent to you' }).getAttribute('aria-selected')).toBe(
+        'true'
+      );
+      expect(screen.getByText(/Nothing waiting from your squad/)).toBeTruthy();
+    });
+  });
+});
+
+describe('MyMissionsPage campaigns', () => {
+  it('lists campaigns with a link to the campaign detail', async () => {
+    fetchMyMissionsMock.mockResolvedValue({ data: [], chains: {}, error: null });
+    fetchMyCampaignsMock.mockResolvedValue({
+      data: [campaign()],
+      error: null,
+    });
+    fetchMyAssignedWorkoutsMock.mockResolvedValue({ data: [], error: null });
 
     render(
       <MemoryRouter>
@@ -406,9 +489,12 @@ describe('MyMissionsPage campaigns', () => {
       </MemoryRouter>
     );
 
+    fireEvent.click(screen.getByRole('tab', { name: 'Campaigns' }));
+
     await waitFor(() => {
       expect(screen.getByText('Your campaigns')).toBeTruthy();
-      expect(screen.getByRole('link', { name: /Spring Build/ }).getAttribute('href')).toBe(
+      expect(screen.getByText('Spring Build')).toBeTruthy();
+      expect(screen.getByRole('link', { name: 'View campaign' }).getAttribute('href')).toBe(
         '/campaign/33333333-3333-4333-8333-333333333333'
       );
     });

@@ -79,6 +79,7 @@ import {
   chainRestBannerForMission,
 } from '@/lib/mission/chainAdvanceCopy';
 import { nextChainedMissionName } from '@/lib/mission/nextChainedMissionName';
+import { formatMissionStateLabel } from '@/lib/mission/formatMissionStateLabel';
 import { canPassRallyPointCommand } from '@/lib/rallyPoint/canPassRallyPointCommand';
 import { shouldHandleLogRoundHotkey } from '@/lib/mission/logRoundHotkey';
 import { LOG_ROUND_COOLDOWN_ALERT, canLogRound } from '@/lib/mission/logRoundCooldown';
@@ -118,21 +119,6 @@ function formatTime(totalSec: number): string {
   const minutes = Math.floor(totalSec / 60);
   const seconds = totalSec % 60;
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-}
-
-function phaseLabel(phase: string): string {
-  switch (phase) {
-    case 'waiting':
-      return 'Waiting';
-    case 'setup':
-      return 'Get ready';
-    case 'work':
-      return 'Live';
-    case 'finished':
-      return 'Finished';
-    default:
-      return phase;
-  }
 }
 
 /** Types WAITING once, then cycles an ellipsis. Honors prefers-reduced-motion. */
@@ -777,7 +763,12 @@ function LiveMissionView({
     isPaused: live.isPaused,
     workDurationSec: live.workDurationSec,
   });
-  const roundLogPulse = useRoundLogPulse();
+  const {
+    buttonRef: roundLogButtonRef,
+    pulseKey: roundLogPulseKey,
+    pulse: pulseRoundLog,
+    reset: resetRoundLogPulse,
+  } = useRoundLogPulse();
   const lastLogRoundAtMsRef = useRef<number | null>(null);
   const [logRoundHint, setLogRoundHint] = useState<string | null>(null);
   const claim = useParticipantClaim(missionId);
@@ -930,16 +921,18 @@ function LiveMissionView({
         return;
       }
       playRoundLogged();
-      roundLogPulse.pulse();
+      pulseRoundLog();
     });
   }
 
   const handleLogRoundRef = useRef(handleLogRound);
-  handleLogRoundRef.current = handleLogRound;
+  useEffect(() => {
+    handleLogRoundRef.current = handleLogRound;
+  });
 
   useEffect(() => {
     if (!showLogRound) {
-      roundLogPulse.reset();
+      resetRoundLogPulse();
       setLogRoundHint(null);
       return;
     }
@@ -952,7 +945,7 @@ function LiveMissionView({
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [showLogRound]);
+  }, [showLogRound, resetRoundLogPulse]);
 
   const showEndPractice = live.isPractice && livePhase === 'finished';
   const showPartialRepsModal =
@@ -1423,7 +1416,7 @@ function LiveMissionView({
                   <WaitingTypewriterLabel />
                 ) : (
                   <p className="text-display text-xs uppercase tracking-widest text-secondary">
-                    {phaseLabel(live.phase)}
+                    {formatMissionStateLabel(live.phase)}
                   </p>
                 )}
                 {chainRestBanner ? (
@@ -1442,10 +1435,10 @@ function LiveMissionView({
                   </p>
                 ) : live.phase !== 'waiting' ? (
                   <p
-                    key={roundLogPulse.pulseKey}
+                    key={roundLogPulseKey}
                     className={`text-display tabular-nums text-accent lg:text-7xl xl:text-8xl ${
                       compactMobileLive ? 'text-7xl' : 'text-5xl'
-                    } ${roundLogPulse.pulseKey > 0 ? 'animate-round-log-flash' : ''}`}
+                    } ${roundLogPulseKey > 0 ? 'animate-round-log-flash' : ''}`}
                   >
                     {formatTime(live.timeLeftSec)}
                   </p>
@@ -1615,7 +1608,7 @@ function LiveMissionView({
                 {showLogRound && (
                   <span className="relative inline-flex max-lg:w-full">
                     <button
-                      ref={roundLogPulse.buttonRef}
+                      ref={roundLogButtonRef}
                       type="button"
                       className="btn-success w-full px-3 py-1.5 text-sm max-lg:py-5 max-lg:text-xl lg:w-auto lg:px-6 lg:py-3 lg:text-base"
                       onClick={handleLogRound}
@@ -1623,8 +1616,8 @@ function LiveMissionView({
                       Log round
                     </button>
                     <RoundLogRippleBurst
-                      pulseKey={roundLogPulse.pulseKey}
-                      buttonRef={roundLogPulse.buttonRef}
+                      pulseKey={roundLogPulseKey}
+                      buttonRef={roundLogButtonRef}
                     />
                   </span>
                 )}
@@ -1665,7 +1658,7 @@ function LiveMissionView({
                           return;
                         }
                         playRoundLogged();
-                        roundLogPulse.pulse();
+                        pulseRoundLog();
                       });
                     }}
                   />

@@ -5,7 +5,7 @@ import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { AuthModal } from '@/components/AuthModal';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { HEADER_TONE_CLASSES, type HeaderTone } from '@/components/headerTone';
-import { isGuestOpenPath } from '@/lib/auth/guestOpenPaths';
+import { isGuestOpenPath, shouldStayAfterSignup } from '@/lib/auth/guestOpenPaths';
 import {
   clearPostAuthPathIntent,
   consumePostAuthPathIntent,
@@ -67,7 +67,11 @@ export function AuthHeaderActions({ tone = 'default' }: { tone?: HeaderTone }) {
   function openAuth(mode: AuthOpenMode) {
     closeMenu();
     setOpenedAsSignUp(mode === 'sign-up');
-    if (mode === 'sign-up' && !isGuestOpenPath(location.pathname)) {
+    if (
+      mode === 'sign-up' &&
+      !isGuestOpenPath(location.pathname) &&
+      !shouldStayAfterSignup(location.pathname)
+    ) {
       setPostAuthPathIntent('/create');
     } else {
       clearPostAuthPathIntent();
@@ -81,7 +85,7 @@ export function AuthHeaderActions({ tone = 'default' }: { tone?: HeaderTone }) {
       clearPostAuthPathIntent();
       return;
     }
-    if (isGuestOpenPath(location.pathname)) {
+    if (isGuestOpenPath(location.pathname) || shouldStayAfterSignup(location.pathname)) {
       clearPostAuthPathIntent();
       return;
     }

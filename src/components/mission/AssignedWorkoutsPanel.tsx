@@ -9,6 +9,7 @@ import {
 import { createMission } from '@/lib/api/missions';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
+import { useRefetchOnVisible } from '@/hooks/useRefetchOnVisible';
 
 /**
  * Workouts a squad friend put on this athlete's list.
@@ -18,7 +19,12 @@ import { useAthleteProfile } from '@/hooks/useAthleteProfile';
  * stored workout, so from that point on it scores, paces and files itself into
  * history like anything else.
  */
-export function AssignedWorkoutsPanel() {
+interface AssignedWorkoutsPanelProps {
+  /** When true, show the section shell even with nothing waiting (dedicated tab). */
+  showWhenEmpty?: boolean;
+}
+
+export function AssignedWorkoutsPanel({ showWhenEmpty = false }: AssignedWorkoutsPanelProps) {
   const navigate = useNavigate();
   const { isAuthenticated, isAuthLoading } = useAmrapAuth();
   const { profile } = useAthleteProfile();
@@ -43,24 +49,10 @@ export function AssignedWorkoutsPanel() {
     if (isAuthLoading || !isAuthenticated) {
       return;
     }
-    let cancelled = false;
-    void fetchMyAssignedWorkouts().then((result) => {
-      if (cancelled) {
-        return;
-      }
-      if (result.error) {
-        setError(result.error.message);
-        setAssigned([]);
-      } else {
-        setError(null);
-        setAssigned(result.data);
-      }
-      setLoading(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [isAuthenticated, isAuthLoading]);
+    void load();
+  }, [isAuthenticated, isAuthLoading, load]);
+
+  useRefetchOnVisible(Boolean(isAuthenticated && !isAuthLoading), load);
 
   async function handleStart(entry: AssignedWorkout) {
     setBusyId(entry.assignedWorkoutId);
@@ -103,8 +95,9 @@ export function AssignedWorkoutsPanel() {
   if (isAuthLoading || !isAuthenticated) {
     return null;
   }
-  // Nothing waiting is the normal case — an empty card every visit is noise.
-  if (!loading && !error && assigned.length === 0) {
+  // Nothing waiting is the normal case — an empty card every visit is noise
+  // unless this panel owns a dedicated tab.
+  if (!showWhenEmpty && !loading && !error && assigned.length === 0) {
     return null;
   }
 
@@ -119,6 +112,10 @@ export function AssignedWorkoutsPanel() {
 
       {loading ? <p className="text-sm text-secondary">Loading…</p> : null}
       {error ? <p className="alert-error">{error}</p> : null}
+
+      {!loading && !error && assigned.length === 0 ? (
+        <p className="text-sm text-secondary">Nothing waiting from your squad.</p>
+      ) : null}
 
       {assigned.length > 0 ? (
         <ul className="divide-y divide-divider">

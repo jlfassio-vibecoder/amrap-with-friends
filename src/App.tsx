@@ -114,7 +114,19 @@ function App() {
             }
           />
           <Route path="/mission/:missionId" element={<MissionWaitingRoomPage />} />
-          <Route path="/my-missions" element={<MyMissionsPage />} />
+          <Route
+            path="/my-missions"
+            element={
+              <RequireIntake
+                guestMode="sign-in"
+                gateTitle="My missions"
+                gateMessage="Sign in to see missions saved to your account. Plan and finish a mission, then save it here."
+                gateAllowsGuest={false}
+              >
+                <MyMissionsPage />
+              </RequireIntake>
+            }
+          />
           <Route path="/intake" element={<IntakePage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route

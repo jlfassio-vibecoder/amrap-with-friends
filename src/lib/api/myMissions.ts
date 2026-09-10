@@ -7,12 +7,14 @@ import {
   readSessionNotes,
   type MissionCheckIns,
 } from '@/lib/mission/missionCheckIn';
+import type { MissionChainItem } from '@/lib/api/missionChain';
 import type { WorkoutExercise } from '@/lib/api/missionTypes';
 import type { ScoreBreakdown } from '@/lib/scoring/types';
 import { parseScoreBreakdownJson } from '@/lib/scoring/parseScoreBreakdownJson';
 import { computeBaseScore } from '@/lib/scoring/computeBaseScore';
 import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
 import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
+import { formatMissionStateLabel } from '@/lib/mission/formatMissionStateLabel';
 import { countOf } from '@/lib/units/plural';
 
 export interface MyMissionEntry {
@@ -26,20 +28,30 @@ export interface MyMissionEntry {
   scheduledAt: string | null;
   isFeatured: boolean;
   durationMinutes: number;
+  /**
+   * Empty until hydrated via `fetchMyMissionDetail`. List rows use
+   * `movementCount` / `repsPerRound` instead.
+   */
   workout: WorkoutExercise[];
+  /** Closed-card movement summary when workout is not yet loaded. */
+  movementCount: number;
+  /**
+   * Scorable reps (or seconds) per round from the list RPC; null means
+   * round-based. Prefer recomputing from `workout` once hydrated.
+   */
+  repsPerRound: number | null;
   /** Library or coach template id when the mission was created from one. */
   templateId: string | null;
   /** Shared Next Mission hub; null for guest-only / non-hub missions. */
   rallyPointId: string | null;
-  /** Rows in mission_chain_items for this hub; 0 when none / no hub. */
-  chainItemCount: number;
-  /** Unstarted chain slots still waiting to be created. */
-  chainUnstartedCount: number;
   state: string;
   segmentIndex: number;
   roundCount: number;
   partialReps: number;
   finalScore: number | null;
+  /** True when a locked breakdown exists; full object may still be null until hydrate. */
+  hasScoreBreakdown: boolean;
+  /** Null on slim list rows until `fetchMyMissionDetail`. */
   scoreBreakdown: ScoreBreakdown | null;
   /** Empty when the mission was performed as programmed. */
   modifiedMovements: string[];
@@ -66,6 +78,12 @@ export type MyMissionsApiError = {
   message: string;
 };
 
+export type MyMissionsListResult = {
+  data: MyMissionEntry[] | null;
+  chains: Record<string, MissionChainItem[]>;
+  error: MyMissionsApiError | null;
+};
+
 function readWorkout(value: unknown): WorkoutExercise[] {
   if (!Array.isArray(value)) {
     return [];
@@ -80,32 +98,32 @@ export function countRoundsForSegment(
   return rounds.filter((round) => round.segment_index === segmentIndex).length;
 }
 
+function resolveRepsPerRound(entry: MyMissionEntry): number | null {
+  if (entry.workout.length > 0) {
+    try {
+      return computeRepsPerRound(entry.workout);
+    } catch {
+      return null;
+    }
+  }
+  return entry.repsPerRound;
+}
+
 export function computeMyMissionBaseScore(entry: MyMissionEntry): number {
-  try {
-    const repsPerRound = computeRepsPerRound(entry.workout);
-    return computeBaseScore(entry.roundCount, entry.partialReps, repsPerRound);
-  } catch {
-    // Copilot suggestion ignored: roundCount fallback is intentional; callers use formatMyMissionScoreDisplay for the unit label.
+  const repsPerRound = resolveRepsPerRound(entry);
+  if (repsPerRound === null) {
     return entry.roundCount;
   }
+  return computeBaseScore(entry.roundCount, entry.partialReps, repsPerRound);
 }
 
 export function isMyMissionScoreScorable(entry: MyMissionEntry): boolean {
-  try {
-    computeRepsPerRound(entry.workout);
-    return true;
-  } catch {
-    return false;
-  }
+  return resolveRepsPerRound(entry) !== null;
 }
 
-/** 0 for a workout `computeRepsPerRound` cannot total — a round-based mission. */
+/** 0 for a workout that is not Phase-1 reps/sec scorable — a round-based mission. */
 export function getMyMissionRepsPerRound(entry: MyMissionEntry): number {
-  try {
-    return computeRepsPerRound(entry.workout);
-  } catch {
-    return 0;
-  }
+  return resolveRepsPerRound(entry) ?? 0;
 }
 
 export function formatMyMissionScoreDisplay(entry: MyMissionEntry): string {
@@ -136,7 +154,7 @@ export function formatMyMissionShareText(entry: MyMissionEntry): string {
     new Date(when).toLocaleString(),
     `${entry.durationMinutes} min`,
     formatMyMissionScoreDisplay(entry),
-    entry.state,
+    formatMissionStateLabel(entry.state),
     ...(entry.isFeatured ? ['Featured'] : []),
   ].join(' · ');
 
@@ -149,7 +167,7 @@ export function formatMyMissionShareText(entry: MyMissionEntry): string {
 }
 
 export function canDeleteMyMission(entry: MyMissionEntry): boolean {
-  return entry.role === 'host' && entry.scoreBreakdown === null && entry.state !== 'finished';
+  return entry.role === 'host' && !entry.hasScoreBreakdown && entry.state !== 'finished';
 }
 
 export function displayMyMissionScore(entry: MyMissionEntry): string | number {
@@ -200,6 +218,13 @@ function parseMyMissionEntry(raw: unknown): MyMissionEntry | null {
     row.score_breakdown === null || row.score_breakdown === undefined
       ? null
       : readScoreBreakdown(row.score_breakdown);
+  const hasScoreBreakdown = row.has_score_breakdown === true || scoreBreakdown !== null;
+  const workout = readWorkout(row.workout);
+  const repsPerRound =
+    row.reps_per_round === null || row.reps_per_round === undefined
+      ? null
+      : readNumber(row.reps_per_round);
+  const movementCount = readNumber(row.movement_count) ?? (workout.length > 0 ? workout.length : 0);
 
   if (
     !participantId ||
@@ -224,7 +249,9 @@ function parseMyMissionEntry(raw: unknown): MyMissionEntry | null {
     scheduledAt: readString(row.scheduled_at),
     isFeatured: row.is_featured === true,
     durationMinutes,
-    workout: readWorkout(row.workout),
+    workout,
+    movementCount,
+    repsPerRound,
     templateId: readString(row.template_id),
     rallyPointId: readString(row.rally_point_id),
     modifiedMovements: readModifiedMovements(row.modified_movements),
@@ -232,26 +259,68 @@ function parseMyMissionEntry(raw: unknown): MyMissionEntry | null {
     rpe: readRpe(row.rpe),
     sessionNotes: readSessionNotes(row.session_notes),
     checkIns: readCheckIns(row.check_ins),
-    chainItemCount: readNumber(row.chain_item_count) ?? 0,
-    chainUnstartedCount: readNumber(row.chain_unstarted_count) ?? 0,
     state,
     segmentIndex,
     roundCount,
     partialReps,
     finalScore,
+    hasScoreBreakdown,
     scoreBreakdown,
     coachWorkoutName: readString(row.coach_workout_name),
   };
 }
 
-export async function fetchMyMissions(): Promise<{
-  data: MyMissionEntry[] | null;
-  error: MyMissionsApiError | null;
-}> {
+function parseEmbeddedChainItem(raw: Record<string, unknown>): MissionChainItem | null {
+  const id = readString(raw.id);
+  const position = typeof raw.position === 'number' ? raw.position : null;
+  const durationMinutes = typeof raw.duration_minutes === 'number' ? raw.duration_minutes : null;
+  if (!id || position === null || durationMinutes === null) {
+    return null;
+  }
+
+  return {
+    id,
+    position,
+    durationMinutes,
+    workout: readWorkout(raw.workout),
+    templateId: readString(raw.template_id),
+    intensityTier: typeof raw.intensity_tier === 'number' ? raw.intensity_tier : null,
+    startedMissionId: readString(raw.started_mission_id),
+  };
+}
+
+function parseEmbeddedChains(raw: unknown): Record<string, MissionChainItem[]> {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return {};
+  }
+
+  const next: Record<string, MissionChainItem[]> = {};
+  for (const [rallyPointId, itemsRaw] of Object.entries(raw as Record<string, unknown>)) {
+    if (!Array.isArray(itemsRaw)) {
+      continue;
+    }
+    const items: MissionChainItem[] = [];
+    for (const entry of itemsRaw) {
+      if (!entry || typeof entry !== 'object') {
+        continue;
+      }
+      const parsed = parseEmbeddedChainItem(entry as Record<string, unknown>);
+      if (parsed) {
+        items.push(parsed);
+      }
+    }
+    if (items.length >= 2) {
+      next[rallyPointId] = items;
+    }
+  }
+  return next;
+}
+
+export async function fetchMyMissions(): Promise<MyMissionsListResult> {
   const { data, error } = await callRpc('my_missions');
 
   if (error) {
-    return { data: null, error: { message: error.message } };
+    return { data: null, chains: {}, error: { message: error.message } };
   }
 
   const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
@@ -259,6 +328,7 @@ export async function fetchMyMissions(): Promise<{
   if (raw.ok !== true) {
     return {
       data: null,
+      chains: {},
       error: { message: 'Something went wrong. Please try again.' },
     };
   }
@@ -268,7 +338,120 @@ export async function fetchMyMissions(): Promise<{
     .map((mission) => parseMyMissionEntry(mission))
     .filter((entry): entry is MyMissionEntry => entry !== null);
 
+  return { data: entries, chains: parseEmbeddedChains(raw.chains), error: null };
+}
+
+export type MyMissionDetail = {
+  missionId: string;
+  workout: WorkoutExercise[];
+  scoreBreakdown: ScoreBreakdown | null;
+};
+
+export async function fetchMyMissionDetail(
+  missionId: string
+): Promise<{ data: MyMissionDetail | null; error: MyMissionsApiError | null }> {
+  const { data, error } = await callRpc('my_mission_detail', {
+    p_mission_id: missionId,
+  });
+
+  if (error) {
+    return { data: null, error: { message: error.message } };
+  }
+
+  const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  if (raw.ok !== true) {
+    return {
+      data: null,
+      error: { message: 'Something went wrong. Please try again.' },
+    };
+  }
+
+  const parsedMissionId = readString(raw.mission_id);
+  if (!parsedMissionId) {
+    return {
+      data: null,
+      error: { message: 'Something went wrong. Please try again.' },
+    };
+  }
+
+  const scoreBreakdown =
+    raw.score_breakdown === null || raw.score_breakdown === undefined
+      ? null
+      : readScoreBreakdown(raw.score_breakdown);
+
+  return {
+    data: {
+      missionId: parsedMissionId,
+      workout: readWorkout(raw.workout),
+      scoreBreakdown,
+    },
+    error: null,
+  };
+}
+
+export type UnlockedAmqapMission = {
+  missionId: string;
+  participantId: string;
+  segmentIndex: number;
+  templateId: string | null;
+  state: string;
+};
+
+export async function fetchUnlockedAmqapMissions(): Promise<{
+  data: UnlockedAmqapMission[] | null;
+  error: MyMissionsApiError | null;
+}> {
+  const { data, error } = await callRpc('list_unlocked_amqap');
+
+  if (error) {
+    return { data: null, error: { message: error.message } };
+  }
+
+  const raw = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  if (raw.ok !== true) {
+    return {
+      data: null,
+      error: { message: 'Something went wrong. Please try again.' },
+    };
+  }
+
+  const missions = Array.isArray(raw.missions) ? raw.missions : [];
+  const entries: UnlockedAmqapMission[] = [];
+  for (const row of missions) {
+    if (!row || typeof row !== 'object') {
+      continue;
+    }
+    const r = row as Record<string, unknown>;
+    const missionId = readString(r.mission_id);
+    const participantId = readString(r.participant_id);
+    const state = readString(r.state);
+    if (!missionId || !participantId || !state) {
+      continue;
+    }
+    entries.push({
+      missionId,
+      participantId,
+      segmentIndex: readNumber(r.segment_index) ?? 0,
+      templateId: readString(r.template_id),
+      state,
+    });
+  }
+
   return { data: entries, error: null };
+}
+
+/** Merge detail fields into a list entry after hydrate. */
+export function applyMyMissionDetail(
+  entry: MyMissionEntry,
+  detail: MyMissionDetail
+): MyMissionEntry {
+  return {
+    ...entry,
+    workout: detail.workout,
+    movementCount: detail.workout.length > 0 ? detail.workout.length : entry.movementCount,
+    scoreBreakdown: detail.scoreBreakdown,
+    hasScoreBreakdown: entry.hasScoreBreakdown || detail.scoreBreakdown !== null,
+  };
 }
 
 function mapDeleteError(message: string | undefined): string {

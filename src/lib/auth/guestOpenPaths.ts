@@ -17,3 +17,11 @@ export function isGuestOpenPath(pathname: string): boolean {
 
   return false;
 }
+
+/**
+ * Account surfaces where Create account / Google sign-up should leave the
+ * athlete on the current page instead of sending them to /create.
+ */
+export function shouldStayAfterSignup(pathname: string): boolean {
+  return pathname === '/my-missions' || pathname === '/hud';
+}

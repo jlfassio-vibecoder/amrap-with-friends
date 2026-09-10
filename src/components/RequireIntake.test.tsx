@@ -86,6 +86,31 @@ describe('RequireIntake', () => {
     expect(screen.getByRole('heading', { name: 'Create account' })).toBeTruthy();
   });
 
+  it('shows the My missions gate copy for signed-out visitors', () => {
+    render(
+      <MemoryRouter initialEntries={['/my-missions']}>
+        <ThemeProvider>
+          <RequireIntake
+            guestMode="sign-in"
+            gateTitle="My missions"
+            gateMessage="Sign in to see missions saved to your account. Plan and finish a mission, then save it here."
+            gateAllowsGuest={false}
+          >
+            <div>gated</div>
+          </RequireIntake>
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('heading', { name: 'My missions' })).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Sign in to see missions saved to your account. Plan and finish a mission, then save it here.'
+      )
+    ).toBeTruthy();
+    expect(screen.queryByText('gated')).toBeNull();
+  });
+
   it('shows the identity overlay and does not mount gated children when identity is missing', () => {
     profileState.isAuthenticated = true;
     profileState.profile = null;

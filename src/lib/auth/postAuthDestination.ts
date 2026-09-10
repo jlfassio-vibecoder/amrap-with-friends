@@ -1,4 +1,4 @@
-import { isGuestOpenPath } from '@/lib/auth/guestOpenPaths';
+import { isGuestOpenPath, shouldStayAfterSignup } from '@/lib/auth/guestOpenPaths';
 
 export const POST_AUTH_PATH_KEY = 'amrap:postAuthPath';
 
@@ -12,14 +12,14 @@ export function safePostAuthPath(raw: string | null | undefined): string | null 
 
 /**
  * Where to send the athlete after Create account / homepage signup.
- * Returns null to stay on the current route (guest-open / join).
+ * Returns null to stay on the current route (guest-open / account stay-put).
  * Never returns /intake.
  */
 export function resolvePostAuthDestination(input: {
   pathname: string;
   next?: string | null;
 }): string | null {
-  if (isGuestOpenPath(input.pathname)) {
+  if (isGuestOpenPath(input.pathname) || shouldStayAfterSignup(input.pathname)) {
     return null;
   }
 

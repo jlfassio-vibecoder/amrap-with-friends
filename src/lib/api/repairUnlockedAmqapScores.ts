@@ -1,4 +1,4 @@
-import { fetchMyMissions, type MyMissionEntry } from '@/lib/api/myMissions';
+import { fetchUnlockedAmqapMissions, type UnlockedAmqapMission } from '@/lib/api/myMissions';
 import { submitParticipantResult } from '@/lib/api/missionSync';
 import { filterUnlockedFinishedAmqap } from '@/lib/amqap/isUnlockedFinishedAmqap';
 
@@ -7,7 +7,7 @@ export type RepairUnlockedAmqapResult = {
   locked: number;
 };
 
-async function lockUnlockedAmqap(entry: MyMissionEntry): Promise<boolean> {
+async function lockUnlockedAmqap(entry: UnlockedAmqapMission): Promise<boolean> {
   const result = await submitParticipantResult({
     missionId: entry.missionId,
     participantId: entry.participantId,
@@ -36,7 +36,7 @@ async function lockUnlockedAmqap(entry: MyMissionEntry): Promise<boolean> {
  * can count them (week / 7d / lastLockedAt / Active Recovery).
  */
 export async function repairUnlockedAmqapScores(): Promise<RepairUnlockedAmqapResult> {
-  const listed = await fetchMyMissions();
+  const listed = await fetchUnlockedAmqapMissions();
   if (listed.error || !listed.data) {
     return { attempted: 0, locked: 0 };
   }

@@ -10,12 +10,17 @@ import { SendWorkoutToSquad } from '@/components/mission/SendWorkoutToSquad';
 import { MyCampaignsPanel } from '@/components/campaign/MyCampaignsPanel';
 import { ScalingProgressionPanel } from '@/components/mission/ScalingProgressionPanel';
 import { CheckInProgressionPanel } from '@/components/mission/CheckInProgressionPanel';
+import { MyMissionsTabPanel } from '@/components/mission/MyMissionsTabPanel';
+import { MyMissionsTopTabs } from '@/components/mission/MyMissionsTopTabs';
+import type { MyMissionsTabKey } from '@/components/mission/myMissionsTabIds';
 import { MyMissionCheckIn } from '@/components/mission/MyMissionCheckIn';
 import { fetchMyBenchmarks, retireBenchmark, type AthleteBenchmark } from '@/lib/api/benchmarks';
 import { benchmarkForMission } from '@/lib/benchmark/matchBenchmark';
 import {
+  applyMyMissionDetail,
   canDeleteMyMission,
   deleteIncompleteMission,
+  fetchMyMissionDetail,
   fetchMyMissions,
   formatMyMissionExerciseLine,
   formatMyMissionScoreDisplay,
@@ -23,10 +28,12 @@ import {
   myMissionWorkoutTitle,
   type MyMissionEntry,
 } from '@/lib/api/myMissions';
-import { getMissionChain, type MissionChainItem } from '@/lib/api/missionChain';
+import type { MissionChainItem } from '@/lib/api/missionChain';
 import type { WorkoutExercise } from '@/lib/api/missionTypes';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useCopyFlash } from '@/hooks/useCopyFlash';
+import { useRefetchOnVisible } from '@/hooks/useRefetchOnVisible';
+import { formatMissionStateLabel } from '@/lib/mission/formatMissionStateLabel';
 import { groupMyMissionsByRallyPoint } from '@/lib/mission/groupMyMissionsByRallyPoint';
 import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
 
@@ -37,20 +44,70 @@ function formatMissionWhen(entry: MyMissionEntry): string {
 
 function confirmDeleteMessage(entry: MyMissionEntry): string {
   if (entry.isFeatured) {
-    return 'Cancel this Featured WOD for this date and time only? Other scheduled days stay on the calendar.';
+    return "Cancel today's mission for this date and time only? Other scheduled days stay on the calendar.";
   }
   return 'Permanently delete this incomplete mission?';
 }
 
-function MyMissionMovements({ title, workout }: { title: string; workout: WorkoutExercise[] }) {
-  if (workout.length === 0) {
+function needsMissionDetail(entry: MyMissionEntry): boolean {
+  if (entry.workout.length === 0 && entry.movementCount > 0) {
+    return true;
+  }
+  return entry.hasScoreBreakdown && entry.scoreBreakdown === null;
+}
+
+/** Keep client-hydrated workout/breakdown when the slim list refetches. */
+function mergePreservingHydration(
+  previous: MyMissionEntry[],
+  next: MyMissionEntry[]
+): MyMissionEntry[] {
+  const prevById = new Map(previous.map((entry) => [entry.missionId, entry]));
+  return next.map((entry) => {
+    const prior = prevById.get(entry.missionId);
+    if (!prior) {
+      return entry;
+    }
+    const workout = prior.workout.length > 0 ? prior.workout : entry.workout;
+    const scoreBreakdown = prior.scoreBreakdown ?? entry.scoreBreakdown;
+    if (workout === entry.workout && scoreBreakdown === entry.scoreBreakdown) {
+      return entry;
+    }
+    return {
+      ...entry,
+      workout,
+      movementCount: workout.length > 0 ? workout.length : entry.movementCount,
+      scoreBreakdown,
+      hasScoreBreakdown: entry.hasScoreBreakdown || scoreBreakdown !== null,
+    };
+  });
+}
+
+function MyMissionMovements({
+  title,
+  workout,
+  movementCount,
+  onExpand,
+}: {
+  title: string;
+  workout: WorkoutExercise[];
+  movementCount: number;
+  onExpand?: () => void;
+}) {
+  const count = workout.length > 0 ? workout.length : movementCount;
+  if (count === 0) {
     return <p className="text-display text-lg text-ink">{title}</p>;
   }
 
-  const summary = workout.length === 1 ? '1 movement' : `${workout.length} movements`;
+  const summary = count === 1 ? '1 movement' : `${count} movements`;
 
   return (
-    <details>
+    <details
+      onToggle={(event) => {
+        if ((event.currentTarget as HTMLDetailsElement).open) {
+          onExpand?.();
+        }
+      }}
+    >
       <summary className="flex cursor-pointer list-none items-baseline gap-x-3 [&::-webkit-details-marker]:hidden">
         <span className="text-display text-lg text-ink">{title}</span>
         <span className="ml-auto inline-flex items-baseline gap-1 text-sm text-secondary hover:text-ink">
@@ -60,20 +117,31 @@ function MyMissionMovements({ title, workout }: { title: string; workout: Workou
           {summary}
         </span>
       </summary>
-      <ul className="mt-2 space-y-1 text-sm text-secondary">
-        {workout.map((exercise, index) => (
-          <li key={`${exercise.name}-${index}`}>{formatMyMissionExerciseLine(exercise)}</li>
-        ))}
-      </ul>
+      {workout.length > 0 ? (
+        <ul className="mt-2 space-y-1 text-sm text-secondary">
+          {workout.map((exercise, index) => (
+            <li key={`${exercise.name}-${index}`}>{formatMyMissionExerciseLine(exercise)}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2 text-sm text-secondary">Loading movements…</p>
+      )}
     </details>
   );
 }
 
-function ShareMyMissionButton({ entry }: { entry: MyMissionEntry }) {
+function ShareMyMissionButton({
+  entry,
+  ensureDetail,
+}: {
+  entry: MyMissionEntry;
+  ensureDetail: (entry: MyMissionEntry) => Promise<MyMissionEntry | null>;
+}) {
   const { copied, error, copy } = useCopyFlash();
 
   async function handleShare() {
-    const text = formatMyMissionShareText(entry);
+    const hydrated = (await ensureDetail(entry)) ?? entry;
+    const text = formatMyMissionShareText(hydrated);
     if (typeof navigator.share === 'function') {
       try {
         await navigator.share({ text });
@@ -102,7 +170,11 @@ function QueuedMissionCard({ item }: { item: MissionChainItem }) {
 
   return (
     <div className="card space-y-2 p-4 text-sm">
-      <MyMissionMovements title={title} workout={item.workout} />
+      <MyMissionMovements
+        title={title}
+        workout={item.workout}
+        movementCount={item.workout.length}
+      />
       <p className="text-center text-secondary">{item.durationMinutes} min · queued</p>
     </div>
   );
@@ -113,6 +185,7 @@ function MyMissionCard({
   deletingMissionId,
   onDelete,
   onViewBreakdown,
+  ensureDetail,
   benchmark,
   onRetireBenchmark,
   expandControl,
@@ -121,6 +194,7 @@ function MyMissionCard({
   deletingMissionId: string | null;
   onDelete: (entry: MyMissionEntry) => void;
   onViewBreakdown: (entry: MyMissionEntry) => void;
+  ensureDetail: (entry: MyMissionEntry) => Promise<MyMissionEntry | null>;
   /** The benchmark this workout and clock belong to, live or retired. */
   benchmark?: AthleteBenchmark | null;
   onRetireBenchmark?: (benchmarkId: string) => void;
@@ -138,10 +212,19 @@ function MyMissionCard({
     formatVariantBadge(entry.movementVariants) ?? formatModifiedBadge(entry.modifiedMovements);
   return (
     <div className="card space-y-2 p-4 text-sm">
-      <MyMissionMovements title={myMissionWorkoutTitle(entry)} workout={entry.workout} />
+      <MyMissionMovements
+        title={myMissionWorkoutTitle(entry)}
+        workout={entry.workout}
+        movementCount={entry.movementCount}
+        onExpand={() => {
+          if (needsMissionDetail(entry)) {
+            void ensureDetail(entry);
+          }
+        }}
+      />
       <p className="text-center text-secondary">
         {formatMissionWhen(entry)} · {entry.durationMinutes} min ·{' '}
-        {formatMyMissionScoreDisplay(entry)} · {entry.state}
+        {formatMyMissionScoreDisplay(entry)} · {formatMissionStateLabel(entry.state)}
         {modifiedBadge ? (
           <>
             {' · '}
@@ -176,17 +259,30 @@ function MyMissionCard({
         <Link className="btn-teal" to={`/mission/${entry.missionId}`}>
           View mission
         </Link>
-        {entry.scoreBreakdown ? (
-          <button type="button" className="link-accent" onClick={() => onViewBreakdown(entry)}>
+        {entry.hasScoreBreakdown ? (
+          <button
+            type="button"
+            className="link-accent"
+            onClick={() => {
+              void (async () => {
+                const hydrated = (await ensureDetail(entry)) ?? entry;
+                onViewBreakdown(hydrated);
+              })();
+            }}
+          >
             View breakdown
           </button>
         ) : null}
-        <ShareMyMissionButton entry={entry} />
+        <ShareMyMissionButton entry={entry} ensureDetail={ensureDetail} />
         <SendWorkoutToSquad
           durationMinutes={entry.durationMinutes}
           workout={entry.workout}
           templateId={entry.templateId}
-          ready={entry.workout.length > 0}
+          ready={entry.movementCount > 0 || entry.workout.length > 0}
+          ensureWorkout={async () => {
+            const hydrated = await ensureDetail(entry);
+            return hydrated?.workout ?? null;
+          }}
           triggerClassName="link-accent font-normal disabled:text-muted"
           triggerLabel="Add squad member"
         />
@@ -234,6 +330,7 @@ export default function MyMissionsPage() {
   const [deletingMissionId, setDeletingMissionId] = useState<string | null>(null);
   const [expandedRallyPointIds, setExpandedRallyPointIds] = useState<Set<string>>(() => new Set());
   const [benchmarks, setBenchmarks] = useState<AthleteBenchmark[]>([]);
+  const [activeTab, setActiveTab] = useState<MyMissionsTabKey>('missions');
 
   const listItems = useMemo(
     () => groupMyMissionsByRallyPoint(entries, chainsByRallyPointId),
@@ -246,6 +343,52 @@ export default function MyMissionsPage() {
       setBenchmarks(result.data ?? []);
     }
   }, []);
+
+  const loadMissions = useCallback(
+    async (options?: { preserveHydration?: boolean; isCancelled?: () => boolean }) => {
+      const result = await fetchMyMissions();
+      if (options?.isCancelled?.()) {
+        return;
+      }
+      if (result.error) {
+        setError(result.error.message);
+        setEntries([]);
+        setChainsByRallyPointId({});
+      } else {
+        const next = result.data ?? [];
+        if (options?.preserveHydration) {
+          setEntries((prev) => mergePreservingHydration(prev, next));
+        } else {
+          setEntries(next);
+        }
+        setChainsByRallyPointId(result.chains);
+      }
+      setHasLoaded(true);
+    },
+    []
+  );
+
+  const ensureDetail = useCallback(
+    async (entry: MyMissionEntry): Promise<MyMissionEntry | null> => {
+      if (!needsMissionDetail(entry)) {
+        return entry;
+      }
+
+      const result = await fetchMyMissionDetail(entry.missionId);
+      if (result.error || !result.data) {
+        setError(result.error?.message ?? 'Could not load mission details.');
+        return null;
+      }
+
+      const merged = applyMyMissionDetail(entry, result.data);
+      setEntries((prev) =>
+        prev.map((item) => (item.missionId === merged.missionId ? merged : item))
+      );
+      setBreakdownEntry((current) => (current?.missionId === merged.missionId ? merged : current));
+      return merged;
+    },
+    []
+  );
 
   useEffect(() => {
     if (isAuthLoading || !isAuthenticated) {
@@ -277,65 +420,19 @@ export default function MyMissionsPage() {
     }
 
     let cancelled = false;
-
-    fetchMyMissions().then((result) => {
-      if (cancelled) {
-        return;
-      }
-      if (result.error) {
-        setError(result.error.message);
-        setEntries([]);
-        setChainsByRallyPointId({});
-      } else {
-        setEntries(result.data ?? []);
-      }
-      setHasLoaded(true);
-    });
+    void loadMissions({ isCancelled: () => cancelled });
 
     return () => {
       cancelled = true;
     };
-  }, [isAuthLoading, isAuthenticated, user]);
+  }, [isAuthLoading, isAuthenticated, user, loadMissions]);
 
-  useEffect(() => {
-    // `my_missions` returns chain_item_count per row (20260908130000), so only
-    // hubs that actually hold a chain need the round trip. Fetching for every hub
-    // id was one RPC per hub on every load, nearly all of them returning nothing
-    // the list would use.
-    const rallyPointIds = [
-      ...new Set(
-        entries
-          .filter((entry) => entry.chainItemCount >= 2)
-          .map((entry) => entry.rallyPointId)
-          .filter((id): id is string => typeof id === 'string' && id.length > 0)
-      ),
-    ];
+  const refetchOnVisible = useCallback(() => {
+    void loadMissions({ preserveHydration: true });
+    void loadBenchmarks();
+  }, [loadMissions, loadBenchmarks]);
 
-    if (rallyPointIds.length === 0) {
-      setChainsByRallyPointId({});
-      return;
-    }
-
-    let cancelled = false;
-
-    void Promise.all(rallyPointIds.map((id) => getMissionChain(id))).then((results) => {
-      if (cancelled) {
-        return;
-      }
-      const next: Record<string, MissionChainItem[]> = {};
-      results.forEach((result, index) => {
-        const id = rallyPointIds[index]!;
-        if (!result?.error && result?.data && result.data.length >= 2) {
-          next[id] = result.data;
-        }
-      });
-      setChainsByRallyPointId(next);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [entries]);
+  useRefetchOnVisible(Boolean(isAuthenticated && user && !isAuthLoading), refetchOnVisible);
 
   const loading = isAuthLoading || (isAuthenticated && user !== null && !hasLoaded);
 
@@ -356,7 +453,7 @@ export default function MyMissionsPage() {
         setError(result.error.message);
         return;
       }
-      setEntries((prev) => prev.filter((item) => item.missionId !== entry.missionId));
+      await loadMissions();
     } catch {
       setError('Something went wrong. Please try again.');
     } finally {
@@ -377,14 +474,12 @@ export default function MyMissionsPage() {
   }
 
   return (
-    <NarrowPageLayout title="My missions" subtitle="Saved to your account">
-      <p className="text-sm text-secondary lg:hidden">Missions you saved to your account.</p>
-
-      <div className="hidden space-y-2 lg:block">
-        <h1 className="text-display text-5xl text-ink">My missions</h1>
-        <p className="text-sm text-secondary">Missions you saved to your account.</p>
-      </div>
-
+    <NarrowPageLayout
+      title="My missions"
+      subtitle="Saved to your account"
+      desktopTitleAsPageHeading
+      contentMaxWidthClassName="max-w-5xl"
+    >
       <div className="flex flex-wrap items-center gap-3">
         <Link className="btn-primary" to="/create">
           Plan mission
@@ -394,92 +489,100 @@ export default function MyMissionsPage() {
         </Link>
       </div>
 
-      <AssignedWorkoutsPanel />
+      <div className="space-y-4">
+        <MyMissionsTopTabs activeTab={activeTab} onChange={setActiveTab} />
 
-      <MyCampaignsPanel showCreateCta={false} />
+        <MyMissionsTabPanel tab="missions" activeTab={activeTab}>
+          {loading ? <p className="text-sm text-secondary">Loading…</p> : null}
 
-      <ScalingProgressionPanel entries={entries} />
+          {error ? <p className="text-error">Error: {error}</p> : null}
 
-      <CheckInProgressionPanel entries={entries} />
+          {!loading && isAuthenticated && entries.length === 0 ? (
+            <p className="text-sm text-secondary">
+              No saved missions yet. Finish a mission and use “Save this mission to my account”.
+            </p>
+          ) : null}
 
-      {loading ? <p className="text-sm text-secondary">Loading…</p> : null}
+          {listItems.length > 0 ? (
+            <ul className="grid gap-3 lg:grid-cols-2">
+              {listItems.map((item) => {
+                if (item.kind === 'single') {
+                  return (
+                    <li key={item.entry.participantId}>
+                      <MyMissionCard
+                        entry={item.entry}
+                        deletingMissionId={deletingMissionId}
+                        onDelete={(entry) => void handleDelete(entry)}
+                        onViewBreakdown={setBreakdownEntry}
+                        ensureDetail={ensureDetail}
+                        benchmark={benchmarkForMission(item.entry, benchmarks)}
+                        onRetireBenchmark={(id) => void handleRetireBenchmark(id)}
+                      />
+                    </li>
+                  );
+                }
 
-      {!isAuthLoading && !isAuthenticated ? (
-        <p className="text-sm text-secondary">Sign in to see missions saved to your account.</p>
-      ) : null}
+                const expanded = expandedRallyPointIds.has(item.rallyPointId);
+                return (
+                  <li key={item.rallyPointId} className="space-y-2">
+                    <MyMissionCard
+                      entry={item.parent}
+                      deletingMissionId={deletingMissionId}
+                      onDelete={(entry) => void handleDelete(entry)}
+                      onViewBreakdown={setBreakdownEntry}
+                      ensureDetail={ensureDetail}
+                      benchmark={benchmarkForMission(item.parent, benchmarks)}
+                      onRetireBenchmark={(id) => void handleRetireBenchmark(id)}
+                      expandControl={{
+                        expanded,
+                        missionCount: item.chainLength,
+                        position: 1,
+                        onToggle: () => toggleGroup(item.rallyPointId),
+                      }}
+                    />
+                    {expanded ? (
+                      <ul className="space-y-2 border-l-2 border-border pl-3">
+                        {item.children.map((child) =>
+                          child.kind === 'started' ? (
+                            <li key={child.entry.participantId}>
+                              <MyMissionCard
+                                entry={child.entry}
+                                deletingMissionId={deletingMissionId}
+                                onDelete={(entry) => void handleDelete(entry)}
+                                onViewBreakdown={setBreakdownEntry}
+                                ensureDetail={ensureDetail}
+                                benchmark={benchmarkForMission(child.entry, benchmarks)}
+                                onRetireBenchmark={(id) => void handleRetireBenchmark(id)}
+                              />
+                            </li>
+                          ) : (
+                            <li key={child.chainItem.id}>
+                              <QueuedMissionCard item={child.chainItem} />
+                            </li>
+                          )
+                        )}
+                      </ul>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
 
-      {error && <p className="text-error">Error: {error}</p>}
+          <ScalingProgressionPanel entries={entries} />
+          <CheckInProgressionPanel entries={entries} />
+        </MyMissionsTabPanel>
 
-      {!loading && isAuthenticated && entries.length === 0 ? (
-        <p className="text-sm text-secondary">
-          No saved missions yet. Finish a mission and use “Save this mission to my account”.
-        </p>
-      ) : null}
+        <MyMissionsTabPanel tab="sent" activeTab={activeTab}>
+          <AssignedWorkoutsPanel showWhenEmpty />
+        </MyMissionsTabPanel>
 
-      {listItems.length > 0 && (
-        <ul className="space-y-3">
-          {listItems.map((item) => {
-            if (item.kind === 'single') {
-              return (
-                <li key={item.entry.participantId}>
-                  <MyMissionCard
-                    entry={item.entry}
-                    deletingMissionId={deletingMissionId}
-                    onDelete={(entry) => void handleDelete(entry)}
-                    onViewBreakdown={setBreakdownEntry}
-                    benchmark={benchmarkForMission(item.entry, benchmarks)}
-                    onRetireBenchmark={(id) => void handleRetireBenchmark(id)}
-                  />
-                </li>
-              );
-            }
+        <MyMissionsTabPanel tab="campaigns" activeTab={activeTab}>
+          <MyCampaignsPanel showCreateCta={false} />
+        </MyMissionsTabPanel>
+      </div>
 
-            const expanded = expandedRallyPointIds.has(item.rallyPointId);
-            return (
-              <li key={item.rallyPointId} className="space-y-2">
-                <MyMissionCard
-                  entry={item.parent}
-                  deletingMissionId={deletingMissionId}
-                  onDelete={(entry) => void handleDelete(entry)}
-                  onViewBreakdown={setBreakdownEntry}
-                  benchmark={benchmarkForMission(item.parent, benchmarks)}
-                  onRetireBenchmark={(id) => void handleRetireBenchmark(id)}
-                  expandControl={{
-                    expanded,
-                    missionCount: item.chainLength,
-                    position: 1,
-                    onToggle: () => toggleGroup(item.rallyPointId),
-                  }}
-                />
-                {expanded ? (
-                  <ul className="space-y-2 border-l-2 border-border pl-3">
-                    {item.children.map((child) =>
-                      child.kind === 'started' ? (
-                        <li key={child.entry.participantId}>
-                          <MyMissionCard
-                            entry={child.entry}
-                            deletingMissionId={deletingMissionId}
-                            onDelete={(entry) => void handleDelete(entry)}
-                            onViewBreakdown={setBreakdownEntry}
-                            benchmark={benchmarkForMission(child.entry, benchmarks)}
-                            onRetireBenchmark={(id) => void handleRetireBenchmark(id)}
-                          />
-                        </li>
-                      ) : (
-                        <li key={child.chainItem.id}>
-                          <QueuedMissionCard item={child.chainItem} />
-                        </li>
-                      )
-                    )}
-                  </ul>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
-      {breakdownEntry ? (
+      {breakdownEntry?.scoreBreakdown ? (
         <MyMissionScoreBreakdownModal
           entry={breakdownEntry}
           onClose={() => setBreakdownEntry(null)}

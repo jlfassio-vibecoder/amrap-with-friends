@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AppLink } from '@/components/AppLink';
 import { fetchMyCampaigns, type CampaignSummary } from '@/lib/api/campaigns';
 import { campaignProgress, formatCampaignShape } from '@/lib/campaign';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
+import { useRefetchOnVisible } from '@/hooks/useRefetchOnVisible';
 
 /**
  * A campaign that is over still belongs in the list — it is the host's record
@@ -32,39 +33,32 @@ export function MyCampaignsPanel({ showCreateCta = true }: MyCampaignsPanelProps
   // synchronously inside the effect would cascade an extra render on mount.
   const [loading, setLoading] = useState(true);
 
+  const load = useCallback(async () => {
+    try {
+      const result = await fetchMyCampaigns();
+      if (result.error) {
+        setError(result.error.message);
+        setCampaigns([]);
+      } else {
+        setError(null);
+        setCampaigns(result.data);
+      }
+    } catch {
+      setError('Something went wrong. Please try again.');
+      setCampaigns([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (isAuthLoading || !isAuthenticated) {
       return;
     }
+    void load();
+  }, [isAuthLoading, isAuthenticated, load]);
 
-    let cancelled = false;
-    fetchMyCampaigns()
-      .then((result) => {
-        if (cancelled) {
-          return;
-        }
-        if (result.error) {
-          setError(result.error.message);
-          setCampaigns([]);
-        } else {
-          setError(null);
-          setCampaigns(result.data);
-        }
-        setLoading(false);
-      })
-      .catch(() => {
-        if (cancelled) {
-          return;
-        }
-        setError('Something went wrong. Please try again.');
-        setCampaigns([]);
-        setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isAuthLoading, isAuthenticated]);
+  useRefetchOnVisible(Boolean(isAuthenticated && !isAuthLoading), load);
 
   if (isAuthLoading || !isAuthenticated) {
     return null;
@@ -101,11 +95,8 @@ export function MyCampaignsPanel({ showCreateCta = true }: MyCampaignsPanelProps
           {campaigns.map((campaign) => {
             const progress = campaignProgress(campaign.completedMissions, campaign.totalMissions);
             return (
-              <li key={campaign.campaignId} className="py-3 first:pt-0 last:pb-0">
-                <AppLink
-                  className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
-                  to={`/campaign/${campaign.campaignId}`}
-                >
+              <li key={campaign.campaignId} className="space-y-3 py-3 first:pt-0 last:pb-0">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                   <span className="flex flex-wrap items-baseline gap-2 text-sm font-semibold text-ink">
                     {campaign.name}
                     {CLOSED_STATUS_LABEL[campaign.status] ? (
@@ -118,6 +109,12 @@ export function MyCampaignsPanel({ showCreateCta = true }: MyCampaignsPanelProps
                     {formatCampaignShape(campaign.weekCount, campaign.missionsPerWeek)} ·{' '}
                     {progress.done}/{progress.total} done
                   </span>
+                </div>
+                <AppLink
+                  className="btn-teal inline-flex text-sm"
+                  to={`/campaign/${campaign.campaignId}`}
+                >
+                  View campaign
                 </AppLink>
               </li>
             );
