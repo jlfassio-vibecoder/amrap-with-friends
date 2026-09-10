@@ -80,7 +80,15 @@ export function useMissionChannel(
   const missionPhaseRef = useRef<MissionRow['state'] | null>(null);
 
   useEffect(() => {
+    const previous = missionPhaseRef.current;
     missionPhaseRef.current = mission?.state ?? null;
+
+    // One last full pull as the clock stops. The reconcile timer stops with it,
+    // so anything dropped inside the final interval -- the rounds that decide
+    // the score -- would otherwise stay missing for good.
+    if (shouldReconcileLiveState(previous) && !shouldReconcileLiveState(missionPhaseRef.current)) {
+      resyncRef.current?.();
+    }
   }, [mission?.state]);
 
   const presenceParticipantId = presence?.participantId;
@@ -169,8 +177,20 @@ export function useMissionChannel(
       } else {
         setParticipants(result.data.participants);
         participantIdsRef.current = new Set(result.data.participants.map((row) => row.id));
-        setRounds(result.data.rounds);
-        setMessages(sortMessagesByCreatedAt(result.data.messages));
+        // Rounds and messages merge rather than replace, even on a full
+        // snapshot. The server ran its query before this response landed, so a
+        // row that arrived live in between is newer than the snapshot -- and
+        // replacing would throw away exactly the kind of row this fetch exists
+        // to recover. Both tables are append-only within a mission id (Reset
+        // makes a new mission), so a merge can only ever be more complete.
+        setRounds((prev) => result.data.rounds.reduce((next, row) => upsertRound(next, row), prev));
+        setMessages((prev) =>
+          sortMessagesByCreatedAt(
+            result.data.messages.reduce((next, row) => upsertMessage(next, row), prev)
+          ).slice(-LIVE_STATE_MESSAGE_CAP)
+        );
+        // Segment results keep the replace: they are deleted as well as
+        // written, so a stale row has to be able to disappear.
         setSegmentResults(result.data.segmentResults);
       }
       // Copilot suggestion ignored: quiet-mission watermark is advanced via server snapshot_at (20260903160000) passed into nextLiveStateSince.

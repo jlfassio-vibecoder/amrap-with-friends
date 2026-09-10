@@ -205,6 +205,54 @@ describe('useMissionChannel', () => {
     expect(getMissionLiveStateMock.mock.calls[1]![0]).toMatchObject({ since: null });
   });
 
+  it('keeps a round that arrived live while the reconcile snapshot was in flight', async () => {
+    // The server ran its query before the response landed, so a round that
+    // arrived in between is newer than the snapshot. Replacing would throw away
+    // exactly the kind of row this fetch exists to recover -- and near the end
+    // of a mission the reconcile timer stops before it could be pulled again.
+    const liveRound = {
+      id: 'cccc1111-1111-4111-8111-111111111111',
+      mission_id: MISSION_ID,
+      participant_id: 'participant-2',
+      round_index: 0,
+      elapsed_sec_at_round: 41,
+      segment_index: 0,
+      missed_log_reps: null,
+      created_at: '2026-09-03T00:00:41.000Z',
+    };
+
+    const { result } = renderHook(() =>
+      useMissionChannel(
+        MISSION_ID,
+        { participantId: 'participant-1', nickname: 'Athlete' },
+        { realtimeTables: true }
+      )
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const roundsHandler = channelMocks[0]!.on.mock.calls.find(
+      (call) => call[0] === 'postgres_changes' && (call[1] as { table?: string }).table === 'rounds'
+    )![2] as (payload: { new: Record<string, unknown> }) => void;
+
+    // Live INSERT arrives, then a full snapshot that predates it resolves.
+    await act(async () => {
+      roundsHandler({ new: liveRound });
+    });
+    expect(result.current.rounds).toHaveLength(1);
+
+    await act(async () => {
+      result.current.resync();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.rounds.map((row) => row.id)).toEqual([liveRound.id]);
+  });
+
   it('does not reconcile once the mission is no longer running', async () => {
     vi.useFakeTimers();
     renderHook(() =>
@@ -227,6 +275,73 @@ describe('useMissionChannel', () => {
     });
 
     expect(getMissionLiveStateMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('pulls one last full snapshot as the mission stops running', async () => {
+    // The reconcile timer stops with the clock, so anything dropped inside the
+    // final interval -- the rounds that decide the score -- would otherwise
+    // stay missing for good.
+    function snapshot(state: string) {
+      return {
+        ok: true,
+        data: {
+          mission: {
+            id: MISSION_ID,
+            state,
+            time_left_sec: state === 'finished' ? 0 : 10,
+            is_paused: false,
+            started_at: '2026-09-03T00:00:00.000Z',
+            segment_index: 0,
+            duration_minutes: 5,
+            workout: [],
+            template_id: null,
+            scheduled_at: null,
+            rally_point_countdown_ends_at: null,
+            created_at: '2026-09-03T00:00:00.000Z',
+            is_featured: false,
+            rally_point_id: null,
+          },
+          missionClock: null,
+          participants: [],
+          participantIds: null,
+          rounds: [],
+          messages: [],
+          segmentResults: [],
+          incremental: false,
+          snapshotAt: '2026-09-03T00:00:00.000Z',
+        },
+      };
+    }
+
+    getMissionLiveStateMock.mockResolvedValueOnce(snapshot('work'));
+    getMissionLiveStateMock.mockResolvedValue(snapshot('finished'));
+
+    renderHook(() =>
+      useMissionChannel(
+        MISSION_ID,
+        { participantId: 'participant-1', nickname: 'Athlete' },
+        { realtimeTables: true }
+      )
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(getMissionLiveStateMock).toHaveBeenCalledTimes(1);
+
+    const missionHandler = channelMocks[0]!.on.mock.calls.find(
+      (call) =>
+        call[0] === 'postgres_changes' && (call[1] as { table?: string }).table === 'missions'
+    )![2] as (payload: { new: Record<string, unknown> }) => void;
+
+    await act(async () => {
+      missionHandler({ new: snapshot('finished').data.mission });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(getMissionLiveStateMock).toHaveBeenCalledTimes(2);
   });
 
   it('abandons an in-flight incremental when resync starts a full snapshot', async () => {
