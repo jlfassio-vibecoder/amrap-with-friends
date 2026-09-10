@@ -4,6 +4,7 @@ import { defaultCut, type CutId } from '@/lib/share/cuts';
 import {
   detectEncoderPath,
   isEncoderImplemented,
+  isRealTimeEncoder,
   readCapabilities,
 } from '@/lib/share/replay/encoderPath';
 import { renderReplay } from '@/lib/share/replay/renderReplay';
@@ -119,7 +120,17 @@ export function useReplay(
       // OffscreenCanvas is the whole reason for the worker; without it the
       // fallback runs the identical pipeline inline rather than shipping a
       // second implementation.
-      if (typeof Worker === 'function' && typeof OffscreenCanvas === 'function') {
+      //
+      // MediaRecorder never takes that route whatever the browser supports:
+      // it records a canvas through captureStream, which does not exist on
+      // OffscreenCanvas. That path stays on the main thread by necessity, and
+      // it janks less than WebCodecs would because it spends most of its time
+      // waiting for the playback clock rather than encoding.
+      const canUseWorker =
+        !isRealTimeEncoder(path) &&
+        typeof Worker === 'function' &&
+        typeof OffscreenCanvas === 'function';
+      if (canUseWorker) {
         const worker = new Worker(new URL('./replay.worker.ts', import.meta.url), {
           type: 'module',
         });
@@ -149,6 +160,7 @@ export function useReplay(
           data,
           cutId,
           draw,
+          path,
           onProgress: (frame, total) =>
             setPhase((previous) =>
               previous && previous.key === key ? { ...previous, progress: frame / total } : previous

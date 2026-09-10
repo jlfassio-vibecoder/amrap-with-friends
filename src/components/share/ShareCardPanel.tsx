@@ -20,6 +20,7 @@ import { CUTS, defaultCut, type CutId } from '@/lib/share/cuts';
 import {
   detectEncoderPath,
   isEncoderImplemented,
+  isRealTimeEncoder,
   readCapabilities,
   replayActionLabel,
   replayCaveat,
@@ -749,16 +750,22 @@ export function ShareCardPanel({
                 className="btn-outline text-sm"
                 onClick={() => replay.start(cutId)}
               >
-                Make replay
+                {isRealTimeEncoder(encoderPath)
+                  ? `Make replay (${CUTS[cutId].durationSeconds}s)`
+                  : 'Make replay'}
               </button>
             ) : null}
 
             {replay.status === 'rendering' ? (
               <>
+                {/* "Recording" for MediaRecorder, because that is what it is
+                    doing and why it is taking the length of the video. */}
                 <p className="text-sm text-secondary">
                   {replay.progress < 1
-                    ? `Rendering ${Math.round(replay.progress * 100)}%`
-                    : 'Encoding…'}
+                    ? `${isRealTimeEncoder(encoderPath) ? 'Recording' : 'Rendering'} ${Math.round(
+                        replay.progress * 100
+                      )}%`
+                    : 'Finishing…'}
                 </p>
                 <button type="button" className="btn-outline text-sm" onClick={replay.cancel}>
                   Cancel

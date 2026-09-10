@@ -6,7 +6,6 @@ import { avcCandidates } from '@/lib/share/replay/avcCodec';
 import type { FrameSink } from '@/lib/share/replay/encodeLoop';
 import { REPLAY_FPS } from '@/lib/share/replay/frames';
 
-
 export interface WebCodecsSinkOptions {
   canvas: OffscreenCanvas | HTMLCanvasElement;
   width: number;
