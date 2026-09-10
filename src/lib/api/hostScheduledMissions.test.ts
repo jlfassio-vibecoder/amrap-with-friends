@@ -53,7 +53,7 @@ describe('hostScheduledMissions formatters', () => {
   it('formatHostScheduledMissionState maps known phases', () => {
     expect(formatHostScheduledMissionState('waiting')).toBe('Waiting');
     expect(formatHostScheduledMissionState('setup')).toBe('Get ready');
-    expect(formatHostScheduledMissionState('work')).toBe('Work');
+    expect(formatHostScheduledMissionState('work')).toBe('Live');
     expect(formatHostScheduledMissionState('custom')).toBe('custom');
   });
 });

@@ -79,6 +79,7 @@ import {
   chainRestBannerForMission,
 } from '@/lib/mission/chainAdvanceCopy';
 import { nextChainedMissionName } from '@/lib/mission/nextChainedMissionName';
+import { formatMissionStateLabel } from '@/lib/mission/formatMissionStateLabel';
 import { canPassRallyPointCommand } from '@/lib/rallyPoint/canPassRallyPointCommand';
 import { shouldHandleLogRoundHotkey } from '@/lib/mission/logRoundHotkey';
 import { LOG_ROUND_COOLDOWN_ALERT, canLogRound } from '@/lib/mission/logRoundCooldown';
@@ -118,21 +119,6 @@ function formatTime(totalSec: number): string {
   const minutes = Math.floor(totalSec / 60);
   const seconds = totalSec % 60;
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-}
-
-function phaseLabel(phase: string): string {
-  switch (phase) {
-    case 'waiting':
-      return 'Waiting';
-    case 'setup':
-      return 'Get ready';
-    case 'work':
-      return 'Live';
-    case 'finished':
-      return 'Finished';
-    default:
-      return phase;
-  }
 }
 
 /** Types WAITING once, then cycles an ellipsis. Honors prefers-reduced-motion. */
@@ -1424,7 +1410,7 @@ function LiveMissionView({
                   <WaitingTypewriterLabel />
                 ) : (
                   <p className="text-display text-xs uppercase tracking-widest text-secondary">
-                    {phaseLabel(live.phase)}
+                    {formatMissionStateLabel(live.phase)}
                   </p>
                 )}
                 {chainRestBanner ? (

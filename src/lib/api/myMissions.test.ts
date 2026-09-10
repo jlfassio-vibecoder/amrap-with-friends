@@ -181,7 +181,7 @@ describe('myMissions helpers', () => {
     expect(text).toContain('T-Push-ups — 10 reps');
     expect(text).toContain('Strict Sit-ups — 12 reps');
     expect(text).toContain('High Knees — 20 reps');
-    expect(text).toContain('10 min · 424 reps · finished');
+    expect(text).toContain('10 min · 424 reps · Finished');
     expect(text.indexOf('Tension Grid')).toBeLessThan(text.indexOf('T-Push-ups'));
     expect(text.indexOf('High Knees')).toBeLessThan(text.indexOf('10 min'));
   });
@@ -197,7 +197,7 @@ describe('myMissions helpers', () => {
     const text = formatMyMissionShareText(entry);
     expect(text).toContain('Empty Grid');
     expect(text).not.toContain('—');
-    expect(text).toContain('5 min · 0 rounds · waiting');
+    expect(text).toContain('5 min · 0 rounds · Waiting');
     expect(text.split('\n\n')).toHaveLength(2);
   });
 

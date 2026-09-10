@@ -1,5 +1,6 @@
 import { callRpc } from '@/lib/api/callRpc';
 import type { WorkoutExercise } from '@/lib/api/missionTypes';
+import { formatMissionStateLabel } from '@/lib/mission/formatMissionStateLabel';
 import { getSupabaseClient } from '@/lib/supabase';
 
 export interface HostScheduledMissionEntry {
@@ -89,16 +90,7 @@ export function formatHostScheduledMissionRallyTime(scheduledAt: string): string
 }
 
 export function formatHostScheduledMissionState(state: string): string {
-  switch (state) {
-    case 'waiting':
-      return 'Waiting';
-    case 'setup':
-      return 'Get ready';
-    case 'work':
-      return 'Work';
-    default:
-      return state;
-  }
+  return formatMissionStateLabel(state);
 }
 
 export async function fetchHostScheduledMissions(): Promise<{

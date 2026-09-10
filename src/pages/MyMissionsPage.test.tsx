@@ -263,7 +263,11 @@ describe('MyMissionsPage delete', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
-    expect(confirmMock).toHaveBeenCalledWith(expect.stringMatching(/this date and time only/i));
+    expect(confirmMock).toHaveBeenCalledWith(
+      expect.stringMatching(/Cancel today's mission for this date and time only/i)
+    );
+    const message = String(confirmMock.mock.calls[0]?.[0] ?? '');
+    expect(message).not.toMatch(/WOD/i);
   });
 });
 

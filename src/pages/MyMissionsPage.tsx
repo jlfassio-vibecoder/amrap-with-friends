@@ -27,6 +27,7 @@ import { getMissionChain, type MissionChainItem } from '@/lib/api/missionChain';
 import type { WorkoutExercise } from '@/lib/api/missionTypes';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useCopyFlash } from '@/hooks/useCopyFlash';
+import { formatMissionStateLabel } from '@/lib/mission/formatMissionStateLabel';
 import { groupMyMissionsByRallyPoint } from '@/lib/mission/groupMyMissionsByRallyPoint';
 import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
 
@@ -37,7 +38,7 @@ function formatMissionWhen(entry: MyMissionEntry): string {
 
 function confirmDeleteMessage(entry: MyMissionEntry): string {
   if (entry.isFeatured) {
-    return 'Cancel this Featured WOD for this date and time only? Other scheduled days stay on the calendar.';
+    return "Cancel today's mission for this date and time only? Other scheduled days stay on the calendar.";
   }
   return 'Permanently delete this incomplete mission?';
 }
@@ -141,7 +142,7 @@ function MyMissionCard({
       <MyMissionMovements title={myMissionWorkoutTitle(entry)} workout={entry.workout} />
       <p className="text-center text-secondary">
         {formatMissionWhen(entry)} · {entry.durationMinutes} min ·{' '}
-        {formatMyMissionScoreDisplay(entry)} · {entry.state}
+        {formatMyMissionScoreDisplay(entry)} · {formatMissionStateLabel(entry.state)}
         {modifiedBadge ? (
           <>
             {' · '}

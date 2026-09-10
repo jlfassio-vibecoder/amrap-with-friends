@@ -13,6 +13,7 @@ import { parseScoreBreakdownJson } from '@/lib/scoring/parseScoreBreakdownJson';
 import { computeBaseScore } from '@/lib/scoring/computeBaseScore';
 import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
 import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
+import { formatMissionStateLabel } from '@/lib/mission/formatMissionStateLabel';
 import { countOf } from '@/lib/units/plural';
 
 export interface MyMissionEntry {
@@ -136,7 +137,7 @@ export function formatMyMissionShareText(entry: MyMissionEntry): string {
     new Date(when).toLocaleString(),
     `${entry.durationMinutes} min`,
     formatMyMissionScoreDisplay(entry),
-    entry.state,
+    formatMissionStateLabel(entry.state),
     ...(entry.isFeatured ? ['Featured'] : []),
   ].join(' · ');
 
