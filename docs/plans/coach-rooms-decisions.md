@@ -1,7 +1,7 @@
 # Coach's Rooms — Phase 0 decisions
 
-_Recorded 10 September 2026. Companions: `coach-rooms-feature-plan.md` (what and why) and
-`coach-rooms-roadmap.md` (in what order) — both working documents, not yet committed._
+_Recorded 10 September 2026 · [feature plan](coach-rooms-feature-plan.md) (what and why) ·
+[roadmap](coach-rooms-roadmap.md) (in what order)_
 
 Three questions the roadmap flagged as "decide before writing code, because
 everything downstream forks on them." Each has a recommendation and the reason.
