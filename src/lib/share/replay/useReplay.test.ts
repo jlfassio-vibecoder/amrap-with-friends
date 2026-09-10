@@ -10,13 +10,17 @@ vi.mock('@/lib/share/replay/renderReplay', async (importOriginal) => ({
   renderReplay,
 }));
 vi.mock('@/lib/analytics/track', () => ({ track: vi.fn(), trackBeacon: vi.fn() }));
-vi.mock('@/lib/share/replay/encoderPath', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/lib/share/replay/encoderPath')>()),
-  readCapabilities: () => ({
+const { readCapabilities } = vi.hoisted(() => ({
+  readCapabilities: vi.fn(() => ({
     hasVideoEncoder: true,
     hasMediaRecorder: false,
     hasCaptureStream: false,
-  }),
+    isTypeSupported: undefined as undefined | ((type: string) => boolean),
+  })),
+}));
+vi.mock('@/lib/share/replay/encoderPath', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/share/replay/encoderPath')>()),
+  readCapabilities,
 }));
 
 const data = {
@@ -108,5 +112,46 @@ describe('useReplay', () => {
     rerender({ options: draw('landscape'), key: 'landscape:result:0' });
     expect(result.current.status).toBe('idle');
     expect(result.current.error).toBeNull();
+  });
+
+  it('never sends a MediaRecorder render to the worker', async () => {
+    // MediaRecorder captures a canvas through captureStream, which does not
+    // exist on OffscreenCanvas. Routed to the worker it would throw inside a
+    // thread whose only error path is a postMessage.
+    readCapabilities.mockReturnValue({
+      hasVideoEncoder: false,
+      hasMediaRecorder: true,
+      hasCaptureStream: true,
+      isTypeSupported: (type: string) => type.startsWith('video/mp4'),
+    });
+    renderReplay.mockImplementation(() => Promise.resolve(new Blob(['a'], { type: 'video/mp4' })));
+    const worker = vi.fn();
+    vi.stubGlobal('Worker', worker);
+    vi.stubGlobal('OffscreenCanvas', class {});
+
+    const { result } = renderHook(() => useReplay(data, draw('story'), 'story:result:0'));
+    await act(async () => {
+      result.current.start('story9');
+    });
+
+    expect(worker).not.toHaveBeenCalled();
+    expect(renderReplay).toHaveBeenCalledTimes(1);
+    expect(renderReplay.mock.calls[0]![0].path).toBe('mediarecorder-mp4');
+    vi.unstubAllGlobals();
+  });
+
+  it('tells the renderer which encoder to build', async () => {
+    readCapabilities.mockReturnValue({
+      hasVideoEncoder: true,
+      hasMediaRecorder: false,
+      hasCaptureStream: false,
+      isTypeSupported: undefined,
+    });
+    renderReplay.mockImplementation(() => Promise.resolve(new Blob(['a'], { type: 'video/mp4' })));
+    const { result } = renderHook(() => useReplay(data, draw('story'), 'story:result:0'));
+    await act(async () => {
+      result.current.start('story9');
+    });
+    expect(renderReplay.mock.calls[0]![0].path).toBe('webcodecs');
   });
 });
