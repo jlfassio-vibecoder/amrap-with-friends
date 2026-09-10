@@ -98,6 +98,35 @@ async function rpc<T>(name: string, body: unknown): Promise<T> {
   return (await response.json()) as T;
 }
 
+/** Time one RPC and weigh what actually came back on the wire. */
+async function measure(
+  name: string,
+  body: unknown
+): Promise<{ ms: number; bytes: number; payload: Record<string, unknown> }> {
+  const startedAt = performance.now();
+  const response = await fetch(`${url}/rest/v1/rpc/${name}`, {
+    method: 'POST',
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${anonKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  const text = await response.text();
+  const ms = performance.now() - startedAt;
+  if (!response.ok) {
+    throw new Error(`${name} -> ${response.status} ${text.slice(0, 200)}`);
+  }
+  return {
+    ms,
+    // Byte length, not string length: nicknames are ASCII here but the caller
+    // should not have to assume that.
+    bytes: Buffer.byteLength(text, 'utf8'),
+    payload: JSON.parse(text) as Record<string, unknown>,
+  };
+}
+
 /** The snapshot call, measured: wall time and the bytes actually on the wire. */
 async function timeSnapshot(
   missionId: string,
@@ -172,6 +201,9 @@ interface Row {
   bytes: number;
   p50: number;
   p95: number;
+  /** The reconcile's actual per-interval call after the counts change. */
+  countsBytes: number;
+  countsP50: number;
 }
 
 /**
@@ -239,8 +271,24 @@ async function runCheckpoint(roster: number, rounds: number, created: string[]):
   }
 
   const samples = [];
+  const countsSamples: Array<{ ms: number; bytes: number }> = [];
   for (let sample = 0; sample < SNAPSHOT_SAMPLES; sample += 1) {
     samples.push(await timeSnapshot(missionId, seats[0]!));
+    const counts = await measure('get_mission_round_counts', {
+      p_mission_id: missionId,
+      p_participant_id: seats[0]!.participantId,
+      p_claim_token: seats[0]!.claimToken,
+      p_host_token: null,
+    });
+    if (counts.payload.ok !== true) {
+      throw new Error(`get_mission_round_counts refused: ${String(counts.payload.reason)}`);
+    }
+    if ((counts.payload.counts as unknown[]).length !== seats.length) {
+      throw new Error(
+        `counts listed ${(counts.payload.counts as unknown[]).length} seats, expected ${seats.length}`
+      );
+    }
+    countsSamples.push({ ms: counts.ms, bytes: counts.bytes });
   }
   const last = samples[samples.length - 1]!;
   if (last.participants !== seats.length || last.rounds !== seats.length * rounds) {
@@ -261,6 +309,11 @@ async function runCheckpoint(roster: number, rounds: number, created: string[]):
     p95: percentile(
       samples.map((s) => s.ms),
       95
+    ),
+    countsBytes: countsSamples[countsSamples.length - 1]!.bytes,
+    countsP50: percentile(
+      countsSamples.map((s) => s.ms),
+      50
     ),
   };
 }
@@ -283,9 +336,10 @@ async function main(): Promise<void> {
       console.log(
         `  roster ${String(row.roster).padStart(4)}  ` +
           `rounds ${String(row.rounds).padStart(5)}  ` +
-          `snapshot ${formatBytes(row.bytes).padStart(9)}  ` +
-          `p50 ${row.p50.toFixed(0).padStart(4)}ms  ` +
-          `p95 ${row.p95.toFixed(0).padStart(4)}ms`
+          `snapshot ${formatBytes(row.bytes).padStart(9)} ${row.p50.toFixed(0).padStart(4)}ms  ` +
+          `counts ${formatBytes(row.countsBytes).padStart(8)} ${row.countsP50
+            .toFixed(0)
+            .padStart(4)}ms`
       );
     }
 
@@ -295,18 +349,26 @@ async function main(): Promise<void> {
         LIVE_RECONCILE_MS / 1000
       }s:`
     );
-    console.log('  roster   snapshot    pulls        egress   realtime msgs');
+    console.log('  roster    pulls   was (snapshot)   now (counts)   realtime msgs');
     for (const row of rows) {
-      const cost = projectReconcileCost({
+      const was = projectReconcileCost({
         snapshotBytes: row.bytes,
+        participants: row.roster,
+        missionMinutes: DURATION_MINUTES,
+        reconcileMs: LIVE_RECONCILE_MS,
+      });
+      // Steady state: the counts agree, so no snapshot follows. A mission that
+      // actually drops rows pays one snapshot per hole on top of this.
+      const now = projectReconcileCost({
+        snapshotBytes: row.countsBytes,
         participants: row.roster,
         missionMinutes: DURATION_MINUTES,
         reconcileMs: LIVE_RECONCILE_MS,
       });
       const fanOut = projectRoundFanOut(row.roster, args.rounds);
       console.log(
-        `  ${String(row.roster).padStart(6)}   ${formatBytes(row.bytes).padStart(8)}   ` +
-          `${String(cost.totalSnapshots).padStart(6)}   ${formatBytes(cost.totalBytes).padStart(10)}   ` +
+        `  ${String(row.roster).padStart(6)}   ${String(was.totalSnapshots).padStart(6)}   ` +
+          `${formatBytes(was.totalBytes).padStart(14)}   ${formatBytes(now.totalBytes).padStart(12)}   ` +
           `${fanOut.toLocaleString('en-US').padStart(13)}`
       );
     }

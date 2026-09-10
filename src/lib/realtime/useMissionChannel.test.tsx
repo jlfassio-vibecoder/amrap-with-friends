@@ -3,44 +3,52 @@ import { act, renderHook } from '@testing-library/react';
 import { GUEST_MISSION_POLL_MS, useMissionChannel } from './useMissionChannel';
 import { LIVE_RECONCILE_MS } from './liveReconcile';
 
-const { channelMocks, removeChannelMock, channelFactory, fromMock, getMissionLiveStateMock } =
-  vi.hoisted(() => {
-    const removeChannelMock = vi.fn();
-    const fromMock = vi.fn();
-    const getMissionLiveStateMock = vi.fn();
-    const channelMocks: Array<{
-      on: ReturnType<typeof vi.fn>;
-      subscribe: ReturnType<typeof vi.fn>;
-      track: ReturnType<typeof vi.fn>;
-      presenceState: ReturnType<typeof vi.fn>;
-    }> = [];
+const {
+  channelMocks,
+  removeChannelMock,
+  channelFactory,
+  fromMock,
+  getMissionLiveStateMock,
+  getMissionRoundCountsMock,
+} = vi.hoisted(() => {
+  const removeChannelMock = vi.fn();
+  const fromMock = vi.fn();
+  const getMissionLiveStateMock = vi.fn();
+  const getMissionRoundCountsMock = vi.fn();
+  const channelMocks: Array<{
+    on: ReturnType<typeof vi.fn>;
+    subscribe: ReturnType<typeof vi.fn>;
+    track: ReturnType<typeof vi.fn>;
+    presenceState: ReturnType<typeof vi.fn>;
+  }> = [];
 
-    function channelFactory() {
-      const mock = {
-        on: vi.fn(),
-        subscribe: vi.fn(),
-        track: vi.fn(() => Promise.resolve()),
-        presenceState: vi.fn(() => ({})),
-      };
-      mock.on.mockImplementation(() => mock);
-      mock.subscribe.mockImplementation((cb?: (status: string) => void) => {
-        if (typeof cb === 'function') {
-          void Promise.resolve().then(() => cb('SUBSCRIBED'));
-        }
-        return mock;
-      });
-      channelMocks.push(mock);
-      return mock;
-    }
-
-    return {
-      channelMocks,
-      removeChannelMock,
-      channelFactory,
-      fromMock,
-      getMissionLiveStateMock,
+  function channelFactory() {
+    const mock = {
+      on: vi.fn(),
+      subscribe: vi.fn(),
+      track: vi.fn(() => Promise.resolve()),
+      presenceState: vi.fn(() => ({})),
     };
-  });
+    mock.on.mockImplementation(() => mock);
+    mock.subscribe.mockImplementation((cb?: (status: string) => void) => {
+      if (typeof cb === 'function') {
+        void Promise.resolve().then(() => cb('SUBSCRIBED'));
+      }
+      return mock;
+    });
+    channelMocks.push(mock);
+    return mock;
+  }
+
+  return {
+    channelMocks,
+    removeChannelMock,
+    channelFactory,
+    fromMock,
+    getMissionLiveStateMock,
+    getMissionRoundCountsMock,
+  };
+});
 
 vi.mock('@/lib/supabase', () => ({
   getSupabaseClient: () => ({
@@ -58,6 +66,10 @@ vi.mock('@/lib/api/getMissionLiveState', () => ({
   getMissionLiveState: (...args: unknown[]) => getMissionLiveStateMock(...args),
 }));
 
+vi.mock('@/lib/api/getMissionRoundCounts', () => ({
+  getMissionRoundCounts: (...args: unknown[]) => getMissionRoundCountsMock(...args),
+}));
+
 vi.mock('@/lib/missionIdentity', () => ({
   getStoredClaimToken: () => 'claim-token',
   getStoredHostToken: () => null,
@@ -71,6 +83,8 @@ describe('useMissionChannel', () => {
     // clearAllMocks does not drain mockResolvedValueOnce queues; an unconsumed
     // one would surface in whichever test ran next.
     getMissionLiveStateMock.mockReset();
+    getMissionRoundCountsMock.mockReset();
+    getMissionRoundCountsMock.mockResolvedValue({ ok: true, counts: [] });
     channelMocks.length = 0;
     getMissionLiveStateMock.mockResolvedValue({
       ok: true,
@@ -144,12 +158,8 @@ describe('useMissionChannel', () => {
     expect(getMissionLiveStateMock.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('pulls a full snapshot on a timer while the mission is live', async () => {
-    // Nothing else repairs another athlete's dropped rounds INSERT: only the
-    // athlete who logged it hears from log_round that the index moved, and the
-    // incremental watermark is already past the row.
-    vi.useFakeTimers();
-    getMissionLiveStateMock.mockResolvedValue({
+  function liveSnapshot(rounds: unknown[] = []) {
+    return {
       ok: true,
       data: {
         mission: {
@@ -171,26 +181,37 @@ describe('useMissionChannel', () => {
         missionClock: null,
         participants: [],
         participantIds: null,
-        rounds: [],
+        rounds,
         messages: [],
         segmentResults: [],
         incremental: false,
         snapshotAt: '2026-09-03T00:00:00.000Z',
       },
-    });
+    };
+  }
 
-    renderHook(() =>
+  async function renderLive() {
+    const rendered = renderHook(() =>
       useMissionChannel(
         MISSION_ID,
         { participantId: 'participant-1', nickname: 'Athlete' },
         { realtimeTables: true }
       )
     );
-
     await act(async () => {
       await Promise.resolve();
       await Promise.resolve();
     });
+    return rendered;
+  }
+
+  it('asks only for round counts on the timer, not the whole mission', async () => {
+    // The full snapshot is the only unbounded payload the app has -- 314 KB at
+    // 100 athletes, measured. Pulling it every interval on every client is what
+    // made the traffic grow with the square of the roster.
+    vi.useFakeTimers();
+    getMissionLiveStateMock.mockResolvedValue(liveSnapshot());
+    await renderLive();
     expect(getMissionLiveStateMock).toHaveBeenCalledTimes(1);
 
     await act(async () => {
@@ -199,58 +220,31 @@ describe('useMissionChannel', () => {
       await Promise.resolve();
     });
 
+    expect(getMissionRoundCountsMock).toHaveBeenCalledTimes(1);
+    expect(getMissionLiveStateMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('pulls the full snapshot once the counts disagree', async () => {
+    vi.useFakeTimers();
+    getMissionLiveStateMock.mockResolvedValue(liveSnapshot());
+    getMissionRoundCountsMock.mockResolvedValue({
+      ok: true,
+      counts: [{ participantId: 'participant-2', roundCount: 4 }],
+    });
+    await renderLive();
+    expect(getMissionLiveStateMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      vi.advanceTimersByTime(LIVE_RECONCILE_MS);
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
     expect(getMissionLiveStateMock).toHaveBeenCalledTimes(2);
     // Full, not incremental: "everything since" would never name the row that
     // went missing.
     expect(getMissionLiveStateMock.mock.calls[1]![0]).toMatchObject({ since: null });
-  });
-
-  it('keeps a round that arrived live while the reconcile snapshot was in flight', async () => {
-    // The server ran its query before the response landed, so a round that
-    // arrived in between is newer than the snapshot. Replacing would throw away
-    // exactly the kind of row this fetch exists to recover -- and near the end
-    // of a mission the reconcile timer stops before it could be pulled again.
-    const liveRound = {
-      id: 'cccc1111-1111-4111-8111-111111111111',
-      mission_id: MISSION_ID,
-      participant_id: 'participant-2',
-      round_index: 0,
-      elapsed_sec_at_round: 41,
-      segment_index: 0,
-      missed_log_reps: null,
-      created_at: '2026-09-03T00:00:41.000Z',
-    };
-
-    const { result } = renderHook(() =>
-      useMissionChannel(
-        MISSION_ID,
-        { participantId: 'participant-1', nickname: 'Athlete' },
-        { realtimeTables: true }
-      )
-    );
-
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    const roundsHandler = channelMocks[0]!.on.mock.calls.find(
-      (call) => call[0] === 'postgres_changes' && (call[1] as { table?: string }).table === 'rounds'
-    )![2] as (payload: { new: Record<string, unknown> }) => void;
-
-    // Live INSERT arrives, then a full snapshot that predates it resolves.
-    await act(async () => {
-      roundsHandler({ new: liveRound });
-    });
-    expect(result.current.rounds).toHaveLength(1);
-
-    await act(async () => {
-      result.current.resync();
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(result.current.rounds.map((row) => row.id)).toEqual([liveRound.id]);
   });
 
   it('does not reconcile once the mission is no longer running', async () => {
@@ -274,6 +268,7 @@ describe('useMissionChannel', () => {
       await Promise.resolve();
     });
 
+    expect(getMissionRoundCountsMock).not.toHaveBeenCalled();
     expect(getMissionLiveStateMock).toHaveBeenCalledTimes(1);
   });
 

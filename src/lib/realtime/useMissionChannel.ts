@@ -7,6 +7,8 @@ import { getStoredClaimToken, getStoredHostToken } from '@/lib/missionIdentity';
 import { LIVE_STATE_MESSAGE_CAP } from '@/lib/realtime/liveStateLimits';
 import { nextLiveStateSince } from '@/lib/realtime/liveStateWatermark';
 import { LIVE_RECONCILE_MS, shouldReconcileLiveState } from '@/lib/realtime/liveReconcile';
+import { getMissionRoundCounts } from '@/lib/api/getMissionRoundCounts';
+import { hasRoundCountDrift } from '@/lib/realtime/roundCountDrift';
 import {
   mergeMissionClock,
   mergePresenceState,
@@ -78,6 +80,16 @@ export function useMissionChannel(
   // Read by the reconcile timer, which must not be torn down and rebuilt every
   // time the clock ticks the mission row forward.
   const missionPhaseRef = useRef<MissionRow['state'] | null>(null);
+  // What this client believes it holds, for the reconcile to compare cheaply.
+  const localRoundCountsRef = useRef<Record<string, number>>({});
+
+  useEffect(() => {
+    const counts: Record<string, number> = {};
+    for (const row of rounds) {
+      counts[row.participant_id] = (counts[row.participant_id] ?? 0) + 1;
+    }
+    localRoundCountsRef.current = counts;
+  }, [rounds]);
 
   useEffect(() => {
     const previous = missionPhaseRef.current;
@@ -218,11 +230,35 @@ export function useMissionChannel(
     // it. Only the athlete who logged it learns, from log_round's reply, that
     // their own view is short -- so without this, another athlete's missing
     // round stays missing on this leaderboard for the rest of the mission.
+    //
+    // It asks for a count per seat rather than pulling the mission. The full
+    // snapshot is the only thing that can close a hole, but it is also the
+    // only unbounded payload the app has -- measured at 314 KB for 100
+    // athletes, which every client pulling every interval turns into 1.2 GB
+    // across a 20-minute mission. The counts answer is a fraction of that, and
+    // the snapshot is worth its bytes only once the counts disagree.
     const reconcileTimer = window.setInterval(() => {
       if (!shouldReconcileLiveState(missionPhaseRef.current)) {
         return;
       }
-      resyncRef.current?.();
+      void (async () => {
+        const missionForCounts = missionIdRef.current;
+        if (!missionForCounts) {
+          return;
+        }
+        const result = await getMissionRoundCounts({
+          missionId: missionForCounts,
+          participantId: participantIdForRpc,
+          claimToken: getStoredClaimToken(missionForCounts),
+          hostToken: getStoredHostToken(missionForCounts),
+        });
+        if (cancelledRef.current || !result.ok) {
+          return;
+        }
+        if (hasRoundCountDrift(localRoundCountsRef.current, result.counts)) {
+          resyncRef.current?.();
+        }
+      })();
     }, LIVE_RECONCILE_MS);
 
     const channel = supabase.channel(`mission:${missionId}`, {
