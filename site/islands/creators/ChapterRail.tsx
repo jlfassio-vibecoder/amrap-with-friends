@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 
 const LINKS = [
-  { href: '#what', label: 'The room' },
+  { href: '#what', label: 'The mission' },
   { href: '#socials', label: 'Your socials' },
-  { href: '#growth', label: 'Your growth' },
-  { href: '#estimate', label: 'Your revenue' },
+  { href: '#growth', label: 'Repeat together' },
+  { href: '#estimate', label: 'Pilot benefits' },
   { href: '#week', label: 'Your week' },
   { href: '#apply', label: 'Apply' },
 ] as const;

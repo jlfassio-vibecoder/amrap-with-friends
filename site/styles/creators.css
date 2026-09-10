@@ -46,6 +46,13 @@
   margin-top: 56px;
 }
 
+.creators p + h2,
+.creators p + h3,
+.creators ul + h2,
+.creators ul + h3 {
+  margin-top: 40px;
+}
+
 .creators-lede {
   font-size: clamp(18px, 1.6vw, 22px);
   max-width: 60ch;

@@ -8,7 +8,7 @@ interface Step {
 const STEPS: Step[] = [
   {
     title: 'You post a link',
-    body: 'amrapwithfriends.com/@yourhandle — your room, your workout, a start time.',
+    body: 'Share a rally link to your mission, with its workout and start time.',
   },
   {
     title: 'They tap in as guests',
@@ -20,16 +20,11 @@ const STEPS: Step[] = [
   },
   {
     title: 'Score lock',
-    body: (
-      <>
-        At the cap everyone hits <em>I earned this</em>. Scores lock. Share card appears, with your
-        handle.
-      </>
-    ),
+    body: <>At the cap, finish logging your result and save your score. Sharing is optional.</>,
   },
   {
-    title: 'They join your squad',
-    body: "Guests are asked to save the mission and train with you. That's your attribution, done automatically.",
+    title: 'Invite them back',
+    body: 'Guests can save their result and return for the next mission. Coach-group membership and commission attribution are separate proposed features.',
   },
 ];
 
@@ -44,9 +39,9 @@ interface Screen {
 
 const SCREENS: Screen[] = [
   {
-    title: '@yourhandle',
+    title: 'Your mission',
     sub: 'Tue 6:00 pm · 12 min AMRAP',
-    btn: 'Join the room',
+    btn: 'Join mission',
   },
   {
     title: 'First name',
@@ -65,9 +60,9 @@ const SCREENS: Screen[] = [
     btn: 'I earned this',
   },
   {
-    title: 'Train with @yourhandle?',
-    sub: '14-day Pro trial · squad board · 15% off',
-    btn: 'Yes, save my mission',
+    title: 'Save your result',
+    sub: 'Keep your progress for next time',
+    btn: 'Save result',
   },
 ];
 

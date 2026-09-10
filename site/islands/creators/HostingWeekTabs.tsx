@@ -3,23 +3,23 @@ import { useState } from 'react';
 const DAYS = [
   {
     label: 'Sunday',
-    title: 'Pick the workout, schedule the room. 10 minutes.',
-    body: 'Choose from the library, your own Coach WODs, or write one. Set Tuesday 6pm. Post the link with a Story: "Tuesday. My room. Bring a friend."',
+    title: 'Pick the workout, schedule the mission. 10 minutes.',
+    body: 'Choose from the library, your own Coach WODs, or write one. Set Tuesday 6pm. Post the link with a Story: "Tuesday. Our next mission. Bring a friend."',
   },
   {
     label: 'Tuesday',
     title: 'Host. 12 minutes on the clock, 30 in the room.',
-    body: 'Go live on your usual platform if you like, or just run the room. Call scaling, hype the last minute, hit the cap. Scores lock. Cards go out.',
+    body: 'Go live on your usual platform if you like, or just run the room. Call scaling, hype the last minute, hit the cap. Save results. Athletes can choose whether to share.',
   },
   {
     label: 'Wednesday',
-    title: 'Post the board. 10 minutes.',
-    body: 'Share your squad card: top five, plus the age-adjusted winner. Repost the athlete cards that tagged you. Reply to every one.',
+    title: 'Share your finish.',
+    body: 'Share your own result and invite athletes back. Ask permission before reposting their cards; respect name and score privacy.',
   },
   {
     label: 'Friday',
-    title: 'Check the dashboard. 5 minutes.',
-    body: "Joins, saves, conversions, and what's pending payout. Note who's close to a PR and tell them next week's workout is the same one.",
+    title: 'Review who returned.',
+    body: 'Review repeat participation with the pilot team and invite your group to the next mission. A commission dashboard is planned, not required for this check-in.',
   },
 ] as const;
 
@@ -50,20 +50,26 @@ export default function HostingWeekTabs() {
         </div>
       </div>
       <div className="creators-kit">
-        <h3>Founding hosts get</h3>
+        <h3>Planned for accepted Founding Hosts</h3>
         <ul>
-          <li>Coach account free for 12 months (normally $199/yr)</li>
-          <li>Builder-tier rates from your first sale</li>
           <li>
-            A 30-minute setup call and a launch kit: card templates, a 15-second app clip, five
-            mission templates
+            Coach access free for 12 months (planned standard price $199.99/year); start date
+            confirmed at onboarding
+          </li>
+          <li>Proposed Builder rates from your first eligible sale once paid referrals launch</li>
+          <li>
+            A setup call and a launch kit tailored to the pilot: sharing guidance and mission
+            templates
           </li>
           <li>
-            Your handle on the founding hosts wall, and a co-post from the AMRAP With Friends
-            channels for your first room
+            A planned Founding Host spotlight and a co-post for your first mission, coordinated with
+            you
           </li>
         </ul>
-        <p>In return: one public room a week for eight weeks, and you post the finish.</p>
+        <p>
+          In return: one public mission a week for eight weeks, and you share your own finish.
+          Athlete sharing stays optional.
+        </p>
       </div>
     </>
   );
