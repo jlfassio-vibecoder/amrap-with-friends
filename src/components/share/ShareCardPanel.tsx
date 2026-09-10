@@ -5,7 +5,7 @@ import { buildCaption } from '@/lib/share/caption';
 import { cardFileName, renderCardBlob } from '@/lib/share/renderCard';
 import { OG_ENCODINGS, OG_LAYOUT, OG_WIDE_LAYOUT, fitsOgLimit } from '@/lib/share/ogImage';
 import { createShareId, shareUrl } from '@/lib/share/shareId';
-import { shareArtifact } from '@/lib/share/shareSheet';
+import { saveArtifacts, shareArtifact } from '@/lib/share/shareSheet';
 import { uploadShareImage } from '@/lib/share/uploadShareImage';
 import { frameAt, myBar, resolveVariant } from '@/lib/share/timeline';
 import { cardMovements, roundSplits, shouldDrawBoard } from '@/lib/share/cardContent';
@@ -417,6 +417,45 @@ export function ShareCardPanel({
     }
   }, [layout, cacheKey, shareId, caption, recordShare]);
 
+  // Both cards, so "save" means the tall one for a feed and the wide one for
+  // X rather than whichever ratio happened to be on screen.
+  const handleSaveImages = useCallback(async () => {
+    setBusy(true);
+    const wanted: ShareLayout[] = ['story', 'landscape'];
+    const files: File[] = [];
+    for (const ratio of wanted) {
+      const cached = blobRef.current.get(cacheKey(ratio));
+      const blob = cached ?? (await renderCardBlob(data, { ...drawOptions, layout: ratio }));
+      if (!blob) {
+        continue;
+      }
+      if (!cached) {
+        blobRef.current.set(cacheKey(ratio), blob);
+      }
+      files.push(new File([blob], cardFileName(shareId, ratio), { type: 'image/png' }));
+    }
+    const result = await saveArtifacts({ files, shareId });
+    setBusy(false);
+    if (result.outcome === 'downloaded') {
+      setNotice('Both cards saved to your downloads.');
+    } else if (result.outcome === 'shared') {
+      setNotice('Both cards handed to your device.');
+    }
+  }, [data, drawOptions, cacheKey, shareId]);
+
+  // Nothing but the URL. A texting app shows the card when the message is the
+  // link and nothing else; put a caption in front of it and most of them fall
+  // back to plain blue text.
+  const handleCopyPlainLink = useCallback(async () => {
+    recordShare('card');
+    try {
+      await navigator.clipboard.writeText(shareUrl(shareId));
+      setNotice('Link copied on its own — paste it into a text and the card appears.');
+    } catch {
+      setNotice(`Copy this: ${shareUrl(shareId)}`);
+    }
+  }, [shareId, recordShare]);
+
   const handleCopyLink = useCallback(async () => {
     recordShare('card');
     try {
@@ -564,14 +603,16 @@ export function ShareCardPanel({
         </div>
       ) : null}
 
-      {/* Two ways to send this, and they do not produce the same thing.
-          "Share the card" hands over the picture, so what lands is exactly
-          what is on screen. "Copy link" sends a URL and lets the app build its
-          own preview from it, which is where the shape stops being ours:
-          Facebook and Messages show the whole portrait card, X crops any
-          preview to a wide strip and has no card type that shows a tall image.
-          The athlete cannot be expected to know that, so the buttons say what
-          they do rather than both saying "share". */}
+      {/* Two jobs, split into two rows, because they are not variations on one
+          another. The top row is the picture: it is the card itself, and what
+          lands is exactly what is on screen. The bottom row is the link: the
+          app on the other end builds its own preview from it, which is where
+          the shape stops being ours.
+
+          There is deliberately no "copy the wide card" / "copy the tall card"
+          pair. The ratio buttons above already choose which card this is, and
+          a second way to say the same thing makes two controls that can
+          disagree — and "Save images" hands over both regardless. */}
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
@@ -581,13 +622,34 @@ export function ShareCardPanel({
         >
           Share the card
         </button>
-        <button type="button" className="btn-outline text-sm" onClick={handleCopyLink}>
-          Copy link
+        <button
+          type="button"
+          className="btn-outline text-sm"
+          disabled={!previewUrl || busy}
+          onClick={handleSaveImages}
+        >
+          Save images
         </button>
       </div>
       <p className="text-xs text-secondary">
-        The card posts as a picture, so it looks the same wherever it lands. A link shows a preview
-        instead, and each app crops that its own way.
+        The card posts as a picture, so it looks the same wherever it lands.{' '}
+        <strong className="font-semibold">Save images</strong> keeps both the tall and the wide card
+        on your device — they are yours to post whenever you like.
+      </p>
+
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className="btn-outline text-sm" onClick={handleCopyLink}>
+          Copy link
+        </button>
+        <button type="button" className="btn-outline text-sm" onClick={handleCopyPlainLink}>
+          Copy link for texting
+        </button>
+      </div>
+      <p className="text-xs text-secondary">
+        A link shows a preview instead, and each app crops that its own way. In a text message the
+        card only appears when the message is the link and nothing else, which is what{' '}
+        <strong className="font-semibold">Copy link for texting</strong> gives you — the other one
+        copies your score alongside it.
       </p>
 
       {isEncoderImplemented(encoderPath) ? (

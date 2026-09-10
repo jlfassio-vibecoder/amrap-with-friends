@@ -15,10 +15,11 @@ vi.mock('@/lib/share/uploadShareImage', async (importOriginal) => ({
 }));
 const { callRpc } = vi.hoisted(() => ({ callRpc: vi.fn() }));
 vi.mock('@/lib/api/callRpc', () => ({ callRpc }));
-const { shareArtifact } = vi.hoisted(() => ({
+const { shareArtifact, saveArtifacts } = vi.hoisted(() => ({
   shareArtifact: vi.fn().mockResolvedValue({ outcome: 'shared' }),
+  saveArtifacts: vi.fn().mockResolvedValue({ outcome: 'downloaded' }),
 }));
-vi.mock('@/lib/share/shareSheet', () => ({ shareArtifact }));
+vi.mock('@/lib/share/shareSheet', () => ({ shareArtifact, saveArtifacts }));
 vi.mock('@/lib/analytics/track', () => ({ track: vi.fn(), trackBeacon: vi.fn() }));
 vi.mock('@/lib/share/replay/useReplay', () => ({
   useReplay: () => ({ blob: null, state: 'idle', progress: 0, start: () => undefined }),
@@ -59,7 +60,13 @@ const data: ReplayData = {
   ],
 };
 
+const writeText = vi.fn().mockResolvedValue(undefined);
+
 function stubBrowser(): void {
+  Object.defineProperty(navigator, 'clipboard', {
+    value: { writeText },
+    configurable: true,
+  });
   // jsdom has no object URLs and no ImageBitmap decoder.
   let urls = 0;
   vi.stubGlobal(
@@ -152,7 +159,7 @@ describe('the image the link preview gets', () => {
     uploadShareImage.mockResolvedValue({ ok: true });
     render(<ShareCardPanel data={data} workoutTitle="The Piston" />);
     await waitFor(() => expect(renderCardBlob).toHaveBeenCalled());
-    fireEvent.click(screen.getByText('Copy link'));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
   }
 
   it('uploads png when it fits, which is the format every renderer decodes', async () => {
@@ -251,7 +258,7 @@ describe('the image the link preview gets', () => {
     callRpc.mockResolvedValue({ data: null, error: new Error('offline') });
     render(<ShareCardPanel data={data} workoutTitle="The Piston" />);
     await waitFor(() => expect(renderCardBlob).toHaveBeenCalled());
-    fireEvent.click(screen.getByText('Copy link'));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
 
     await waitFor(() => expect(callRpc).toHaveBeenCalledTimes(2)); // one retry
     expect(uploadShareImage).not.toHaveBeenCalled();
@@ -284,7 +291,7 @@ describe('the image the link preview gets', () => {
 
     addPhoto();
     await waitFor(() => expect(screen.getAllByText('photo added').length).toBe(2));
-    fireEvent.click(screen.getByText('Copy link'));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
 
     await waitFor(() => expect(uploadShareImage).toHaveBeenCalled());
     const ogCall = renderCardBlob.mock.calls.find((call) => call[2]?.type !== undefined);
@@ -302,7 +309,7 @@ describe('the image the link preview gets', () => {
     addPhoto();
     await waitFor(() => expect(screen.getAllByText('photo added').length).toBe(2));
     fireEvent.click(screen.getByRole('checkbox'));
-    fireEvent.click(screen.getByText('Copy link'));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
 
     await waitFor(() => expect(uploadShareImage).toHaveBeenCalled());
     const ogCall = renderCardBlob.mock.calls.find((call) => call[2]?.type !== undefined);
@@ -420,7 +427,7 @@ describe('a photo per card shape', () => {
     addPhoto();
     await waitFor(() => expect(screen.getAllByText('photo added')).toHaveLength(2));
     fireEvent.click(screen.getByRole('checkbox'));
-    fireEvent.click(screen.getByText('Copy link'));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
 
     await waitFor(() => expect(uploadShareImage).toHaveBeenCalled());
     const uploads = renderCardBlob.mock.calls.filter((call) => call[2]?.type !== undefined);
@@ -447,5 +454,67 @@ describe('a photo per card shape', () => {
     await waitFor(() => expect(renderCardBlob).toHaveBeenCalled());
     const wide = renderCardBlob.mock.calls.find((call) => call[1].layout === 'landscape');
     expect(wide![1].photo).toMatchObject({ width: 4, height: 5, closed: false });
+  });
+});
+
+describe('keeping and texting a result', () => {
+  afterEach(() => {
+    cleanup();
+    renderCardBlob.mockReset();
+    uploadShareImage.mockReset();
+    callRpc.mockReset();
+    saveArtifacts.mockClear();
+    writeText.mockClear();
+  });
+
+  async function panel(): Promise<void> {
+    stubBrowser();
+    callRpc.mockResolvedValue({ data: null, error: null });
+    uploadShareImage.mockResolvedValue({ ok: true });
+    renderCardBlob.mockResolvedValue(new Blob(['card'], { type: 'image/png' }));
+    render(<ShareCardPanel data={data} workoutTitle="The Piston" />);
+    await waitFor(() => expect(renderCardBlob).toHaveBeenCalled());
+  }
+
+  it('saves both cards, not whichever ratio happened to be on screen', async () => {
+    // The tall one is for a feed and the wide one is for X. An athlete who
+    // wanted one of them wanted the other too.
+    await panel();
+    fireEvent.click(screen.getByText('Save images', { selector: 'button' }));
+    await waitFor(() => expect(saveArtifacts).toHaveBeenCalled());
+    const names = saveArtifacts.mock.calls[0]![0].files.map((file: File) => file.name);
+    expect(names).toHaveLength(2);
+    expect(names.some((name: string) => name.includes('tall'))).toBe(true);
+    expect(names.some((name: string) => name.includes('wide'))).toBe(true);
+  });
+
+  it('names the files in words an athlete reads, not the internal layouts', async () => {
+    await panel();
+    fireEvent.click(screen.getByText('Save images', { selector: 'button' }));
+    await waitFor(() => expect(saveArtifacts).toHaveBeenCalled());
+    const names: string[] = saveArtifacts.mock.calls[0]![0].files.map((file: File) => file.name);
+    expect(names.join(' ')).not.toContain('story');
+    expect(names.join(' ')).not.toContain('landscape');
+  });
+
+  it('copies the bare url for texting, with no caption in front of it', async () => {
+    // A texting app shows the card when the message is the link and nothing
+    // else; a caption in front of it drops most of them to plain blue text.
+    await panel();
+    fireEvent.click(screen.getByText('Copy link for texting', { selector: 'button' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalled());
+    const copied: string = writeText.mock.calls.at(-1)![0];
+    expect(copied).toMatch(/^\S+$/);
+    expect(copied).toContain('/s/');
+    expect(copied).not.toContain('AMRAP');
+  });
+
+  it('still offers the caption alongside the link on the other button', async () => {
+    await panel();
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalled());
+    const copied: string = writeText.mock.calls.at(-1)![0];
+    expect(copied).toContain('AMRAP');
+    expect(copied).toContain('/s/');
   });
 });

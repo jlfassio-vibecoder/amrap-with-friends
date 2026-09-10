@@ -57,6 +57,13 @@ export async function renderCardBlob(
   });
 }
 
+/** What the athlete sees in their downloads, so not the internal layout names. */
+const FILE_WORD: Record<string, string> = {
+  story: 'tall',
+  square: 'square',
+  landscape: 'wide',
+};
+
 export function cardFileName(shareId: string, layout: string): string {
-  return `amrap-${layout}-${shareId}.png`;
+  return `amrap-${FILE_WORD[layout] ?? layout}-${shareId}.png`;
 }
