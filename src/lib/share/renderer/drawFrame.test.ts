@@ -311,6 +311,53 @@ describe('the card actually shows the result', () => {
     ...extra,
   });
 
+  it('never overprints one split label on the next', () => {
+    // Regression: a 24-round card printed "0:270:100:100:10..." along the
+    // bottom of the chart. Bars stay legible however many there are, so the
+    // chart looked right until you tried to read a time. Found on a real
+    // card, not by a test.
+    const many = fullCard();
+    many.rounds = Array.from({ length: 24 }, (_, index) => ({
+      participantId: 'p0',
+      n: index + 1,
+      atSeconds: (index + 1) * 12,
+    }));
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, frameAt(many), {
+      ...richOptions(),
+      splits: Array.from({ length: 24 }, (_, index) => ({ n: index + 1, seconds: 12 })),
+    });
+
+    const labels = texts.filter((entry) => /^\d+:\d\d$/.test(entry.text)).sort((a, b) => a.x - b.x);
+    expect(labels.length).toBeGreaterThan(0);
+    for (let i = 1; i < labels.length; i += 1) {
+      const size = Number(/(\d+)px/.exec(labels[i]!.font)?.[1] ?? 24);
+      const width = labels[i]!.text.length * size * 0.55;
+      // Labels are centred, so neighbours clear when the gap exceeds a width.
+      expect(labels[i]!.x - labels[i - 1]!.x).toBeGreaterThanOrEqual(width);
+    }
+  });
+
+  it('still labels every bar on a chart that has room', () => {
+    // Ten rounds fit today and must keep fitting -- thinning is for the
+    // charts that cannot, not a blanket reduction.
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, frameAt(fullCard()), richOptions());
+    const labels = texts.filter((entry) => /^\d+:\d\d$/.test(entry.text));
+    expect(labels).toHaveLength(3);
+  });
+
+  it('keeps the slowest round labelled when it thins the rest', () => {
+    // The accent bar is why the chart is on the card.
+    const seconds = Array.from({ length: 24 }, (_, index) => (index === 9 ? 90 : 12));
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, frameAt(fullCard()), {
+      ...richOptions(),
+      splits: seconds.map((value, index) => ({ n: index + 1, seconds: value })),
+    });
+    expect(texts.some((entry) => entry.text === '1:30')).toBe(true);
+  });
+
   it('draws nothing below the bottom edge', () => {
     // Regression: the card is 608px tall and inherited the story's type scale,
     // whose block stack needs about 740px. The workout ran off the bottom and
