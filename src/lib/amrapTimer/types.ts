@@ -20,19 +20,27 @@ export interface AmrapTimerState {
   /** Countdown for current phase (setup or work); 0 in idle/finished */
   timeLeftSec: number;
   isPaused: boolean;
-  /** Set when setup completes → work; used for first-round wall correction */
+  /** Set when setup completes → work. The anchor the work clock is measured from. */
   workStartedAtMs: number | null;
+  /** Set on start. The anchor the setup countdown is measured from. */
+  setupStartedAtMs: number | null;
+  /** Milliseconds spent paused during this work segment, excluding any pause still open. */
+  pausedAccumMs: number;
+  /** When the open pause began, or null when running. */
+  pausedAtMs: number | null;
   rounds: AmrapRoundLog[];
 }
 
 export type AmrapTimerAction =
   | {
       type: 'start';
+      nowMs: number;
       setupDurationSec: number;
       workDurationSec: number;
     }
   | {
       type: 'hydrate';
+      nowMs: number;
       phase: 'setup' | 'work';
       setupDurationSec: number;
       workDurationSec: number;
@@ -41,8 +49,8 @@ export type AmrapTimerAction =
       isPaused: boolean;
     }
   | { type: 'tick'; nowMs: number }
-  | { type: 'pause' }
-  | { type: 'resume' }
+  | { type: 'pause'; nowMs: number }
+  | { type: 'resume'; nowMs: number }
   | { type: 'finish' }
   | {
       type: 'logRound';
