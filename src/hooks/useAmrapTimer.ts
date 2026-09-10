@@ -46,12 +46,25 @@ export function useAmrapTimer(): UseAmrapTimerReturn {
       dispatch({ type: 'tick', nowMs: Date.now() });
     }, 1000);
 
-    return () => clearInterval(interval);
+    // Coming back from a backgrounded tab, the next interval could be up to a
+    // second away and the clock would show a stale value until then. The tick
+    // is idempotent -- it reads the clock rather than advancing anything -- so
+    // firing one on return is free and makes the catch-up instant.
+    const catchUp = () => dispatch({ type: 'tick', nowMs: Date.now() });
+    document.addEventListener('visibilitychange', catchUp);
+    window.addEventListener('focus', catchUp);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', catchUp);
+      window.removeEventListener('focus', catchUp);
+    };
   }, [phase, isPaused]);
 
   const start = useCallback((config: { setupDurationSec: number; workDurationSec: number }) => {
     dispatch({
       type: 'start',
+      nowMs: Date.now(),
       setupDurationSec: config.setupDurationSec,
       workDurationSec: config.workDurationSec,
     });
@@ -68,6 +81,7 @@ export function useAmrapTimer(): UseAmrapTimerReturn {
     }) => {
       dispatch({
         type: 'hydrate',
+        nowMs: Date.now(),
         phase: config.phase,
         setupDurationSec: config.setupDurationSec,
         workDurationSec: config.workDurationSec,
@@ -80,11 +94,11 @@ export function useAmrapTimer(): UseAmrapTimerReturn {
   );
 
   const pause = useCallback(() => {
-    dispatch({ type: 'pause' });
+    dispatch({ type: 'pause', nowMs: Date.now() });
   }, []);
 
   const resume = useCallback(() => {
-    dispatch({ type: 'resume' });
+    dispatch({ type: 'resume', nowMs: Date.now() });
   }, []);
 
   const finish = useCallback(() => {

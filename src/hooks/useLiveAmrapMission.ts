@@ -371,6 +371,9 @@ export function useLiveAmrapMission(
           timeLeftSec: timer.timeLeftSec,
           isPaused: timer.isPaused,
           workStartedAtMs: timer.workStartedAtMs,
+          setupStartedAtMs: null,
+          pausedAccumMs: 0,
+          pausedAtMs: null,
           rounds: timer.rounds,
         });
 

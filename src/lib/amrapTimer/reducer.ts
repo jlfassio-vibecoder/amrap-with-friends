@@ -1,4 +1,3 @@
-import { computeElapsedSecForLogRound } from './computeElapsedSecForLogRound';
 import type { AmrapTimerAction, AmrapTimerState } from './types';
 
 export function createInitialState(): AmrapTimerState {
@@ -9,8 +8,32 @@ export function createInitialState(): AmrapTimerState {
     timeLeftSec: 0,
     isPaused: false,
     workStartedAtMs: null,
+    setupStartedAtMs: null,
+    pausedAccumMs: 0,
+    pausedAtMs: null,
     rounds: [],
   };
+}
+
+/**
+ * Seconds of work actually done by `nowMs`, pause excluded.
+ *
+ * This is the whole point of the module. The clock used to be a counter the
+ * tick decremented, which meant it measured how many intervals the browser had
+ * chosen to run rather than how much time had passed — and browsers throttle
+ * background intervals hard. A phone locked mid-workout produced a clock
+ * running slow, a mission that overran its cap, and round timestamps short by
+ * the drift, which became the splits, which became PVI, which multiplies the
+ * final score. Reading the wall clock cannot drift because it is not counting
+ * anything.
+ */
+function workElapsedSec(state: AmrapTimerState, nowMs: number): number {
+  if (state.workStartedAtMs === null) {
+    return 0;
+  }
+  const openPauseMs = state.pausedAtMs === null ? 0 : Math.max(0, nowMs - state.pausedAtMs);
+  const runningMs = nowMs - state.workStartedAtMs - state.pausedAccumMs - openPauseMs;
+  return Math.max(0, Math.floor(runningMs / 1000));
 }
 
 export function selectElapsedSec(state: AmrapTimerState): number {
@@ -38,6 +61,9 @@ export function amrapTimerReducer(
         timeLeftSec: action.setupDurationSec,
         isPaused: false,
         workStartedAtMs: null,
+        setupStartedAtMs: action.nowMs,
+        pausedAccumMs: 0,
+        pausedAtMs: null,
         rounds: [],
       };
 
@@ -45,27 +71,61 @@ export function amrapTimerReducer(
       if (state.phase !== 'idle') {
         return state;
       }
-      return {
-        phase: action.phase,
-        setupDurationSec: action.setupDurationSec,
-        workDurationSec: action.workDurationSec,
-        timeLeftSec: action.timeLeftSec,
-        isPaused: action.phase === 'work' ? action.isPaused : false,
-        workStartedAtMs: action.phase === 'work' ? action.workStartedAtMs : null,
-        rounds: [],
-      };
+      {
+        const isPaused = action.phase === 'work' ? action.isPaused : false;
+        // Prefer the real instant work began. Without one, anchor so the clock
+        // continues from the time we were handed rather than jumping.
+        const workStartedAtMs =
+          action.phase === 'work'
+            ? (action.workStartedAtMs ??
+              action.nowMs - (action.workDurationSec - action.timeLeftSec) * 1000)
+            : null;
+        return {
+          phase: action.phase,
+          setupDurationSec: action.setupDurationSec,
+          workDurationSec: action.workDurationSec,
+          timeLeftSec: action.timeLeftSec,
+          isPaused,
+          workStartedAtMs,
+          setupStartedAtMs:
+            action.phase === 'setup'
+              ? action.nowMs - (action.setupDurationSec - action.timeLeftSec) * 1000
+              : null,
+          // Pauses before this client existed are unknowable; the anchor above
+          // already accounts for them by matching the clock we were given.
+          pausedAccumMs: 0,
+          pausedAtMs: isPaused ? action.nowMs : null,
+          rounds: [],
+        };
+      }
 
     case 'pause':
       if (state.phase !== 'work' || state.isPaused) {
         return state;
       }
-      return { ...state, isPaused: true };
+      // Freeze on the real clock, not on whatever the last tick left behind: a
+      // tick missed just before the pause would otherwise be frozen in too.
+      return {
+        ...state,
+        isPaused: true,
+        pausedAtMs: action.nowMs,
+        timeLeftSec: Math.max(0, state.workDurationSec - workElapsedSec(state, action.nowMs)),
+      };
 
-    case 'resume':
+    case 'resume': {
       if (state.phase !== 'work' || !state.isPaused) {
         return state;
       }
-      return { ...state, isPaused: false };
+      // The pause is banked here, which is what keeps the wall clock honest
+      // across it: time spent paused is time the athlete did not work.
+      const bankedMs = state.pausedAtMs === null ? 0 : Math.max(0, action.nowMs - state.pausedAtMs);
+      return {
+        ...state,
+        isPaused: false,
+        pausedAccumMs: state.pausedAccumMs + bankedMs,
+        pausedAtMs: null,
+      };
+    }
 
     case 'finish':
       if (state.phase !== 'work') {
@@ -83,15 +143,10 @@ export function amrapTimerReducer(
         return state;
       }
 
-      const loggedElapsedSec = computeElapsedSecForLogRound({
-        workDurationSec: state.workDurationSec,
-        timeLeftSec: state.timeLeftSec,
-        phase: state.phase,
-        isPaused: state.isPaused,
-        workStartedAtMs: state.workStartedAtMs,
-        roundCountInWork: state.rounds.length,
-        nowMs: action.nowMs,
-      });
+      // Read the clock rather than the last tick's leftovers: timeLeftSec is
+      // only as fresh as the interval that set it, and a round logged between
+      // ticks would otherwise be recorded up to a second early.
+      const loggedElapsedSec = Math.min(state.workDurationSec, workElapsedSec(state, action.nowMs));
 
       // A missed log carries its own reconstructed boundary; an ordinary log
       // takes the clock as it stands.
@@ -117,27 +172,35 @@ export function amrapTimerReducer(
       }
 
       if (state.phase === 'setup') {
-        if (state.timeLeftSec <= 1) {
+        const anchor = state.setupStartedAtMs ?? action.nowMs;
+        const remaining = state.setupDurationSec - Math.floor((action.nowMs - anchor) / 1000);
+        if (remaining <= 0) {
+          // Work begins when the countdown *ended*, not when this tick happened
+          // to run. A throttled tab would otherwise start the clock late and
+          // hand the athlete extra seconds.
           return {
             ...state,
             phase: 'work',
             timeLeftSec: state.workDurationSec,
-            workStartedAtMs: action.nowMs,
+            workStartedAtMs: anchor + state.setupDurationSec * 1000,
+            setupStartedAtMs: anchor,
           };
         }
-        return { ...state, timeLeftSec: state.timeLeftSec - 1 };
+        return { ...state, timeLeftSec: remaining, setupStartedAtMs: anchor };
       }
 
       if (state.phase === 'work') {
-        if (state.timeLeftSec <= 1) {
+        const remaining = state.workDurationSec - workElapsedSec(state, action.nowMs);
+        if (remaining <= 0) {
           return {
             ...state,
             phase: 'finished',
             timeLeftSec: 0,
             isPaused: false,
+            pausedAtMs: null,
           };
         }
-        return { ...state, timeLeftSec: state.timeLeftSec - 1 };
+        return { ...state, timeLeftSec: remaining };
       }
 
       return state;
