@@ -23,6 +23,7 @@ const HUDPage = lazy(() => import('./pages/HUDPage'));
 const IntakePage = lazy(() => import('./pages/IntakePage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const CoachPage = lazy(() => import('./pages/CoachPage'));
+const HostRoomsPage = lazy(() => import('./pages/HostRoomsPage'));
 const CoachWodsPage = lazy(() => import('./pages/CoachWodsPage'));
 const CoachArticlesPage = lazy(() => import('./pages/CoachArticlesPage'));
 const TimerDevPage = lazy(() => import('./pages/dev/TimerDevPage'));
@@ -138,6 +139,9 @@ function App() {
               </RequireIntake>
             }
           />
+          {/* The host dashboard. Not under /coach: that area is the platform
+              owner's, gated by the coach_users allowlist. */}
+          <Route path="/host" element={<HostRoomsPage />} />
           <Route
             path="/coach"
             element={
