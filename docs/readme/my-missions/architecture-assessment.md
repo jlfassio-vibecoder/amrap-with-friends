@@ -71,12 +71,12 @@ account” on a finished guest mission is how rows appear here.
 [`MyMissionsPage.tsx`](../../../src/pages/MyMissionsPage.tsx):
 
 ```
-NarrowPageLayout ("My missions" / "Saved to your account", desktopTitleAsPageHeading)
+NarrowPageLayout ("My missions" / "Saved to your account", desktopTitleAsPageHeading, max-w-5xl)
 ├── Plan mission | New campaign
 ├── MyMissionsTopTabs (Missions | Sent to you | Campaigns)
 ├── tab Missions
 │   ├── loading / empty / error
-│   ├── groupMyMissionsByRallyPoint(entries, chains)
+│   ├── mission cards in lg:grid-cols-2 (groupMyMissionsByRallyPoint)
 │   │   ├── single → MyMissionCard
 │   │   └── group  → parent MyMissionCard + expand
 │   │                 └── started MyMissionCard | QueuedMissionCard

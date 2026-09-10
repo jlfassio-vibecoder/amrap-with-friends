@@ -477,6 +477,7 @@ export default function MyMissionsPage() {
       title="My missions"
       subtitle="Saved to your account"
       desktopTitleAsPageHeading
+      contentMaxWidthClassName="max-w-5xl"
     >
       <div className="flex flex-wrap items-center gap-3">
         <Link className="btn-primary" to="/create">
@@ -502,7 +503,7 @@ export default function MyMissionsPage() {
           ) : null}
 
           {listItems.length > 0 ? (
-            <ul className="space-y-3">
+            <ul className="grid gap-3 lg:grid-cols-2">
               {listItems.map((item) => {
                 if (item.kind === 'single') {
                   return (
