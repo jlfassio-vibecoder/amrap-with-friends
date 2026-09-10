@@ -95,6 +95,12 @@ export function useMissionChannel(
     // incremental: the watermark has already moved past the row that went
     // missing, so asking for "everything since" would never return it.
     resyncRef.current = () => {
+      // Bumping the generation abandons anything already in flight. Without
+      // it, an incremental request issued before the resync can land after the
+      // full snapshot and push the watermark forward again -- which is the
+      // exact race fetchGenRef exists to stop, and the resync was walking past
+      // it.
+      fetchGenRef.current += 1;
       sinceRef.current = null;
       void refreshSnapshot();
     };
