@@ -403,7 +403,7 @@ describe('a photo per card shape', () => {
     await waitFor(() => expect(screen.getAllByText('photo added')).toHaveLength(1));
 
     renderCardBlob.mockClear();
-    fireEvent.click(screen.getByText('16:9'));
+    fireEvent.click(screen.getByRole('button', { name: 'Wide 16:9' }));
     await waitFor(() => expect(renderCardBlob).toHaveBeenCalled());
     const wide = renderCardBlob.mock.calls.find((call) => call[1].layout === 'landscape');
     expect(wide![1].photo).toMatchObject({ width: 4, height: 5 });
@@ -416,7 +416,7 @@ describe('a photo per card shape', () => {
     await waitFor(() => expect(screen.getAllByText('photo added')).toHaveLength(1));
 
     renderCardBlob.mockClear();
-    fireEvent.click(screen.getByText('1:1'));
+    fireEvent.click(screen.getByRole('button', { name: 'Square 1:1' }));
     await waitFor(() => expect(renderCardBlob).toHaveBeenCalled());
     const square = renderCardBlob.mock.calls.find((call) => call[1].layout === 'square');
     expect(square![1].photo).toBeNull();
@@ -450,7 +450,7 @@ describe('a photo per card shape', () => {
     await waitFor(() => expect(screen.getAllByText('photo added')).toHaveLength(1));
 
     renderCardBlob.mockClear();
-    fireEvent.click(screen.getByText('16:9'));
+    fireEvent.click(screen.getByRole('button', { name: 'Wide 16:9' }));
     await waitFor(() => expect(renderCardBlob).toHaveBeenCalled());
     const wide = renderCardBlob.mock.calls.find((call) => call[1].layout === 'landscape');
     expect(wide![1].photo).toMatchObject({ width: 4, height: 5, closed: false });
@@ -516,5 +516,80 @@ describe('keeping and texting a result', () => {
     const copied: string = writeText.mock.calls.at(-1)![0];
     expect(copied).toContain('AMRAP');
     expect(copied).toContain('/s/');
+  });
+});
+
+describe('the card shape control', () => {
+  afterEach(() => {
+    cleanup();
+    renderCardBlob.mockReset();
+    callRpc.mockReset();
+  });
+
+  async function panel(): Promise<void> {
+    stubBrowser();
+    callRpc.mockResolvedValue({ data: null, error: null });
+    renderCardBlob.mockResolvedValue(new Blob(['card'], { type: 'image/png' }));
+    render(<ShareCardPanel data={data} workoutTitle="The Piston" />);
+    await waitFor(() => expect(renderCardBlob).toHaveBeenCalled());
+  }
+
+  it('says what the three chips are for', async () => {
+    // Unlabelled, they read as four unrelated chips next to the squad toggle
+    // and nothing said the numbers were choosing the card.
+    await panel();
+    expect(screen.getByRole('group', { name: 'Card shape' })).toBeTruthy();
+  });
+
+  it('names the shapes the same way the photo picker does', async () => {
+    // The photo picker calls them the tall card and the wide card. A control
+    // naming the same two things 9:16 and 16:9 left the athlete to work out
+    // that those were the same two things.
+    await panel();
+    const shapes = screen.getByRole('group', { name: 'Card shape' });
+    expect(shapes.textContent).toContain('Tall');
+    expect(shapes.textContent).toContain('Wide');
+    addPhoto();
+    await waitFor(() => expect(screen.getAllByText('photo added')).toHaveLength(2));
+    expect(screen.getAllByText('Tall card').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Wide card').length).toBeGreaterThan(0);
+  });
+
+  it('keeps the ratios, because that is what the destination asks for', async () => {
+    await panel();
+    const shapes = screen.getByRole('group', { name: 'Card shape' });
+    expect(shapes.textContent).toContain('9:16');
+    expect(shapes.textContent).toContain('16:9');
+  });
+
+  it('leaves the squad toggle outside the shape group', async () => {
+    // It is independent, not one of three, and a label over the pair would
+    // have claimed otherwise.
+    const squad = {
+      ...data,
+      participants: [
+        ...data.participants,
+        {
+          participantId: 'p2',
+          userId: null,
+          displayName: 'Britt',
+          isMe: false,
+          finalRounds: 2,
+          finalReps: 0,
+          finalScore: 90,
+          role: 'guest',
+        },
+      ],
+    } as unknown as typeof data;
+    stubBrowser();
+    callRpc.mockResolvedValue({ data: null, error: null });
+    renderCardBlob.mockResolvedValue(new Blob(['card'], { type: 'image/png' }));
+    render(<ShareCardPanel data={squad} workoutTitle="The Piston" />);
+    await waitFor(() => expect(renderCardBlob).toHaveBeenCalled());
+
+    expect(screen.getByText('Squad board')).toBeTruthy();
+    expect(screen.getByRole('group', { name: 'Card shape' }).textContent).not.toContain(
+      'Squad board'
+    );
   });
 });

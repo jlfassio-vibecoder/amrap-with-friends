@@ -39,10 +39,13 @@ const PHOTO_SLOT_LABELS: { id: PhotoSlot; label: string }[] = [
   { id: 'wide', label: 'Wide card' },
 ];
 
+// The ratio alone was a translation step: the photo picker below calls these
+// the tall card and the wide card, and the same control naming them 9:16 and
+// 16:9 left the athlete to work out that those were the same two things.
 const LAYOUT_OPTIONS: { id: ShareLayout; label: string }[] = [
-  { id: 'story', label: '9:16' },
-  { id: 'square', label: '1:1' },
-  { id: 'landscape', label: '16:9' },
+  { id: 'story', label: 'Tall 9:16' },
+  { id: 'square', label: 'Square 1:1' },
+  { id: 'landscape', label: 'Wide 16:9' },
 ];
 
 interface ShareCardPanelProps {
@@ -487,23 +490,36 @@ export function ShareCardPanel({
         <p className="text-sm text-secondary">Building your card…</p>
       )}
 
-      <div className="flex flex-wrap gap-2">
-        {LAYOUT_OPTIONS.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            aria-pressed={layout === option.id}
-            onClick={() => setLayout(option.id)}
-            className={`rounded-full border px-4 py-2 text-sm font-semibold ${
-              layout === option.id
-                ? 'border-accent bg-accent text-on-accent'
-                : 'border-border bg-surface text-secondary'
-            }`}
-          >
-            {option.label}
-          </button>
-        ))}
-        {data.participants.length > 1 ? (
+      {/* Labelled, and on its own row. These three used to sit unlabelled
+          beside the squad toggle, so the row read as four unrelated chips and
+          nothing said the numbers were choosing the card. The toggle is a
+          different kind of control — independent, not one of three — and a
+          label over the pair would have claimed it was one of them. */}
+      <div className="space-y-2" role="group" aria-label="Card shape">
+        <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
+          Card shape
+        </span>
+        <div className="flex flex-wrap gap-2">
+          {LAYOUT_OPTIONS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              aria-pressed={layout === option.id}
+              onClick={() => setLayout(option.id)}
+              className={`rounded-full border px-4 py-2 text-sm font-semibold ${
+                layout === option.id
+                  ? 'border-accent bg-accent text-on-accent'
+                  : 'border-border bg-surface text-secondary'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {data.participants.length > 1 ? (
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             aria-pressed={variant === 'squad'}
@@ -516,8 +532,8 @@ export function ShareCardPanel({
           >
             Squad board
           </button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       {/* One upload, and the athlete says which card it is for. The tall card
           and the wide card crop a phone photo differently — a head-and-shoulders
