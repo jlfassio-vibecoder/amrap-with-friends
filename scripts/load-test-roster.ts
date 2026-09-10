@@ -36,6 +36,7 @@ interface Args {
   checkpoints: number[];
   rounds: number;
   keep: boolean;
+  direct: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
@@ -55,7 +56,12 @@ function parseArgs(argv: string[]): Args {
   if (!Number.isFinite(rounds) || rounds < 0) {
     throw new Error('--rounds must be a non-negative integer');
   }
-  return { checkpoints, rounds, keep: argv.includes('--keep') };
+  return {
+    checkpoints,
+    rounds,
+    keep: argv.includes('--keep'),
+    direct: argv.includes('--direct'),
+  };
 }
 
 function readEnv(): { url: string; anonKey: string; serviceKey: string } {
@@ -173,6 +179,80 @@ async function inBatches<T>(items: T[], run: (item: T) => Promise<unknown>): Pro
   }
 }
 
+/**
+ * Seed the roster straight into the tables with the service role.
+ *
+ * join_mission refuses the 101st seat -- session_participant_limit() is a
+ * hard-coded 100 -- so measuring past that through the front door would mean
+ * changing production. The question above 100 is about the read path, which
+ * does not care how the rows arrived: get_mission_live_state and
+ * get_mission_round_counts read participants and rounds, not the RPC that
+ * wrote them.
+ *
+ * This deliberately does NOT measure join_mission or log_round at scale, and
+ * says so in the output, because those are the writes it skips.
+ */
+async function seedDirect(
+  missionId: string,
+  roster: number,
+  rounds: number,
+  existing: number
+): Promise<void> {
+  const headers = {
+    apikey: serviceKey,
+    Authorization: `Bearer ${serviceKey}`,
+    'Content-Type': 'application/json',
+    Prefer: 'return=representation',
+  };
+
+  const ids: string[] = [];
+  const CHUNK = 500;
+  const toCreate = Math.max(0, roster - existing);
+
+  for (let offset = 0; offset < toCreate; offset += CHUNK) {
+    const batch = Array.from({ length: Math.min(CHUNK, toCreate - offset) }, (_, index) => ({
+      mission_id: missionId,
+      nickname: `athlete-${offset + index}`,
+      role: 'joiner',
+    }));
+    const response = await fetch(`${url}/rest/v1/participants?select=id`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(batch),
+    });
+    const text = await response.text();
+    if (!response.ok) {
+      throw new Error(`seed participants -> ${response.status} ${text.slice(0, 200)}`);
+    }
+    for (const row of JSON.parse(text) as Array<{ id: string }>) {
+      ids.push(row.id);
+    }
+  }
+
+  const roundRows: Array<Record<string, unknown>> = [];
+  for (const participantId of ids) {
+    for (let roundIndex = 0; roundIndex < rounds; roundIndex += 1) {
+      roundRows.push({
+        mission_id: missionId,
+        participant_id: participantId,
+        round_index: roundIndex,
+        elapsed_sec_at_round: (roundIndex + 1) * 30,
+        segment_index: SEGMENT_INDEX,
+      });
+    }
+  }
+  for (let offset = 0; offset < roundRows.length; offset += CHUNK) {
+    const response = await fetch(`${url}/rest/v1/rounds`, {
+      method: 'POST',
+      headers: { ...headers, Prefer: 'return=minimal' },
+      body: JSON.stringify(roundRows.slice(offset, offset + CHUNK)),
+    });
+    if (!response.ok) {
+      throw new Error(`seed rounds -> ${response.status} ${(await response.text()).slice(0, 200)}`);
+    }
+  }
+}
+
 async function deleteAll(missionId: string): Promise<void> {
   const headers = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` };
   for (const table of [
@@ -212,7 +292,12 @@ interface Row {
  * incrementally would therefore have to start it before the last athletes
  * arrived -- so each size is built, started, logged and weighed on its own.
  */
-async function runCheckpoint(roster: number, rounds: number, created: string[]): Promise<Row> {
+async function runCheckpoint(
+  roster: number,
+  rounds: number,
+  created: string[],
+  direct: boolean
+): Promise<Row> {
   const host = await rpc<{
     mission_id: string;
     host_token: string;
@@ -231,13 +316,20 @@ async function runCheckpoint(roster: number, rounds: number, created: string[]):
   created.push(missionId);
 
   const seats: Seat[] = [{ participantId: host.participant_id, claimToken: host.claim_token }];
-  await inBatches([...Array(Math.max(0, roster - 1)).keys()], async (index) => {
-    const joined = await rpc<{ participant_id: string; claim_token: string }>('join_mission', {
-      p_mission_id: missionId,
-      p_nickname: `athlete-${index}`,
+  let seededRounds = 0;
+
+  if (direct) {
+    await seedDirect(missionId, roster, rounds, seats.length);
+    seededRounds = (roster - seats.length) * rounds;
+  } else {
+    await inBatches([...Array(Math.max(0, roster - 1)).keys()], async (index) => {
+      const joined = await rpc<{ participant_id: string; claim_token: string }>('join_mission', {
+        p_mission_id: missionId,
+        p_nickname: `athlete-${index}`,
+      });
+      seats.push({ participantId: joined.participant_id, claimToken: joined.claim_token });
     });
-    seats.push({ participantId: joined.participant_id, claimToken: joined.claim_token });
-  });
+  }
 
   // log_round only writes while the mission is running, and join_mission only
   // works before it is -- so the roster has to be complete before this line.
@@ -283,18 +375,20 @@ async function runCheckpoint(roster: number, rounds: number, created: string[]):
     if (counts.payload.ok !== true) {
       throw new Error(`get_mission_round_counts refused: ${String(counts.payload.reason)}`);
     }
-    if ((counts.payload.counts as unknown[]).length !== seats.length) {
-      throw new Error(
-        `counts listed ${(counts.payload.counts as unknown[]).length} seats, expected ${seats.length}`
-      );
+    const listed = (counts.payload.counts as unknown[]).length;
+    const expectedSeats = direct ? roster : seats.length;
+    if (listed !== expectedSeats) {
+      throw new Error(`counts listed ${listed} seats, expected ${expectedSeats}`);
     }
     countsSamples.push({ ms: counts.ms, bytes: counts.bytes });
   }
   const last = samples[samples.length - 1]!;
-  if (last.participants !== seats.length || last.rounds !== seats.length * rounds) {
+  const expectedParticipants = direct ? roster : seats.length;
+  const expectedRounds = seededRounds + seats.length * rounds;
+  if (last.participants !== expectedParticipants || last.rounds !== expectedRounds) {
     throw new Error(
-      `snapshot disagrees with the roster we built: expected ${seats.length} participants ` +
-        `and ${seats.length * rounds} rounds, got ${last.participants} and ${last.rounds}`
+      `snapshot disagrees with the roster we built: expected ${expectedParticipants} participants ` +
+        `and ${expectedRounds} rounds, got ${last.participants} and ${last.rounds}`
     );
   }
 
@@ -324,6 +418,9 @@ async function main(): Promise<void> {
   console.log(`project      ${url}`);
   console.log(`checkpoints  ${args.checkpoints.join(', ')}`);
   console.log(`rounds each  ${args.rounds}`);
+  if (args.direct) {
+    console.log('mode         --direct: rows seeded past the join cap; read path only');
+  }
   console.log('');
 
   const created: string[] = [];
@@ -331,7 +428,7 @@ async function main(): Promise<void> {
 
   try {
     for (const checkpoint of args.checkpoints) {
-      const row = await runCheckpoint(checkpoint, args.rounds, created);
+      const row = await runCheckpoint(checkpoint, args.rounds, created, args.direct);
       rows.push(row);
       console.log(
         `  roster ${String(row.roster).padStart(4)}  ` +
