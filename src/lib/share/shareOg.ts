@@ -14,6 +14,8 @@ function formatScore(rounds: number, reps: number): string {
 export interface ShareSummary {
   shareId: string;
   imagePath: string | null;
+  /** Landscape render for twitter:image. Null on shares made before it existed. */
+  wideImagePath: string | null;
   templateId: string | null;
   durationMinutes: number;
   rounds: number;
@@ -72,4 +74,29 @@ export function shareOgImage(
     return `${supabaseUrl}/storage/v1/object/public/mission-shares/${summary.imagePath}`;
   }
   return `${origin}/og-image-f.png`;
+}
+
+/**
+ * The image X gets, which is not the image Facebook gets.
+ *
+ * og:image and twitter:image are separate tags because platforms crop
+ * differently, and X is why. Facebook and Apple's Messages letterbox the 9:16
+ * card and show all of it. X crops to roughly 1.9:1 out of the vertical
+ * middle: measured on a posted card, that kept "540 reps", the movement list
+ * and half the chart, and threw away the hero score, the athlete's name, the
+ * link and the watermark — every part that says whose result it is.
+ *
+ * A landscape render survives that crop, so X is pointed at one. Shares made
+ * before wide images existed fall back to the portrait card, which is what
+ * they have always shown there; a missing image would be worse.
+ */
+export function shareTwitterImage(
+  summary: ShareSummary | null,
+  origin: string,
+  supabaseUrl: string | null
+): string {
+  if (summary?.wideImagePath && supabaseUrl) {
+    return `${supabaseUrl}/storage/v1/object/public/mission-shares/${summary.wideImagePath}`;
+  }
+  return shareOgImage(summary, origin, supabaseUrl);
 }

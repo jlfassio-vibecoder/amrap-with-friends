@@ -39,6 +39,7 @@ const meta: ShareMeta = {
   image: 'https://cdn.example.com/6vtx923n.png',
   imageWidth: 1080,
   imageHeight: 1920,
+  twitterImage: 'https://cdn.example.com/6vtx923n-wide.png',
 };
 
 describe('injectShareMeta', () => {
@@ -68,6 +69,19 @@ describe('injectShareMeta', () => {
     expect(out.match(/property="og:description"/g)).toHaveLength(1);
     expect(out.match(/name="twitter:image"/g)).toHaveLength(1);
     expect(out.match(/name="description"/g)).toHaveLength(1);
+  });
+
+  it('sends X the wide render, because X crops a portrait card to its middle', () => {
+    // og:image and twitter:image are separate tags precisely because the
+    // platforms crop differently. Measured on a posted card: X kept "540
+    // reps", the movements and half the chart, and cropped away the hero, the
+    // name, the link and the watermark.
+    expect(out).toContain(
+      '<meta name="twitter:image" content="https://cdn.example.com/6vtx923n-wide.png" />'
+    );
+    expect(out).toContain(
+      '<meta property="og:image" content="https://cdn.example.com/6vtx923n.png" />'
+    );
   });
 
   it('drops og:image:alt, which described the logo that is no longer there', () => {

@@ -19,6 +19,17 @@ import type { ShareLayout } from '@/lib/share/types';
 /** The layout rendered for the link preview — the same one the panel previews. */
 export const OG_LAYOUT: ShareLayout = 'story';
 
+/**
+ * The layout X gets.
+ *
+ * X crops og:image to roughly 1.9:1 out of the vertical middle. On a posted
+ * portrait card that kept the reps line, the movement list and half the chart,
+ * and cropped away the hero score, the athlete's name, the link and the
+ * watermark. Landscape is 1.78:1 and survives it, and twitter:image is a
+ * separate tag from og:image for exactly this reason.
+ */
+export const OG_WIDE_LAYOUT: ShareLayout = 'landscape';
+
 export interface OgEncoding {
   type: string;
   quality?: number;

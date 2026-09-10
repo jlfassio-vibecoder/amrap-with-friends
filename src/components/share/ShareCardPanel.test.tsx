@@ -162,6 +162,38 @@ describe('the image the link preview gets', () => {
     expect(uploadShareImage.mock.calls[0]![0].blob.type).toBe('image/webp');
   });
 
+  it('also uploads a wide card, because X crops a portrait one to its middle', async () => {
+    // Measured on a posted card: X kept the reps line, the movements and half
+    // the chart, and cropped away the hero score, the name, the link and the
+    // watermark. twitter:image is a separate tag from og:image for this.
+    renderCardBlob.mockResolvedValue(new Blob(['card'], { type: 'image/png' }));
+    await shareIt();
+
+    await waitFor(() => expect(uploadShareImage).toHaveBeenCalled());
+    const layouts = renderCardBlob.mock.calls
+      .filter((call) => call[2]?.type !== undefined)
+      .map((call) => call[1].layout);
+    expect(layouts).toContain('story');
+    expect(layouts).toContain('landscape');
+    expect(uploadShareImage.mock.calls[0]![0].wideBlob).toBeTruthy();
+  });
+
+  it('still uploads the portrait card when the wide one will not fit', async () => {
+    // The wide card is a bonus. Losing it costs X the better crop; losing the
+    // portrait one costs every other platform the card entirely.
+    const tooBig = new Blob([new Uint8Array(500 * 1024)], { type: 'image/webp' });
+    renderCardBlob.mockImplementation((_data, options: { layout: string }) =>
+      Promise.resolve(
+        options.layout === 'landscape' ? tooBig : new Blob(['card'], { type: 'image/png' })
+      )
+    );
+    await shareIt();
+
+    await waitFor(() => expect(uploadShareImage).toHaveBeenCalled());
+    expect(uploadShareImage.mock.calls[0]![0].blob.type).toBe('image/png');
+    expect(uploadShareImage.mock.calls[0]![0].wideBlob).toBeNull();
+  });
+
   it('uploads the same portrait card the panel is previewing', async () => {
     // The link has to unfurl as the card the athlete composed. It shipped as a
     // landscape render for a while -- chosen to survive a crawler's 1.91:1
