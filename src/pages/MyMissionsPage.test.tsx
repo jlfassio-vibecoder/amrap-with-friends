@@ -455,7 +455,8 @@ describe('MyMissionsPage tabs', () => {
         'true'
       );
       expect(screen.getByText('Your campaigns')).toBeTruthy();
-      expect(screen.getByRole('link', { name: /Spring Build/ }).getAttribute('href')).toBe(
+      expect(screen.getByText('Spring Build')).toBeTruthy();
+      expect(screen.getByRole('link', { name: 'View campaign' }).getAttribute('href')).toBe(
         '/campaign/33333333-3333-4333-8333-333333333333'
       );
     });
@@ -492,7 +493,8 @@ describe('MyMissionsPage campaigns', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Your campaigns')).toBeTruthy();
-      expect(screen.getByRole('link', { name: /Spring Build/ }).getAttribute('href')).toBe(
+      expect(screen.getByText('Spring Build')).toBeTruthy();
+      expect(screen.getByRole('link', { name: 'View campaign' }).getAttribute('href')).toBe(
         '/campaign/33333333-3333-4333-8333-333333333333'
       );
     });

@@ -3,19 +3,7 @@ import {
   tabIdForMyMissionsTab,
   type MyMissionsTabKey,
 } from './myMissionsTabIds';
-
-export type { MyMissionsTabKey };
-
-export interface MyMissionsTabDefinition {
-  key: MyMissionsTabKey;
-  label: string;
-}
-
-export const MY_MISSIONS_TABS: readonly MyMissionsTabDefinition[] = [
-  { key: 'missions', label: 'Missions' },
-  { key: 'sent', label: 'Sent to you' },
-  { key: 'campaigns', label: 'Campaigns' },
-];
+import { MY_MISSIONS_TABS, type MyMissionsTabDefinition } from './myMissionsTabs';
 
 interface MyMissionsTopTabsProps {
   tabs?: readonly MyMissionsTabDefinition[];

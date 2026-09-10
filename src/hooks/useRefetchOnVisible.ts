@@ -6,8 +6,11 @@ import { useEffect, useRef } from 'react';
  */
 export function useRefetchOnVisible(enabled: boolean, refetch: () => void): void {
   const refetchRef = useRef(refetch);
-  refetchRef.current = refetch;
   const skipNextVisibleRef = useRef(true);
+
+  useEffect(() => {
+    refetchRef.current = refetch;
+  }, [refetch]);
 
   useEffect(() => {
     if (!enabled) {

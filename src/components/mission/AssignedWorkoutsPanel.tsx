@@ -33,11 +33,8 @@ export function AssignedWorkoutsPanel({ showWhenEmpty = false }: AssignedWorkout
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const load = useCallback(async (options?: { isCancelled?: () => boolean }) => {
+  const load = useCallback(async () => {
     const result = await fetchMyAssignedWorkouts();
-    if (options?.isCancelled?.()) {
-      return;
-    }
     if (result.error) {
       setError(result.error.message);
       setAssigned([]);
@@ -52,11 +49,7 @@ export function AssignedWorkoutsPanel({ showWhenEmpty = false }: AssignedWorkout
     if (isAuthLoading || !isAuthenticated) {
       return;
     }
-    let cancelled = false;
-    void load({ isCancelled: () => cancelled });
-    return () => {
-      cancelled = true;
-    };
+    void load();
   }, [isAuthenticated, isAuthLoading, load]);
 
   useRefetchOnVisible(Boolean(isAuthenticated && !isAuthLoading), load);

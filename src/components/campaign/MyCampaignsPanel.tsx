@@ -33,12 +33,9 @@ export function MyCampaignsPanel({ showCreateCta = true }: MyCampaignsPanelProps
   // synchronously inside the effect would cascade an extra render on mount.
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async (options?: { isCancelled?: () => boolean }) => {
+  const load = useCallback(async () => {
     try {
       const result = await fetchMyCampaigns();
-      if (options?.isCancelled?.()) {
-        return;
-      }
       if (result.error) {
         setError(result.error.message);
         setCampaigns([]);
@@ -46,13 +43,10 @@ export function MyCampaignsPanel({ showCreateCta = true }: MyCampaignsPanelProps
         setError(null);
         setCampaigns(result.data);
       }
-      setLoading(false);
     } catch {
-      if (options?.isCancelled?.()) {
-        return;
-      }
       setError('Something went wrong. Please try again.');
       setCampaigns([]);
+    } finally {
       setLoading(false);
     }
   }, []);
@@ -61,13 +55,7 @@ export function MyCampaignsPanel({ showCreateCta = true }: MyCampaignsPanelProps
     if (isAuthLoading || !isAuthenticated) {
       return;
     }
-
-    let cancelled = false;
-    void load({ isCancelled: () => cancelled });
-
-    return () => {
-      cancelled = true;
-    };
+    void load();
   }, [isAuthLoading, isAuthenticated, load]);
 
   useRefetchOnVisible(Boolean(isAuthenticated && !isAuthLoading), load);
@@ -107,11 +95,8 @@ export function MyCampaignsPanel({ showCreateCta = true }: MyCampaignsPanelProps
           {campaigns.map((campaign) => {
             const progress = campaignProgress(campaign.completedMissions, campaign.totalMissions);
             return (
-              <li key={campaign.campaignId} className="py-3 first:pt-0 last:pb-0">
-                <AppLink
-                  className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
-                  to={`/campaign/${campaign.campaignId}`}
-                >
+              <li key={campaign.campaignId} className="space-y-3 py-3 first:pt-0 last:pb-0">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                   <span className="flex flex-wrap items-baseline gap-2 text-sm font-semibold text-ink">
                     {campaign.name}
                     {CLOSED_STATUS_LABEL[campaign.status] ? (
@@ -124,6 +109,12 @@ export function MyCampaignsPanel({ showCreateCta = true }: MyCampaignsPanelProps
                     {formatCampaignShape(campaign.weekCount, campaign.missionsPerWeek)} ·{' '}
                     {progress.done}/{progress.total} done
                   </span>
+                </div>
+                <AppLink
+                  className="btn-teal inline-flex text-sm"
+                  to={`/campaign/${campaign.campaignId}`}
+                >
+                  View campaign
                 </AppLink>
               </li>
             );
