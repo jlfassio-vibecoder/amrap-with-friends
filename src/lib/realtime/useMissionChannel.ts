@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { getMissionLiveState } from '@/lib/api/getMissionLiveState';
 import { getSupabaseClient } from '@/lib/supabase';
@@ -39,6 +39,8 @@ export interface MissionChannelPresence {
 }
 
 export interface UseMissionChannelResult {
+  /** Pull a full snapshot, for a caller that has learned its view is stale. */
+  resync: () => void;
   mission: MissionRow | null;
   participants: ParticipantRow[];
   rounds: RoundRow[];
@@ -71,6 +73,7 @@ export function useMissionChannel(
   const missionIdRef = useRef(missionId);
   const fetchGenRef = useRef(0);
   const sinceRef = useRef<string | null>(null);
+  const resyncRef = useRef<(() => void) | null>(null);
 
   const presenceParticipantId = presence?.participantId;
   const presenceNickname = presence?.nickname;
@@ -86,6 +89,15 @@ export function useMissionChannel(
     const supabase = getSupabaseClient();
     cancelledRef.current = false;
     const participantIdForRpc = presenceParticipantId;
+
+    // Exposed so a caller that learns its view is stale -- log_round healing a
+    // round index is the signal -- can pull a full snapshot. Full, not
+    // incremental: the watermark has already moved past the row that went
+    // missing, so asking for "everything since" would never return it.
+    resyncRef.current = () => {
+      sinceRef.current = null;
+      void refreshSnapshot();
+    };
 
     async function refreshSnapshot() {
       const requestedMissionId = missionIdRef.current;
@@ -313,6 +325,7 @@ export function useMissionChannel(
     return () => {
       cancelledRef.current = true;
       fetchGenRef.current += 1;
+      resyncRef.current = null;
       if (pollTimer !== null) {
         window.clearInterval(pollTimer);
       }
@@ -324,7 +337,10 @@ export function useMissionChannel(
     };
   }, [missionId, presenceParticipantId, presenceNickname, realtimeTables]);
 
+  const resync = useCallback(() => resyncRef.current?.(), []);
+
   return {
+    resync,
     mission,
     participants,
     rounds,

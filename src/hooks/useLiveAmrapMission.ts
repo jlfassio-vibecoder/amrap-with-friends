@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { updateMissionState, logRound, submitParticipantResult } from '@/lib/api/missionSync';
+import { shouldResyncAfterLog } from '@/lib/missionSync/roundResync';
 import { resetLiveMission } from '@/lib/api/resetLiveMission';
 import { computeElapsedSecForLogRound } from '@/lib/amrapTimer/computeElapsedSecForLogRound';
 import {
@@ -771,6 +772,13 @@ export function useLiveAmrapMission(
       setSyncError(`Could not log round: ${result.data.reason}`);
       return false;
     }
+    // The server writing the round at an index we did not ask for means our
+    // view of our own rounds is short -- an INSERT we never received. The round
+    // is safe; the count on screen is not, and nothing else will correct it,
+    // so pull a full snapshot.
+    if (result.data?.ok === true && shouldResyncAfterLog(myRoundCount, result.data.roundIndex)) {
+      channel.resync();
+    }
     return true;
   }, [
     displayPhase,
@@ -784,6 +792,7 @@ export function useLiveAmrapMission(
     myRoundCount,
     missionId,
     segmentIndex,
+    channel,
   ]);
 
   const submitPartialRepsAction = useCallback(
