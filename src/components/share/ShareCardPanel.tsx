@@ -16,7 +16,7 @@ import {
   type PhotoSlot,
   type PhotoTarget,
 } from '@/lib/share/photo';
-import { defaultCut } from '@/lib/share/cuts';
+import { CUTS, defaultCut, type CutId } from '@/lib/share/cuts';
 import {
   detectEncoderPath,
   isEncoderImplemented,
@@ -42,6 +42,11 @@ const PHOTO_SLOT_LABELS: { id: PhotoSlot; label: string }[] = [
 // The ratio alone was a translation step: the photo picker below calls these
 // the tall card and the wide card, and the same control naming them 9:16 and
 // 16:9 left the athlete to work out that those were the same two things.
+const REPLAY_LENGTHS: { id: CutId; label: string }[] = [
+  { id: 'story9', label: `${CUTS.story9.durationSeconds}s` },
+  { id: 'full20', label: `${CUTS.full20.durationSeconds}s` },
+];
+
 const LAYOUT_OPTIONS: { id: ShareLayout; label: string }[] = [
   { id: 'story', label: 'Tall 9:16' },
   { id: 'square', label: 'Square 1:1' },
@@ -68,6 +73,9 @@ export function ShareCardPanel({
   const [variant, setVariant] = useState<ShareVariant>('result');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // One slot, shared by every action in the panel, and nothing used to clear
+  // it — so "Caption and link copied." sat under the Share replay button as
+  // though the replay had produced it. Every action starts by wiping it.
   const [notice, setNotice] = useState<string | null>(null);
   // Detected once: the answer cannot change while the panel is open, and
   // probing per render would run a feature test on every keystroke.
@@ -380,13 +388,34 @@ export function ShareCardPanel({
     };
   }, []);
 
-  const replay = useReplay(data, drawOptions);
-  const cutId = defaultCut(data.participants.length);
+  // Keyed on the same thing the card blobs are: shape, variant and which photo
+  // is loaded. A replay made before any of those changed is not this card's.
+  const replay = useReplay(data, drawOptions, cacheKey(layout));
+
+  // The card has a preview; the replay had none, so the only way to see what
+  // was about to be posted was to post it. Revoked on replacement, because a
+  // twenty-second 1080p video is not something to leak per re-render.
+  const replayUrl = useMemo(
+    () => (replay.blob ? URL.createObjectURL(replay.blob) : null),
+    [replay.blob]
+  );
+  useEffect(
+    () => () => {
+      if (replayUrl) {
+        URL.revokeObjectURL(replayUrl);
+      }
+    },
+    [replayUrl]
+  );
+  // Chosen for the athlete, changeable by them. A two-person race does not
+  // need twenty seconds, but that is a default rather than a rule.
+  const [cutId, setCutId] = useState<CutId>(() => defaultCut(data.participants.length));
 
   const handleShareReplay = useCallback(async () => {
     if (!replay.blob) {
       return;
     }
+    setNotice(null);
     recordShare('replay');
     // Already encoded, so navigator.share is still inside this click. Awaiting
     // the encode here instead would make iOS refuse the sheet.
@@ -408,6 +437,7 @@ export function ShareCardPanel({
     if (!blob) {
       return;
     }
+    setNotice(null);
     setBusy(true);
     recordShare('card');
     // Already rendered, so navigator.share is still inside the click. Awaiting
@@ -423,6 +453,7 @@ export function ShareCardPanel({
   // Both cards, so "save" means the tall one for a feed and the wide one for
   // X rather than whichever ratio happened to be on screen.
   const handleSaveImages = useCallback(async () => {
+    setNotice(null);
     setBusy(true);
     const wanted: ShareLayout[] = ['story', 'landscape'];
     const files: File[] = [];
@@ -450,6 +481,7 @@ export function ShareCardPanel({
   // link and nothing else; put a caption in front of it and most of them fall
   // back to plain blue text.
   const handleCopyPlainLink = useCallback(async () => {
+    setNotice(null);
     recordShare('card');
     try {
       await navigator.clipboard.writeText(shareUrl(shareId));
@@ -460,6 +492,7 @@ export function ShareCardPanel({
   }, [shareId, recordShare]);
 
   const handleCopyLink = useCallback(async () => {
+    setNotice(null);
     recordShare('card');
     try {
       await navigator.clipboard.writeText(caption);
@@ -669,35 +702,85 @@ export function ShareCardPanel({
       </p>
 
       {isEncoderImplemented(encoderPath) ? (
-        <div className="space-y-2 border-t border-border pt-4">
-          {replay.status === 'idle' || replay.status === 'error' ? (
-            <button
-              type="button"
-              className="btn-outline text-sm"
-              onClick={() => replay.start(cutId)}
-            >
-              Make replay
-            </button>
-          ) : null}
+        <div className="space-y-3 border-t border-border pt-4">
+          <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
+            Replay
+          </span>
 
-          {replay.status === 'rendering' ? (
-            <div className="space-y-2">
-              <p className="text-sm text-secondary">
-                {replay.progress < 1
-                  ? `Rendering ${Math.round(replay.progress * 100)}%`
-                  : 'Encoding…'}
-              </p>
-              <button type="button" className="btn-outline text-sm" onClick={replay.cancel}>
-                Cancel
+          {/* Length is picked before the render, because changing it after
+              means throwing away thirty seconds of encoding. */}
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Replay length">
+            {REPLAY_LENGTHS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={cutId === option.id}
+                disabled={replay.status === 'rendering'}
+                onClick={() => setCutId(option.id)}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                  cutId === option.id
+                    ? 'border-accent bg-accent text-on-accent'
+                    : 'border-border bg-surface text-secondary'
+                }`}
+              >
+                {option.label}
               </button>
-            </div>
+            ))}
+          </div>
+
+          {/* Watch it before posting it. Muted and inline so a phone plays it
+              in place instead of throwing it into fullscreen. */}
+          {replay.status === 'ready' && replayUrl ? (
+            <video
+              key={replayUrl}
+              src={replayUrl}
+              controls
+              loop
+              muted
+              playsInline
+              className="w-full max-w-64 rounded-card border border-border"
+            />
           ) : null}
 
-          {replay.status === 'ready' ? (
-            <button type="button" className="btn-primary text-sm" onClick={handleShareReplay}>
-              {replayActionLabel(encoderPath)}
-            </button>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            {replay.status === 'idle' || replay.status === 'error' ? (
+              <button
+                type="button"
+                className="btn-outline text-sm"
+                onClick={() => replay.start(cutId)}
+              >
+                Make replay
+              </button>
+            ) : null}
+
+            {replay.status === 'rendering' ? (
+              <>
+                <p className="text-sm text-secondary">
+                  {replay.progress < 1
+                    ? `Rendering ${Math.round(replay.progress * 100)}%`
+                    : 'Encoding…'}
+                </p>
+                <button type="button" className="btn-outline text-sm" onClick={replay.cancel}>
+                  Cancel
+                </button>
+              </>
+            ) : null}
+
+            {replay.status === 'ready' ? (
+              <>
+                <button type="button" className="btn-primary text-sm" onClick={handleShareReplay}>
+                  {replayActionLabel(encoderPath)}
+                </button>
+                <button
+                  type="button"
+                  className="btn-outline text-sm"
+                  onClick={() => replay.start(cutId)}
+                >
+                  Make it again
+                </button>
+              </>
+            ) : null}
+          </div>
 
           {/* Said before a thirty-second render, not after it. */}
           {replayCaveat(encoderPath) ? (

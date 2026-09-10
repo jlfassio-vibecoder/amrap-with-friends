@@ -21,8 +21,34 @@ const { shareArtifact, saveArtifacts } = vi.hoisted(() => ({
 }));
 vi.mock('@/lib/share/shareSheet', () => ({ shareArtifact, saveArtifacts }));
 vi.mock('@/lib/analytics/track', () => ({ track: vi.fn(), trackBeacon: vi.fn() }));
-vi.mock('@/lib/share/replay/useReplay', () => ({
-  useReplay: () => ({ blob: null, state: 'idle', progress: 0, start: () => undefined }),
+const { useReplay } = vi.hoisted(() => ({
+  useReplay: vi.fn<
+    () => {
+      blob: Blob | null;
+      status: string;
+      progress: number;
+      error: string | null;
+      start: (cut?: string) => void;
+      cancel: () => void;
+    }
+  >(() => ({
+    blob: null,
+    status: 'idle',
+    progress: 0,
+    error: null,
+    start: vi.fn(),
+    cancel: vi.fn(),
+  })),
+}));
+vi.mock('@/lib/share/replay/useReplay', () => ({ useReplay }));
+// jsdom has no VideoEncoder, and the replay section is hidden without one.
+vi.mock('@/lib/share/replay/encoderPath', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/share/replay/encoderPath')>()),
+  readCapabilities: () => ({
+    hasVideoEncoder: true,
+    hasMediaRecorder: false,
+    hasCaptureStream: false,
+  }),
 }));
 
 const data: ReplayData = {
@@ -591,5 +617,105 @@ describe('the card shape control', () => {
     expect(screen.getByRole('group', { name: 'Card shape' }).textContent).not.toContain(
       'Squad board'
     );
+  });
+});
+
+describe('the replay panel', () => {
+  afterEach(() => {
+    cleanup();
+    renderCardBlob.mockReset();
+    callRpc.mockReset();
+    writeText.mockClear();
+    useReplay.mockReturnValue({
+      blob: null,
+      status: 'idle',
+      progress: 0,
+      error: null,
+      start: vi.fn(),
+      cancel: vi.fn(),
+    });
+  });
+
+  async function panel(): Promise<void> {
+    stubBrowser();
+    callRpc.mockResolvedValue({ data: null, error: null });
+    renderCardBlob.mockResolvedValue(new Blob(['card'], { type: 'image/png' }));
+    render(<ShareCardPanel data={data} workoutTitle="The Piston" />);
+    await waitFor(() => expect(renderCardBlob).toHaveBeenCalled());
+  }
+
+  it('clears a notice from an earlier action instead of leaving it under the replay', async () => {
+    // Straight from a screenshot: "Caption and link copied." sat under the
+    // Share replay button as though the replay had produced it. One notice
+    // slot, shared by every action, and nothing ever cleared it.
+    const share = vi.fn();
+    useReplay.mockReturnValue({
+      blob: new Blob(['mp4'], { type: 'video/mp4' }),
+      status: 'ready',
+      progress: 1,
+      error: null,
+      start: share,
+      cancel: vi.fn(),
+    });
+    await panel();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
+    await waitFor(() => expect(screen.getByText('Caption and link copied.')).toBeTruthy());
+
+    fireEvent.click(screen.getByText('Share replay'));
+    await waitFor(() => expect(screen.queryByText('Caption and link copied.')).toBeNull());
+  });
+
+  it('shows the replay so it can be watched before it is posted', async () => {
+    // The card has a preview; the replay had none, so the only way to see
+    // what was about to go out was to post it.
+    useReplay.mockReturnValue({
+      blob: new Blob(['mp4'], { type: 'video/mp4' }),
+      status: 'ready',
+      progress: 1,
+      error: null,
+      start: vi.fn(),
+      cancel: vi.fn(),
+    });
+    await panel();
+    const video = document.querySelector('video');
+    expect(video).toBeTruthy();
+    expect(video!.getAttribute('src')).toMatch(/^blob:/);
+  });
+
+  it('lets the athlete choose the length before spending the render on it', async () => {
+    await panel();
+    const lengths = screen.getByRole('group', { name: 'Replay length' });
+    expect(lengths.textContent).toContain('9s');
+    expect(lengths.textContent).toContain('20s');
+  });
+
+  it('renders the length the athlete picked, not only the default', async () => {
+    const start = vi.fn();
+    useReplay.mockReturnValue({
+      blob: null,
+      status: 'idle',
+      progress: 0,
+      error: null,
+      start,
+      cancel: vi.fn(),
+    });
+    await panel();
+    fireEvent.click(screen.getByRole('button', { name: '20s' }));
+    fireEvent.click(screen.getByText('Make replay'));
+    expect(start).toHaveBeenCalledWith('full20');
+  });
+
+  it('offers a re-render once one is ready, since the card underneath can change', async () => {
+    useReplay.mockReturnValue({
+      blob: new Blob(['mp4'], { type: 'video/mp4' }),
+      status: 'ready',
+      progress: 1,
+      error: null,
+      start: vi.fn(),
+      cancel: vi.fn(),
+    });
+    await panel();
+    expect(screen.getByText('Make it again')).toBeTruthy();
   });
 });
