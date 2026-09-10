@@ -16,7 +16,7 @@ import {
   formatMoney,
 } from '@/lib/creators/estimateRevenue';
 
-export default function RevenueEstimator() {
+export default function RevenueEstimator({ showTiers = true }: { showTiers?: boolean }) {
   const [followers, setFollowers] = useState(DEFAULT_FOLLOWERS);
   const [missions, setMissions] = useState(1);
   const [joins, setJoins] = useState(DEFAULT_ATHLETES);
@@ -123,33 +123,38 @@ export default function RevenueEstimator() {
         </div>
       </div>
 
-      <h3>Your share grows with your squad</h3>
-      <div className="creators-tiers" role="tablist" aria-label="Revenue share tiers">
-        {CREATOR_TIERS.map((t, i) => (
-          <button
-            key={t.name}
-            role="tab"
-            type="button"
-            className={`creators-tier${tierIndex === i ? ' is-active' : ''}`}
-            aria-selected={tierIndex === i}
-            onClick={() => setUserTier(i)}
-          >
-            {t.name}
-          </button>
-        ))}
-      </div>
-      <div className="creators-tier-panel" role="tabpanel">
-        <span className="creators-tp-share">{Math.round(tier.share * 100)}%</span>
-        <div className="creators-tp-body">
-          <p>{tier.desc}</p>
-          <p className="creators-fine">{tier.qual}</p>
-        </div>
-      </div>
-      <p className="creators-fine">
-        Attribution works two ways: your link or code at signup, or an athlete joining your room and
-        choosing to train with you when they save the mission. You see clicks, joins, saves and paid
-        conversions on one dashboard. Payouts through Stripe on the 15th of each month; $25 minimum.
-      </p>
+      {showTiers ? (
+        <>
+          <h3>Your share grows with your squad</h3>
+          <div className="creators-tiers" role="tablist" aria-label="Revenue share tiers">
+            {CREATOR_TIERS.map((t, i) => (
+              <button
+                key={t.name}
+                role="tab"
+                type="button"
+                className={`creators-tier${tierIndex === i ? 'is-active' : ''}`}
+                aria-selected={tierIndex === i}
+                onClick={() => setUserTier(i)}
+              >
+                {t.name}
+              </button>
+            ))}
+          </div>
+          <div className="creators-tier-panel" role="tabpanel">
+            <span className="creators-tp-share">{Math.round(tier.share * 100)}%</span>
+            <div className="creators-tp-body">
+              <p>{tier.desc}</p>
+              <p className="creators-fine">{tier.qual}</p>
+            </div>
+          </div>
+          <p className="creators-fine">
+            Attribution works two ways: your link or code at signup, or an athlete joining your room
+            and choosing to train with you when they save the mission. You see clicks, joins, saves
+            and paid conversions on one dashboard. Payouts through Stripe on the 15th of each month;
+            $25 minimum.
+          </p>
+        </>
+      ) : null}
     </>
   );
 }

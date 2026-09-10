@@ -6,9 +6,11 @@
  */
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ChapterRail from '../islands/creators/ChapterRail';
+import EstimatorsTabs from '../islands/creators/EstimatorsTabs';
 import HostingSteps from '../islands/creators/HostingSteps';
 import HostingWeekTabs from '../islands/creators/HostingWeekTabs';
 import MissionRoomPreview from '../islands/creators/MissionRoomPreview';
+import RevenueTiers from '../islands/creators/RevenueTiers';
 import { breadcrumbList, faqPage } from '@/lib/seo/structuredData';
 import '../styles/creators.css';
 
@@ -68,12 +70,13 @@ const jsonLd = [
 
     <section class="creators-hero" id="top">
       <div class="creators-hero-copy">
-        <p class="creators-fine">Founding Host pilot invitation</p>
-        <h1>Your followers already train alone. Give them a room.</h1>
+        <p class="creators-eyebrow">Founding Host pilot invitation</p>
+        <h1>Turn your followers into a squad that trains together.</h1>
         <p class="creators-lede">
-          Host one live AMRAP mission a week. Athletes join from a link, train on the same clock,
-          and log rounds together. Help us learn what brings your squad back for a second mission.
-          We are starting with 3–5 pilot hosts, then expanding toward 20 as the pilot proves useful.
+          Host one or more live AMRAP missions a week. Athletes join from a link, train on the same
+          clock, and log rounds together. Help us learn what brings your squad back for a second
+          mission. We are starting with 3–5 pilot hosts, then expanding toward 20 as the pilot
+          proves useful.
         </p>
         <div class="creators-hero-actions">
           <a class="creators-btn" href="#apply">Apply to host</a>
@@ -84,7 +87,7 @@ const jsonLd = [
           ability to host a regular group.
         </p>
       </div>
-      <MissionRoomPreview client:visible />
+      <MissionRoomPreview client:load />
     </section>
 
     <ChapterRail client:visible />
@@ -125,76 +128,49 @@ const jsonLd = [
         </figure>
         <ul class="creators-proof">
           <li>
-            <b>A weekly ritual</b> gives athletes a time to return: “Tuesday, 6pm, our next mission.”
+            <b>A weekly ritual</b>
+            gives your feed a fixed appointment. "Tuesday, 6pm, my room" is a hook you can repeat to attract
+            new followers and paying clients.
           </li>
           <li>
-            <b>Sharing stays optional.</b> Preview the card and respect each athlete’s choice about names
-            and results. Ask before reposting someone else’s content.
+            <b>Their audience sees your handle</b>
+            on a card they made about themselves. It's a referral that doesn't feel like one.
           </li>
           <li>
-            <b>A share link shows the result.</b> It is not a promise that every click joins your next
-            mission or earns a commission.
+            <b>The link unfurls with the card</b>
+            in DMs, group chats and Slack. Anyone who taps it lands on your room.
           </li>
           <li>
-            <b>Celebrate participation and progress.</b> Explain scoring methods before sharing adjusted
-            rankings; avoid presenting them as guarantees of fairness.
+            <b>Your squad board is content.</b>
+            Post the top five every week. The age-adjusted and weight-adjusted boards give your older
+            and lighter athletes a reason to share too.
           </li>
         </ul>
       </div>
     </section>
 
     <section class="creators-chapter" id="growth">
-      <h2>Build a habit with your squad</h2>
+      <h2>Grow your socials footprint</h2>
       <p class="creators-lede">
-        The pilot asks one question: do athletes complete a second mission with the same host within
-        14 days?
+        Host alongside a Live and every finish card that tags you becomes a post in someone else's
+        feed. Views turn into follows. This is a conservative picture of the loop, not a promise.
       </p>
       <p>
-        We will review returning athletes, repeat hosting, unique guests who save results, and
-        feedback from your group. We are not forecasting follower growth or subscription income
-        before we have that evidence.
+        One weekly room compounds: athletes who finish share the card, their followers see your
+        handle, and a few of those taps become people who show up next Tuesday. The loop is slow and
+        repeatable — not a viral spike — which is why we describe it conservatively and without
+        forecasting follower counts.
       </p>
     </section>
 
     <section class="creators-chapter" id="estimate">
-      <h2>Proposed pilot benefits</h2>
-      <p class="creators-lede">
-        Earn a share of eligible subscriptions attributed to you once the paid referral program is
-        ready. These are proposed rates, not an active payout offer or an earnings forecast.
-      </p>
-      <ul class="creators-proof">
-        <li>
-          <b>Founding Hosts begin at Builder:</b> proposed 30% of net revenue for each referred subscriber’s
-          first 12 months, then 15% on renewals.
-        </li>
-        <li>
-          <b>General tier ladder:</b> Starter 25% / 10%; Builder 30% / 15% at 25 qualifying paid referrals;
-          Partner 35% / 20% at 100; Anchor 40% / 25% at 300, with individually agreed terms. Qualification
-          uses unique paid referrals over a rolling 12 months. Free group members do not qualify.
-        </li>
-        <li>
-          <b>Illustrative annual sale:</b> $69.99 less a 15% first-purchase discount and illustrative
-          processing fees gives about $57.46 net; 30% is $17.24. An undiscounted renewal gives about $67.66
-          net; 15% is $10.15. Actual fees, tax, refunds and discounts change these amounts.
-        </li>
-        <li>
-          <b>Proposed payout timing:</b> the 15th of the month after the 30-day hold has cleared; $25
-          minimum, with smaller balances carried forward.
-        </li>
-      </ul>
-      <p>
-        There is no automatic commission for joining a squad. Read the attribution FAQ and <a
-          href="#pilot-details">pilot details</a
-        > before applying.
-      </p>
+      <h2>Your share grows with your squad</h2>
+      <RevenueTiers client:visible />
     </section>
 
     <section class="creators-chapter" id="week">
       <h2>What a hosting week looks like</h2>
-      <p class="creators-lede">
-        An example rhythm to adapt with your group. Setup and support time vary; we will measure the
-        workload during the pilot.
-      </p>
+      <p class="creators-lede">About ninety minutes, most of it the workout itself.</p>
       <HostingWeekTabs client:visible />
     </section>
 
@@ -284,6 +260,15 @@ const jsonLd = [
         Our <a href="/terms">general Terms of Use</a> cover use of the app. They are not creator commission
         terms. See our <a href="/privacy">Privacy policy</a> for data handling.
       </p>
+    </section>
+
+    <section class="creators-chapter" id="estimates">
+      <h2>Run the numbers</h2>
+      <p class="creators-lede">
+        Conservative estimates from the same models as the original creators page — not a promise.
+        Move the sliders to your numbers.
+      </p>
+      <EstimatorsTabs client:visible />
     </section>
 
     <footer class="creators-foot">

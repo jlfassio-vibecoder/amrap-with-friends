@@ -13,7 +13,7 @@
   --creators-orange-hover: var(--color-accent-hover);
   --creators-turf: var(--color-success-text);
   --creators-white: var(--color-surface);
-  --creators-night: var(--color-ink);
+  --creators-night: var(--color-night);
   --creators-night-muted: var(--color-night-secondary);
   font-size: 18px;
   line-height: 1.5;
@@ -57,6 +57,30 @@
   font-size: clamp(18px, 1.6vw, 22px);
   max-width: 60ch;
   margin: 20px 0 0;
+}
+
+.creators-lede + p {
+  margin-top: 20px;
+  max-width: 64ch;
+}
+
+.creators-chapter > h2 + p {
+  margin-top: 20px;
+  max-width: 64ch;
+}
+
+.creators-chapter > p + p {
+  margin-top: 20px;
+  max-width: 64ch;
+}
+
+.creators-eyebrow {
+  font-family: Rubik, system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  color: var(--creators-slate);
+  margin: 0 0 24px;
 }
 
 .creators-fine {
@@ -231,7 +255,7 @@
 
 .creators-bar {
   height: 12px;
-  background: color-mix(in srgb, var(--color-success) 28%, var(--color-ink));
+  background: color-mix(in srgb, var(--color-success) 28%, var(--color-night));
   border-radius: 6px;
   overflow: hidden;
 }
@@ -446,7 +470,9 @@
 }
 
 .creators-sc {
-  background: var(--creators-night);
+  background:
+    linear-gradient(180deg, rgb(6 21 33 / 0.55) 0%, rgb(6 21 33 / 0.78) 100%),
+    url('/athlete.png') center / cover no-repeat;
   color: var(--color-night-ink);
   border-radius: 12px;
   padding: 22px 20px;
@@ -608,11 +634,39 @@
 .creators-tiers {
   display: flex;
   gap: 6px;
-  margin-top: 20px;
-  flex-wrap: wrap;
+  margin-top: 28px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--creators-chalk-2);
+  padding-top: 4px;
 }
 
-.creators-tier,
+.creators-tier {
+  flex-shrink: 0;
+  background: var(--creators-chalk);
+  border: 1px solid var(--creators-chalk-2);
+  border-bottom-color: transparent;
+  border-radius: 8px 8px 0 0;
+  padding: 10px 16px;
+  margin-bottom: -1px;
+  font-family: Rubik, system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--creators-slate);
+  cursor: pointer;
+}
+
+.creators-tier:hover {
+  color: var(--creators-ink);
+  background: var(--creators-white);
+}
+
+.creators-tier.is-active {
+  border-color: var(--creators-chalk-2);
+  border-bottom-color: var(--creators-chalk);
+  color: var(--creators-ink);
+  background: var(--creators-chalk);
+}
+
 .creators-day {
   background: none;
   border: 2px solid var(--creators-chalk-2);
@@ -625,7 +679,6 @@
   cursor: pointer;
 }
 
-.creators-tier.is-active,
 .creators-day.is-active {
   border-color: var(--creators-ink);
   color: var(--creators-ink);
@@ -641,6 +694,10 @@
   background: var(--creators-white);
   border-radius: 14px;
   padding: 28px 32px;
+}
+
+.creators-calc-panel {
+  margin-top: 28px;
 }
 
 .creators-tp-share {
