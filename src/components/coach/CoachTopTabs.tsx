@@ -36,6 +36,7 @@ export function CoachTopTabs({ tabs = COACH_TABS, activeTab, onChange }: CoachTo
                   ? 'relative -mb-px shrink-0 rounded-t-card border border-border border-b-page bg-page px-4 py-2.5 text-sm font-semibold text-ink shadow-sm'
                   : 'shrink-0 rounded-t-card border border-border border-b-transparent bg-surface px-4 py-2 text-sm font-semibold text-secondary hover:bg-page hover:text-ink'
               }
+              // Copilot suggestion ignored: arrow-key tab roving would diverge from HudTopTabs / MyMissionsTopTabs parity.
               onClick={() => onChange(tab.key)}
             >
               <span className="inline-flex items-center gap-2">

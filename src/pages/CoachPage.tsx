@@ -4,7 +4,10 @@ import { AppHeader } from '@/components/AppHeader';
 import { CoachActivityCohorts } from '@/components/coach/CoachActivityCohorts';
 import { CoachDataTable } from '@/components/coach/CoachDataTable';
 import { CoachEventsExplorer } from '@/components/coach/CoachEventsExplorer';
-import { CoachFoundingHostApplications } from '@/components/coach/CoachFoundingHostApplications';
+import {
+  CoachFoundingHostApplications,
+  FOUNDING_HOST_APPLICATIONS_LIMIT,
+} from '@/components/coach/CoachFoundingHostApplications';
 import { CoachFunnelCard } from '@/components/coach/CoachFunnelCard';
 import { CoachGuestBrowsersPanel } from '@/components/coach/CoachGuestBrowsersPanel';
 import { CoachOnboardingStuckTable } from '@/components/coach/CoachOnboardingStuckTable';
@@ -24,6 +27,7 @@ import {
   fetchCoachRecentEvents,
   type CoachDashboard,
   type CoachDashboardWindow,
+  type CoachEventRow,
   type CoachUserListRow,
 } from '@/lib/api/coach';
 import { hasFoundingHostApplicationInLast7Days } from '@/lib/coach/foundingHostNew';
@@ -53,6 +57,8 @@ export default function CoachPage() {
   const [guestBrowsersOpen, setGuestBrowsersOpen] = useState(false);
   const [reportWindow, setReportWindow] = useState<CoachDashboardWindow>('all');
   const [activeTab, setActiveTab] = useState<CoachTabKey>('applications');
+  const [applicationRows, setApplicationRows] = useState<CoachEventRow[] | null>(null);
+  const [applicationsError, setApplicationsError] = useState<string | null>(null);
   const [showApplicationsNewBadge, setShowApplicationsNewBadge] = useState(false);
   const onlineAnonIds = useOnlineAnonIds();
 
@@ -62,11 +68,22 @@ export default function CoachPage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetchCoachRecentEvents({ eventName: 'founding_host_applied', limit: 50 }).then((result) => {
-      if (cancelled || result.error || !result.data) {
+    fetchCoachRecentEvents({
+      eventName: 'founding_host_applied',
+      limit: FOUNDING_HOST_APPLICATIONS_LIMIT,
+    }).then((result) => {
+      if (cancelled) {
         return;
       }
-      setShowApplicationsNewBadge(hasFoundingHostApplicationInLast7Days(result.data, Date.now()));
+      if (result.error) {
+        setApplicationsError(result.error.message);
+        setApplicationRows([]);
+        return;
+      }
+      const rows = result.data ?? [];
+      setApplicationsError(null);
+      setApplicationRows(rows);
+      setShowApplicationsNewBadge(hasFoundingHostApplicationInLast7Days(rows, Date.now()));
     });
     return () => {
       cancelled = true;
@@ -141,7 +158,7 @@ export default function CoachPage() {
         <CoachTabPanel tab="applications" activeTab={activeTab}>
           <section className="space-y-3">
             <CoachSectionHeader title="Founding host applications" />
-            <CoachFoundingHostApplications />
+            <CoachFoundingHostApplications rows={applicationRows} error={applicationsError} />
           </section>
         </CoachTabPanel>
 

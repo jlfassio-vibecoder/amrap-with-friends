@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react';
 import { CoachDataTable } from '@/components/coach/CoachDataTable';
-import { fetchCoachRecentEvents, type CoachEventRow } from '@/lib/api/coach';
+import type { CoachEventRow } from '@/lib/api/coach';
 
-const APPLICATIONS_LIMIT = 50;
+export const FOUNDING_HOST_APPLICATIONS_LIMIT = 50;
 const SCROLL_AFTER_ROWS = 12;
 
 function propString(props: Record<string, unknown>, key: string): string {
@@ -10,36 +9,18 @@ function propString(props: Record<string, unknown>, key: string): string {
   return typeof value === 'string' && value.trim() ? value.trim() : '—';
 }
 
+interface CoachFoundingHostApplicationsProps {
+  rows: CoachEventRow[] | null;
+  error: string | null;
+}
+
 /**
  * Recent Founding Host pilot applications recorded from /creators (duplicate of
  * the mailto draft so coaches can review them without hunting Explore).
+ * Rows are loaded by the parent so the Applications tab badge shares one fetch.
  */
-export function CoachFoundingHostApplications() {
-  const [rows, setRows] = useState<CoachEventRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchCoachRecentEvents({
-      eventName: 'founding_host_applied',
-      limit: APPLICATIONS_LIMIT,
-    }).then((result) => {
-      if (cancelled) {
-        return;
-      }
-      setLoading(false);
-      if (result.error) {
-        setError(result.error.message);
-        return;
-      }
-      setError(null);
-      setRows(result.data ?? []);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+export function CoachFoundingHostApplications({ rows, error }: CoachFoundingHostApplicationsProps) {
+  const loading = rows === null;
 
   return (
     <div className="card space-y-4 p-4">
@@ -51,7 +32,7 @@ export function CoachFoundingHostApplications() {
       {loading ? <p className="text-sm text-secondary">Loading…</p> : null}
       {error ? <p className="text-error text-sm">{error}</p> : null}
 
-      {!loading && !error ? (
+      {!loading && !error && rows ? (
         <CoachDataTable
           rows={rows}
           rowKey={(row) => row.id}
