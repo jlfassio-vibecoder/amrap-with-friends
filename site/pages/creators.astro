@@ -6,47 +6,49 @@
  */
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ChapterRail from '../islands/creators/ChapterRail';
+import EstimatorsTabs from '../islands/creators/EstimatorsTabs';
 import HostingSteps from '../islands/creators/HostingSteps';
 import HostingWeekTabs from '../islands/creators/HostingWeekTabs';
 import MissionRoomPreview from '../islands/creators/MissionRoomPreview';
-import RevenueEstimator from '../islands/creators/RevenueEstimator';
-import SocialGrowthEstimator from '../islands/creators/SocialGrowthEstimator';
+import RevenueTiers from '../islands/creators/RevenueTiers';
 import { breadcrumbList, faqPage } from '@/lib/seo/structuredData';
 import '../styles/creators.css';
 
-const APPLY_URL = 'https://www.amrapwithfriends.com/apply';
-
 const faqs = [
   {
-    question: 'Do my followers need to pay to join my room?',
-    // Copilot suggestion ignored: AMQAP is the product name for quality mobility flows, not a typo for AMRAP.
+    question: 'Do athletes need to pay or make an account to join?',
     answer:
-      'No. Joining is free, forever, no account needed. You earn when someone chooses to subscribe for history, all the leaderboards, AMQAP recovery flows, and clean share cards. Most people who pay do it after a few weeks in your room.',
+      'No. Joining a mission is free and guests can play without an account. Saving a result and joining a coach group are optional. Neither should block participation.',
   },
   {
-    question: 'What if someone joins my room but signed up through another coach?',
+    question: 'Who gets credit for a subscription?',
     answer:
-      "Athletes choose one home coach and can change it once every 90 days. If they already have one, they stay attributed to that coach even in your room. The dashboard shows you exactly who's yours.",
+      'Under the proposed pilot policy, coach-group membership and commission attribution are separate. Athletes may train with multiple coaches. An eligible referral lasts 60 days; the latest eligible referral is shown at checkout and can be corrected before payment. The credited coach is fixed on the subscription at its first paid conversion. Later group changes do not transfer past or renewal commissions. Purchases without an eligible referral earn no commission.',
   },
   {
-    question: 'What does "net revenue" mean?',
+    question: 'What does net revenue mean?',
     answer:
-      "List price minus any discount the athlete used, card processing fees, refunds, and sales tax. On a $69.99 annual plan with the squad discount that's about $57. At Builder you'd earn about $17 on that sale, and about $9 when it renews.",
+      'Revenue after discounts, processing fees, refunds and sales tax. At the proposed Builder rate, a $69.99 annual plan with a 15% first-purchase discount yields about $57.46 net and $17.24 commission. An undiscounted $69.99 renewal yields about $67.66 net and $10.15 at 15%. These examples assume illustrative processing fees and no tax or refund; actual amounts vary.',
   },
   {
-    question: 'Do I have to disclose that I earn from this?',
+    question: 'When would payouts arrive?',
     answer:
-      "Yes, and we make it easy. The launch kit includes the disclosure line, and the program terms require it. It's the same as any affiliate relationship.",
+      'Proposed payouts are through Stripe on the 15th, after a 30-day transaction hold, with a $25 minimum. Smaller balances roll forward. Payout onboarding and final written terms must be ready before paid referrals begin. Applying does not activate payouts.',
+  },
+  {
+    question: 'How should I disclose a paid referral?',
+    answer:
+      'Before paid referrals begin, we will provide disclosure wording with the written program terms. Planned wording: “I earn a share if you subscribe through my referral.” Make that relationship clear wherever you promote a paid referral.',
   },
   {
     question: 'Can I keep my Zoom or my Live?',
     answer:
-      'Yes. The room is just the clock and the board. Run it alongside whatever you already do. Plenty of hosts run the room on a laptop and go live from their phone.',
+      'Yes. Use the mission clock and scoreboard alongside your usual video or group channel. There is no need to replace your existing coaching workflow.',
   },
   {
-    question: 'What if I have a gym, not a following?',
+    question: 'What if I run a gym?',
     answer:
-      'There\'s a gym tier coming with a TV clock and member rosters. Apply anyway and say "gym" in the channel field; the first pilots are free.',
+      'Choose Gym / fitness studio in the application. TV mode and member rosters are a separate planned gym pilot, with three locations and a proposed 90-day free trial. Applying does not guarantee a place or immediate access to those features.',
   },
 ];
 
@@ -68,21 +70,24 @@ const jsonLd = [
 
     <section class="creators-hero" id="top">
       <div class="creators-hero-copy">
-        <h1>Your followers already train alone. Give them a room.</h1>
+        <p class="creators-eyebrow">Founding Host pilot invitation</p>
+        <h1>Turn your followers into a squad that trains together.</h1>
         <p class="creators-lede">
-          Host one live AMRAP a week. Everyone joins from a link, the clock syncs, rounds count on
-          one board. You earn a share of every subscription your squad buys, and every finish
-          becomes a post with your handle on it.
+          Host one or more live AMRAP missions a week. Athletes join from a link, train on the same
+          clock, and log rounds together. Help us learn what brings your squad back for a second
+          mission. We are starting with 3–5 pilot hosts, then expanding toward 20 as the pilot
+          proves useful.
         </p>
         <div class="creators-hero-actions">
           <a class="creators-btn" href="#apply">Apply to host</a>
-          <a class="creators-link" href="#estimate">See what a squad is worth</a>
+          <a class="creators-link" href="#estimate">See proposed pilot benefits</a>
         </div>
         <p class="creators-fine">
-          Free coach account for founding hosts. No follower minimum. Payouts monthly.
+          Applications are open for the pilot. No follower minimum. Selection is based on your
+          ability to host a regular group.
         </p>
       </div>
-      <MissionRoomPreview client:visible />
+      <MissionRoomPreview client:load />
     </section>
 
     <ChapterRail client:visible />
@@ -97,15 +102,17 @@ const jsonLd = [
     </section>
 
     <section class="creators-chapter" id="socials">
-      <h2>Every finish is a post that tags you</h2>
+      <h2>Every finish creates something worth sharing</h2>
       <p class="creators-lede">
-        When the clock hits zero, each athlete gets a share card and a 20-second replay of the race,
-        made on their phone, with your handle and your link on it. You don't ask them to post. The
-        card is worth posting.
+        Athletes can choose to share a result card and make an optional replay on supported devices.
+        Sharing is never required. Coach-branded cards, personal handle links and referral tracking
+        are planned pilot benefits, not promises of immediate access.
       </p>
       <div class="creators-cards-row">
         <figure class="creators-sharecard">
-          <figcaption>Maya's card</figcaption>
+          <figcaption>
+            Illustrative card — coach branding is planned; names are fictional
+          </figcaption>
           <div class="creators-sc">
             <span class="creators-sc-top">12 min AMRAP</span>
             <span class="creators-sc-score">7<small>+12</small></span>
@@ -122,8 +129,8 @@ const jsonLd = [
         <ul class="creators-proof">
           <li>
             <b>A weekly ritual</b>
-            gives your feed a fixed appointment. "Tuesday, 6pm, my room" is a hook you can repeat for
-            a year.
+            gives your feed a fixed appointment. "Tuesday, 6pm, my room" is a hook you can repeat to attract
+            new followers and paying clients.
           </li>
           <li>
             <b>Their audience sees your handle</b>
@@ -146,19 +153,19 @@ const jsonLd = [
       <h2>Grow your socials footprint</h2>
       <p class="creators-lede">
         Host alongside a Live and every finish card that tags you becomes a post in someone else's
-        feed. Views turn into follows. Move the sliders — this is a conservative estimate, not a
-        promise.
+        feed. Views turn into follows. This is a conservative picture of the loop, not a promise.
       </p>
-      <SocialGrowthEstimator client:visible />
+      <p>
+        One weekly room compounds: athletes who finish share the card, their followers see your
+        handle, and a few of those taps become people who show up next Tuesday. The loop is slow and
+        repeatable — not a viral spike — which is why we describe it conservatively and without
+        forecasting follower counts.
+      </p>
     </section>
 
     <section class="creators-chapter" id="estimate">
-      <h2>What a squad is worth to you</h2>
-      <p class="creators-lede">
-        Move the sliders to your numbers. This uses the program's real rates and conservative
-        conversion assumptions; it's an estimate, not a promise.
-      </p>
-      <RevenueEstimator client:visible />
+      <h2>Your share grows with your squad</h2>
+      <RevenueTiers client:visible />
     </section>
 
     <section class="creators-chapter" id="week">
@@ -170,10 +177,15 @@ const jsonLd = [
     <section class="creators-chapter" id="apply">
       <h2>Apply to host</h2>
       <p class="creators-lede">
-        We're taking 20 founding hosts for the first 90 days. Tell us where your people train with
-        you and when you'd run your room.
+        We are selecting 3–5 hosts first, then expanding toward 20 after reviewing repeat
+        participation. Tell us where your group trains and when you would host a weekly mission.
       </p>
-      <form class="creators-apply" action={APPLY_URL} method="post">
+      <form
+        class="creators-apply"
+        action="mailto:hello@amrapwithfriends.com"
+        method="get"
+        id="pilot-application"
+      >
         <label>
           <span class="creators-lbl">Name</span>
           <input name="name" required autocomplete="name" />
@@ -183,8 +195,8 @@ const jsonLd = [
           <input name="email" type="email" required autocomplete="email" />
         </label>
         <label>
-          <span class="creators-lbl">Main handle (Instagram, TikTok, YouTube…)</span>
-          <input name="handle" placeholder="@" required />
+          <span class="creators-lbl">Main handle or gym name</span>
+          <input name="handle" placeholder="@handle or gym name" required />
         </label>
         <label>
           <span class="creators-lbl">Where do you run group workouts today?</span>
@@ -194,6 +206,7 @@ const jsonLd = [
             <option>Zoom / Google Meet</option>
             <option>Discord or WhatsApp group</option>
             <option>In-person class or run club</option>
+            <option>Gym / fitness studio</option>
             <option>I don't yet, I want to start</option>
           </select>
         </label>
@@ -201,9 +214,10 @@ const jsonLd = [
           <span class="creators-lbl">Day and time you'd host</span>
           <input name="slot" placeholder="Tuesdays 6pm PT" />
         </label>
-        <button class="creators-btn" type="submit">Send application</button>
+        <button class="creators-btn" type="submit">Open email application</button>
         <p class="creators-fine">
-          We reply within 3 days. If it's a fit, we'll book your setup call on that email.
+          This opens a draft in your email app; review and send it there. Nothing is submitted until
+          you send. If it does not open, email hello@amrapwithfriends.com with the details above.
         </p>
       </form>
 
@@ -219,10 +233,67 @@ const jsonLd = [
       </div>
     </section>
 
+    <section class="creators-chapter" id="pilot-details">
+      <h2>Pilot details — proposed, not final program terms</h2>
+      <p>
+        Applying expresses interest and does not enroll you in a paid program. We will confirm
+        available tools, the free-access start date, commission eligibility, tier changes, refunds,
+        resubscriptions and payout setup in writing before paid referrals begin.
+      </p>
+      <p>
+        The proposed Founding Host offer is 12 months of Coach access at no charge; the planned
+        standard annual price is $199.99. We ask accepted hosts to run one public mission per week
+        for eight weeks and share their own finish, respecting other athletes’ privacy.
+      </p>
+      <p>
+        Coach groups are optional and can be left without transferring existing subscription
+        commissions. Eligible referral touches last 60 days; checkout identifies the credited coach.
+        Self-referrals are excluded; shared devices or payment methods require review rather than
+        automatic rejection. A dispute process will be included in the written terms.
+      </p>
+      <p>
+        The proposed athlete offer is a 14-day trial and 15% off the first eligible 6- or 12-month
+        plan. It does not stack with founding pricing; checkout will show the eligible price and
+        renewal terms. Features and offers described as planned require confirmation before use.
+      </p>
+      <p>
+        Our <a href="/terms">general Terms of Use</a> cover use of the app. They are not creator commission
+        terms. See our <a href="/privacy">Privacy policy</a> for data handling.
+      </p>
+    </section>
+
+    <section class="creators-chapter" id="estimates">
+      <h2>Run the numbers</h2>
+      <p class="creators-lede">
+        Conservative estimates from the same models as the original creators page — not a promise.
+        Move the sliders to your numbers.
+      </p>
+      {
+        /* Copilot suggestion ignored: estimators were intentionally restored at page bottom after the pilot rewrite. */
+      }
+      <EstimatorsTabs client:visible />
+    </section>
+
     <footer class="creators-foot">
       <span>AMRAP With Friends</span>
-      <a href="/terms">Program terms</a>
+      <a href="#pilot-details">Proposed pilot details</a>
       <a href="/">Home</a>
     </footer>
   </div>
 </BaseLayout>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('#pilot-application');
+  form?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const body = [
+      `Name: ${data.get('name') ?? ''}`,
+      `Email: ${data.get('email') ?? ''}`,
+      `Handle or gym: ${data.get('handle') ?? ''}`,
+      `Current group: ${data.get('channel') ?? ''}`,
+      `Hosting time: ${data.get('slot') ?? ''}`,
+    ].join('\n');
+    window.location.href = `mailto:hello@amrapwithfriends.com?subject=${encodeURIComponent('Founding Host pilot application')}&body=${encodeURIComponent(body)}`;
+  });
+</script>

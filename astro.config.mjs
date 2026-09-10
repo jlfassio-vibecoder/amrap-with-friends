@@ -5,7 +5,16 @@ import path from 'node:path';
 import { loadEnv } from 'vite';
 
 const root = path.resolve(import.meta.dirname);
-const mode = process.env.NODE_ENV === 'production' ? 'production' : 'development';
+// Prefer the Astro CLI verb over a leftover shell NODE_ENV. If `astro dev`
+// prebundles under production, Vite inlines react-jsx-dev-runtime.production
+// where jsxDEV is undefined and every React island clears after hydrate.
+const mode = process.argv.includes('build')
+  ? 'production'
+  : process.argv.includes('dev')
+    ? 'development'
+    : process.env.NODE_ENV === 'production'
+      ? 'production'
+      : 'development';
 const env = loadEnv(mode, root, '');
 
 /** Astro's srcDir is site/, so Vite's default envDir misses the repo-root .env. */
