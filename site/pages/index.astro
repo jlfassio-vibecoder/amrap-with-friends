@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import HeroBelowLogo from '../islands/HeroBelowLogo';
+import HomeSeoIntro from '../islands/HomeSeoIntro';
 import TodaysMission from '../islands/TodaysMission';
 import WorkoutStyles from '../islands/WorkoutStyles';
 import { HeroLogoDissolve } from '@/components/home/HeroLogoDissolve';
@@ -133,25 +134,7 @@ const jsonLd = [webApplication(), faqPage(faqs)];
             As many rounds. As possible.
           </h2>
         </div>
-        <div class="space-y-4">
-          <p class="text-base leading-[1.7] text-secondary">
-            AMRAP stands for <strong class="font-semibold text-ink"
-              >As Many Rounds (or Reps) As Possible</strong
-            > — a timed workout format where you cycle through a short list of exercises for a fixed duration,
-            completing as many full rounds as you can before the clock runs out.
-          </p>
-          <p class="text-base leading-[1.7] text-secondary">
-            It's one of the most popular workout styles in functional fitness because it's simple to
-            set up, scales to any fitness level, and turns a workout into a measurable score you can
-            compare against friends.
-          </p>
-          <p class="text-base leading-[1.7] text-secondary">
-            <strong class="font-semibold text-ink">AMRAP With Friends</strong> takes that format and makes
-            it social: host a live AMRAP mission, share a code, and everyone's countdown, round count,
-            and leaderboard position update in real time — whether you're all in the same gym or scattered
-            across different time zones.
-          </p>
-        </div>
+        <HomeSeoIntro client:visible />
       </section>
 
       <!-- Presentational only, so Astro renders it to HTML and it ships no JavaScript. -->
