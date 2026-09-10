@@ -14,15 +14,16 @@ function entry(overrides: Partial<MyMissionEntry> = {}): MyMissionEntry {
     isFeatured: false,
     durationMinutes: 15,
     workout: [],
+    movementCount: 0,
+    repsPerRound: null,
     templateId: 'amqap-foundational-15',
     rallyPointId: null,
-    chainItemCount: 0,
-    chainUnstartedCount: 0,
     state: 'finished',
     segmentIndex: 0,
     roundCount: 0,
     partialReps: 0,
     finalScore: null,
+    hasScoreBreakdown: false,
     scoreBreakdown: null,
     modifiedMovements: [],
     movementVariants: {},
@@ -43,6 +44,7 @@ describe('isUnlockedFinishedAmqap', () => {
     expect(isUnlockedFinishedAmqap(entry({ scoreBreakdown: { finalScore: 0 } as never }))).toBe(
       false
     );
+    expect(isUnlockedFinishedAmqap(entry({ hasScoreBreakdown: true }))).toBe(false);
     expect(isUnlockedFinishedAmqap(entry({ templateId: 'the-pendulum' }))).toBe(false);
     expect(isUnlockedFinishedAmqap(entry({ templateId: null }))).toBe(false);
     expect(isUnlockedFinishedAmqap(entry({ state: 'work' }))).toBe(false);

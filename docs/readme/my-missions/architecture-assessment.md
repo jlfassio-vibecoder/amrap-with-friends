@@ -29,21 +29,21 @@ focus.
 The architecture fits a “saved history + related account lists” product job,
 but the page has grown into a composite home for several account concerns while
 still paying the full-history payload cost that benchmarks and Smart Recovery
-already escaped. Highest-priority remaining gaps: payload size, soft auth /
-no in-page sign-in CTA, and stale list after mutations elsewhere. P0 vocabulary
-(V1–V3) is addressed via `formatMissionStateLabel`.
+already escaped. Highest-priority remaining gaps: soft auth / no in-page
+sign-in CTA, stale list after mutations elsewhere, and page composition.
+P0 vocabulary (V1–V3) and P1 payload/chains (D1–D2) are addressed.
 
 ---
 
 ## 1. What the page is for
 
-| Athlete question                         | Answered by                                      |
-| ---------------------------------------- | ------------------------------------------------ |
-| What have I trained / saved?             | Mission list from `my_missions()`                |
-| What did a squad friend put on my list?  | `AssignedWorkoutsPanel`                          |
-| Which campaigns am I running?            | `MyCampaignsPanel`                               |
+| Athlete question                             | Answered by                                          |
+| -------------------------------------------- | ---------------------------------------------------- |
+| What have I trained / saved?                 | Mission list from `my_missions()`                    |
+| What did a squad friend put on my list?      | `AssignedWorkoutsPanel`                              |
+| Which campaigns am I running?                | `MyCampaignsPanel`                                   |
 | How has my scaling / check-in pattern moved? | `ScalingProgressionPanel`, `CheckInProgressionPanel` |
-| Is this workout a personal benchmark?    | Pill + Retire via `fetchMyBenchmarks`            |
+| Is this workout a personal benchmark?        | Pill + Retire via `fetchMyBenchmarks`                |
 
 Outbound: **View mission** → `/mission/:id`, **Plan mission** → `/create`,
 **New campaign** → `/campaign/new`, campaign rows → `/campaign/:id`.
@@ -58,14 +58,14 @@ account” on a finished guest mission is how rows appear here.
 
 ### 2.1 Entry and chrome
 
-| Concern        | Detail |
-| -------------- | ------ |
+| Concern        | Detail                                                                                                                 |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | Route          | [`App.tsx`](../../../src/App.tsx) — `lazy(() => import('./pages/MyMissionsPage'))`, bare `<Route path="/my-missions">` |
-| Auth at router | **None.** Peers like `/squad`, `/campaign/*`, `/hud` use `RequireIntake` |
-| Page gate      | [`useAmrapAuth`](../../../src/hooks/useAmrapAuth.ts) — guests see copy, no RPC |
-| SEO            | [`routes.ts`](../../../src/lib/seo/routes.ts) — title “My missions”, `index: false` |
-| Deploy         | `vercel.json` rewrites `/my-missions` → app shell |
-| Post-auth      | Sign-**up** from this path resolves to `/create`; sign-**in** stays |
+| Auth at router | **None.** Peers like `/squad`, `/campaign/*`, `/hud` use `RequireIntake`                                               |
+| Page gate      | [`useAmrapAuth`](../../../src/hooks/useAmrapAuth.ts) — guests see copy, no RPC                                         |
+| SEO            | [`routes.ts`](../../../src/lib/seo/routes.ts) — title “My missions”, `index: false`                                    |
+| Deploy         | `vercel.json` rewrites `/my-missions` → app shell                                                                      |
+| Post-auth      | Sign-**up** from this path resolves to `/create`; sign-**in** stays                                                    |
 
 ### 2.2 Page composition
 
@@ -117,14 +117,14 @@ rows with no score breakdown (cancelled featured slots).
 
 **RPC evolution (additive):**
 
-| Migration | Added |
-| --------- | ----- |
-| `20260901400000_mission_rename.sql` | Rename-era function + grants |
-| `20260908120000_my_missions_rally_point_id.sql` | `rally_point_id` |
-| `20260908130000_my_missions_chain_counts.sql` | chain counts (avoids N empty chain fetches) |
-| `20260909120000_modified_movements_comparisons.sql` | `modified_movements` |
-| `20260909160000_variants_on_read_paths.sql` | `movement_variants` |
-| `20260909190000_check_in_on_read_paths.sql` | `rpe`, `session_notes`, `check_ins` |
+| Migration                                           | Added                                       |
+| --------------------------------------------------- | ------------------------------------------- |
+| `20260901400000_mission_rename.sql`                 | Rename-era function + grants                |
+| `20260908120000_my_missions_rally_point_id.sql`     | `rally_point_id`                            |
+| `20260908130000_my_missions_chain_counts.sql`       | chain counts (avoids N empty chain fetches) |
+| `20260909120000_modified_movements_comparisons.sql` | `modified_movements`                        |
+| `20260909160000_variants_on_read_paths.sql`         | `movement_variants`                         |
+| `20260909190000_check_in_on_read_paths.sql`         | `rpe`, `session_notes`, `check_ins`         |
 
 ### 2.4 Client grouping and chains
 
@@ -188,64 +188,64 @@ docs.
 
 ### 3.1 Data and performance
 
-| ID | Sev | Gap | Notes |
-| -- | --- | --- | ----- |
-| D1 | P1 | Unbounded heavy `my_missions` payload | Every row ships full workout jsonb, score breakdown, coach join, chain correlates. Documented in personal-benchmarks; HUD/Smart Recovery already use narrow RPCs. This page is still the heavy consumer — and `repairUnlockedAmqapScores` reuses the same client fetch. |
-| D2 | P1 | N chain RPCs after list load | Mitigated by `chainItemCount >= 2`, still scales with hubs that have chains. |
-| D3 | P1 | Stale after external mutation | Claiming a mission, finishing elsewhere, or campaign changes do not refresh until remount. No Realtime, no focus refetch. |
-| D4 | P2 | No pagination / filters | Fine for early users; will hurt once history is long even if payload were slimmed. |
+| ID  | Sev | Gap                                                     | Notes                                                                                                                     |
+| --- | --- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| D1  | P1  | ~~Unbounded heavy `my_missions` payload~~ **Addressed** | Slim list rows + `my_mission_detail` for workout/breakdown; HUD repair uses `list_unlocked_amqap`.                        |
+| D2  | P1  | ~~N chain RPCs after list load~~ **Addressed**          | `my_missions` embeds `chains` (queued workouts only); page no longer fans out `get_mission_chain`.                        |
+| D3  | P1  | Stale after external mutation                           | Claiming a mission, finishing elsewhere, or campaign changes do not refresh until remount. No Realtime, no focus refetch. |
+| D4  | P2  | No pagination / filters                                 | Fine for early users; will hurt once history is long even if payload were slimmed.                                        |
 
 ### 3.2 Auth and navigation
 
-| ID | Sev | Gap | Notes |
-| -- | --- | --- | ----- |
-| A1 | P1 | Soft auth vs `RequireIntake` peers | Incomplete profiles can open the page; squad/plan/campaign cannot. May be intentional for history, but inconsistent. |
-| A2 | P1 | Guest UX is quiet | Signed-out copy with **no** AuthModal / sign-in CTA on the page. Top CTAs still link to `/create` and `/campaign/new`. |
-| A3 | P2 | Sign-up leaves the page | Post-auth destination from `/my-missions` goes to `/create`, not back here after claim-oriented journeys. |
+| ID  | Sev | Gap                                | Notes                                                                                                                  |
+| --- | --- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| A1  | P1  | Soft auth vs `RequireIntake` peers | Incomplete profiles can open the page; squad/plan/campaign cannot. May be intentional for history, but inconsistent.   |
+| A2  | P1  | Guest UX is quiet                  | Signed-out copy with **no** AuthModal / sign-in CTA on the page. Top CTAs still link to `/create` and `/campaign/new`. |
+| A3  | P2  | Sign-up leaves the page            | Post-auth destination from `/my-missions` goes to `/create`, not back here after claim-oriented journeys.              |
 
 ### 3.3 Product / vocabulary (click-rule)
 
-| ID | Sev | Gap | Notes |
-| -- | --- | --- | ----- |
-| V1 | P0 | ~~Raw `entry.state` on the card~~ **Addressed** | Card meta / share / host scheduled / waiting room use [`formatMissionStateLabel`](../../../src/lib/mission/formatMissionStateLabel.ts) (`work` → Live). |
-| V2 | P0 | ~~Featured delete confirm says “Featured WOD”~~ **Addressed** | Confirm: “Cancel today's mission for this date and time only? …” |
-| V3 | P2 | ~~Share text includes raw `state`~~ **Addressed** | Same helper via `formatMyMissionShareText`. |
-| V4 | P2 | Migration comment “multi-mission session” | Historical SQL comments only; not user-visible. |
+| ID  | Sev | Gap                                                           | Notes                                                                                                                                                   |
+| --- | --- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| V1  | P0  | ~~Raw `entry.state` on the card~~ **Addressed**               | Card meta / share / host scheduled / waiting room use [`formatMissionStateLabel`](../../../src/lib/mission/formatMissionStateLabel.ts) (`work` → Live). |
+| V2  | P0  | ~~Featured delete confirm says “Featured WOD”~~ **Addressed** | Confirm: “Cancel today's mission for this date and time only? …”                                                                                        |
+| V3  | P2  | ~~Share text includes raw `state`~~ **Addressed**             | Same helper via `formatMyMissionShareText`.                                                                                                             |
+| V4  | P2  | Migration comment “multi-mission session”                     | Historical SQL comments only; not user-visible.                                                                                                         |
 
 Host scheduled list delegates to the same helper (`work` → Live).
 
 ### 3.4 Composition / single job
 
-| ID | Sev | Gap | Notes |
-| -- | --- | --- | ----- |
-| C1 | P1 | Composite hub | History + assigned + campaigns + two progression panels + benchmarks. Assigned and campaigns are justified (“what’s waiting” / “what programme”), but the first viewport is a stack of jobs rather than one composition. |
-| C2 | P2 | Duplicate title chrome | Mobile subtitle via `NarrowPageLayout` and a desktop-only h1 block both say “My missions”. |
+| ID  | Sev | Gap                    | Notes                                                                                                                                                                                                                    |
+| --- | --- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| C1  | P1  | Composite hub          | History + assigned + campaigns + two progression panels + benchmarks. Assigned and campaigns are justified (“what’s waiting” / “what programme”), but the first viewport is a stack of jobs rather than one composition. |
+| C2  | P2  | Duplicate title chrome | Mobile subtitle via `NarrowPageLayout` and a desktop-only h1 block both say “My missions”.                                                                                                                               |
 
 ### 3.5 Correctness / edge cases
 
-| ID | Sev | Gap | Notes |
-| -- | --- | --- | ----- |
-| E1 | P2 | Delete does not refresh chains | Removing a hub mission from local `entries` may leave expand state / chain map until remount. |
-| E2 | P2 | Benchmark load errors are silent | Failed `fetchMyBenchmarks` leaves pills empty with no message. |
-| E3 | P1 | Score display vs finalScore | Card correctly shows performed reps/rounds, not PVI-adjusted `finalScore` — keep this; breakdown modal owns the adjusted story. |
+| ID  | Sev | Gap                              | Notes                                                                                                                           |
+| --- | --- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| E1  | P2  | Delete does not refresh chains   | Removing a hub mission from local `entries` may leave expand state / chain map until remount.                                   |
+| E2  | P2  | Benchmark load errors are silent | Failed `fetchMyBenchmarks` leaves pills empty with no message.                                                                  |
+| E3  | P1  | Score display vs finalScore      | Card correctly shows performed reps/rounds, not PVI-adjusted `finalScore` — keep this; breakdown modal owns the adjusted story. |
 
 ### 3.6 Tests
 
-| Area | Covered | Gaps |
-| ---- | ------- | ---- |
-| `MyMissionsPage.test.tsx` | Titles, delete, featured confirm, chain expand, CTAs, campaigns link | Guest copy, loading, fetch error, empty state, Share, breakdown modal, Modified, benchmarks/Retire, progression panels, chain fetch failure |
-| `myMissions.test.ts` | Score display, share, delete mapping, rally/chain parse | Check-ins / variants / modified parse, `ok !== true`, malformed row drop |
-| `groupMyMissionsByRallyPoint.test.ts` | Singles, daisy, planned chain, guest fallback, queued mix | scheduledAt vs createdAt sort; leftover singles after partial consume |
+| Area                                  | Covered                                                              | Gaps                                                                                                                                        |
+| ------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MyMissionsPage.test.tsx`             | Titles, delete, featured confirm, chain expand, CTAs, campaigns link | Guest copy, loading, fetch error, empty state, Share, breakdown modal, Modified, benchmarks/Retire, progression panels, chain fetch failure |
+| `myMissions.test.ts`                  | Score display, share, delete mapping, rally/chain parse              | Check-ins / variants / modified parse, `ok !== true`, malformed row drop                                                                    |
+| `groupMyMissionsByRallyPoint.test.ts` | Singles, daisy, planned chain, guest fallback, queued mix            | scheduledAt vs createdAt sort; leftover singles after partial consume                                                                       |
 
 ### 3.7 Plans that already constrain this surface
 
-| Doc | Implication |
-| --- | ----------- |
-| personal-benchmarks | Do not pull HUD scores from `my_missions`; keep pills here lightweight |
-| smart-recovery | Do **not** extend this RPC for recovery history |
-| modified-movements | Progression + Modified badge belong here; check-ins stay on this read path for privacy |
-| seo-roadmap | Keep `noindex` |
-| share-card / replay plans | Richer Share from history rows is future work; Share already exists |
+| Doc                       | Implication                                                                            |
+| ------------------------- | -------------------------------------------------------------------------------------- |
+| personal-benchmarks       | Do not pull HUD scores from `my_missions`; keep pills here lightweight                 |
+| smart-recovery            | Do **not** extend this RPC for recovery history                                        |
+| modified-movements        | Progression + Modified badge belong here; check-ins stay on this read path for privacy |
+| seo-roadmap               | Keep `noindex`                                                                         |
+| share-card / replay plans | Richer Share from history rows is future work; Share already exists                    |
 
 ---
 
@@ -256,9 +256,10 @@ Ordered for impact vs risk. Implementation is out of scope for this note.
 1. ~~**Map mission state for display and share**~~ **Done** —
    `formatMissionStateLabel` on card meta, share text, host scheduled list, and
    waiting room; Featured delete confirm uses “today's mission”.
-2. **Slim or paginate `my_missions`** — list projection without full workout /
-   breakdown until expand or “View breakdown”; or cursor/limit. Leave check-ins
-   / variants only if progression panels still need them (D1).
+2. ~~**Slim or paginate `my_missions`**~~ **Done (slim, not paginate)** —
+   list projection drops workout/breakdown; `my_mission_detail` hydrates on
+   demand; chains embedded; `list_unlocked_amqap` for HUD repair. Pagination
+   (D4) still open.
 3. **Guest + incomplete-profile decision** — either `RequireIntake` with guest
    passthrough + in-page sign-in, or keep soft gate but add an explicit Auth
    CTA (A1, A2).
@@ -285,12 +286,12 @@ Ordered for impact vs risk. Implementation is out of scope for this note.
 
 ## 6. Key paths
 
-| Role | Path |
-| ---- | ---- |
-| Page | `src/pages/MyMissionsPage.tsx` |
-| API | `src/lib/api/myMissions.ts` |
-| Grouping | `src/lib/mission/groupMyMissionsByRallyPoint.ts` |
-| Latest SQL | `supabase/migrations/20260909190000_check_in_on_read_paths.sql` |
-| Route | `src/App.tsx` |
-| SEO | `src/lib/seo/routes.ts` |
-| Page tests | `src/pages/MyMissionsPage.test.tsx` |
+| Role       | Path                                                           |
+| ---------- | -------------------------------------------------------------- |
+| Page       | `src/pages/MyMissionsPage.tsx`                                 |
+| API        | `src/lib/api/myMissions.ts`                                    |
+| Grouping   | `src/lib/mission/groupMyMissionsByRallyPoint.ts`               |
+| Latest SQL | `supabase/migrations/20260910620000_my_missions_slim_list.sql` |
+| Route      | `src/App.tsx`                                                  |
+| SEO        | `src/lib/seo/routes.ts`                                        |
+| Page tests | `src/pages/MyMissionsPage.test.tsx`                            |

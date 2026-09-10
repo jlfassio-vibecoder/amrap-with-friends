@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@/contexts/ThemeProvider';
@@ -9,7 +9,6 @@ import type { MyMissionEntry } from '@/lib/api/myMissions';
 const fetchMyMissionsMock = vi.fn();
 const deleteIncompleteMissionMock = vi.fn();
 const fetchMyCampaignsMock = vi.fn();
-const getMissionChainMock = vi.fn();
 const authUser = { id: 'user-1' };
 
 vi.mock('@/hooks/useAmrapAuth', () => ({
@@ -38,15 +37,6 @@ vi.mock('@/lib/api/campaigns', async () => {
   };
 });
 
-vi.mock('@/lib/api/missionChain', async () => {
-  const actual =
-    await vi.importActual<typeof import('@/lib/api/missionChain')>('@/lib/api/missionChain');
-  return {
-    ...actual,
-    getMissionChain: (...args: unknown[]) => getMissionChainMock(...args),
-  };
-});
-
 function entry(overrides: Partial<MyMissionEntry> = {}): MyMissionEntry {
   return {
     participantId: '11111111-1111-4111-8111-111111111111',
@@ -59,15 +49,16 @@ function entry(overrides: Partial<MyMissionEntry> = {}): MyMissionEntry {
     isFeatured: false,
     durationMinutes: 5,
     workout: [{ name: 'Mountain Climbers', target: 20, unit: 'reps' }],
+    movementCount: 1,
+    repsPerRound: 20,
     templateId: null,
     rallyPointId: null,
-    chainItemCount: 0,
-    chainUnstartedCount: 0,
     state: 'waiting',
     segmentIndex: 0,
     roundCount: 0,
     partialReps: 0,
     finalScore: null,
+    hasScoreBreakdown: false,
     scoreBreakdown: null,
     modifiedMovements: [],
     movementVariants: {},
@@ -103,12 +94,7 @@ afterEach(() => {
   fetchMyMissionsMock.mockReset();
   deleteIncompleteMissionMock.mockReset();
   fetchMyCampaignsMock.mockReset();
-  getMissionChainMock.mockReset();
   vi.unstubAllGlobals();
-});
-
-beforeEach(() => {
-  getMissionChainMock.mockResolvedValue({ data: [], error: null });
 });
 
 function renderPage() {
@@ -132,10 +118,13 @@ describe('MyMissionsPage workout summary', () => {
             { name: 'Dead Hang', target: 30, unit: 'seconds' },
             { name: 'Pull-ups', target: 10, unit: 'reps' },
           ],
+          movementCount: 2,
+          repsPerRound: 40,
           state: 'finished',
           finalScore: 42,
         }),
       ],
+      chains: {},
       error: null,
     });
 
@@ -155,8 +144,11 @@ describe('MyMissionsPage workout summary', () => {
         entry({
           templateId: 'the-pendulum',
           workout: [{ name: 'Burpees', target: 10, unit: 'reps' }],
+          movementCount: 1,
+          repsPerRound: 10,
         }),
       ],
+      chains: {},
       error: null,
     });
 
@@ -184,6 +176,7 @@ describe('MyMissionsPage delete', () => {
           missionId: 's3',
           state: 'finished',
           finalScore: 100,
+          hasScoreBreakdown: true,
           scoreBreakdown: {
             baseScore: 100,
             pvi: null,
@@ -199,6 +192,7 @@ describe('MyMissionsPage delete', () => {
           roundCount: 6,
         }),
       ],
+      chains: {},
       error: null,
     });
 
@@ -215,6 +209,7 @@ describe('MyMissionsPage delete', () => {
   it('confirms then deletes and removes the row', async () => {
     fetchMyMissionsMock.mockResolvedValue({
       data: [entry()],
+      chains: {},
       error: null,
     });
     deleteIncompleteMissionMock.mockImplementation(async () => ({ error: null }));
@@ -249,6 +244,7 @@ describe('MyMissionsPage delete', () => {
           coachWorkoutName: 'THE UNDERTOW',
         }),
       ],
+      chains: {},
       error: null,
     });
     deleteIncompleteMissionMock.mockImplementation(async () => ({ error: null }));
@@ -278,43 +274,42 @@ describe('MyMissionsPage chain groups', () => {
         entry({
           templateId: 'the-piston',
           rallyPointId: 'rp1',
-          chainItemCount: 3,
-          chainUnstartedCount: 2,
           workout: [{ name: 'Air Squats', target: 10 }],
+          movementCount: 1,
+          repsPerRound: 10,
         }),
       ],
-      error: null,
-    });
-    getMissionChainMock.mockResolvedValue({
-      data: [
-        {
-          id: 'c0',
-          position: 0,
-          durationMinutes: 5,
-          workout: [{ name: 'Air Squats', target: 10 }],
-          templateId: 'the-piston',
-          intensityTier: 3,
-          startedMissionId: '22222222-2222-4222-8222-222222222222',
-        },
-        {
-          id: 'c1',
-          position: 1,
-          durationMinutes: 5,
-          workout: [{ name: 'Fast Air Squats', target: 15 }],
-          templateId: 'the-metronome',
-          intensityTier: 3,
-          startedMissionId: null,
-        },
-        {
-          id: 'c2',
-          position: 2,
-          durationMinutes: 10,
-          workout: [{ name: 'Burpees', target: 10 }],
-          templateId: 'whiplash',
-          intensityTier: 3,
-          startedMissionId: null,
-        },
-      ],
+      chains: {
+        rp1: [
+          {
+            id: 'c0',
+            position: 0,
+            durationMinutes: 5,
+            workout: [],
+            templateId: 'the-piston',
+            intensityTier: 3,
+            startedMissionId: '22222222-2222-4222-8222-222222222222',
+          },
+          {
+            id: 'c1',
+            position: 1,
+            durationMinutes: 5,
+            workout: [{ name: 'Fast Air Squats', target: 15 }],
+            templateId: 'the-metronome',
+            intensityTier: 3,
+            startedMissionId: null,
+          },
+          {
+            id: 'c2',
+            position: 2,
+            durationMinutes: 10,
+            workout: [{ name: 'Burpees', target: 10 }],
+            templateId: 'whiplash',
+            intensityTier: 3,
+            startedMissionId: null,
+          },
+        ],
+      },
       error: null,
     });
 
@@ -349,6 +344,8 @@ describe('MyMissionsPage chain groups', () => {
           rallyPointId: 'rp1',
           templateId: 'the-piston',
           workout: [{ name: 'Air Squats', target: 10 }],
+          movementCount: 1,
+          repsPerRound: 10,
         }),
         entry({
           participantId: 'p-old',
@@ -357,8 +354,11 @@ describe('MyMissionsPage chain groups', () => {
           rallyPointId: 'rp1',
           templateId: 'the-metronome',
           workout: [{ name: 'Fast Air Squats', target: 15 }],
+          movementCount: 1,
+          repsPerRound: 15,
         }),
       ],
+      chains: {},
       error: null,
     });
 
@@ -380,7 +380,7 @@ describe('MyMissionsPage chain groups', () => {
 
 describe('MyMissionsPage CTAs', () => {
   it('links Plan mission and New campaign to their routes', async () => {
-    fetchMyMissionsMock.mockResolvedValue({ data: [], error: null });
+    fetchMyMissionsMock.mockResolvedValue({ data: [], chains: {}, error: null });
     renderPage();
 
     await waitFor(() => {
@@ -396,7 +396,7 @@ describe('MyMissionsPage CTAs', () => {
 
 describe('MyMissionsPage campaigns', () => {
   it('lists campaigns with a link to the campaign detail', async () => {
-    fetchMyMissionsMock.mockResolvedValue({ data: [], error: null });
+    fetchMyMissionsMock.mockResolvedValue({ data: [], chains: {}, error: null });
     fetchMyCampaignsMock.mockResolvedValue({
       data: [campaign()],
       error: null,

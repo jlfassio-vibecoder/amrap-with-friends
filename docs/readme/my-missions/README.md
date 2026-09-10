@@ -40,8 +40,8 @@ daisy-chain command, and long-term score trends respectively.
 | -------------- | ------------------------------------------------------------------------------ |
 | Route          | `src/App.tsx` — lazy `MyMissionsPage`, no `RequireIntake`                      |
 | Page           | `src/pages/MyMissionsPage.tsx`                                                 |
-| History RPC    | `my_missions()` → `src/lib/api/myMissions.ts`                                  |
-| Chain grouping | `src/lib/mission/groupMyMissionsByRallyPoint.ts` + `get_mission_chain`         |
+| History RPC    | `my_missions()` (slim) + `my_mission_detail` → `src/lib/api/myMissions.ts` |
+| Chain grouping | `src/lib/mission/groupMyMissionsByRallyPoint.ts` + embedded `chains` from list RPC |
 | Campaigns      | `MyCampaignsPanel` → `my_campaigns`                                            |
 | Assigned       | `AssignedWorkoutsPanel` → assigned-workout RPCs                                |
 | SEO            | `src/lib/seo/routes.ts` — `index: false`                                       |

@@ -14,6 +14,11 @@ interface SendWorkoutToSquadProps {
   triggerClassName?: string;
   /** Collapsed trigger label. Shorten it where space is tight. */
   triggerLabel?: string;
+  /**
+   * When the list row has not hydrated workout jsonb yet, load it before
+   * opening. Return the movements to send (parent also updates props).
+   */
+  ensureWorkout?: () => Promise<WorkoutExercise[] | null>;
 }
 
 /**
@@ -29,6 +34,7 @@ export function SendWorkoutToSquad({
   ready,
   triggerClassName = 'btn-outline text-sm font-semibold',
   triggerLabel = 'Send this to a squad friend',
+  ensureWorkout,
 }: SendWorkoutToSquadProps) {
   const [friends, setFriends] = useState<SquadAthlete[]>([]);
   const [open, setOpen] = useState(false);
@@ -37,6 +43,9 @@ export function SendWorkoutToSquad({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const [hydratedWorkout, setHydratedWorkout] = useState<WorkoutExercise[] | null>(null);
+
+  const workoutToSend = hydratedWorkout && hydratedWorkout.length > 0 ? hydratedWorkout : workout;
 
   useEffect(() => {
     if (!open || friends.length > 0) {
@@ -72,7 +81,7 @@ export function SendWorkoutToSquad({
     const result = await assignWorkout({
       toUserId,
       durationMinutes,
-      workout,
+      workout: workoutToSend,
       templateId,
       intensityTier,
       note,
@@ -112,10 +121,25 @@ export function SendWorkoutToSquad({
       <button
         type="button"
         className={triggerClassName}
-        disabled={!ready}
-        onClick={() => setOpen(true)}
+        disabled={!ready || busy}
+        onClick={() => {
+          void (async () => {
+            if (workoutToSend.length === 0 && ensureWorkout) {
+              setBusy(true);
+              setError(null);
+              const loaded = await ensureWorkout();
+              setBusy(false);
+              if (!loaded || loaded.length === 0) {
+                setError('Could not load this workout. Please try again.');
+                return;
+              }
+              setHydratedWorkout(loaded);
+            }
+            setOpen(true);
+          })();
+        }}
       >
-        {triggerLabel}
+        {busy ? 'Loading…' : triggerLabel}
       </button>
     );
   }

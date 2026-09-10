@@ -37,15 +37,16 @@ function baseEntry(overrides: Partial<MyMissionEntry> = {}): MyMissionEntry {
       { name: 'Burpees', target: 20, unit: 'reps' },
       { name: 'Air squats', target: 20, unit: 'reps' },
     ],
+    movementCount: 2,
+    repsPerRound: 40,
     templateId: null,
     rallyPointId: null,
-    chainItemCount: 0,
-    chainUnstartedCount: 0,
     state: 'waiting',
     segmentIndex: 0,
     roundCount: 0,
     partialReps: 0,
     finalScore: null,
+    hasScoreBreakdown: false,
     scoreBreakdown: null,
     modifiedMovements: [],
     movementVariants: {},
@@ -156,6 +157,19 @@ describe('myMissions helpers', () => {
     expect(formatMyMissionExerciseLine({ name: 'Burpees' })).toBe('Burpees');
   });
 
+  it('formatMyMissionScoreDisplay uses repsPerRound when workout is empty', () => {
+    const entry = baseEntry({
+      state: 'finished',
+      workout: [],
+      movementCount: 2,
+      repsPerRound: 40,
+      roundCount: 4,
+      partialReps: 15,
+    });
+
+    expect(formatMyMissionScoreDisplay(entry)).toBe('175 reps');
+  });
+
   it('formatMyMissionShareText includes title, movements, and meta', () => {
     const entry = baseEntry({
       coachWorkoutName: 'Tension Grid',
@@ -190,6 +204,8 @@ describe('myMissions helpers', () => {
     const entry = baseEntry({
       coachWorkoutName: 'Empty Grid',
       workout: [],
+      movementCount: 0,
+      repsPerRound: null,
       durationMinutes: 5,
       state: 'waiting',
     });
@@ -219,6 +235,7 @@ describe('myMissions helpers', () => {
         baseEntry({
           state: 'finished',
           finalScore: 100,
+          hasScoreBreakdown: true,
           scoreBreakdown: {
             baseScore: 100,
             pvi: null,
@@ -237,7 +254,7 @@ describe('fetchMyMissions', () => {
     vi.clearAllMocks();
   });
 
-  it('parses rally_point_id onto rallyPointId', async () => {
+  it('parses slim list fields and embedded chains', async () => {
     rpcMock.mockResolvedValue({
       data: {
         ok: true,
@@ -252,20 +269,41 @@ describe('fetchMyMissions', () => {
             scheduled_at: null,
             is_featured: false,
             duration_minutes: 5,
-            workout: [{ name: 'Burpees', target: 10 }],
             template_id: 'the-piston',
             rally_point_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-            chain_item_count: 3,
-            chain_unstarted_count: 2,
+            movement_count: 1,
+            reps_per_round: 10,
+            has_score_breakdown: false,
             state: 'waiting',
             segment_index: 0,
             round_count: 0,
             partial_reps: 0,
             final_score: null,
-            score_breakdown: null,
             coach_workout_name: null,
           },
         ],
+        chains: {
+          'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa': [
+            {
+              id: 'c0',
+              position: 0,
+              duration_minutes: 5,
+              template_id: 'the-piston',
+              intensity_tier: 3,
+              started_mission_id: '22222222-2222-4222-8222-222222222222',
+              workout: [],
+            },
+            {
+              id: 'c1',
+              position: 1,
+              duration_minutes: 5,
+              template_id: 'the-metronome',
+              intensity_tier: 3,
+              started_mission_id: null,
+              workout: [{ name: 'Fast Air Squats', target: 15 }],
+            },
+          ],
+        },
       },
       error: null,
       count: null,
@@ -278,8 +316,14 @@ describe('fetchMyMissions', () => {
     expect(result.error).toBeNull();
     expect(result.data?.[0]?.rallyPointId).toBe('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
     expect(result.data?.[0]?.templateId).toBe('the-piston');
-    expect(result.data?.[0]?.chainItemCount).toBe(3);
-    expect(result.data?.[0]?.chainUnstartedCount).toBe(2);
+    expect(result.data?.[0]?.movementCount).toBe(1);
+    expect(result.data?.[0]?.repsPerRound).toBe(10);
+    expect(result.data?.[0]?.hasScoreBreakdown).toBe(false);
+    expect(result.data?.[0]?.workout).toEqual([]);
+    expect(result.chains['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa']).toHaveLength(2);
+    expect(result.chains['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa']?.[1]?.workout).toEqual([
+      { name: 'Fast Air Squats', target: 15 },
+    ]);
   });
 });
 
