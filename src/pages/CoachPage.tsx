@@ -4,6 +4,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { CoachActivityCohorts } from '@/components/coach/CoachActivityCohorts';
 import { CoachDataTable } from '@/components/coach/CoachDataTable';
 import { CoachEventsExplorer } from '@/components/coach/CoachEventsExplorer';
+import { CoachFoundingHostApplications } from '@/components/coach/CoachFoundingHostApplications';
 import { CoachFunnelCard } from '@/components/coach/CoachFunnelCard';
 import { CoachGuestBrowsersPanel } from '@/components/coach/CoachGuestBrowsersPanel';
 import { CoachOnboardingStuckTable } from '@/components/coach/CoachOnboardingStuckTable';
@@ -772,6 +773,11 @@ export default function CoachPage() {
                   />
                 </div>
               </div>
+            </section>
+
+            <section className="space-y-3">
+              <CoachSectionHeader title="Founding host applications" />
+              <CoachFoundingHostApplications />
             </section>
 
             <section className="space-y-3">

@@ -98,6 +98,9 @@ export const ANALYTICS_EVENT_NAMES = [
   'pacing_calculator_scored',
   'pacing_calculator_cta_clicked',
 
+  // Founding Host pilot applications from /creators
+  'founding_host_applied',
+
   // Share card
   'share_card_rendered',
   'share_opened',
