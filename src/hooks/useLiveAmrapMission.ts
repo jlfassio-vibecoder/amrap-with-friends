@@ -13,6 +13,7 @@ import type { AmrapRoundLog, AmrapTimerPhase } from '@/lib/amrapTimer/types';
 import { useAmrapTimer } from '@/hooks/useAmrapTimer';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { buildLeaderboard, buildPresenceList } from '@/lib/realtime/missionChannelUtils';
+import { buildParticipantRoster } from '@/lib/missionSync/buildParticipantRoster';
 import type { UseMissionChannelResult } from '@/lib/realtime/useMissionChannel';
 import { computeRepsPerRound } from '@/lib/scoring/computeRepsPerRound';
 import {
@@ -62,6 +63,8 @@ export interface UseLiveAmrapMissionReturn {
   hasSubmittedPartialReps: boolean;
   leaderboard: LeaderboardEntry[];
   presence: MissionPresenceEntry[];
+  /** 1-based rank on the score board, or null before this athlete has one. */
+  selfRank: number | null;
   isRealtimeConnected: boolean;
   lastAuthoritativeSyncAtMs: number | null;
   syncError: string | null;
@@ -372,7 +375,7 @@ export function useLiveAmrapMission(
           isPaused: timer.isPaused,
           workStartedAtMs: timer.workStartedAtMs,
           setupStartedAtMs: null,
-          pausedAccumMs: 0,
+          pausedAccumMs: timer.pausedAccumMs,
           pausedAtMs: null,
           rounds: timer.rounds,
         });
@@ -399,6 +402,10 @@ export function useLiveAmrapMission(
 
   const displayWorkStartedAtMs =
     isPractice || isHost ? timer.workStartedAtMs : (joinerDisplay?.workStartedAtMs ?? null);
+
+  // A joiner's clock is reconciled from the host's pushes and carries no pause
+  // ledger, so it cannot spend wall time on round logging. Null says so.
+  const displayPausedAccumMs = isPractice || isHost ? timer.pausedAccumMs : null;
 
   const displayElapsedSec = isPractice
     ? hostElapsedSec
@@ -495,6 +502,23 @@ export function useLiveAmrapMission(
     () => buildPresenceList(channel.participants, channel.presenceByParticipantId),
     [channel.participants, channel.presenceByParticipantId]
   );
+
+  /**
+   * Where this athlete stands on the board everyone else is looking at.
+   * Ranked through the roster rather than off the leaderboard array, so the
+   * number cannot disagree with the panel: only the roster knows about the
+   * athletes who are here but have not scored.
+   */
+  const selfRank = useMemo(() => {
+    const roster = buildParticipantRoster(
+      leaderboard,
+      presence,
+      participantId ?? '',
+      'absolute',
+      displayPhase
+    );
+    return roster.find((entry) => entry.isSelf)?.rank ?? null;
+  }, [leaderboard, presence, participantId, displayPhase]);
 
   const abandonedFiredRef = useRef(false);
 
@@ -647,7 +671,7 @@ export function useLiveAmrapMission(
         phase: 'work',
         isPaused: displayIsPaused,
         workStartedAtMs: displayWorkStartedAtMs,
-        roundCountInWork: myRoundCount,
+        pausedAccumMs: displayPausedAccumMs,
         nowMs: Date.now(),
       }),
     [
@@ -655,7 +679,7 @@ export function useLiveAmrapMission(
       displayTimeLeftSec,
       displayIsPaused,
       displayWorkStartedAtMs,
-      myRoundCount,
+      displayPausedAccumMs,
     ]
   );
 
@@ -889,6 +913,7 @@ export function useLiveAmrapMission(
     hasSubmittedPartialReps: isPractice ? true : hasSubmittedPartialReps,
     leaderboard,
     presence,
+    selfRank,
     isRealtimeConnected: channel.isConnected,
     lastAuthoritativeSyncAtMs,
     syncError,

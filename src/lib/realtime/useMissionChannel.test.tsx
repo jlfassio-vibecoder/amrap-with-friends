@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { GUEST_MISSION_POLL_MS, useMissionChannel } from './useMissionChannel';
+import { LIVE_RECONCILE_MS } from './liveReconcile';
 
 const { channelMocks, removeChannelMock, channelFactory, fromMock, getMissionLiveStateMock } =
   vi.hoisted(() => {
@@ -141,6 +142,91 @@ describe('useMissionChannel', () => {
     });
 
     expect(getMissionLiveStateMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('pulls a full snapshot on a timer while the mission is live', async () => {
+    // Nothing else repairs another athlete's dropped rounds INSERT: only the
+    // athlete who logged it hears from log_round that the index moved, and the
+    // incremental watermark is already past the row.
+    vi.useFakeTimers();
+    getMissionLiveStateMock.mockResolvedValue({
+      ok: true,
+      data: {
+        mission: {
+          id: MISSION_ID,
+          state: 'work',
+          time_left_sec: 300,
+          is_paused: false,
+          started_at: '2026-09-03T00:00:00.000Z',
+          segment_index: 0,
+          duration_minutes: 5,
+          workout: [],
+          template_id: null,
+          scheduled_at: null,
+          rally_point_countdown_ends_at: null,
+          created_at: '2026-09-03T00:00:00.000Z',
+          is_featured: false,
+          rally_point_id: null,
+        },
+        missionClock: null,
+        participants: [],
+        participantIds: null,
+        rounds: [],
+        messages: [],
+        segmentResults: [],
+        incremental: false,
+        snapshotAt: '2026-09-03T00:00:00.000Z',
+      },
+    });
+
+    renderHook(() =>
+      useMissionChannel(
+        MISSION_ID,
+        { participantId: 'participant-1', nickname: 'Athlete' },
+        { realtimeTables: true }
+      )
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(getMissionLiveStateMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      vi.advanceTimersByTime(LIVE_RECONCILE_MS);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(getMissionLiveStateMock).toHaveBeenCalledTimes(2);
+    // Full, not incremental: "everything since" would never name the row that
+    // went missing.
+    expect(getMissionLiveStateMock.mock.calls[1]![0]).toMatchObject({ since: null });
+  });
+
+  it('does not reconcile once the mission is no longer running', async () => {
+    vi.useFakeTimers();
+    renderHook(() =>
+      useMissionChannel(
+        MISSION_ID,
+        { participantId: 'participant-1', nickname: 'Athlete' },
+        { realtimeTables: true }
+      )
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(getMissionLiveStateMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      vi.advanceTimersByTime(LIVE_RECONCILE_MS * 3);
+      await Promise.resolve();
+    });
+
+    expect(getMissionLiveStateMock).toHaveBeenCalledTimes(1);
   });
 
   it('abandons an in-flight incremental when resync starts a full snapshot', async () => {

@@ -793,8 +793,7 @@ function LiveMissionView({
     live.repsPerRound,
     live.myRoundCount
   );
-  const selfRankIndex = live.leaderboard.findIndex((entry) => entry.isSelf);
-  const selfRank = selfRankIndex >= 0 ? selfRankIndex + 1 : null;
+  const selfRank = live.selfRank;
 
   const rallyPointCountdownEndsAt = effectiveRallyPointCountdownEndsAt(
     live.rallyPointCountdownEndsAt,

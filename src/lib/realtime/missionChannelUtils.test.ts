@@ -195,7 +195,7 @@ describe('missionChannelUtils', () => {
     ]);
   });
 
-  it('buildLeaderboard sorts by round count then nickname', () => {
+  it('buildLeaderboard scores each participant, in participant order', () => {
     const participants = [
       parseParticipantRow({
         id: HOST_ID,
@@ -244,15 +244,21 @@ describe('missionChannelUtils', () => {
     ];
 
     const leaderboard = buildLeaderboard(participants, rounds, [], 0, HOST_ID, WORKOUT, 5, 'work');
-    expect(leaderboard[0].participantId).toBe(HOST_ID);
-    expect(leaderboard[0].roundCount).toBe(2);
-    expect(leaderboard[0].baseScore).toBe(40);
-    expect(leaderboard[1].participantId).toBe(JOINER_ID);
-    expect(leaderboard[1].roundCount).toBe(1);
-    expect(leaderboard[1].baseScore).toBe(20);
+    // Ranking belongs to buildParticipantRoster; this array stays in the order
+    // the participants came in.
+    expect(leaderboard.map((entry) => entry.participantId)).toEqual(
+      participants.map((participant) => participant.id)
+    );
+
+    const host = leaderboard.find((entry) => entry.participantId === HOST_ID)!;
+    const joiner = leaderboard.find((entry) => entry.participantId === JOINER_ID)!;
+    expect(host.roundCount).toBe(2);
+    expect(host.baseScore).toBe(40);
+    expect(joiner.roundCount).toBe(1);
+    expect(joiner.baseScore).toBe(20);
   });
 
-  it('buildLeaderboard ranks by baseScore when partial reps break round-count ties', () => {
+  it('buildLeaderboard counts partial reps into baseScore', () => {
     const participants = [
       parseParticipantRow({
         id: HOST_ID,
@@ -311,10 +317,8 @@ describe('missionChannelUtils', () => {
       'work'
     );
 
-    expect(leaderboard[0].participantId).toBe(HOST_ID);
-    expect(leaderboard[0].baseScore).toBe(35);
-    expect(leaderboard[1].participantId).toBe(JOINER_ID);
-    expect(leaderboard[1].baseScore).toBe(20);
+    expect(leaderboard.find((entry) => entry.participantId === HOST_ID)!.baseScore).toBe(35);
+    expect(leaderboard.find((entry) => entry.participantId === JOINER_ID)!.baseScore).toBe(20);
   });
 
   it('buildParticipantRoundSummaries computes per-round durations from elapsed timestamps', () => {

@@ -15,6 +15,8 @@ export interface UseAmrapTimerReturn {
   setupDurationSec: number;
   isPaused: boolean;
   workStartedAtMs: number | null;
+  /** Milliseconds banked in closed pauses this work segment. */
+  pausedAccumMs: number;
   rounds: AmrapRoundLog[];
   start: (config: { setupDurationSec: number; workDurationSec: number }) => void;
   hydrate: (config: {
@@ -126,6 +128,7 @@ export function useAmrapTimer(): UseAmrapTimerReturn {
     setupDurationSec: state.setupDurationSec,
     isPaused: state.isPaused,
     workStartedAtMs: state.workStartedAtMs,
+    pausedAccumMs: state.pausedAccumMs,
     rounds: state.rounds,
     start,
     hydrate,

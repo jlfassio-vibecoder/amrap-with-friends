@@ -393,6 +393,15 @@ function summarizeSortedParticipantRounds(
   });
 }
 
+/**
+ * Scores for everyone in the mission, in participant order.
+ *
+ * Deliberately unsorted: `buildParticipantRoster` is the only thing that ranks,
+ * because it is the only thing that has also merged in the athletes who are
+ * present but have not scored yet. Sorting here as well was not just repeated
+ * work -- the two comparators disagreed, so the rank the mobile chip read off
+ * this array could be one better than the rank the board beside it displayed.
+ */
 export function buildLeaderboard(
   participants: ParticipantRow[],
   rounds: RoundRow[],
@@ -457,63 +466,53 @@ export function buildLeaderboard(
     participantRounds.sort((a, b) => a.round_index - b.round_index);
   }
 
-  return participants
-    .map((participant) => {
-      const participantRounds = roundsByParticipant.get(participant.id) ?? [];
-      const liveRoundCount = counts.get(participant.id) ?? 0;
-      const partialReps = partialByParticipant.get(participant.id) ?? 0;
-      // Copilot suggestion ignored: round-count fallback is intentional for unsupported workouts; UI labels rounds vs reps via repsPerRound.
-      const baseScore =
-        repsPerRound > 0
-          ? computeBaseScore(liveRoundCount, partialReps, repsPerRound)
-          : liveRoundCount;
-      const locked = lockedByParticipant.get(participant.id);
-      const roundSummaries =
-        locked?.breakdown.roundSplits && locked.breakdown.roundSplits.length > 0
-          ? locked.breakdown.roundSplits.map((durationSec, index) => ({
-              roundNumber: index + 1,
-              durationSec,
-            }))
-          : summarizeSortedParticipantRounds(participantRounds);
-      const roundCount =
-        locked?.breakdown.roundSplits && locked.breakdown.roundSplits.length > 0
-          ? (locked.breakdown.roundCount ?? locked.breakdown.roundSplits.length)
-          : liveRoundCount;
-      const roundDurationsSec = roundSummaries.map((round) => round.durationSec);
-      const breakdown = locked
-        ? locked.breakdown
-        : computeScoreBreakdown(roundDurationsSec, durationMinutes, missionPhase, baseScore);
-      const finalScore = locked ? locked.finalScore : breakdown.finalScore;
-      const pviTier = getPviMultiplier(breakdown.pvi);
+  return participants.map((participant) => {
+    const participantRounds = roundsByParticipant.get(participant.id) ?? [];
+    const liveRoundCount = counts.get(participant.id) ?? 0;
+    const partialReps = partialByParticipant.get(participant.id) ?? 0;
+    // Copilot suggestion ignored: round-count fallback is intentional for unsupported workouts; UI labels rounds vs reps via repsPerRound.
+    const baseScore =
+      repsPerRound > 0
+        ? computeBaseScore(liveRoundCount, partialReps, repsPerRound)
+        : liveRoundCount;
+    const locked = lockedByParticipant.get(participant.id);
+    const roundSummaries =
+      locked?.breakdown.roundSplits && locked.breakdown.roundSplits.length > 0
+        ? locked.breakdown.roundSplits.map((durationSec, index) => ({
+            roundNumber: index + 1,
+            durationSec,
+          }))
+        : summarizeSortedParticipantRounds(participantRounds);
+    const roundCount =
+      locked?.breakdown.roundSplits && locked.breakdown.roundSplits.length > 0
+        ? (locked.breakdown.roundCount ?? locked.breakdown.roundSplits.length)
+        : liveRoundCount;
+    const roundDurationsSec = roundSummaries.map((round) => round.durationSec);
+    const breakdown = locked
+      ? locked.breakdown
+      : computeScoreBreakdown(roundDurationsSec, durationMinutes, missionPhase, baseScore);
+    const finalScore = locked ? locked.finalScore : breakdown.finalScore;
+    const pviTier = getPviMultiplier(breakdown.pvi);
 
-      return {
-        participantId: participant.id,
-        nickname: participant.nickname,
-        roundCount,
-        partialReps,
-        repsPerRound,
-        baseScore: breakdown.baseScore,
-        pvi: breakdown.pvi,
-        pviMultiplier: breakdown.pviMultiplier,
-        pviClassification: missionPhase === 'finished' ? pviTier.classification : 'Standard',
-        pviVerdict: missionPhase === 'finished' ? pviTier.verdict : '',
-        domainWeight: breakdown.domainWeight,
-        finalScore,
-        rounds: roundSummaries,
-        isSelf: participant.id === selfParticipantId,
-        modifiedMovements: modifiedByParticipant.get(participant.id) ?? [],
-        movementVariants: variantsByParticipant.get(participant.id) ?? {},
-      };
-    })
-    .sort((a, b) => {
-      const scoreA = missionPhase === 'finished' ? a.finalScore : a.baseScore;
-      const scoreB = missionPhase === 'finished' ? b.finalScore : b.baseScore;
-
-      if (scoreB !== scoreA) {
-        return scoreB - scoreA;
-      }
-      return a.nickname.localeCompare(b.nickname);
-    });
+    return {
+      participantId: participant.id,
+      nickname: participant.nickname,
+      roundCount,
+      partialReps,
+      repsPerRound,
+      baseScore: breakdown.baseScore,
+      pvi: breakdown.pvi,
+      pviMultiplier: breakdown.pviMultiplier,
+      pviClassification: missionPhase === 'finished' ? pviTier.classification : 'Standard',
+      pviVerdict: missionPhase === 'finished' ? pviTier.verdict : '',
+      domainWeight: breakdown.domainWeight,
+      finalScore,
+      rounds: roundSummaries,
+      isSelf: participant.id === selfParticipantId,
+      modifiedMovements: modifiedByParticipant.get(participant.id) ?? [],
+      movementVariants: variantsByParticipant.get(participant.id) ?? {},
+    };
+  });
 }
 
 export function buildPresenceList(

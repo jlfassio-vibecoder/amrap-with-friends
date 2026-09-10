@@ -6,6 +6,7 @@ import { track } from '@/lib/analytics/track';
 import { getStoredClaimToken, getStoredHostToken } from '@/lib/missionIdentity';
 import { LIVE_STATE_MESSAGE_CAP } from '@/lib/realtime/liveStateLimits';
 import { nextLiveStateSince } from '@/lib/realtime/liveStateWatermark';
+import { LIVE_RECONCILE_MS, shouldReconcileLiveState } from '@/lib/realtime/liveReconcile';
 import {
   mergeMissionClock,
   mergePresenceState,
@@ -74,6 +75,13 @@ export function useMissionChannel(
   const fetchGenRef = useRef(0);
   const sinceRef = useRef<string | null>(null);
   const resyncRef = useRef<(() => void) | null>(null);
+  // Read by the reconcile timer, which must not be torn down and rebuilt every
+  // time the clock ticks the mission row forward.
+  const missionPhaseRef = useRef<MissionRow['state'] | null>(null);
+
+  useEffect(() => {
+    missionPhaseRef.current = mission?.state ?? null;
+  }, [mission?.state]);
 
   const presenceParticipantId = presence?.participantId;
   const presenceNickname = presence?.nickname;
@@ -184,6 +192,18 @@ export function useMissionChannel(
         void refreshSnapshot();
       }, GUEST_MISSION_POLL_MS);
     }
+
+    // Both feeds can lose a row and never look back: a dropped realtime INSERT
+    // is simply gone, and the incremental poll's watermark has already passed
+    // it. Only the athlete who logged it learns, from log_round's reply, that
+    // their own view is short -- so without this, another athlete's missing
+    // round stays missing on this leaderboard for the rest of the mission.
+    const reconcileTimer = window.setInterval(() => {
+      if (!shouldReconcileLiveState(missionPhaseRef.current)) {
+        return;
+      }
+      resyncRef.current?.();
+    }, LIVE_RECONCILE_MS);
 
     const channel = supabase.channel(`mission:${missionId}`, {
       config: { presence: { key: presenceParticipantId } },
@@ -332,6 +352,7 @@ export function useMissionChannel(
       cancelledRef.current = true;
       fetchGenRef.current += 1;
       resyncRef.current = null;
+      window.clearInterval(reconcileTimer);
       if (pollTimer !== null) {
         window.clearInterval(pollTimer);
       }
