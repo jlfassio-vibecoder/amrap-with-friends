@@ -104,35 +104,37 @@ export default function CoachPage() {
       <AppHeader title="Coach" subtitle="Product analytics" />
 
       <div className="mx-auto max-w-6xl space-y-8 px-6 pb-10 pt-0 lg:px-8 lg:py-10">
-        <section className="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-ink">WOD Builder</h2>
-            <p className="text-sm text-secondary">
-              Create custom exercises and coach-authored workouts.
-            </p>
-          </div>
-          <Link
-            className="btn-primary inline-flex shrink-0 items-center justify-center text-sm"
-            to="/coach/wods"
-          >
-            Open WOD Builder
-          </Link>
-        </section>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <section className="card flex flex-col gap-3 p-4">
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold text-ink">WOD Builder</h2>
+              <p className="text-sm text-secondary">
+                Create custom exercises and coach-authored workouts.
+              </p>
+            </div>
+            <Link
+              className="btn-primary inline-flex shrink-0 items-center justify-center self-start text-sm"
+              to="/coach/wods"
+            >
+              Open WOD Builder
+            </Link>
+          </section>
 
-        <section className="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-ink">Article Builder</h2>
-            <p className="text-sm text-secondary">
-              Draft blog posts with copy and photos for the SEO content layer.
-            </p>
-          </div>
-          <Link
-            className="btn-primary inline-flex shrink-0 items-center justify-center text-sm"
-            to="/coach/articles"
-          >
-            Open Article Builder
-          </Link>
-        </section>
+          <section className="card flex flex-col gap-3 p-4">
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold text-ink">Article Builder</h2>
+              <p className="text-sm text-secondary">
+                Draft blog posts with copy and photos for the SEO content layer.
+              </p>
+            </div>
+            <Link
+              className="btn-primary inline-flex shrink-0 items-center justify-center self-start text-sm"
+              to="/coach/articles"
+            >
+              Open Article Builder
+            </Link>
+          </section>
+        </div>
 
         <CoachTopTabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
