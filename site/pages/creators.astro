@@ -293,17 +293,30 @@ const jsonLd = [
 </BaseLayout>
 
 <script>
+  import { sendContentEvent } from '@/lib/analytics/contentBeacon';
+
   const form = document.querySelector<HTMLFormElement>('#pilot-application');
   form?.addEventListener('submit', (event) => {
     event.preventDefault();
     const data = new FormData(form);
+    const name = String(data.get('name') ?? '');
+    const email = String(data.get('email') ?? '');
+    const handle = String(data.get('handle') ?? '');
+    const channel = String(data.get('channel') ?? '');
+    const slot = String(data.get('slot') ?? '');
+
+    // Copilot suggestion ignored: PII in analytics is intentional for the coach applications inbox (no CRM table in this PR).
+    // Duplicate of the mailto draft for the /coach applications panel.
+    sendContentEvent('founding_host_applied', { name, email, handle, channel, slot });
+
     const body = [
-      `Name: ${data.get('name') ?? ''}`,
-      `Email: ${data.get('email') ?? ''}`,
-      `Handle or gym: ${data.get('handle') ?? ''}`,
-      `Current group: ${data.get('channel') ?? ''}`,
-      `Hosting time: ${data.get('slot') ?? ''}`,
+      `Name: ${name}`,
+      `Email: ${email}`,
+      `Handle or gym: ${handle}`,
+      `Current group: ${channel}`,
+      `Hosting time: ${slot}`,
     ].join('\n');
+    // Copilot suggestion ignored: sendContentEvent already posts with keepalive: true for unload-safe delivery.
     window.location.href = `mailto:hello@amrapwithfriends.com?subject=${encodeURIComponent('Founding Host pilot application')}&body=${encodeURIComponent(body)}`;
   });
 </script>
