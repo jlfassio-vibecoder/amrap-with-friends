@@ -8,6 +8,7 @@ import {
 } from '@/lib/share/cardContent';
 import { chartBandStops, coverRect, scrimStops } from '@/lib/share/photo';
 import { cardMetrics, footerTop } from '@/lib/share/renderer/cardMetrics';
+import { splitLabelIndices, splitLabelSize } from '@/lib/share/splitLabels';
 import {
   AWF_THEME,
   LAYOUTS,
@@ -359,21 +360,45 @@ function drawCardFrame(ctx: Ctx, frame: FrameState, options: DrawFrameOptions): 
     ctx.fillText('ROUND SPLITS', left, labelY);
     y = chartTop;
 
-    const gap = 12;
+    // Named for what it is: the outer `gap()` is the type-scale helper, and
+    // this used to shadow it.
+    const barGap = 12;
     const barWidth = Math.max(
       8,
-      Math.floor((contentWidth - gap * (splits.length - 1)) / Math.max(1, splits.length))
+      Math.floor((contentWidth - barGap * (splits.length - 1)) / Math.max(1, splits.length))
+    );
+
+    // Labels are chosen before anything is drawn, because how many fit decides
+    // how large they can be. Past about seventeen rounds they are wider than
+    // the bars are apart, and every bar having one turned the axis into a
+    // smear of overlapping digits.
+    const pitch = barWidth + barGap;
+    const widestLabel = (size: number): number => {
+      ctx.font = font(size, 600);
+      return Math.max(...splits.map((split) => ctx.measureText(formatSplit(split.seconds)).width));
+    };
+    const labelSize = splitLabelSize([24, 21, 18].map(gap), pitch, widestLabel);
+    const labelled = new Set(
+      splitLabelIndices({
+        count: splits.length,
+        pitch,
+        labelWidth: widestLabel(labelSize),
+        slowestIndex: splits.findIndex((split) => split.seconds === slowest),
+      })
     );
 
     splits.forEach((split, index) => {
       const height = Math.max(6, Math.round((split.seconds / slowest) * chartHeight));
-      const x = left + index * (barWidth + gap);
+      const x = left + index * (barWidth + barGap);
       // Slowest round in the accent: the moment it fell apart is the story.
       ctx.fillStyle = split.seconds === slowest ? theme.accent : theme.border;
       ctx.fillRect(x, y + (chartHeight - height), barWidth, height);
 
+      if (!labelled.has(index)) {
+        return;
+      }
       ctx.fillStyle = theme.secondary;
-      ctx.font = font(24, 600);
+      ctx.font = font(labelSize, 600);
       ctx.textAlign = 'center';
       ctx.fillText(formatSplit(split.seconds), x + barWidth / 2, y + chartHeight + 12);
       ctx.textAlign = 'left';
