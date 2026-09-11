@@ -12,7 +12,7 @@ import {
   type RoomPage as RoomPageData,
 } from '@/lib/api/rooms';
 import { WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
-import { activityLine, recentActivity, shouldShowActivity } from '@/lib/rooms/roomActivity';
+import { RoomActivityFeed } from '@/components/rooms/RoomActivityFeed';
 import { roomIcsFileName, roomMissionCalendarEvent } from '@/lib/rooms/roomCalendar';
 import { nextMission, nextMissionLabel } from '@/lib/rooms/roomSchedule';
 import { track } from '@/lib/analytics/track';
@@ -65,7 +65,6 @@ export default function RoomPage() {
 function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
   const [room, setRoom] = useState<RoomPageData | null>(null);
   const [upcoming, setUpcoming] = useState<RoomMission[]>([]);
-  const [recent, setRecent] = useState<RoomMission[]>([]);
   // A schedule that failed to load is not an empty schedule. Without this, a
   // slow or failed read says "nothing on the clock" over a mission that exists.
   const [scheduleStatus, setScheduleStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -74,6 +73,9 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
   const [joining, setJoining] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  // Bumped when someone signs in, so the feed can claim the finishes this
+  // device already owns rather than leaving them unnamed behind a new account.
+  const [authNonce, setAuthNonce] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -94,7 +96,6 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
         }
         if (schedule.ok) {
           setUpcoming(schedule.upcoming);
-          setRecent(schedule.recent);
           setScheduleStatus('ready');
         } else {
           setScheduleStatus('error');
@@ -132,8 +133,19 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
         : ({ action: 'none' } as const);
 
     setNotice(homeCoachNotice(outcome, room.displayName) ?? `You joined ${room.displayName}.`);
-    setRoom({ ...room, myRole: 'member', memberCount: room.memberCount + 1 });
-  }, [room]);
+
+    // Re-read rather than patch. Rejoining reopens the membership row that was
+    // there before, keeping whatever activity_visible it held, and a hand-built
+    // local room object would leave that null -- showing a "Show my name here"
+    // switch ticked over a name the database is hiding. The member count is
+    // the server's to say too.
+    const again = await getRoomByHandle(handle);
+    if (again.ok) {
+      setRoom(again.room);
+    } else {
+      setRoom({ ...room, myRole: 'member', memberCount: room.memberCount + 1 });
+    }
+  }, [room, handle]);
 
   // The start time passes while the page is open, and nothing here reloads.
   // Without a tick, a visitor who opens the room five minutes before the
@@ -269,23 +281,20 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
         )}
       </div>
 
-      {scheduleStatus === 'ready' && shouldShowActivity(recentActivity(recent)) ? (
-        <section className="card mt-4 space-y-2 p-4 text-sm">
-          <h2 className="eyebrow text-secondary">Recently in this room</h2>
-          <ul className="flex flex-col gap-1">
-            {recentActivity(recent).map((row) => (
-              <li key={row.missionId} className="text-secondary">
-                {activityLine(row, workoutName(row.templateId))}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+      <RoomActivityFeed
+        roomId={room.id}
+        signedIn={signedIn}
+        isMember={isMember}
+        activityVisible={room.myActivityVisible}
+        authNonce={authNonce}
+        workoutName={workoutName}
+        onSignUp={() => setAuthOpen(true)}
+      />
 
       {!isMember ? (
         <p className="mt-3 text-xs text-secondary">
-          Joining lets this coach see the missions you finish in their room. It never adds you to
-          anyone&rsquo;s squad.
+          Joining puts your name on the missions you finish in this room, here on this page. You can
+          turn that off any time. It never adds you to anyone&rsquo;s squad.
         </p>
       ) : null}
 
@@ -294,6 +303,11 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
           onClose={() => setAuthOpen(false)}
           onAuthenticated={() => {
             setAuthOpen(false);
+            // Tells the feed to claim this device's own finishes. Runs whether
+            // or not the join below succeeds: naming a result already on the
+            // page is what the prompt promised, and it does not depend on
+            // membership.
+            setAuthNonce((nonce) => nonce + 1);
             void runJoin();
           }}
         />

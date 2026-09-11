@@ -45,10 +45,18 @@ describe('postFinishSheet', () => {
 });
 
 describe('joinNote', () => {
-  it('says what the coach can see', () => {
-    expect(joinNote('Bay Area CrossFit', false)).toContain(
-      'will see the missions you finish in their room'
-    );
+  it('says the name goes somewhere public, before the tick', () => {
+    // It used to promise only that the coach would see it. The room page now
+    // carries a public activity feed, so that wording was about to become a
+    // promise the product breaks -- and the athlete would have found out by
+    // seeing their name on a page anyone can open.
+    const note = joinNote('Bay Area CrossFit', false);
+    expect(note).toContain('Your name goes on the missions you finish');
+    expect(note).toContain('public page');
+  });
+
+  it('says the opt-out in the same breath as the opt-in', () => {
+    expect(joinNote('Bay Area CrossFit', false)).toContain('turn that off any time');
   });
 
   it('promises the squad is untouched', () => {

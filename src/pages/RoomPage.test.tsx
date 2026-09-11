@@ -4,12 +4,21 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import RoomPage from '@/pages/RoomPage';
 import { ThemeProvider } from '@/contexts/ThemeProvider';
 
-const { getRoomByHandle, listRoomMissions, joinRoom } = vi.hoisted(() => ({
-  getRoomByHandle: vi.fn(),
-  listRoomMissions: vi.fn(),
-  joinRoom: vi.fn(),
+const { getRoomByHandle, listRoomMissions, joinRoom, listRoomActivity, setRoomActivityVisible } =
+  vi.hoisted(() => ({
+    getRoomByHandle: vi.fn(),
+    listRoomMissions: vi.fn(),
+    joinRoom: vi.fn(),
+    listRoomActivity: vi.fn(),
+    setRoomActivityVisible: vi.fn(),
+  }));
+vi.mock('@/lib/api/rooms', () => ({
+  getRoomByHandle,
+  listRoomMissions,
+  joinRoom,
+  listRoomActivity,
+  setRoomActivityVisible,
 }));
-vi.mock('@/lib/api/rooms', () => ({ getRoomByHandle, listRoomMissions, joinRoom }));
 vi.mock('@/lib/analytics/track', () => ({ track: vi.fn(), trackBeacon: vi.fn() }));
 vi.mock('@/hooks/useAmrapAuth', () => ({
   useAmrapAuth: () => ({ user: null, isAuthenticated: false, isAuthLoading: false }),
@@ -27,6 +36,7 @@ const room = {
   myRole: null,
   announcement: null,
   brand: null,
+  myActivityVisible: null,
 };
 
 function scheduled(scheduledAt: string) {
@@ -57,6 +67,7 @@ function renderRoom() {
 describe('add to calendar on a room page', () => {
   beforeEach(() => {
     getRoomByHandle.mockResolvedValue({ ok: true, room });
+    listRoomActivity.mockResolvedValue({ ok: true, rows: [] });
   });
 
   afterEach(() => {
@@ -64,6 +75,7 @@ describe('add to calendar on a room page', () => {
     vi.useRealTimers();
     getRoomByHandle.mockReset();
     listRoomMissions.mockReset();
+    listRoomActivity.mockReset();
   });
 
   it('offers it for a mission still to come', async () => {
