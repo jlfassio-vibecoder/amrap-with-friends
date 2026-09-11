@@ -4,20 +4,28 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import RoomPage from '@/pages/RoomPage';
 import { ThemeProvider } from '@/contexts/ThemeProvider';
 
-const { getRoomByHandle, listRoomMissions, joinRoom, listRoomActivity, setRoomActivityVisible } =
-  vi.hoisted(() => ({
-    getRoomByHandle: vi.fn(),
-    listRoomMissions: vi.fn(),
-    joinRoom: vi.fn(),
-    listRoomActivity: vi.fn(),
-    setRoomActivityVisible: vi.fn(),
-  }));
+const {
+  getRoomByHandle,
+  listRoomMissions,
+  joinRoom,
+  listRoomActivity,
+  setRoomActivityVisible,
+  listRoomWorkouts,
+} = vi.hoisted(() => ({
+  getRoomByHandle: vi.fn(),
+  listRoomMissions: vi.fn(),
+  joinRoom: vi.fn(),
+  listRoomActivity: vi.fn(),
+  setRoomActivityVisible: vi.fn(),
+  listRoomWorkouts: vi.fn(),
+}));
 vi.mock('@/lib/api/rooms', () => ({
   getRoomByHandle,
   listRoomMissions,
   joinRoom,
   listRoomActivity,
   setRoomActivityVisible,
+  listRoomWorkouts,
 }));
 vi.mock('@/lib/analytics/track', () => ({ track: vi.fn(), trackBeacon: vi.fn() }));
 vi.mock('@/hooks/useAmrapAuth', () => ({
@@ -68,6 +76,7 @@ describe('add to calendar on a room page', () => {
   beforeEach(() => {
     getRoomByHandle.mockResolvedValue({ ok: true, room });
     listRoomActivity.mockResolvedValue({ ok: true, rows: [] });
+    listRoomWorkouts.mockResolvedValue({ ok: true, workouts: [] });
   });
 
   afterEach(() => {
@@ -76,6 +85,7 @@ describe('add to calendar on a room page', () => {
     getRoomByHandle.mockReset();
     listRoomMissions.mockReset();
     listRoomActivity.mockReset();
+    listRoomWorkouts.mockReset();
   });
 
   it('offers it for a mission still to come', async () => {

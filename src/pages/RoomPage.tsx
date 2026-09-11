@@ -13,6 +13,7 @@ import {
 } from '@/lib/api/rooms';
 import { WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
 import { RoomActivityFeed } from '@/components/rooms/RoomActivityFeed';
+import { RoomWorkoutCollection } from '@/components/rooms/RoomWorkoutCollection';
 import { roomIcsFileName, roomMissionCalendarEvent } from '@/lib/rooms/roomCalendar';
 import { nextMission, nextMissionLabel } from '@/lib/rooms/roomSchedule';
 import { track } from '@/lib/analytics/track';
@@ -28,8 +29,9 @@ import NotFoundPage from '@/pages/NotFoundPage';
  * not.
  *
  * The page's job, in this order: who am I training with, what can I do next,
- * why come back. Phase 2a answers the first and starts the second; next
- * mission, the workout collection and the activity list follow.
+ * why come back. All three are answered now: identity and the pinned
+ * announcement, the next mission with an "add to calendar", the coach's
+ * workouts to train on your own clock, and the activity list.
  */
 /** The shape the database enforces, checked before asking it anything. */
 const HANDLE = /^[a-z0-9][a-z0-9_]{2,23}$/;
@@ -280,6 +282,8 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
           </button>
         )}
       </div>
+
+      <RoomWorkoutCollection roomId={room.id} workoutName={workoutName} />
 
       <RoomActivityFeed
         roomId={room.id}

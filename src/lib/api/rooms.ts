@@ -2,6 +2,8 @@ import { callRpc } from '@/lib/api/callRpc';
 import { persistMissionIdentity } from '@/lib/missionIdentity';
 import { parseRoomBrand, type RoomBrand } from '@/lib/rooms/brand';
 import type { RoomFeedRow } from '@/lib/rooms/roomFeed';
+import type { RoomWorkout } from '@/lib/rooms/roomWorkouts';
+import type { WorkoutExercise } from '@/lib/api/missionTypes';
 import { isRoomReaction, type RoomReaction } from '@/lib/rooms/reactions';
 import type { RoomRole } from '@/lib/rooms/membership';
 
@@ -532,6 +534,50 @@ export async function setRoomActivityVisible(
   return payload?.ok === true
     ? { ok: true }
     : { ok: false, reason: str(payload?.reason) ?? 'unknown' };
+}
+
+/**
+ * The room's workout collection. Public, like the page it sits on.
+ *
+ * Each entry carries the workout jsonb as the room ran it, not a template id
+ * to look up: an edited template must never change what an athlete is handed.
+ */
+export async function listRoomWorkouts(
+  roomId: string,
+  limit = 12
+): Promise<{ ok: true; workouts: RoomWorkout[] } | { ok: false; reason: string }> {
+  const { data, error } = await callRpc<unknown>('list_room_workouts', {
+    p_room_id: roomId,
+    p_limit: limit,
+  });
+  if (error) {
+    return { ok: false, reason: error.message };
+  }
+  const payload = record(data);
+  if (!payload || payload.ok !== true || !Array.isArray(payload.workouts)) {
+    return { ok: false, reason: str(payload?.reason) ?? 'invalid_response' };
+  }
+
+  const workouts: RoomWorkout[] = [];
+  for (const entry of payload.workouts) {
+    const item = record(entry);
+    const workoutKey = item ? str(item.workout_key) : null;
+    const lastRun = item ? str(item.last_run) : null;
+    if (!item || !workoutKey || !lastRun || !Array.isArray(item.workout)) {
+      continue;
+    }
+    workouts.push({
+      workoutKey,
+      templateId: str(item.template_id),
+      workout: item.workout as WorkoutExercise[],
+      durationMinutes: typeof item.duration_minutes === 'number' ? item.duration_minutes : 0,
+      intensityTier: typeof item.intensity_tier === 'number' ? item.intensity_tier : null,
+      scoreUnit: item.score_unit === 'rounds' ? 'rounds' : 'reps',
+      lastRun,
+      finishers: typeof item.finishers === 'number' ? item.finishers : 0,
+    });
+  }
+  return { ok: true, workouts };
 }
 
 export interface RoomFinish {
