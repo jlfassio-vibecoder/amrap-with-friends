@@ -51,7 +51,7 @@ function buildChainGroup(
   // Planned-chain UI only when position 0 is stamped to a mission the athlete
   // can see. Falling back to an unstamped hub row made "1 of N in this chain"
   // appear while advance still treated pos0 as unstarted and recreated workout 1.
-  if (!first.startedMissionId) {
+  if (first.position !== 0 || !first.startedMissionId) {
     return null;
   }
   const parent = byMissionId.get(first.startedMissionId);

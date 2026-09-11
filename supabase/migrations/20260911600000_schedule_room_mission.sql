@@ -26,6 +26,7 @@ CREATE OR REPLACE FUNCTION public.schedule_room_mission(
   p_workout jsonb,
   p_template_id text DEFAULT NULL,
   p_intensity_tier integer DEFAULT NULL,
+  -- Copilot suggestion ignored: local date/timezone scheduling redesign is out of scope for this chain-heal PR.
   p_scheduled_at timestamptz DEFAULT NULL
 )
 RETURNS jsonb
@@ -122,6 +123,7 @@ BEGIN
     p_intensity_tier,
     'waiting',
     10,
+    -- Copilot suggestion ignored: excluding room missions from athlete host caps is a separate scheduling policy change.
     p_scheduled_at,
     p_room_id
   )

@@ -152,6 +152,28 @@ describe('groupMyMissionsByRallyPoint', () => {
     ]);
   });
 
+  it('does not show a planned chain when the lowest position is not 0', () => {
+    const second = entry({
+      missionId: 'm2',
+      createdAt: '2026-09-06T10:00:00.000Z',
+      rallyPointId: 'rp-chain',
+      templateId: 'the-metronome',
+    });
+    const chain = [
+      chainItem({
+        id: 'c1',
+        position: 1,
+        templateId: 'the-metronome',
+        startedMissionId: 'm2',
+      }),
+      chainItem({ id: 'c2', position: 2, templateId: 'whiplash' }),
+    ];
+
+    const result = groupMyMissionsByRallyPoint([second], { 'rp-chain': chain });
+
+    expect(result).toEqual([{ kind: 'single', entry: second }]);
+  });
+
   it('does not show a planned chain when position 0 has no started_mission_id stamp', () => {
     const piston = entry({
       missionId: 'm1',
