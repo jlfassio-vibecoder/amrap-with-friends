@@ -6,13 +6,17 @@ import {
   getRoomActivity,
   getRoomByHandle,
   listRoomMembers,
+  listRoomMissions,
   setRoomCohost,
   type RoomActivity,
   type RoomMember,
+  type RoomMission,
   type RoomPage,
 } from '@/lib/api/rooms';
 import { capabilitiesFor } from '@/lib/rooms/membership';
 import { roomActivitySentence, roomInviteUrl } from '@/lib/rooms/roomInvite';
+import { ScheduleMissionForm } from '@/components/rooms/ScheduleMissionForm';
+import { nextMission, nextMissionLabel, repeatableMission } from '@/lib/rooms/roomSchedule';
 
 /**
  * A host's view of their own room.
@@ -55,6 +59,7 @@ function Dashboard({ handle }: { handle: string }) {
   const [room, setRoom] = useState<RoomPage | null>(null);
   const [members, setMembers] = useState<RoomMember[]>([]);
   const [activity, setActivity] = useState<RoomActivity | null>(null);
+  const [missions, setMissions] = useState<RoomMission[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'denied' | 'missing' | 'error'>(
     'loading'
   );
@@ -76,9 +81,10 @@ function Dashboard({ handle }: { handle: string }) {
     }
 
     setRoom(found.room);
-    const [roster, counts] = await Promise.all([
+    const [roster, counts, schedule] = await Promise.all([
       listRoomMembers(found.room.id),
       getRoomActivity(found.room.id),
+      listRoomMissions(found.room.id),
     ]);
     // Both reads are role-gated. If either refuses -- a co-host revoked between
     // the two calls, say -- this is not a dashboard to render half of.
@@ -94,6 +100,10 @@ function Dashboard({ handle }: { handle: string }) {
 
     setMembers(roster.members);
     setActivity(counts.activity);
+    // The mission list is public, so a failure there is worth an empty schedule
+    // rather than a denied page -- it is not an authorization signal like the
+    // other two reads.
+    setMissions(schedule.ok ? schedule.missions : []);
     setStatus('ready');
   }, [handle]);
 
@@ -162,7 +172,20 @@ function Dashboard({ handle }: { handle: string }) {
 
   return (
     <NarrowPageLayout title={room.displayName} subtitle={`@${room.handle}`}>
-      <section className="card space-y-2 p-4 text-sm">
+      <section className="card space-y-3 p-4 text-sm">
+        <h2 className="eyebrow text-secondary">Next mission</h2>
+        <p>{nextMissionLabel(nextMission(missions))}</p>
+        {room.isActive ? (
+          <ScheduleMissionForm
+            roomId={room.id}
+            hostNickname={room.displayName}
+            repeatable={repeatableMission(missions)}
+            onScheduled={() => void load()}
+          />
+        ) : null}
+      </section>
+
+      <section className="card mt-4 space-y-2 p-4 text-sm">
         <h2 className="eyebrow text-secondary">This week</h2>
         <p>{activity ? roomActivitySentence(activity) : 'Loading…'}</p>
         {!room.isActive ? (
