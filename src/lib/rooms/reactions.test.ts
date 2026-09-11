@@ -42,8 +42,10 @@ describe('the reaction set matches the database', () => {
     }
   });
 
-  it('is small, because the plan says a small fixed set', () => {
-    expect(ROOM_REACTIONS.length).toBeLessThanOrEqual(6);
+  // "A small fixed set" is four. An upper bound would let a fifth through so
+  // long as both sides changed together, which is the decision this guards.
+  it('is exactly the four the product decided on', () => {
+    expect([...ROOM_REACTIONS]).toEqual(['respect', 'fire', 'grit', 'salute']);
   });
 });
 
@@ -72,18 +74,24 @@ describe('nextReaction', () => {
 
 describe('finishLine', () => {
   it('names the athlete and the score', () => {
-    expect(finishLine('Maya', 140, false)).toBe('Maya — 140 reps');
+    expect(finishLine('Maya', 140, 'reps', false)).toBe('Maya — 140 reps');
+  });
+
+  // A round-based workout has no reps to print, and printing them anyway
+  // describes a workout the athlete did not do.
+  it('counts rounds when that is what the workout counts', () => {
+    expect(finishLine('Maya', 7, 'rounds', false)).toBe('Maya — 7 rounds');
   });
 
   it('marks a guest, because that is who the room is trying to convert', () => {
-    expect(finishLine('Maya', 140, true)).toBe('Maya — 140 reps · guest');
+    expect(finishLine('Maya', 140, 'reps', true)).toBe('Maya — 140 reps · guest');
   });
 
   it('survives a blank nickname rather than rendering an empty row', () => {
-    expect(finishLine('   ', 100, false)).toBe('Athlete — 100 reps');
+    expect(finishLine('   ', 100, 'reps', false)).toBe('Athlete — 100 reps');
   });
 
   it('omits the score when there is not one', () => {
-    expect(finishLine('Maya', null, false)).toBe('Maya');
+    expect(finishLine('Maya', null, 'reps', false)).toBe('Maya');
   });
 });

@@ -88,7 +88,9 @@ export function RecentFinishes({ roomId }: { roomId: string }) {
         const key = `${finish.participantId}:${finish.segmentIndex}`;
         return (
           <li key={key} className="flex flex-col gap-1">
-            <span>{finishLine(finish.nickname, finish.finalScore, finish.isGuest)}</span>
+            <span>
+              {finishLine(finish.nickname, finish.baseScore, finish.scoreUnit, finish.isGuest)}
+            </span>
             <span className="flex flex-wrap items-center gap-1">
               {ROOM_REACTIONS.map((reaction) => (
                 <button

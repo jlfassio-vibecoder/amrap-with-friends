@@ -441,7 +441,9 @@ export interface RoomFinish {
   nickname: string;
   missionId: string;
   templateId: string | null;
-  finalScore: number | null;
+  /** Reps or rounds actually done. Never the P.V.I.-adjusted final score. */
+  baseScore: number | null;
+  scoreUnit: 'reps' | 'rounds';
   finishedAt: string;
   isGuest: boolean;
   myReaction: RoomReaction | null;
@@ -475,7 +477,8 @@ export async function listRoomFinishes(
       nickname: str(row.nickname) ?? '',
       missionId,
       templateId: str(row.template_id),
-      finalScore: typeof row.final_score === 'number' ? row.final_score : null,
+      baseScore: typeof row.base_score === 'number' ? row.base_score : null,
+      scoreUnit: row.score_unit === 'rounds' ? 'rounds' : 'reps',
       finishedAt: str(row.finished_at) ?? '',
       isGuest: row.is_guest === true,
       myReaction: reaction && isRoomReaction(reaction) ? reaction : null,

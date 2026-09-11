@@ -40,9 +40,22 @@ export function nextReaction(
   return current === tapped ? null : tapped;
 }
 
-/** How a finish reads in the host's list. */
-export function finishLine(nickname: string, score: number | null, isGuest: boolean): string {
+/**
+ * How a finish reads in the host's list.
+ *
+ * The base score with the unit the workout is counted in -- never the final
+ * score, which is that number adjusted by P.V.I. and Domain and is worth more
+ * or less than the work the athlete actually did. ParticipantsPanel carries the
+ * same rule for the same reason: a number printed next to "reps" has to be the
+ * reps.
+ */
+export function finishLine(
+  nickname: string,
+  score: number | null,
+  unit: 'reps' | 'rounds',
+  isGuest: boolean
+): string {
   const who = nickname.trim().length > 0 ? nickname.trim() : 'Athlete';
   const guest = isGuest ? ' · guest' : '';
-  return score === null ? `${who}${guest}` : `${who} — ${score} reps${guest}`;
+  return score === null ? `${who}${guest}` : `${who} — ${score} ${unit}${guest}`;
 }
