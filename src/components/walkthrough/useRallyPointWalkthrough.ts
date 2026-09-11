@@ -5,7 +5,12 @@ import {
   type RallyPointWalkthroughStep,
   type WalkthroughRole,
 } from './rallyPointWalkthrough';
-import { dismissWalkthroughForever, isWalkthroughDismissed } from './walkthroughPrefs';
+import {
+  dismissWalkthroughForever,
+  isWalkthroughDismissed,
+  markWalkthroughCompleteForMission,
+  isWalkthroughCompleteForMission,
+} from './walkthroughPrefs';
 
 export type WalkthroughStatus = 'idle' | 'running' | 'finale' | 'done';
 
@@ -36,10 +41,14 @@ function resolveStep(
   return { step: null, index: steps.length };
 }
 
-function initialState(key: string, role: WalkthroughRole): WalkthroughState {
+function isWalkthroughSettled(missionId: string, role: WalkthroughRole): boolean {
+  return isWalkthroughDismissed(role) || isWalkthroughCompleteForMission(missionId, role);
+}
+
+function initialState(key: string, missionId: string, role: WalkthroughRole): WalkthroughState {
   return {
     key,
-    status: isWalkthroughDismissed(role) ? 'done' : 'idle',
+    status: isWalkthroughSettled(missionId, role) ? 'done' : 'idle',
     stepIndex: 0,
   };
 }
@@ -68,13 +77,16 @@ export function useRallyPointWalkthrough({
   const role: WalkthroughRole = isHost ? 'host' : 'joiner';
   const walkthroughKey = `${missionId}:${role}`;
   const steps = useMemo(() => stepsForRole(isHost), [isHost]);
-  const [state, setState] = useState<WalkthroughState>(() => initialState(walkthroughKey, role));
+  const [state, setState] = useState<WalkthroughState>(() =>
+    initialState(walkthroughKey, missionId, role)
+  );
 
-  const normalized = state.key === walkthroughKey ? state : initialState(walkthroughKey, role);
+  const normalized =
+    state.key === walkthroughKey ? state : initialState(walkthroughKey, missionId, role);
 
-  const dismissed = isWalkthroughDismissed(role);
-  const baseStatus = dismissed ? 'done' : normalized.status;
-  const effectiveStatus: WalkthroughStatus = dismissed
+  const settled = isWalkthroughSettled(missionId, role);
+  const baseStatus = settled ? 'done' : normalized.status;
+  const effectiveStatus: WalkthroughStatus = settled
     ? 'done'
     : enabled && baseStatus === 'idle'
       ? 'running'
@@ -87,7 +99,7 @@ export function useRallyPointWalkthrough({
 
   const showingFinale = enabled && effectiveStatus === 'running' && resolved.step === null;
   const status: WalkthroughStatus = showingFinale ? 'finale' : effectiveStatus;
-  const complete = status === 'done' || dismissed;
+  const complete = status === 'done' || settled;
   const active = enabled && status === 'running' && resolved.step !== null;
 
   const next = useCallback(() => {
@@ -101,29 +113,32 @@ export function useRallyPointWalkthrough({
   }, [state.key, state.stepIndex, walkthroughKey, steps, isTargetPresent]);
 
   const skipVisit = useCallback(() => {
+    markWalkthroughCompleteForMission(missionId, role);
     setState({
       key: walkthroughKey,
       status: 'done',
       stepIndex: state.key === walkthroughKey ? state.stepIndex : 0,
     });
-  }, [walkthroughKey, state.key, state.stepIndex]);
+  }, [missionId, role, walkthroughKey, state.key, state.stepIndex]);
 
   const confirmLetsDoThis = useCallback(() => {
+    markWalkthroughCompleteForMission(missionId, role);
     setState({
       key: walkthroughKey,
       status: 'done',
       stepIndex: state.key === walkthroughKey ? state.stepIndex : 0,
     });
-  }, [walkthroughKey, state.key, state.stepIndex]);
+  }, [missionId, role, walkthroughKey, state.key, state.stepIndex]);
 
   const dismissForever = useCallback(() => {
     dismissWalkthroughForever(role);
+    markWalkthroughCompleteForMission(missionId, role);
     setState({
       key: walkthroughKey,
       status: 'done',
       stepIndex: state.key === walkthroughKey ? state.stepIndex : 0,
     });
-  }, [role, walkthroughKey, state.key, state.stepIndex]);
+  }, [missionId, role, walkthroughKey, state.key, state.stepIndex]);
 
   return {
     status,

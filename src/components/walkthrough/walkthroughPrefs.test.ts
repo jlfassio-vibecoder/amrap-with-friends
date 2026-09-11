@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   dismissWalkthroughForever,
+  isWalkthroughCompleteForMission,
   isWalkthroughDismissed,
+  markWalkthroughCompleteForMission,
   resetWalkthroughPrefs,
+  walkthroughMissionCompleteKey,
   walkthroughStorageKey,
 } from './walkthroughPrefs';
 
@@ -29,5 +32,16 @@ describe('walkthroughPrefs', () => {
 
     expect(isWalkthroughDismissed('joiner')).toBe(true);
     expect(isWalkthroughDismissed('host')).toBe(false);
+  });
+
+  it('persists completion per mission without forever-dismissing the role', () => {
+    markWalkthroughCompleteForMission('mission-a', 'host');
+
+    expect(isWalkthroughCompleteForMission('mission-a', 'host')).toBe(true);
+    expect(isWalkthroughCompleteForMission('mission-b', 'host')).toBe(false);
+    expect(isWalkthroughDismissed('host')).toBe(false);
+    expect(walkthroughMissionCompleteKey('mission-a', 'host')).toBe(
+      'amrap_rally_point_walkthrough_v1_mission_host_mission-a'
+    );
   });
 });
