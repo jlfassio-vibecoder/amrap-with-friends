@@ -1,3 +1,5 @@
+import { panelIdFor, tabIdFor } from '@/components/tabs/tabIds';
+
 export type CoachTabKey =
   | 'applications'
   | 'rooms'
@@ -8,9 +10,9 @@ export type CoachTabKey =
   | 'explore';
 
 export function panelIdForCoachTab(tab: CoachTabKey): string {
-  return `coach-panel-${tab}`;
+  return panelIdFor('coach', tab);
 }
 
 export function tabIdForCoachTab(tab: CoachTabKey): string {
-  return `coach-tab-${tab}`;
+  return tabIdFor('coach', tab);
 }

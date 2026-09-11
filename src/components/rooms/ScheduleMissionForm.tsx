@@ -1,5 +1,11 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
+import {
+  WORKOUT_CATEGORIES,
+  WORKOUT_TEMPLATES,
+  type TimeDomain,
+  type WorkoutCategory,
+} from '@/data/workoutTemplates';
+import { WorkoutBrowser } from '@/components/workout/WorkoutBrowser';
 import { scheduleRoomMission } from '@/lib/api/rooms';
 import { checkScheduledAt, hostNicknameFor, type RoomMissionLike } from '@/lib/rooms/roomSchedule';
 import { templateToExercises } from '@/lib/workout/templateToExercises';
@@ -30,6 +36,18 @@ export function ScheduleMissionForm({
   onScheduled,
 }: ScheduleMissionFormProps) {
   const [templateId, setTemplateId] = useState(repeatable?.templateId ?? '');
+  // The browser's own filters. Seeded from the repeatable mission when there is
+  // one, so "run it again" lands the host where that workout actually lives
+  // rather than on a default they have to navigate away from.
+  const repeatSeed = repeatable?.templateId
+    ? WORKOUT_TEMPLATES.find((template) => template.id === repeatable.templateId)
+    : undefined;
+  const [duration, setDuration] = useState<TimeDomain>(
+    (repeatSeed?.durationMinutes as TimeDomain | undefined) ?? 10
+  );
+  const [category, setCategory] = useState<WorkoutCategory>(
+    repeatSeed?.category ?? WORKOUT_CATEGORIES[0]!.id
+  );
   const [when, setWhen] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -106,21 +124,22 @@ export function ScheduleMissionForm({
         </button>
       ) : null}
 
-      <label className="block">
+      {/* The same browser the athlete's create-mission flow uses. It was a
+          native <select> of every workout in the library, sorted by duration --
+          two hundred names a coach had to already know to find. Choosing a
+          workout is the same act in both places and should not be two
+          different products. */}
+      <div className="space-y-1">
         <span className="eyebrow text-secondary">Workout</span>
-        <select
-          className="input-field mt-1 w-full"
-          value={templateId}
-          onChange={(event) => setTemplateId(event.target.value)}
-        >
-          <option value="">Choose a workout</option>
-          {templates.map((template) => (
-            <option key={template.id} value={template.id}>
-              {template.name} · {template.durationMinutes} min
-            </option>
-          ))}
-        </select>
-      </label>
+        <WorkoutBrowser
+          durationMinutes={duration}
+          selectedCategory={category}
+          selectedTemplateIds={templateId ? [templateId] : []}
+          onDurationChange={setDuration}
+          onCategoryChange={setCategory}
+          onTemplateSelect={(template) => setTemplateId(template.id)}
+        />
+      </div>
 
       <label className="block">
         <span className="eyebrow text-secondary">When</span>

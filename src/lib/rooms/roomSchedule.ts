@@ -27,6 +27,31 @@ export function isOpenMission(mission: RoomMissionLike): boolean {
 }
 
 /**
+ * Every mission the room could still run, soonest first.
+ *
+ * `nextMission` answers "what is next" and throws the rest away. A host who has
+ * scheduled three needs to see three -- the dashboard already loaded them and
+ * rendered only the first, which is how a duplicate gets scheduled.
+ *
+ * Undated missions sort first because they are open now, matching the order
+ * `nextMission` picks from.
+ */
+export function scheduledMissions(missions: RoomMissionLike[]): RoomMissionLike[] {
+  return missions.filter(isOpenMission).sort((a, b) => {
+    if (a.scheduledAt === null && b.scheduledAt === null) {
+      return a.createdAt.localeCompare(b.createdAt);
+    }
+    if (a.scheduledAt === null) {
+      return -1;
+    }
+    if (b.scheduledAt === null) {
+      return 1;
+    }
+    return a.scheduledAt.localeCompare(b.scheduledAt);
+  });
+}
+
+/**
  * The next mission the room will run.
  *
  * A mission already running beats one scheduled for later -- a host looking at
