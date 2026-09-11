@@ -27,26 +27,45 @@ import { roomActivitySentence, roomInviteUrl } from '@/lib/rooms/roomInvite';
  */
 export default function RoomDashboardPage() {
   const { handle } = useParams<{ handle: string }>();
-  const { user } = useAmrapAuth();
-  return (
-    <Dashboard
-      key={`${handle ?? ''}:${user?.id ?? 'anon'}`}
-      handle={(handle ?? '').toLowerCase()}
-    />
-  );
+  const { user, isAuthenticated, isAuthLoading } = useAmrapAuth();
+
+  if (isAuthLoading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center p-6 text-sm text-secondary">
+        Loading…
+      </main>
+    );
+  }
+
+  // The room page behind this is public, so a signed-out visitor would
+  // otherwise reach the "you are in this room" branch and be told something
+  // untrue about a dashboard they cannot see.
+  if (!isAuthenticated || !user) {
+    return (
+      <NarrowPageLayout title="Manage room" subtitle={`@${(handle ?? '').toLowerCase()}`}>
+        <p className="text-sm text-secondary">Sign in as a host of this room to manage it.</p>
+      </NarrowPageLayout>
+    );
+  }
+
+  return <Dashboard key={`${handle ?? ''}:${user.id}`} handle={(handle ?? '').toLowerCase()} />;
 }
 
 function Dashboard({ handle }: { handle: string }) {
   const [room, setRoom] = useState<RoomPage | null>(null);
   const [members, setMembers] = useState<RoomMember[]>([]);
   const [activity, setActivity] = useState<RoomActivity | null>(null);
-  const [status, setStatus] = useState<'loading' | 'ready' | 'denied' | 'error'>('loading');
+  const [status, setStatus] = useState<'loading' | 'ready' | 'denied' | 'missing' | 'error'>(
+    'loading'
+  );
   const [copied, setCopied] = useState(false);
 
   const load = useCallback(async () => {
     const found = await getRoomByHandle(handle);
     if (!found.ok) {
-      setStatus('error');
+      // A failed request is not a missing room. Telling a valid host their
+      // handle does not exist because a fetch timed out is the worse error.
+      setStatus(found.reason === 'not_found' || found.reason === 'moved' ? 'missing' : 'error');
       return;
     }
     if (!capabilitiesFor(found.room.myRole).runRoom) {
@@ -61,12 +80,20 @@ function Dashboard({ handle }: { handle: string }) {
       listRoomMembers(found.room.id),
       getRoomActivity(found.room.id),
     ]);
-    if (roster.ok) {
-      setMembers(roster.members);
+    // Both reads are role-gated. If either refuses -- a co-host revoked between
+    // the two calls, say -- this is not a dashboard to render half of.
+    if (!roster.ok || !counts.ok) {
+      setStatus(
+        (!roster.ok && roster.reason === 'forbidden') ||
+          (!counts.ok && counts.reason === 'forbidden')
+          ? 'denied'
+          : 'error'
+      );
+      return;
     }
-    if (counts.ok) {
-      setActivity(counts.activity);
-    }
+
+    setMembers(roster.members);
+    setActivity(counts.activity);
     setStatus('ready');
   }, [handle]);
 
@@ -102,10 +129,20 @@ function Dashboard({ handle }: { handle: string }) {
     );
   }
 
-  if (status === 'error' || !room) {
+  if (status === 'missing') {
     return (
       <NarrowPageLayout title="Room not found" subtitle={`@${handle}`}>
         <p className="text-sm text-secondary">No room answers to that handle.</p>
+      </NarrowPageLayout>
+    );
+  }
+
+  if (status === 'error' || !room) {
+    return (
+      <NarrowPageLayout title="Can’t load this room" subtitle={`@${handle}`}>
+        <p className="text-sm text-secondary">
+          Something went wrong loading this room. Refresh to try again.
+        </p>
       </NarrowPageLayout>
     );
   }
@@ -114,7 +151,7 @@ function Dashboard({ handle }: { handle: string }) {
     return (
       <NarrowPageLayout title={room.displayName} subtitle={`@${room.handle}`}>
         <p className="text-sm text-secondary">
-          You&rsquo;re in this room, but only its owner and co-hosts can manage it.
+          Only this room&rsquo;s owner and co-hosts can manage it.
         </p>
       </NarrowPageLayout>
     );
