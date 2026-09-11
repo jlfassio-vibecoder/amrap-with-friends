@@ -22,6 +22,7 @@ export interface InvitationCardProps {
   onBlock?: () => void;
   onSaveToInbox?: () => void;
   onSignInToSave?: () => void;
+  viewerUserId?: string | null;
 }
 
 function movementLine(card: InvitationCardData): string | null {
@@ -43,6 +44,7 @@ export function InvitationCard({
   onBlock,
   onSaveToInbox,
   onSignInToSave,
+  viewerUserId = null,
 }: InvitationCardProps) {
   const duration = card.durationMinutes ?? card.mission?.durationMinutes ?? 15;
   const weekCount = card.campaign?.weekCount ?? 8;
@@ -59,12 +61,18 @@ export function InvitationCard({
         state: card.mission.state === 'unknown' ? null : card.mission.state,
         scheduledAt: card.mission.scheduledAt,
         alreadyJoined: card.mission.alreadyJoined,
+        joinable: card.mission.joinable,
       })
     : null;
   const movements = movementLine(card);
   const squadPending = card.squadRequestId && card.squadStatus === 'pending';
+  const isOwnCard = Boolean(viewerUserId && viewerUserId === card.fromUserId);
   const showSave =
-    variant === 'chat' && !card.deliveryId && isAuthenticated && Boolean(onSaveToInbox);
+    variant === 'chat' &&
+    !card.deliveryId &&
+    isAuthenticated &&
+    !isOwnCard &&
+    Boolean(onSaveToInbox);
   const showSignInSave =
     variant === 'chat' && !card.deliveryId && !isAuthenticated && Boolean(onSignInToSave);
 
@@ -111,18 +119,20 @@ export function InvitationCard({
           </button>
         ) : null}
 
-        {card.type === 'workout' && onPrimary ? (
+        {card.type === 'workout' && card.resultingMissionId ? (
+          <AppLink className="btn-primary text-sm" to={`/mission/${card.resultingMissionId}`}>
+            Return to {duration}-min mission
+          </AppLink>
+        ) : null}
+
+        {card.type === 'workout' && onPrimary && !card.resultingMissionId ? (
           <button type="button" className="btn-primary text-sm" disabled={busy} onClick={onPrimary}>
             {busy ? 'Starting…' : primaryLabel}
           </button>
         ) : null}
 
-        {card.type === 'mission' && card.mission && onPrimary ? (
-          missionAction === 'view_workout' ? (
-            <AppLink className="btn-primary text-sm" to={`/mission/${card.mission.id}`}>
-              {primaryLabel}
-            </AppLink>
-          ) : (
+        {card.type === 'mission' && card.mission ? (
+          missionAction === 'join_mission' && onPrimary ? (
             <button
               type="button"
               className="btn-primary text-sm"
@@ -131,6 +141,14 @@ export function InvitationCard({
             >
               {primaryLabel}
             </button>
+          ) : missionAction === 'unavailable' ? (
+            <button type="button" className="btn-primary text-sm" disabled>
+              {primaryLabel}
+            </button>
+          ) : (
+            <AppLink className="btn-primary text-sm" to={`/mission/${card.mission.id}`}>
+              {primaryLabel}
+            </AppLink>
           )
         ) : null}
 

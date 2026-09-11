@@ -1,3 +1,5 @@
+import { SITE_HOST } from '@/lib/seo/routes';
+
 const UUID_RE = '[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
 
 export type ParsedInvitationLink =
@@ -15,11 +17,22 @@ function tryUrl(raw: string): URL | null {
     return new URL(trimmed);
   } catch {
     try {
-      return new URL(trimmed, 'https://amrapwithfriends.com');
+      return new URL(trimmed, `https://${SITE_HOST}`);
     } catch {
       return null;
     }
   }
+}
+
+function isAllowedInvitationHost(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/\.$/, '');
+  if (host === SITE_HOST || host === `www.${SITE_HOST}`) {
+    return true;
+  }
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return true;
+  }
+  return host.endsWith('.vercel.app');
 }
 
 /**
@@ -29,7 +42,7 @@ function tryUrl(raw: string): URL | null {
  */
 export function parseInvitationLink(raw: string): ParsedInvitationLink | null {
   const url = tryUrl(raw);
-  if (!url) {
+  if (!url || !isAllowedInvitationHost(url.hostname)) {
     return null;
   }
 

@@ -25,6 +25,7 @@ import {
 } from '@/lib/invitations/pendingInvitationSave';
 import type { WorkoutExercise } from '@/lib/api/missionTypes';
 import type { LiveMissionPhase, MessageRow } from '@/lib/missionSync/types';
+import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 
 interface MissionChatProps {
@@ -50,6 +51,8 @@ function ChatInvitationMessage({
   participantId,
   claimToken,
   isAuthenticated,
+  viewerUserId,
+  nickname,
   onRequestSignIn,
 }: {
   invitationId: string;
@@ -57,11 +60,13 @@ function ChatInvitationMessage({
   participantId: string;
   claimToken: string | null;
   isAuthenticated: boolean;
+  viewerUserId: string | null;
+  nickname: string;
   onRequestSignIn?: () => void;
 }) {
-  const { profile } = useAthleteProfile();
   const [card, setCard] = useState<InvitationCardData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -109,76 +114,99 @@ function ChatInvitationMessage({
   }
 
   return (
-    <InvitationCard
-      card={card}
-      variant="chat"
-      isAuthenticated={isAuthenticated}
-      busy={busy}
-      onPrimary={
-        card.deliveryId
-          ? () => {
-              void (async () => {
-                setBusy(true);
-                const result = await acceptInvitation(
-                  card.deliveryId as string,
-                  profile?.nickname?.trim() || 'Athlete'
-                );
-                setBusy(false);
-                if (result.data?.missionId) {
-                  window.location.assign(`/mission/${result.data.missionId}`);
-                }
-              })();
-            }
-          : card.mission
+    <div className="space-y-2">
+      <InvitationCard
+        card={card}
+        variant="chat"
+        isAuthenticated={isAuthenticated}
+        viewerUserId={viewerUserId}
+        busy={busy}
+        onPrimary={
+          card.deliveryId
             ? () => {
-                window.location.assign(`/mission/${card.mission?.id}`);
+                void (async () => {
+                  setBusy(true);
+                  setActionError(null);
+                  const result = await acceptInvitation(card.deliveryId as string, nickname);
+                  setBusy(false);
+                  if (result.error || !result.data) {
+                    setActionError(
+                      result.error?.message ?? 'Something went wrong. Please try again.'
+                    );
+                    return;
+                  }
+                  if (result.data.missionId) {
+                    window.location.assign(`/mission/${result.data.missionId}`);
+                  }
+                })();
+              }
+            : card.mission
+              ? () => {
+                  window.location.assign(`/mission/${card.mission?.id}`);
+                }
+              : undefined
+        }
+        onJoinCampaign={
+          card.deliveryId
+            ? () => {
+                void (async () => {
+                  setBusy(true);
+                  setActionError(null);
+                  const result = await acceptInvitation(card.deliveryId as string, nickname);
+                  setBusy(false);
+                  if (result.error || !result.data) {
+                    setActionError(
+                      result.error?.message ?? 'Something went wrong. Please try again.'
+                    );
+                    return;
+                  }
+                  if (result.data.campaignId) {
+                    window.location.assign(`/campaign/${result.data.campaignId}`);
+                  }
+                })();
               }
             : undefined
-      }
-      onJoinCampaign={
-        card.deliveryId
-          ? () => {
-              void (async () => {
-                setBusy(true);
-                const result = await acceptInvitation(
-                  card.deliveryId as string,
-                  profile?.nickname?.trim() || 'Athlete'
-                );
-                setBusy(false);
-                if (result.data?.campaignId) {
-                  window.location.assign(`/campaign/${result.data.campaignId}`);
-                }
-              })();
+        }
+        onAcceptSquad={
+          card.deliveryId && card.squadRequestId
+            ? () => {
+                void (async () => {
+                  setBusy(true);
+                  setActionError(null);
+                  const result = await acceptInvitationSquad(card.deliveryId as string);
+                  setBusy(false);
+                  if (result.error) {
+                    setActionError(result.error.message);
+                    return;
+                  }
+                  setCard((current) =>
+                    current ? { ...current, squadStatus: 'accepted' } : current
+                  );
+                })();
+              }
+            : undefined
+        }
+        onSaveToInbox={() => {
+          void (async () => {
+            setBusy(true);
+            setActionError(null);
+            const result = await saveChatInvitation(invitationId);
+            setBusy(false);
+            const deliveryId = result.deliveryId;
+            if (result.error || !deliveryId) {
+              setActionError(result.error?.message ?? 'Could not save that invitation.');
+              return;
             }
-          : undefined
-      }
-      onAcceptSquad={
-        card.deliveryId && card.squadRequestId
-          ? () => {
-              void (async () => {
-                setBusy(true);
-                await acceptInvitationSquad(card.deliveryId as string);
-                setBusy(false);
-              })();
-            }
-          : undefined
-      }
-      onSaveToInbox={() => {
-        void (async () => {
-          setBusy(true);
-          const result = await saveChatInvitation(invitationId);
-          setBusy(false);
-          const deliveryId = result.deliveryId;
-          if (!result.error && deliveryId) {
             setCard((current) => (current ? { ...current, deliveryId } : current));
-          }
-        })();
-      }}
-      onSignInToSave={() => {
-        markPendingInvitationSave(invitationId);
-        onRequestSignIn?.();
-      }}
-    />
+          })();
+        }}
+        onSignInToSave={() => {
+          markPendingInvitationSave(invitationId);
+          onRequestSignIn?.();
+        }}
+      />
+      {actionError ? <p className="text-error text-sm">{actionError}</p> : null}
+    </div>
   );
 }
 
@@ -198,6 +226,10 @@ export function MissionChat({
   phase = 'waiting',
   onRequestSignIn,
 }: MissionChatProps) {
+  const { profile } = useAthleteProfile();
+  const { user } = useAmrapAuth();
+  const nickname = profile?.nickname?.trim() || 'Athlete';
+  const viewerUserId = isAuthenticated ? (user?.id ?? null) : null;
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -322,6 +354,8 @@ export function MissionChat({
                     participantId={participantId}
                     claimToken={claimToken}
                     isAuthenticated={isAuthenticated}
+                    viewerUserId={viewerUserId}
+                    nickname={nickname}
                     onRequestSignIn={onRequestSignIn}
                   />
                 ) : (

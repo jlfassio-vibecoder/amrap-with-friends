@@ -57,6 +57,7 @@ export function missionInvitationAction(input: {
   state: LiveMissionPhase | 'unknown' | null;
   scheduledAt: string | null;
   alreadyJoined: boolean;
+  joinable?: boolean;
   nowMs?: number;
 }): MissionInvitationAction {
   if (input.alreadyJoined) {
@@ -69,6 +70,9 @@ export function missionInvitationAction(input: {
     return 'view_workout';
   }
   if (input.state === 'waiting') {
+    if (input.joinable === false) {
+      return 'unavailable';
+    }
     const scheduledAt = input.scheduledAt;
     if (scheduledAt) {
       const when = Date.parse(scheduledAt);
@@ -83,6 +87,23 @@ export function missionInvitationAction(input: {
     return 'unavailable';
   }
   return 'unavailable';
+}
+
+export function sendInvitationTypeLabel(
+  type: InvitationType,
+  durationMinutes: number,
+  campaignWeekCount: number | null
+): string {
+  if (type === 'mission') {
+    return `Invite to this ${formatDurationLabel(durationMinutes)} mission`;
+  }
+  if (type === 'workout') {
+    return `Send this ${formatDurationLabel(durationMinutes)} workout`;
+  }
+  if (campaignWeekCount && campaignWeekCount > 0) {
+    return `Invite to this ${formatCampaignLengthLabel(campaignWeekCount)} campaign`;
+  }
+  return 'Invite to a campaign';
 }
 
 export function missionInvitationCtaLabel(

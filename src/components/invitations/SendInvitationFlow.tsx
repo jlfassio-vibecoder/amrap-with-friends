@@ -6,7 +6,10 @@ import {
 } from '@/lib/api/invitations';
 import type { InvitationType } from '@/lib/invitations/invitationPresentation';
 import type { WorkoutExercise } from '@/lib/api/missionTypes';
-import { invitationAudienceSummary } from '@/lib/invitations/invitationPresentation';
+import {
+  invitationAudienceSummary,
+  sendInvitationTypeLabel,
+} from '@/lib/invitations/invitationPresentation';
 
 export interface SendInvitationContext {
   sourceMissionId?: string | null;
@@ -28,12 +31,6 @@ interface SendInvitationFlowProps extends SendInvitationContext {
   onClose: () => void;
   onSent?: (summary: string) => void;
 }
-
-const TYPE_LABEL: Record<InvitationType, string> = {
-  mission: 'Invite to this mission',
-  workout: 'Send this workout',
-  campaign: 'Invite to a campaign',
-};
 
 export function SendInvitationFlow({
   open,
@@ -69,6 +66,7 @@ export function SendInvitationFlow({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingAudience, setLoadingAudience] = useState(Boolean(open));
+  const [clientRequestId] = useState(() => crypto.randomUUID());
 
   useEffect(() => {
     if (!open) {
@@ -97,22 +95,28 @@ export function SendInvitationFlow({
     [audience]
   );
 
-  const squadCount = useMemo(() => {
+  const selectedSquadIds = useMemo(() => {
     if (lockRecipientUserId) {
-      return 1;
+      return new Set([lockRecipientUserId]);
     }
-    return Object.values(selectedSquad).filter(Boolean).length;
+    return new Set(
+      Object.entries(selectedSquad)
+        .filter(([, on]) => on)
+        .map(([id]) => id)
+    );
   }, [lockRecipientUserId, selectedSquad]);
+
+  const squadCount = selectedSquadIds.size;
 
   const missionCount = useMemo(() => {
     if (lockRecipientUserId) {
       return 0;
     }
-    if (everyoneInMission) {
-      return missionPeople.length;
-    }
-    return Object.values(selectedMission).filter(Boolean).length;
-  }, [everyoneInMission, lockRecipientUserId, missionPeople.length, selectedMission]);
+    const picked = everyoneInMission
+      ? missionPeople
+      : missionPeople.filter((person) => selectedMission[person.userId]);
+    return picked.filter((person) => !selectedSquadIds.has(person.userId)).length;
+  }, [everyoneInMission, lockRecipientUserId, missionPeople, selectedMission, selectedSquadIds]);
 
   const summary = invitationAudienceSummary({
     squadCount,
@@ -173,6 +177,7 @@ export function SendInvitationFlow({
       workout: type === 'workout' ? workout : null,
       templateId: type === 'workout' ? templateId : null,
       intensityTier: type === 'workout' ? intensityTier : null,
+      clientRequestId,
     });
     setBusy(false);
     if (result.error || !result.data) {
@@ -218,7 +223,14 @@ export function SendInvitationFlow({
                   checked={type === option}
                   onChange={() => setType(option)}
                 />
-                {TYPE_LABEL[option]}
+                {sendInvitationTypeLabel(
+                  option,
+                  durationMinutes,
+                  audience?.campaigns.find((row) => row.campaignId === resolvedCampaignId)
+                    ?.weekCount ??
+                    audience?.campaigns[0]?.weekCount ??
+                    null
+                )}
               </label>
             ))}
           </fieldset>

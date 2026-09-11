@@ -7,6 +7,7 @@ import {
   invitationHeadline,
   missionInvitationAction,
   missionInvitationCtaLabel,
+  sendInvitationTypeLabel,
   workoutInvitationCtaLabel,
 } from './invitationPresentation';
 
@@ -78,6 +79,17 @@ describe('missionInvitationAction', () => {
     ).toBe('unavailable');
   });
 
+  it('treats a full waiting mission as unavailable', () => {
+    expect(
+      missionInvitationAction({
+        state: 'waiting',
+        scheduledAt: null,
+        alreadyJoined: false,
+        joinable: false,
+      })
+    ).toBe('unavailable');
+  });
+
   it('switches a finished invite to View workout', () => {
     expect(
       missionInvitationAction({
@@ -96,6 +108,13 @@ describe('cta labels', () => {
     expect(workoutInvitationCtaLabel(10)).toBe('Start 10-min mission');
     expect(campaignViewCtaLabel(8)).toBe('View 8-week campaign');
     expect(campaignJoinCtaLabel(8)).toBe('Join 8-week campaign');
+  });
+
+  it('names send-flow type radios with duration when known', () => {
+    expect(sendInvitationTypeLabel('mission', 15, null)).toBe('Invite to this 15-min mission');
+    expect(sendInvitationTypeLabel('workout', 10, null)).toBe('Send this 10-min workout');
+    expect(sendInvitationTypeLabel('campaign', 15, 8)).toBe('Invite to this 8-week campaign');
+    expect(sendInvitationTypeLabel('campaign', 15, null)).toBe('Invite to a campaign');
   });
 });
 

@@ -220,6 +220,33 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.invitation_require_uid() FROM PUBLIC, anon, authenticated;
 
+CREATE OR REPLACE FUNCTION public.invitation_lock_sender(p_uid uuid)
+RETURNS void
+LANGUAGE sql
+SET search_path = pg_catalog, public, extensions
+AS $$
+  SELECT pg_advisory_xact_lock(870114, hashtext(p_uid::text));
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.invitation_lock_sender(uuid)
+  FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.invitation_squad_still_pending(p_squad_request_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SET search_path = pg_catalog, public, extensions
+AS $$
+  SELECT p_squad_request_id IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM public.squad_requests
+      WHERE id = p_squad_request_id AND status = 'pending'
+    );
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.invitation_squad_still_pending(uuid)
+  FROM PUBLIC, anon, authenticated;
+
 CREATE OR REPLACE FUNCTION public.invitation_is_friend(p_a uuid, p_b uuid)
 RETURNS boolean
 LANGUAGE sql
@@ -328,10 +355,14 @@ BEGIN
     v_already_joined := public.invitation_is_signed_in_participant(
       v_inv.target_mission_id, p_viewer
     );
+    SELECT count(*)::int INTO v_members
+    FROM public.participants
+    WHERE mission_id = v_mission.id;
     v_joinable_mission :=
       v_mission.id IS NOT NULL
       AND v_mission.state = 'waiting'
-      AND NOT v_already_joined;
+      AND NOT v_already_joined
+      AND v_members < public.mission_participant_limit();
   END IF;
 
   IF v_inv.target_campaign_id IS NOT NULL THEN
@@ -463,6 +494,7 @@ DECLARE
   v_segment int;
 BEGIN
   v_uid := public.invitation_require_uid();
+  PERFORM public.invitation_lock_sender(v_uid);
   v_type := btrim(coalesce(p_type, ''));
   IF v_type NOT IN ('mission', 'workout', 'campaign') THEN
     RAISE EXCEPTION 'Pick what to send';
@@ -737,8 +769,16 @@ BEGIN
         IF NOT v_co_participant THEN
           RAISE EXCEPTION 'Pick a squad friend to send it to';
         END IF;
-        v_squad_json := public.send_squad_invite(v_to);
-        v_squad_id := (v_squad_json ->> 'request_id')::uuid;
+        BEGIN
+          v_squad_json := public.send_squad_invite(v_to);
+          v_squad_id := (v_squad_json ->> 'request_id')::uuid;
+        EXCEPTION WHEN OTHERS THEN
+          IF p_include_all_mission_participants THEN
+            v_squad_id := NULL;
+          ELSE
+            RAISE;
+          END IF;
+        END;
       END IF;
 
       INSERT INTO public.invitation_deliveries (
@@ -1022,6 +1062,8 @@ DECLARE
   v_host_token text;
   v_participant_id uuid;
   v_campaign_id uuid;
+  v_delivery_status text;
+  v_started_mission uuid;
 BEGIN
   v_uid := public.invitation_require_uid();
 
@@ -1048,28 +1090,51 @@ BEGIN
     RAISE EXCEPTION 'Name or nickname is required (max 50 characters)';
   END IF;
 
-  -- Recover a workout start that already committed.
-  IF v_inv.invitation_type = 'workout'
-     AND v_del.status = 'accepted'
-     AND v_del.resulting_mission_id IS NOT NULL THEN
-    SELECT host_token INTO v_host_token
-    FROM public.missions
-    WHERE id = v_del.resulting_mission_id;
-    SELECT id INTO v_participant_id
-    FROM public.participants
-    WHERE mission_id = v_del.resulting_mission_id
-      AND user_id = v_uid
-    ORDER BY CASE WHEN role = 'host' THEN 0 ELSE 1 END, joined_at ASC
-    LIMIT 1;
-    RETURN jsonb_build_object(
-      'ok', true,
-      'type', 'workout',
-      'recovered', true,
-      'mission_id', v_del.resulting_mission_id,
-      'host_token', v_host_token,
-      'participant_id', v_participant_id,
-      'claim_token', NULL
-    );
+  -- Recover a workout start that already committed, including the older
+  -- start_assigned_workout path that used to leave the delivery pending.
+  IF v_inv.invitation_type = 'workout' THEN
+    IF v_del.status = 'accepted' AND v_del.resulting_mission_id IS NOT NULL THEN
+      v_started_mission := v_del.resulting_mission_id;
+    ELSIF v_del.assigned_workout_id IS NOT NULL THEN
+      SELECT mission_id INTO v_started_mission
+      FROM public.assigned_workouts
+      WHERE id = v_del.assigned_workout_id
+        AND to_user_id = v_uid
+        AND status = 'started'
+        AND mission_id IS NOT NULL;
+      IF v_started_mission IS NOT NULL AND v_del.status = 'pending' THEN
+        v_delivery_status := CASE
+          WHEN public.invitation_squad_still_pending(v_del.squad_request_id) THEN 'pending'
+          ELSE 'accepted'
+        END;
+        UPDATE public.invitation_deliveries
+        SET status = v_delivery_status,
+            resolved_at = CASE WHEN v_delivery_status = 'accepted' THEN now() ELSE resolved_at END,
+            read_at = coalesce(read_at, now()),
+            resulting_mission_id = v_started_mission
+        WHERE id = v_del.id;
+      END IF;
+    END IF;
+    IF v_started_mission IS NOT NULL THEN
+      SELECT host_token INTO v_host_token
+      FROM public.missions
+      WHERE id = v_started_mission;
+      SELECT id INTO v_participant_id
+      FROM public.participants
+      WHERE mission_id = v_started_mission
+        AND user_id = v_uid
+      ORDER BY CASE WHEN role = 'host' THEN 0 ELSE 1 END, joined_at ASC
+      LIMIT 1;
+      RETURN jsonb_build_object(
+        'ok', true,
+        'type', 'workout',
+        'recovered', true,
+        'mission_id', v_started_mission,
+        'host_token', v_host_token,
+        'participant_id', v_participant_id,
+        'claim_token', NULL
+      );
+    END IF;
   END IF;
 
   IF v_del.status = 'accepted' AND v_inv.invitation_type = 'mission' THEN
@@ -1108,9 +1173,13 @@ BEGIN
       END IF;
       RAISE;
     END;
+    v_delivery_status := CASE
+      WHEN public.invitation_squad_still_pending(v_del.squad_request_id) THEN 'pending'
+      ELSE 'accepted'
+    END;
     UPDATE public.invitation_deliveries
-    SET status = 'accepted',
-        resolved_at = now(),
+    SET status = v_delivery_status,
+        resolved_at = CASE WHEN v_delivery_status = 'accepted' THEN now() ELSE resolved_at END,
         read_at = coalesce(read_at, now()),
         resulting_mission_id = v_inv.target_mission_id
     WHERE id = v_del.id;
@@ -1151,9 +1220,13 @@ BEGIN
       RAISE;
     END;
     v_campaign_id := coalesce((v_joined ->> 'campaign_id')::uuid, v_inv.target_campaign_id);
+    v_delivery_status := CASE
+      WHEN public.invitation_squad_still_pending(v_del.squad_request_id) THEN 'pending'
+      ELSE 'accepted'
+    END;
     UPDATE public.invitation_deliveries
-    SET status = 'accepted',
-        resolved_at = now(),
+    SET status = v_delivery_status,
+        resolved_at = CASE WHEN v_delivery_status = 'accepted' THEN now() ELSE resolved_at END,
         read_at = coalesce(read_at, now()),
         resulting_campaign_id = v_campaign_id
     WHERE id = v_del.id;
@@ -1186,9 +1259,13 @@ BEGIN
       AND status = 'pending';
   END IF;
 
+  v_delivery_status := CASE
+    WHEN public.invitation_squad_still_pending(v_del.squad_request_id) THEN 'pending'
+    ELSE 'accepted'
+  END;
   UPDATE public.invitation_deliveries
-  SET status = 'accepted',
-      resolved_at = now(),
+  SET status = v_delivery_status,
+      resolved_at = CASE WHEN v_delivery_status = 'accepted' THEN now() ELSE resolved_at END,
       read_at = coalesce(read_at, now()),
       resulting_mission_id = (v_created ->> 'mission_id')::uuid
   WHERE id = v_del.id;
@@ -1218,15 +1295,35 @@ DECLARE
   v_uid uuid;
   v_del public.invitation_deliveries%ROWTYPE;
   v_result jsonb;
+  v_primary_done boolean;
 BEGIN
   v_uid := public.invitation_require_uid();
   SELECT * INTO v_del
   FROM public.invitation_deliveries
-  WHERE id = p_delivery_id;
+  WHERE id = p_delivery_id
+  FOR UPDATE;
   IF NOT FOUND OR v_del.to_user_id <> v_uid OR v_del.squad_request_id IS NULL THEN
     RAISE EXCEPTION 'Invite not found';
   END IF;
   v_result := public.respond_squad_invite(v_del.squad_request_id, true);
+  v_primary_done :=
+    v_del.resulting_mission_id IS NOT NULL
+    OR v_del.resulting_campaign_id IS NOT NULL
+    OR EXISTS (
+      SELECT 1 FROM public.assigned_workouts
+      WHERE id = v_del.assigned_workout_id AND status = 'started'
+    );
+  UPDATE public.invitation_deliveries
+  SET read_at = coalesce(read_at, now()),
+      status = CASE
+        WHEN v_primary_done THEN 'accepted'
+        ELSE status
+      END,
+      resolved_at = CASE
+        WHEN v_primary_done THEN coalesce(resolved_at, now())
+        ELSE resolved_at
+      END
+  WHERE id = v_del.id;
   RETURN jsonb_build_object('ok', true, 'accepted', v_result -> 'accepted');
 END;
 $$;
@@ -1245,10 +1342,15 @@ DECLARE
   v_inv public.invitations%ROWTYPE;
   v_existing public.invitation_deliveries%ROWTYPE;
   v_friend boolean;
-  v_co boolean;
   v_assigned_id uuid;
+  v_squad_id uuid;
   v_id uuid;
   v_pending int;
+  v_sender_pending int;
+  v_declines int;
+  v_last_decline timestamptz;
+  v_mine int;
+  v_theirs int;
 BEGIN
   v_uid := public.invitation_require_uid();
   SELECT * INTO v_inv FROM public.invitations WHERE id = p_invitation_id;
@@ -1269,6 +1371,9 @@ BEGIN
     RAISE EXCEPTION 'That invitation is not available';
   END IF;
 
+  PERFORM public.invitation_lock_sender(v_inv.from_user_id);
+  PERFORM pg_advisory_xact_lock(hashtext(v_inv.from_user_id::text), hashtext(v_uid::text));
+
   SELECT * INTO v_existing
   FROM public.invitation_deliveries
   WHERE invitation_id = v_inv.id AND to_user_id = v_uid;
@@ -1277,12 +1382,10 @@ BEGIN
   END IF;
 
   v_friend := public.invitation_is_friend(v_inv.from_user_id, v_uid);
-  v_co := true;
   IF NOT v_friend AND v_inv.invitation_type = 'campaign' AND NOT v_inv.include_squad_invite THEN
     RAISE EXCEPTION 'That invitation is not available';
   END IF;
 
-  PERFORM pg_advisory_xact_lock(hashtext(v_inv.from_user_id::text), hashtext(v_uid::text));
   SELECT count(*)::int INTO v_pending
   FROM public.invitation_deliveries d
   INNER JOIN public.invitations i ON i.id = d.invitation_id
@@ -1290,6 +1393,14 @@ BEGIN
     AND i.from_user_id = v_inv.from_user_id
     AND d.status = 'pending';
   IF v_pending >= public.assigned_workout_pending_limit() THEN
+    RAISE EXCEPTION 'They have not picked up your last few invitations yet';
+  END IF;
+
+  SELECT count(*)::int INTO v_sender_pending
+  FROM public.invitation_deliveries d
+  INNER JOIN public.invitations i ON i.id = d.invitation_id
+  WHERE i.from_user_id = v_inv.from_user_id AND d.status = 'pending';
+  IF v_sender_pending >= public.invitation_sender_pending_limit() THEN
     RAISE EXCEPTION 'They have not picked up your last few invitations yet';
   END IF;
 
@@ -1304,10 +1415,52 @@ BEGIN
     RETURNING id INTO v_assigned_id;
   END IF;
 
+  IF v_inv.include_squad_invite AND NOT v_friend THEN
+    SELECT sr.id INTO v_squad_id
+    FROM public.squad_requests sr
+    WHERE sr.status = 'pending'
+      AND (
+        (sr.from_user_id = v_inv.from_user_id AND sr.to_user_id = v_uid)
+        OR (sr.from_user_id = v_uid AND sr.to_user_id = v_inv.from_user_id)
+      )
+    LIMIT 1;
+    IF v_squad_id IS NULL THEN
+      SELECT count(*)::int, max(updated_at)
+      INTO v_declines, v_last_decline
+      FROM public.squad_requests
+      WHERE from_user_id = v_inv.from_user_id
+        AND to_user_id = v_uid
+        AND status = 'declined';
+      SELECT count(*)::int INTO v_mine FROM public.squad_friends WHERE user_id = v_inv.from_user_id;
+      SELECT count(*)::int INTO v_theirs FROM public.squad_friends WHERE user_id = v_uid;
+      IF coalesce(v_declines, 0) < public.squad_decline_limit()
+         AND (v_last_decline IS NULL OR v_last_decline <= now() - public.squad_decline_cooldown())
+         AND v_mine < public.squad_friend_limit()
+         AND v_theirs < public.squad_friend_limit() THEN
+        BEGIN
+          INSERT INTO public.squad_requests (from_user_id, to_user_id, status)
+          VALUES (v_inv.from_user_id, v_uid, 'pending')
+          RETURNING id INTO v_squad_id;
+        EXCEPTION WHEN unique_violation THEN
+          SELECT sr.id INTO v_squad_id
+          FROM public.squad_requests sr
+          WHERE sr.status = 'pending'
+            AND (
+              (sr.from_user_id = v_inv.from_user_id AND sr.to_user_id = v_uid)
+              OR (sr.from_user_id = v_uid AND sr.to_user_id = v_inv.from_user_id)
+            )
+          LIMIT 1;
+        WHEN OTHERS THEN
+          v_squad_id := NULL;
+        END;
+      END IF;
+    END IF;
+  END IF;
+
   INSERT INTO public.invitation_deliveries (
-    invitation_id, to_user_id, assigned_workout_id
+    invitation_id, to_user_id, assigned_workout_id, squad_request_id
   )
-  VALUES (v_inv.id, v_uid, v_assigned_id)
+  VALUES (v_inv.id, v_uid, v_assigned_id, v_squad_id)
   RETURNING id INTO v_id;
 
   RETURN jsonb_build_object('ok', true, 'delivery_id', v_id, 'already', false);
@@ -1561,6 +1714,69 @@ REVOKE EXECUTE ON FUNCTION public.assign_workout(uuid, int, jsonb, text, int, te
   FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.assign_workout(uuid, int, jsonb, text, int, text)
   TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.start_assigned_workout(
+  p_assigned_workout_id uuid,
+  p_mission_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public, extensions
+AS $$
+DECLARE
+  v_uid uuid;
+  v_updated int;
+  v_del public.invitation_deliveries%ROWTYPE;
+  v_status text;
+BEGIN
+  v_uid := auth.uid();
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'Authentication required';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM public.participants
+    WHERE mission_id = p_mission_id AND user_id = v_uid
+  ) THEN
+    RAISE EXCEPTION 'That workout is not available';
+  END IF;
+
+  UPDATE public.assigned_workouts
+  SET status = 'started', mission_id = p_mission_id, resolved_at = now()
+  WHERE id = p_assigned_workout_id
+    AND to_user_id = v_uid
+    AND status = 'pending';
+
+  GET DIAGNOSTICS v_updated = ROW_COUNT;
+  IF v_updated = 0 THEN
+    RAISE EXCEPTION 'That workout is not available';
+  END IF;
+
+  SELECT * INTO v_del
+  FROM public.invitation_deliveries
+  WHERE assigned_workout_id = p_assigned_workout_id
+    AND to_user_id = v_uid
+  FOR UPDATE;
+  IF FOUND THEN
+    v_status := CASE
+      WHEN public.invitation_squad_still_pending(v_del.squad_request_id) THEN 'pending'
+      ELSE 'accepted'
+    END;
+    UPDATE public.invitation_deliveries
+    SET status = v_status,
+        resolved_at = CASE WHEN v_status = 'accepted' THEN now() ELSE resolved_at END,
+        read_at = coalesce(read_at, now()),
+        resulting_mission_id = p_mission_id
+    WHERE id = v_del.id;
+  END IF;
+
+  RETURN jsonb_build_object('ok', true, 'assigned_workout_id', p_assigned_workout_id);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.start_assigned_workout(uuid, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.start_assigned_workout(uuid, uuid) TO authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Live state: include message.attachment so chat cards bootstrap for guests

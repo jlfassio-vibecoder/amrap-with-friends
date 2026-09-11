@@ -211,5 +211,39 @@ describe('in-app invitations migration contract', () => {
     expect(cardFn).not.toContain('host_token');
     expect(cardFn).not.toContain('claim_token');
     expect(cardFn).not.toContain('invite_code');
+    expect(cardFn).toContain('mission_participant_limit()');
+  });
+
+  it('locks the sender and keeps a pending squad bundle from closing the delivery', () => {
+    expect(sql).toContain('CREATE OR REPLACE FUNCTION public.invitation_lock_sender(');
+    expect(sql).toContain('PERFORM public.invitation_lock_sender(v_uid)');
+    expect(sql).toContain('CREATE OR REPLACE FUNCTION public.invitation_squad_still_pending(');
+  });
+
+  it('marks invitation deliveries when start_assigned_workout resolves the workout', () => {
+    const startFn = sql.slice(
+      sql.lastIndexOf('CREATE OR REPLACE FUNCTION public.start_assigned_workout('),
+      sql.indexOf('CREATE OR REPLACE FUNCTION public.get_mission_live_state(')
+    );
+    expect(startFn).toContain('UPDATE public.invitation_deliveries');
+    expect(startFn).toContain('resulting_mission_id = p_mission_id');
+    expect(startFn).toContain('invitation_squad_still_pending');
+  });
+
+  it('saves a late chat squad bundle as the original sender, after locking', () => {
+    const saveFn = sql.slice(
+      sql.indexOf('CREATE OR REPLACE FUNCTION public.save_chat_invitation('),
+      sql.indexOf('CREATE OR REPLACE FUNCTION public.invitation_audience(')
+    );
+    const lockAt = saveFn.indexOf('PERFORM public.invitation_lock_sender');
+    const rereadAt = saveFn.indexOf('SELECT * INTO v_existing');
+    expect(lockAt).toBeGreaterThan(-1);
+    expect(rereadAt).toBeGreaterThan(lockAt);
+    expect(saveFn).toContain("'already', true");
+    expect(saveFn).toContain(
+      'INSERT INTO public.squad_requests (from_user_id, to_user_id, status)'
+    );
+    expect(saveFn).toContain("VALUES (v_inv.from_user_id, v_uid, 'pending')");
+    expect(saveFn).not.toContain('public.send_squad_invite');
   });
 });

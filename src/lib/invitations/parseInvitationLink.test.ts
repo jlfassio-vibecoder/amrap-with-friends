@@ -30,6 +30,36 @@ describe('parseInvitationLink', () => {
     expect(parseInvitationLink('see you at https://amrapwithfriends.com')).toBeNull();
   });
 
+  it('rejects lookalike hosts even when the path is a real mission URL', () => {
+    expect(parseInvitationLink(`https://evil.com/mission/${MISSION}`)).toBeNull();
+    expect(parseInvitationLink(`https://evil.example/mission/${MISSION}`)).toBeNull();
+    expect(
+      parseInvitationLink(`https://amrapwithfriends.com.evil.com/mission/${MISSION}`)
+    ).toBeNull();
+    expect(parseInvitationLink(`https://notvercel.app/mission/${MISSION}`)).toBeNull();
+  });
+
+  it('still recognizes localhost, loopback, and Vercel preview hosts', () => {
+    expect(parseInvitationLink(`https://localhost/mission/${MISSION}`)).toEqual({
+      kind: 'mission',
+      missionId: MISSION,
+    });
+    expect(parseInvitationLink(`http://127.0.0.1/mission/${MISSION}`)).toEqual({
+      kind: 'mission',
+      missionId: MISSION,
+    });
+    expect(
+      parseInvitationLink(`https://amrap-with-friends-abc.vercel.app/mission/${MISSION}`)
+    ).toEqual({
+      kind: 'mission',
+      missionId: MISSION,
+    });
+    expect(parseInvitationLink(`https://www.amrapwithfriends.com/mission/${MISSION}`)).toEqual({
+      kind: 'mission',
+      missionId: MISSION,
+    });
+  });
+
   it('only treats a whole-field paste as a standalone invite', () => {
     expect(isStandaloneInvitationLink(`https://amrapwithfriends.com/join?m=${MISSION}`)).toBe(true);
     expect(

@@ -82,8 +82,10 @@ export function InvitationsInboxPanel({
     if (unreadIds.length === 0) {
       return;
     }
-    void markInvitationsRead(unreadIds).then(() => {
-      onUnreadChange?.(0);
+    void markInvitationsRead(unreadIds).then((result) => {
+      if (!result.error) {
+        onUnreadChange?.(0);
+      }
     });
   }, [isAuthenticated, pending, onUnreadChange]);
 

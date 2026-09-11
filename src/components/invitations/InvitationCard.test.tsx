@@ -128,4 +128,75 @@ describe('InvitationCard', () => {
     );
     expect(screen.queryByRole('button', { name: 'Join 15-min mission' })).toBeNull();
   });
+
+  it('views a scheduled mission without treating View as Join', () => {
+    const onPrimary = vi.fn();
+    renderCard({
+      card: card({
+        type: 'mission',
+        durationMinutes: 15,
+        mission: {
+          id: 'm-1',
+          state: 'waiting',
+          scheduledAt: '2099-09-12T18:00:00.000Z',
+          durationMinutes: 15,
+          alreadyJoined: false,
+          joinable: true,
+        },
+      }),
+      onPrimary,
+    });
+
+    expect(screen.getByRole('link', { name: 'View 15-min mission' }).getAttribute('href')).toBe(
+      '/mission/m-1'
+    );
+    fireEvent.click(screen.getByRole('link', { name: 'View 15-min mission' }));
+    expect(onPrimary).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Join 15-min mission' })).toBeNull();
+  });
+
+  it('joins an open waiting mission with the primary action', () => {
+    const onPrimary = vi.fn();
+    renderCard({
+      card: card({
+        type: 'mission',
+        mission: {
+          id: 'm-1',
+          state: 'waiting',
+          scheduledAt: null,
+          durationMinutes: 15,
+          alreadyJoined: false,
+          joinable: true,
+        },
+      }),
+      onPrimary,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Join 15-min mission' }));
+    expect(onPrimary).toHaveBeenCalled();
+  });
+
+  it('hides Save on the sender’s own chat card', () => {
+    renderCard({
+      card: card({ deliveryId: null, fromUserId: 'user-1' }),
+      variant: 'chat',
+      isAuthenticated: true,
+      viewerUserId: 'user-1',
+      onSaveToInbox: vi.fn(),
+    });
+
+    expect(screen.queryByRole('button', { name: 'Save to Sent to you' })).toBeNull();
+  });
+
+  it('offers Save on a chat card the viewer did not send', () => {
+    renderCard({
+      card: card({ deliveryId: null, fromUserId: 'user-2' }),
+      variant: 'chat',
+      isAuthenticated: true,
+      viewerUserId: 'user-1',
+      onSaveToInbox: vi.fn(),
+    });
+
+    expect(screen.getByRole('button', { name: 'Save to Sent to you' })).toBeTruthy();
+  });
 });
