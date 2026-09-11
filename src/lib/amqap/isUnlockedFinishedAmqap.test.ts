@@ -17,6 +17,7 @@ function entry(overrides: Partial<MyMissionEntry> = {}): MyMissionEntry {
     movementCount: 0,
     repsPerRound: null,
     templateId: 'amqap-foundational-15',
+    intensityTier: null,
     rallyPointId: null,
     state: 'finished',
     segmentIndex: 0,

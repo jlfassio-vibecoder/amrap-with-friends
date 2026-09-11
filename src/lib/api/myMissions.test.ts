@@ -40,6 +40,7 @@ function baseEntry(overrides: Partial<MyMissionEntry> = {}): MyMissionEntry {
     movementCount: 2,
     repsPerRound: 40,
     templateId: null,
+    intensityTier: null,
     rallyPointId: null,
     state: 'waiting',
     segmentIndex: 0,

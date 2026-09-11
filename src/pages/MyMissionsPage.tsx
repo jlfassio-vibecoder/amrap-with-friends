@@ -74,13 +74,19 @@ function mergePreservingHydration(
     }
     const workout = prior.workout.length > 0 ? prior.workout : entry.workout;
     const scoreBreakdown = prior.scoreBreakdown ?? entry.scoreBreakdown;
-    if (workout === entry.workout && scoreBreakdown === entry.scoreBreakdown) {
+    const intensityTier = prior.intensityTier ?? entry.intensityTier;
+    if (
+      workout === entry.workout &&
+      scoreBreakdown === entry.scoreBreakdown &&
+      intensityTier === entry.intensityTier
+    ) {
       return entry;
     }
     return {
       ...entry,
       workout,
       movementCount: workout.length > 0 ? workout.length : entry.movementCount,
+      intensityTier,
       scoreBreakdown,
       hasScoreBreakdown: entry.hasScoreBreakdown || scoreBreakdown !== null,
     };
@@ -189,6 +195,7 @@ function MyMissionCard({
   entry,
   deletingMissionId,
   relaunchingMissionId,
+  profileLoading,
   onDelete,
   onRelaunch,
   onViewBreakdown,
@@ -200,6 +207,7 @@ function MyMissionCard({
   entry: MyMissionEntry;
   deletingMissionId: string | null;
   relaunchingMissionId: string | null;
+  profileLoading: boolean;
   onDelete: (entry: MyMissionEntry) => void;
   onRelaunch: (entry: MyMissionEntry) => void;
   onViewBreakdown: (entry: MyMissionEntry) => void;
@@ -220,7 +228,7 @@ function MyMissionCard({
   const modifiedBadge =
     formatVariantBadge(entry.movementVariants) ?? formatModifiedBadge(entry.modifiedMovements);
   const relaunching = relaunchingMissionId === entry.missionId;
-  const relaunchBusy = relaunchingMissionId != null;
+  const relaunchBusy = relaunchingMissionId != null || profileLoading;
   return (
     <div className="card space-y-2 p-4 text-sm">
       <MyMissionMovements
@@ -346,7 +354,7 @@ function MyMissionCard({
 export default function MyMissionsPage() {
   const navigate = useNavigate();
   const { user, isAuthenticated, isAuthLoading } = useAmrapAuth();
-  const { profile } = useAthleteProfile();
+  const { profile, loading: profileLoading, error: profileError } = useAthleteProfile();
   const [entries, setEntries] = useState<MyMissionEntry[]>([]);
   const [chainsByRallyPointId, setChainsByRallyPointId] = useState<
     Record<string, MissionChainItem[]>
@@ -397,8 +405,11 @@ export default function MyMissionsPage() {
   );
 
   const ensureDetail = useCallback(
-    async (entry: MyMissionEntry): Promise<MyMissionEntry | null> => {
-      if (!needsMissionDetail(entry)) {
+    async (
+      entry: MyMissionEntry,
+      options?: { force?: boolean }
+    ): Promise<MyMissionEntry | null> => {
+      if (!options?.force && !needsMissionDetail(entry)) {
         return entry;
       }
 
@@ -490,7 +501,12 @@ export default function MyMissionsPage() {
   }
 
   async function handleRelaunch(entry: MyMissionEntry) {
-    if (relaunchingMissionId) {
+    if (relaunchingMissionId || profileLoading) {
+      return;
+    }
+
+    if (profileError) {
+      setError(profileError);
       return;
     }
 
@@ -513,16 +529,19 @@ export default function MyMissionsPage() {
         return;
       }
 
-      const hydrated = (await ensureDetail(entry)) ?? entry;
+      const hydrated = (await ensureDetail(entry, { force: true })) ?? entry;
       if (hydrated.workout.length === 0) {
         setError('Could not load this workout to re-launch.');
         return;
       }
 
+      // Prefer the mission's stored tier (coach / AMQAP / custom); library lookup is fallback.
       const intensityTier =
+        hydrated.intensityTier ??
         (hydrated.templateId
-          ? WORKOUT_TEMPLATES.find((template) => template.id === hydrated.templateId)?.intensityTier
-          : null) ?? null;
+          ? (WORKOUT_TEMPLATES.find((template) => template.id === hydrated.templateId)
+              ?.intensityTier ?? null)
+          : null);
 
       const result = await createRallyPointMission({
         nickname,
@@ -596,6 +615,7 @@ export default function MyMissionsPage() {
                         entry={item.entry}
                         deletingMissionId={deletingMissionId}
                         relaunchingMissionId={relaunchingMissionId}
+                        profileLoading={profileLoading}
                         onDelete={(entry) => void handleDelete(entry)}
                         onRelaunch={(entry) => void handleRelaunch(entry)}
                         onViewBreakdown={setBreakdownEntry}
@@ -614,6 +634,7 @@ export default function MyMissionsPage() {
                       entry={item.parent}
                       deletingMissionId={deletingMissionId}
                       relaunchingMissionId={relaunchingMissionId}
+                      profileLoading={profileLoading}
                       onDelete={(entry) => void handleDelete(entry)}
                       onRelaunch={(entry) => void handleRelaunch(entry)}
                       onViewBreakdown={setBreakdownEntry}
@@ -636,6 +657,7 @@ export default function MyMissionsPage() {
                                 entry={child.entry}
                                 deletingMissionId={deletingMissionId}
                                 relaunchingMissionId={relaunchingMissionId}
+                                profileLoading={profileLoading}
                                 onDelete={(entry) => void handleDelete(entry)}
                                 onRelaunch={(entry) => void handleRelaunch(entry)}
                                 onViewBreakdown={setBreakdownEntry}

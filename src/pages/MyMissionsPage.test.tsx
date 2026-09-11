@@ -7,6 +7,7 @@ import type { CampaignSummary } from '@/lib/api/campaigns';
 import type { MyMissionEntry } from '@/lib/api/myMissions';
 
 const fetchMyMissionsMock = vi.fn();
+const fetchMyMissionDetailMock = vi.fn();
 const deleteIncompleteMissionMock = vi.fn();
 const fetchMyCampaignsMock = vi.fn();
 const fetchMyAssignedWorkoutsMock = vi.fn();
@@ -17,6 +18,7 @@ const authUser = { id: 'user-1' };
 const athleteProfileState = {
   profile: { nickname: 'Justin' } as { nickname: string } | null,
   loading: false,
+  error: null as string | null,
 };
 
 vi.mock('@/hooks/useAmrapAuth', () => ({
@@ -37,6 +39,7 @@ vi.mock('@/lib/api/myMissions', async () => {
   return {
     ...actual,
     fetchMyMissions: (...args: unknown[]) => fetchMyMissionsMock(...args),
+    fetchMyMissionDetail: (...args: unknown[]) => fetchMyMissionDetailMock(...args),
     deleteIncompleteMission: (...args: unknown[]) => deleteIncompleteMissionMock(...args),
   };
 });
@@ -96,6 +99,7 @@ function entry(overrides: Partial<MyMissionEntry> = {}): MyMissionEntry {
     movementCount: 1,
     repsPerRound: 20,
     templateId: null,
+    intensityTier: null,
     rallyPointId: null,
     state: 'waiting',
     segmentIndex: 0,
@@ -136,6 +140,7 @@ function campaign(overrides: Partial<CampaignSummary> = {}): CampaignSummary {
 afterEach(() => {
   cleanup();
   fetchMyMissionsMock.mockReset();
+  fetchMyMissionDetailMock.mockReset();
   deleteIncompleteMissionMock.mockReset();
   fetchMyCampaignsMock.mockReset();
   fetchMyAssignedWorkoutsMock.mockReset();
@@ -144,6 +149,7 @@ afterEach(() => {
   navigateMock.mockReset();
   athleteProfileState.profile = { nickname: 'Justin' };
   athleteProfileState.loading = false;
+  athleteProfileState.error = null;
   vi.unstubAllGlobals();
 });
 
@@ -476,6 +482,15 @@ describe('MyMissionsPage relaunch', () => {
       error: null,
     });
     fetchHostActiveMissionCountMock.mockResolvedValue({ data: 0, error: null });
+    fetchMyMissionDetailMock.mockResolvedValue({
+      data: {
+        missionId: 'old-mission',
+        workout: [{ name: 'Burpees', target: 10, unit: 'reps' }],
+        intensityTier: 4,
+        scoreBreakdown: null,
+      },
+      error: null,
+    });
     createRallyPointMissionMock.mockResolvedValue({
       data: {
         rallyPointId: 'rp-1',
@@ -502,7 +517,7 @@ describe('MyMissionsPage relaunch', () => {
         durationMinutes: 10,
         workout: [{ name: 'Burpees', target: 10, unit: 'reps' }],
         templateId: 'the-pendulum',
-        intensityTier: expect.any(Number),
+        intensityTier: 4,
       });
       expect(navigateMock).toHaveBeenCalledWith('/mission/new-mission');
     });
@@ -527,6 +542,30 @@ describe('MyMissionsPage relaunch', () => {
     await waitFor(() => {
       expect(screen.getByText(/Add your name in Your profile before launching/)).toBeTruthy();
     });
+    expect(createRallyPointMissionMock).not.toHaveBeenCalled();
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it('blocks relaunch when the host is at the active mission limit', async () => {
+    fetchMyMissionsMock.mockResolvedValue({
+      data: [entry({ missionId: 'old-mission', state: 'finished', finalScore: 10 })],
+      chains: {},
+      error: null,
+    });
+    fetchHostActiveMissionCountMock.mockResolvedValue({ data: 3, error: null });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Re-launch mission' })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Re-launch mission' }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/You already have 3 active missions/)).toBeTruthy();
+    });
+    expect(fetchMyMissionDetailMock).not.toHaveBeenCalled();
     expect(createRallyPointMissionMock).not.toHaveBeenCalled();
     expect(navigateMock).not.toHaveBeenCalled();
   });

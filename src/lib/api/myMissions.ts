@@ -42,6 +42,11 @@ export interface MyMissionEntry {
   repsPerRound: number | null;
   /** Library or coach template id when the mission was created from one. */
   templateId: string | null;
+  /**
+   * Null until hydrated via `fetchMyMissionDetail`. List rows omit it so
+   * Re-launch must load detail (or fall back to a library template).
+   */
+  intensityTier: number | null;
   /** Shared Next Mission hub; null for guest-only / non-hub missions. */
   rallyPointId: string | null;
   state: string;
@@ -253,6 +258,7 @@ function parseMyMissionEntry(raw: unknown): MyMissionEntry | null {
     movementCount,
     repsPerRound,
     templateId: readString(row.template_id),
+    intensityTier: typeof row.intensity_tier === 'number' ? row.intensity_tier : null,
     rallyPointId: readString(row.rally_point_id),
     modifiedMovements: readModifiedMovements(row.modified_movements),
     movementVariants: readMovementVariants(row.movement_variants),
@@ -344,6 +350,8 @@ export async function fetchMyMissions(): Promise<MyMissionsListResult> {
 export type MyMissionDetail = {
   missionId: string;
   workout: WorkoutExercise[];
+  /** Stored mission intensity; null when the original row had none. */
+  intensityTier: number | null;
   scoreBreakdown: ScoreBreakdown | null;
 };
 
@@ -383,6 +391,7 @@ export async function fetchMyMissionDetail(
     data: {
       missionId: parsedMissionId,
       workout: readWorkout(raw.workout),
+      intensityTier: typeof raw.intensity_tier === 'number' ? raw.intensity_tier : null,
       scoreBreakdown,
     },
     error: null,
@@ -449,6 +458,7 @@ export function applyMyMissionDetail(
     ...entry,
     workout: detail.workout,
     movementCount: detail.workout.length > 0 ? detail.workout.length : entry.movementCount,
+    intensityTier: detail.intensityTier,
     scoreBreakdown: detail.scoreBreakdown,
     hasScoreBreakdown: entry.hasScoreBreakdown || detail.scoreBreakdown !== null,
   };
