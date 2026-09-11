@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { AddToCalendar } from '@/components/calendar/AddToCalendar';
 import { AuthModal } from '@/components/AuthModal';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
@@ -12,7 +13,9 @@ import {
 } from '@/lib/api/rooms';
 import { WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
 import { activityLine, recentActivity, shouldShowActivity } from '@/lib/rooms/roomActivity';
+import { roomIcsFileName, roomMissionCalendarEvent } from '@/lib/rooms/roomCalendar';
 import { nextMission, nextMissionLabel } from '@/lib/rooms/roomSchedule';
+import { track } from '@/lib/analytics/track';
 import { homeCoachNotice } from '@/lib/rooms/homeCoach';
 import { isRoomHost } from '@/lib/rooms/membership';
 import NotFoundPage from '@/pages/NotFoundPage';
@@ -166,6 +169,16 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
   }
 
   const isMember = room.myRole !== null;
+  const next = scheduleStatus === 'ready' ? nextMission(upcoming) : null;
+  const calendarEvent = next
+    ? roomMissionCalendarEvent({
+        roomHandle: room.handle,
+        roomDisplayName: room.displayName,
+        mission: next,
+        workoutName: workoutName(next.templateId),
+        origin: window.location.origin,
+      })
+    : null;
 
   return (
     <NarrowPageLayout title={room.displayName} subtitle={`@${room.handle}`}>
@@ -183,18 +196,27 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
             Couldn&rsquo;t load this room&rsquo;s schedule. Refresh to try again.
           </p>
         ) : null}
-        {scheduleStatus === 'ready' ? <p>{nextMissionLabel(nextMission(upcoming))}</p> : null}
-        {scheduleStatus === 'ready' && nextMission(upcoming) ? (
-          <a
-            className="btn-primary inline-block text-sm"
-            href={`/mission/${nextMission(upcoming)!.missionId}`}
-          >
-            {nextMission(upcoming)!.state === 'waiting' ? 'Enter mission' : 'Join mission'}
+        {scheduleStatus === 'ready' ? <p>{nextMissionLabel(next)}</p> : null}
+        {scheduleStatus === 'ready' && next ? (
+          <a className="btn-primary inline-block text-sm" href={`/mission/${next.missionId}`}>
+            {next.state === 'waiting' ? 'Enter mission' : 'Join mission'}
           </a>
         ) : scheduleStatus === 'ready' ? (
           <p className="text-xs text-secondary">
             Nothing on the clock right now. Joining means you&rsquo;ll see the next one.
           </p>
+        ) : null}
+        {/* Only when there is a future time to save. A mission running now, or
+            open with no time, would put an entry in the athlete's week for
+            something already over by the time they look at it. */}
+        {calendarEvent ? (
+          <AddToCalendar
+            event={calendarEvent}
+            fileName={roomIcsFileName(room.handle)}
+            onSaved={(method) =>
+              track('room_mission_calendar_saved', { method }, { missionId: next!.missionId })
+            }
+          />
         ) : null}
       </section>
 

@@ -3,7 +3,7 @@ import { AppLink } from '@/components/AppLink';
 import { fetchCurrentFeaturedWod, type FeaturedWod } from '@/lib/api/featuredWod';
 import { getFeaturedWodCardPresentation } from '@/lib/mission/featuredWodCardPresentation';
 import { track } from '@/lib/analytics/track';
-import { buildGoogleCalendarUrl, buildIcsFileContent } from '@/lib/calendar/buildCalendarEvent';
+import { AddToCalendar } from '@/components/calendar/AddToCalendar';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { buildRallyInviteUrl } from '@/lib/mission/buildRallyInviteUrl';
 import { ogCardFromSex } from '@/lib/share/ogCard';
@@ -30,22 +30,6 @@ function calendarEventInputFor(featured: FeaturedWod, card: ReturnType<typeof og
     startsAt: new Date(featured.scheduledAt),
     durationMinutes: featured.durationMinutes,
   };
-}
-
-function downloadIcsFile(featured: FeaturedWod, card: ReturnType<typeof ogCardFromSex>) {
-  const ics = buildIcsFileContent(calendarEventInputFor(featured, card));
-  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'featured-wod.ics';
-  link.rel = 'noopener';
-  link.style.display = 'none';
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  // Defer revoke so the browser can start reading the blob after click().
-  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
 
 /** How often to re-poll while mounted, so the waiting -> live transition and
@@ -130,37 +114,13 @@ export function FeaturedWodCard() {
         {featured.tags.length > 0 ? ` · ${featured.tags.join(', ')}` : ''}
       </p>
       <p className="text-sm font-semibold text-ink">{presentation.statusLine}</p>
-      <p className="flex flex-wrap gap-3 text-xs">
-        <button
-          type="button"
-          className="link-accent"
-          onClick={() => {
-            downloadIcsFile(featured, ogCard);
-            track(
-              'featured_wod_calendar_saved',
-              { method: 'ics' },
-              { missionId: featured.missionId }
-            );
-          }}
-        >
-          Download calendar invite
-        </button>
-        <a
-          className="link-accent"
-          href={buildGoogleCalendarUrl(calendarEventInputFor(featured, ogCard))}
-          target="_blank"
-          rel="noreferrer"
-          onClick={() =>
-            track(
-              'featured_wod_calendar_saved',
-              { method: 'google' },
-              { missionId: featured.missionId }
-            )
-          }
-        >
-          Add to Google Calendar
-        </a>
-      </p>
+      <AddToCalendar
+        event={calendarEventInputFor(featured, ogCard)}
+        fileName="featured-wod.ics"
+        onSaved={(method) =>
+          track('featured_wod_calendar_saved', { method }, { missionId: featured.missionId })
+        }
+      />
       {presentation.showJoinRallyPoint ? (
         <AppLink
           className="btn-primary inline-block"
