@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   coachOnboardingStuckStatusLabel,
+  fetchCoachActivationInactiveList,
   fetchCoachAnonSummary,
   fetchCoachDashboard,
   fetchCoachGuestList,
@@ -15,6 +16,7 @@ import {
   fetchCoachRecentEvents,
   fetchCoachUserDetail,
   fetchCoachUsersList,
+  fetchCoachWaitingGraveyardList,
   parseCoachAnonSummary,
 } from './coach';
 
@@ -62,6 +64,26 @@ describe('fetchCoachDashboard', () => {
           links_copied: 8,
           deep_link_joins: 3,
           conversion_rate_pct: 37.5,
+        },
+        activationFunnel: {
+          signed_up: 12,
+          identity_complete: 9,
+          create_viewed: 7,
+          mission_created: 6,
+          mission_started: 4,
+          finished: 3,
+          claimed: 2,
+          identity_rate_pct: 75,
+          create_viewed_rate_pct: 77.78,
+          mission_created_rate_pct: 85.71,
+          mission_started_rate_pct: 66.67,
+          finished_rate_pct: 75,
+          claimed_rate_pct: 66.67,
+        },
+        waitingGraveyard: {
+          waiting_or_setup: 11,
+          older_than_2h: 5,
+          older_than_24h: 2,
         },
         missionDropoff: [
           {
@@ -269,6 +291,10 @@ describe('fetchCoachDashboard', () => {
     expect(result.data?.topStrip.guestBrowsers7d).toBe(2);
     expect(result.data?.topStrip.uniqueAnonIds).toBe(5);
     expect(result.data?.claimFunnel.completionRatePct).toBe(40);
+    expect(result.data?.activationFunnel.signedUp).toBe(12);
+    expect(result.data?.activationFunnel.missionStarted).toBe(4);
+    expect(result.data?.activationFunnel.finishedRatePct).toBe(75);
+    expect(result.data?.waitingGraveyard.olderThan2h).toBe(5);
     expect(result.data?.templatePerformance[0]?.templateId).toBe('blood-shunt-5');
     expect(result.data?.signupFunnel[0]?.completions).toBe(14);
     expect(result.data?.authFailureReasons[0]?.reason).toBe('duplicate');
@@ -641,6 +667,86 @@ describe('fetchCoachOnboardingStuckList', () => {
     });
     expect(result.data).toBeNull();
     expect(result.error?.message).toBe('Not authorized.');
+  });
+});
+
+describe('fetchCoachActivationInactiveList', () => {
+  it('wires RPC params and parses inactive activation rows', async () => {
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        users: [
+          {
+            user_id: '55555555-5555-4555-8555-555555555555',
+            email: 'idle@example.com',
+            username: 'idle_ops',
+            nickname: 'Idle',
+            missions_touched: 2,
+            account_created_at: '2026-09-02T10:00:00.000Z',
+            last_sign_in_at: '2026-09-03T10:00:00.000Z',
+          },
+          {
+            user_id: 'bad-row',
+            username: 'x',
+          },
+        ],
+      },
+      error: null,
+    });
+
+    const result = await fetchCoachActivationInactiveList({ limit: 25 });
+
+    expect(callRpcMock).toHaveBeenCalledWith('coach_activation_inactive_list', {
+      p_limit: 25,
+    });
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual([
+      {
+        userId: '55555555-5555-4555-8555-555555555555',
+        email: 'idle@example.com',
+        username: 'idle_ops',
+        nickname: 'Idle',
+        missionsTouched: 2,
+        accountCreatedAt: '2026-09-02T10:00:00.000Z',
+        lastSignInAt: '2026-09-03T10:00:00.000Z',
+      },
+    ]);
+  });
+});
+
+describe('fetchCoachWaitingGraveyardList', () => {
+  it('wires RPC params and parses waiting graveyard rows', async () => {
+    callRpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        missions: [
+          {
+            mission_id: '66666666-6666-4666-8666-666666666666',
+            state: 'waiting',
+            created_at: '2026-09-01T08:00:00.000Z',
+            workout_name: 'First contact',
+            age_hours: 48.5,
+          },
+        ],
+      },
+      error: null,
+    });
+
+    const result = await fetchCoachWaitingGraveyardList();
+
+    expect(callRpcMock).toHaveBeenCalledWith('coach_waiting_graveyard_list', {
+      p_limit: 100,
+    });
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual([
+      {
+        missionId: '66666666-6666-4666-8666-666666666666',
+        state: 'waiting',
+        createdAt: '2026-09-01T08:00:00.000Z',
+        workoutName: 'First contact',
+        ageHours: 48.5,
+      },
+    ]);
   });
 });
 

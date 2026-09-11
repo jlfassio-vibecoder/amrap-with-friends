@@ -36,6 +36,46 @@ export interface CoachClaimFunnel {
   completionRatePct: number | null;
 }
 
+export interface CoachActivationFunnel {
+  signedUp: number;
+  identityComplete: number;
+  createViewed: number;
+  missionCreated: number;
+  missionStarted: number;
+  finished: number;
+  claimed: number;
+  identityRatePct: number | null;
+  createViewedRatePct: number | null;
+  missionCreatedRatePct: number | null;
+  missionStartedRatePct: number | null;
+  finishedRatePct: number | null;
+  claimedRatePct: number | null;
+}
+
+export interface CoachWaitingGraveyardSummary {
+  waitingOrSetup: number;
+  olderThan2h: number;
+  olderThan24h: number;
+}
+
+export interface CoachActivationInactiveRow {
+  userId: string;
+  email: string;
+  username: string;
+  nickname: string;
+  missionsTouched: number;
+  accountCreatedAt: string;
+  lastSignInAt: string | null;
+}
+
+export interface CoachWaitingGraveyardRow {
+  missionId: string;
+  state: string;
+  createdAt: string;
+  workoutName: string;
+  ageHours: number;
+}
+
 export interface CoachIntakeFunnel {
   submitted: number;
   abandoned: number;
@@ -198,6 +238,8 @@ export interface CoachDashboard {
   intakeFunnel: CoachIntakeFunnel;
   rallyConversion: CoachRallyConversion;
   missionAbandonment: CoachMissionAbandonment;
+  activationFunnel: CoachActivationFunnel;
+  waitingGraveyard: CoachWaitingGraveyardSummary;
   missionDropoff: MissionDropoffRow[];
   socialLift: SocialLiftRow[];
   weeklyRetention: RetentionCell[];
@@ -421,6 +463,32 @@ function parseClaimFunnel(row: Record<string, unknown>): CoachClaimFunnel {
     claimsCompleted: num(row, 'claims_completed'),
     claimsConflicted: num(row, 'claims_conflicted'),
     completionRatePct: numOrNull(row, 'completion_rate_pct'),
+  };
+}
+
+function parseActivationFunnel(row: Record<string, unknown>): CoachActivationFunnel {
+  return {
+    signedUp: num(row, 'signed_up'),
+    identityComplete: num(row, 'identity_complete'),
+    createViewed: num(row, 'create_viewed'),
+    missionCreated: num(row, 'mission_created'),
+    missionStarted: num(row, 'mission_started'),
+    finished: num(row, 'finished'),
+    claimed: num(row, 'claimed'),
+    identityRatePct: numOrNull(row, 'identity_rate_pct'),
+    createViewedRatePct: numOrNull(row, 'create_viewed_rate_pct'),
+    missionCreatedRatePct: numOrNull(row, 'mission_created_rate_pct'),
+    missionStartedRatePct: numOrNull(row, 'mission_started_rate_pct'),
+    finishedRatePct: numOrNull(row, 'finished_rate_pct'),
+    claimedRatePct: numOrNull(row, 'claimed_rate_pct'),
+  };
+}
+
+function parseWaitingGraveyardSummary(row: Record<string, unknown>): CoachWaitingGraveyardSummary {
+  return {
+    waitingOrSetup: num(row, 'waiting_or_setup'),
+    olderThan2h: num(row, 'older_than_2h'),
+    olderThan24h: num(row, 'older_than_24h'),
   };
 }
 
@@ -751,6 +819,44 @@ function parseOnboardingStuckRow(row: Record<string, unknown>): CoachOnboardingS
   };
 }
 
+function parseActivationInactiveRow(
+  row: Record<string, unknown>
+): CoachActivationInactiveRow | null {
+  const userId = strOrNull(row, 'user_id');
+  const username = strOrNull(row, 'username');
+  const nickname = strOrNull(row, 'nickname');
+  const accountCreatedAt = strOrNull(row, 'account_created_at');
+  if (!userId || !username || !nickname || !accountCreatedAt) {
+    return null;
+  }
+  return {
+    userId,
+    email: str(row, 'email'),
+    username,
+    nickname,
+    missionsTouched: nonNegativeNum(row, 'missions_touched'),
+    accountCreatedAt,
+    lastSignInAt: strOrNull(row, 'last_sign_in_at'),
+  };
+}
+
+function parseWaitingGraveyardRow(row: Record<string, unknown>): CoachWaitingGraveyardRow | null {
+  const missionId = strOrNull(row, 'mission_id');
+  const state = strOrNull(row, 'state');
+  const createdAt = strOrNull(row, 'created_at');
+  const workoutName = strOrNull(row, 'workout_name');
+  if (!missionId || !state || !createdAt || !workoutName) {
+    return null;
+  }
+  return {
+    missionId,
+    state,
+    createdAt,
+    workoutName,
+    ageHours: nonNegativeNum(row, 'age_hours'),
+  };
+}
+
 function parseUserProfile(row: Record<string, unknown>): CoachUserProfile | null {
   const userId = strOrNull(row, 'userId');
   const username = strOrNull(row, 'username');
@@ -912,6 +1018,52 @@ export async function fetchCoachOnboardingStuckList(input?: {
   return { data: users, error: null };
 }
 
+export async function fetchCoachActivationInactiveList(input?: {
+  limit?: number;
+}): Promise<{ data: CoachActivationInactiveRow[] | null; error: CoachApiError | null }> {
+  const { data, error } = await callRpc('coach_activation_inactive_list', {
+    p_limit: input?.limit ?? 100,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const users = asArray(raw.users)
+    .map(parseActivationInactiveRow)
+    .filter((row): row is CoachActivationInactiveRow => row !== null);
+
+  return { data: users, error: null };
+}
+
+export async function fetchCoachWaitingGraveyardList(input?: {
+  limit?: number;
+}): Promise<{ data: CoachWaitingGraveyardRow[] | null; error: CoachApiError | null }> {
+  const { data, error } = await callRpc('coach_waiting_graveyard_list', {
+    p_limit: input?.limit ?? 100,
+  });
+
+  if (error) {
+    return { data: null, error: { message: mapCoachError(error.message) } };
+  }
+
+  const raw = asRecord(data);
+  if (raw.ok !== true) {
+    return { data: null, error: { message: 'Something went wrong. Please try again.' } };
+  }
+
+  const missions = asArray(raw.missions)
+    .map(parseWaitingGraveyardRow)
+    .filter((row): row is CoachWaitingGraveyardRow => row !== null);
+
+  return { data: missions, error: null };
+}
+
 export async function fetchCoachUserDetail(userId: string): Promise<{
   data: CoachUserDetail | null;
   error: CoachApiError | null;
@@ -981,6 +1133,8 @@ export async function fetchCoachDashboard(window: CoachDashboardWindow = 'all'):
       intakeFunnel: parseIntakeFunnel(asRecord(raw.intakeFunnel)),
       rallyConversion: parseRallyConversion(asRecord(raw.rallyConversion)),
       missionAbandonment: parseMissionAbandonment(asRecord(raw.missionAbandonment)),
+      activationFunnel: parseActivationFunnel(asRecord(raw.activationFunnel)),
+      waitingGraveyard: parseWaitingGraveyardSummary(asRecord(raw.waitingGraveyard)),
       missionDropoff: asArray(raw.missionDropoff).map(parseMissionDropoffRow),
       socialLift: asArray(raw.socialLift).map(parseSocialLiftRow),
       weeklyRetention: asArray(raw.weeklyRetention).map(parseRetentionCell),

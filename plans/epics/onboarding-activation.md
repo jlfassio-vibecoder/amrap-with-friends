@@ -1,7 +1,7 @@
 # Epic: Onboarding Activation — See Why New Users Don’t Train
 
 **Branch:** `feature/onboarding-activation-p1`  
-**Status:** Draft — Phase 1 instrumentation in progress  
+**Status:** Draft — Phase 2 Activation funnel on branch (push migrations to verify live)  
 **Last updated:** 2026-09-11
 
 **Related:** [Phase 0 findings](./phase0-findings.md), [JIT onboarding](../../docs/epics/jit-onboarding.md) (Launch → auth → identity → rally point), [anonymous guest tracking](../../docs/epics/anonymous-guest-tracking.md), [analytics back-end roadmap](../../docs/epics/analytics-back-end-roadmap), `/coach` (Content & acquisition, Funnels, Incomplete sign-ups, Explore).
@@ -225,22 +225,22 @@ Featured join gate events (`featured_join_*`) deferred — Phase 0 ranked featur
 **Goal:** Make the middle of the funnel a first-class coach surface, not a SQL hobby.
 
 **Depends on:** Phase 1 (or DB-derived Start if events lag)  
-**Risk:** Coach RPC cost; keep windows and coach role gates consistent with existing coach RPCs.
+**Risk:** Coach RPC cost; keep windows and coach role gates consistent with existing coach RPCs.  
+**Status:** Implemented on `feature/onboarding-activation-p1` (migrations `20260912430000`–`450000` applied).
 
 ### Deliverables
 
-1. **`coach_activation_funnel`** (or extend an existing coach overview RPC) returning step counts for a window:
-   - signed_up → identity_complete → create_viewed → mission_created → mission_started → finished → claimed
-2. **Cohort table:** profile complete, zero finished missions (optional: zero any mission).
-3. **Waiting graveyard:** missions created, never reached `work`, age buckets.
-4. UI on `/coach` — Activation card under Funnels (or Overview): conversion rates between steps, not only absolute counts.
-5. Clarify copy on Acquisition: **Trained** label tooltip or rename toward “Joined a mission” so it is not read as finished.
+1. [x] **Activation funnel** via `report_activation_funnel` + `coach_dashboard.activationFunnel` (signup cohort steps + consecutive rates).
+2. [x] **Cohort table:** `coach_activation_inactive_list` — profile complete, zero finished missions (Users tab).
+3. [x] **Waiting graveyard:** `report_waiting_graveyard` summary + `coach_waiting_graveyard_list` detail.
+4. [x] UI on `/coach` Funnels — Activation card + graveyard; Acquisition **Joined a mission** column (`trained`).
+5. [x] Clarify Joined vs Completed on Acquisition (caption).
 
 ### Exit criteria
 
-- [ ] Coach can answer “where do new users stop?” without SQL editor.
-- [ ] Client parser + tests for the RPC envelope.
-- [ ] Coach role / RLS pattern matches other coach RPCs.
+- [ ] Coach can answer “where do new users stop?” without SQL editor (after client deploy).
+- [x] Client parser + tests for the RPC envelope.
+- [x] Coach role / RLS pattern matches other coach RPCs.
 
 ---
 
@@ -294,20 +294,20 @@ Do **not** ship a large onboarding UX rewrite before T0/T1 unless JIT Phase 3/4 
 
 1. **Start signal:** **Resolved (Phase 1):** client `mission_started` on first successful host push to `work`. SQL backfill can wait for Phase 2.
 2. **Pageviews:** **Resolved (Phase 1):** dedicated `create_viewed` / `rally_point_entered` (not a generic `page_viewed` helper).
-3. **Trained definition:** rename in coach UI now, or only after Activation funnel ships?
+3. **Trained definition:** **Resolved (Phase 2):** Acquisition shows **Joined a mission** (`trained`) vs **Completed a mission**; social-lift “Trained” column remains cohort Solo/Social.
 4. **Owner of JIT P3/P4 vs this epic:** identity overlay completion stays under `jit-onboarding.md`; this epic consumes its metrics.
 
 ---
 
 ## File touch map (expected)
 
-| Area      | Files                                                                                                      |
-| --------- | ---------------------------------------------------------------------------------------------------------- |
-| Events    | `events.ts`; `CreateMissionPage`; `MissionWaitingRoomPage`; `useLiveAmrapMission`; `missionStartSource.ts` |
-| Coach API | Phase 2: `src/lib/api/coach.ts`, new/extended coach RPC migration                                          |
-| Coach UI  | Phase 2: Activation card                                                                                   |
-| Tests     | `missionStartSource.test.ts`, `CreateMissionPage.test.tsx`, `events.test.ts` (registry)                    |
-| Docs      | this epic; Phase 0 findings                                                                                |
+| Area      | Files                                                                 |
+| --------- | --------------------------------------------------------------------- |
+| Events    | Phase 1: `events.ts`, create/waiting/start emit sites                 |
+| Coach API | `coach.ts`; migrations `20260912430000`–`450000`                      |
+| Coach UI  | `CoachActivationFunnelCard`, inactive + graveyard tables, `CoachPage` |
+| Tests     | `coach.test.ts`, Phase 1 analytics tests                              |
+| Docs      | this epic; Phase 0 findings                                           |
 
 ---
 
@@ -315,5 +315,5 @@ Do **not** ship a large onboarding UX rewrite before T0/T1 unless JIT Phase 3/4 
 
 - [x] **P0** Diagnose with existing `/coach` (+ SQL pending for waiting graveyard); record dominant drop — [phase0-findings.md](./phase0-findings.md)
 - [x] **P1** `mission_started` + create/waiting-room signals (staging Explore verify remaining)
-- [ ] **P2** Coach Activation funnel + profile-complete-zero-missions cohort
+- [x] **P2** Coach Activation funnel + profile-complete-zero-missions cohort (migrations applied; client deploy remaining)
 - [ ] **P3** Data-gated product fix(es) for the measured step
