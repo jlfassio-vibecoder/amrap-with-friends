@@ -34,6 +34,15 @@ import NotFoundPage from '@/pages/NotFoundPage';
 /** The shape the database enforces, checked before asking it anything. */
 const HANDLE = /^[a-z0-9][a-z0-9_]{2,23}$/;
 
+/**
+ * How often the page re-checks whether the scheduled time has passed.
+ *
+ * Coarse on purpose. This decides only whether a save-to-calendar action is
+ * still worth offering, and a mission that started thirty seconds ago is the
+ * one case where being slightly late costs nothing.
+ */
+const CALENDAR_TICK_MS = 30_000;
+
 export default function RoomPage() {
   const { handle: segment } = useParams<{ handle: string }>();
   const { user, isAuthenticated } = useAmrapAuth();
@@ -64,6 +73,7 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
     let cancelled = false;
@@ -125,6 +135,21 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
     setRoom({ ...room, myRole: 'member', memberCount: room.memberCount + 1 });
   }, [room]);
 
+  // The start time passes while the page is open, and nothing here reloads.
+  // Without a tick, a visitor who opens the room five minutes before the
+  // countdown keeps the "add to calendar" actions indefinitely -- and after
+  // the mission starts those save an event for a time already gone. Only runs
+  // while something is actually scheduled; a room with nothing on the clock
+  // has no reason to hold a timer.
+  const nextScheduledAt = nextMission(upcoming)?.scheduledAt ?? null;
+  useEffect(() => {
+    if (nextScheduledAt === null) {
+      return;
+    }
+    const id = window.setInterval(() => setNowMs(Date.now()), CALENDAR_TICK_MS);
+    return () => window.clearInterval(id);
+  }, [nextScheduledAt]);
+
   const join = useCallback(() => {
     if (!signedIn) {
       // AuthModal reports back when auth settles, so the join the visitor
@@ -171,13 +196,16 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
   const isMember = room.myRole !== null;
   const next = scheduleStatus === 'ready' ? nextMission(upcoming) : null;
   const calendarEvent = next
-    ? roomMissionCalendarEvent({
-        roomHandle: room.handle,
-        roomDisplayName: room.displayName,
-        mission: next,
-        workoutName: workoutName(next.templateId),
-        origin: window.location.origin,
-      })
+    ? roomMissionCalendarEvent(
+        {
+          roomHandle: room.handle,
+          roomDisplayName: room.displayName,
+          mission: next,
+          workoutName: workoutName(next.templateId),
+          origin: window.location.origin,
+        },
+        new Date(nowMs)
+      )
     : null;
 
   return (
