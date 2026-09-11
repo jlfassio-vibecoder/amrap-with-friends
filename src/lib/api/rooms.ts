@@ -213,3 +213,89 @@ export async function getMissionRoom(missionId: string): Promise<MissionRoom | n
     hasHomeCoach: room.has_home_coach === true,
   };
 }
+
+export interface RoomMember {
+  userId: string;
+  role: RoomRole;
+  nickname: string | null;
+  joinedAt: string;
+}
+
+export async function listRoomMembers(
+  roomId: string
+): Promise<{ ok: true; members: RoomMember[] } | { ok: false; reason: string }> {
+  const { data, error } = await callRpc<unknown>('list_room_members', { p_room_id: roomId });
+  if (error) {
+    return { ok: false, reason: error.message };
+  }
+  const payload = record(data);
+  if (!payload || payload.ok !== true || !Array.isArray(payload.members)) {
+    return { ok: false, reason: str(payload?.reason) ?? 'invalid_response' };
+  }
+
+  const members: RoomMember[] = [];
+  for (const entry of payload.members) {
+    const row = record(entry);
+    const userId = row ? str(row.user_id) : null;
+    const seat = row ? role(row.role) : null;
+    if (!row || !userId || !seat) {
+      continue;
+    }
+    members.push({
+      userId,
+      role: seat,
+      nickname: str(row.nickname),
+      joinedAt: str(row.joined_at) ?? '',
+    });
+  }
+  return { ok: true, members };
+}
+
+export interface RoomActivity {
+  finishedThisWeek: number;
+  athletesThisWeek: number;
+  missionsThisWeek: number;
+  returningAthletes: number;
+}
+
+export async function getRoomActivity(
+  roomId: string
+): Promise<{ ok: true; activity: RoomActivity } | { ok: false; reason: string }> {
+  const { data, error } = await callRpc<unknown>('room_activity_summary', { p_room_id: roomId });
+  if (error) {
+    return { ok: false, reason: error.message };
+  }
+  const payload = record(data);
+  if (!payload || payload.ok !== true) {
+    return { ok: false, reason: str(payload?.reason) ?? 'invalid_response' };
+  }
+  const num = (value: unknown): number => (typeof value === 'number' ? value : 0);
+  return {
+    ok: true,
+    activity: {
+      finishedThisWeek: num(payload.finished_this_week),
+      athletesThisWeek: num(payload.athletes_this_week),
+      missionsThisWeek: num(payload.missions_this_week),
+      returningAthletes: num(payload.returning_athletes),
+    },
+  };
+}
+
+export async function setRoomCohost(
+  roomId: string,
+  userId: string,
+  isCohost: boolean
+): Promise<{ ok: boolean; reason?: string }> {
+  const { data, error } = await callRpc<unknown>('set_room_cohost', {
+    p_room_id: roomId,
+    p_user_id: userId,
+    p_is_cohost: isCohost,
+  });
+  if (error) {
+    return { ok: false, reason: error.message };
+  }
+  const payload = record(data);
+  return payload?.ok === true
+    ? { ok: true }
+    : { ok: false, reason: str(payload?.reason) ?? 'unknown' };
+}

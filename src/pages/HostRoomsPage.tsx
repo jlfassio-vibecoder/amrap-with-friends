@@ -128,6 +128,11 @@ function RoomRow({ room }: { room: RoomSummary }) {
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
+        {capabilitiesFor(room.role).runRoom ? (
+          <a className="btn-outline text-xs" href={`/host/${room.handle}`}>
+            Manage
+          </a>
+        ) : null}
         {room.role !== 'member' ? (
           <span className="text-xs uppercase text-secondary">{room.role}</span>
         ) : null}
