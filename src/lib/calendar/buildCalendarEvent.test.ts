@@ -56,6 +56,45 @@ describe('buildIcsFileContent', () => {
     expect(ics).toContain(`DESCRIPTION:${'x'.repeat(75 - 'DESCRIPTION:'.length)}\r\n x`);
   });
 
+  it('folds by octets, not by characters', () => {
+    // A room's display name is coach-chosen text, and accented characters are
+    // two octets each: counting UTF-16 units let a line past the 75-octet
+    // limit while looking short enough.
+    const accented = 'é'.repeat(60);
+    const ics = buildIcsFileContent({ ...BASE_INPUT, description: accented });
+    const encoder = new TextEncoder();
+    for (const line of ics.split('\r\n')) {
+      expect(encoder.encode(line).length).toBeLessThanOrEqual(75);
+    }
+  });
+
+  it('never splits a character in half', () => {
+    // slice() cuts UTF-16 code units, so a fold landing mid-emoji produced a
+    // lone surrogate -- which is not valid UTF-8 and not a character any
+    // calendar can render.
+    const ics = buildIcsFileContent({ ...BASE_INPUT, description: '🔥'.repeat(40) });
+    for (const line of ics.split('\r\n')) {
+      // A lone surrogate survives a UTF-8 round trip only as the replacement
+      // character, so this is the check that catches one.
+      expect(line).not.toMatch(/[\uD800-\uDFFF]/u);
+    }
+  });
+
+  it('carries a location and a url when given them, and omits both when not', () => {
+    const withPlace = buildIcsFileContent({
+      ...BASE_INPUT,
+      location: 'amrapwithfriends.com/@northside',
+      url: 'https://amrapwithfriends.com/mission/m1',
+    });
+    expect(withPlace).toContain('LOCATION:amrapwithfriends.com/@northside');
+    // A URI value is not text-escaped: escaping a comma would break the link.
+    expect(withPlace).toContain('URL:https://amrapwithfriends.com/mission/m1');
+
+    const plain = buildIcsFileContent(BASE_INPUT);
+    expect(plain).not.toContain('LOCATION:');
+    expect(plain).not.toContain('URL:');
+  });
+
   it('uses CRLF line endings throughout', () => {
     const ics = buildIcsFileContent(BASE_INPUT);
     expect(ics.includes('\r\n')).toBe(true);
@@ -74,5 +113,11 @@ describe('buildGoogleCalendarUrl', () => {
     expect(parsed.searchParams.get('text')).toBe('The Undertow');
     expect(parsed.searchParams.get('dates')).toBe('20260829T160000Z/20260829T161500Z');
     expect(parsed.searchParams.get('details')).toBe(BASE_INPUT.description);
+    expect(parsed.searchParams.get('location')).toBeNull();
+  });
+
+  it('passes the location through when there is one', () => {
+    const url = buildGoogleCalendarUrl({ ...BASE_INPUT, location: 'amrapwithfriends.com/@north' });
+    expect(new URL(url).searchParams.get('location')).toBe('amrapwithfriends.com/@north');
   });
 });
