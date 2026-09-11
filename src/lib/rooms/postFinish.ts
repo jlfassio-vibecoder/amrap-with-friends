@@ -49,9 +49,15 @@ export function postFinishSheet(input: PostFinishInput): PostFinishSheet {
  * An athlete who already has a home coach is told their attribution does not
  * move -- before they decide, not after. Silence there would read as "this
  * changes my coach", which is the thing most likely to make them untick it.
+ *
+ * This used to say only that the coach would see it. Since the room page
+ * carries a public activity feed, ticking this also puts the athlete's name on
+ * a page anyone can open -- including, retroactively, finishes already on it.
+ * A change to a public page has to be consented to rather than discovered, so
+ * the note says it before the tick and says the opt-out in the same breath.
  */
 export function joinNote(roomName: string, hasHomeCoach: boolean): string {
-  const base = `${roomName} will see the missions you finish in their room.`;
+  const base = `Your name goes on the missions you finish in ${roomName}'s room, on their public page. You can turn that off any time.`;
   return hasHomeCoach
     ? `${base} Your home coach stays who it is today.`
     : `${base} It never adds you to anyone's squad.`;

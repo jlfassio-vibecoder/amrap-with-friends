@@ -1,6 +1,7 @@
 import { callRpc } from '@/lib/api/callRpc';
 import { persistMissionIdentity } from '@/lib/missionIdentity';
 import { parseRoomBrand, type RoomBrand } from '@/lib/rooms/brand';
+import type { RoomFeedRow } from '@/lib/rooms/roomFeed';
 import { isRoomReaction, type RoomReaction } from '@/lib/rooms/reactions';
 import type { RoomRole } from '@/lib/rooms/membership';
 
@@ -30,6 +31,8 @@ export interface RoomPage {
   myRole: RoomRole | null;
   announcement: string | null;
   brand: RoomBrand | null;
+  /** The viewer's own setting. Null when signed out or not a member. */
+  myActivityVisible: boolean | null;
 }
 
 function str(value: unknown): string | null {
@@ -90,6 +93,8 @@ export async function getRoomByHandle(handle: string): Promise<GetRoomResult> {
       myRole: role(room.my_role),
       announcement: str(room.announcement),
       brand: parseRoomBrand(room.brand),
+      myActivityVisible:
+        typeof room.my_activity_visible === 'boolean' ? room.my_activity_visible : null,
     },
   };
 }
@@ -451,6 +456,71 @@ export async function setRoomBrand(
   const { data, error } = await callRpc<unknown>('set_room_brand', {
     p_room_id: roomId,
     p_accent: accent,
+  });
+  if (error) {
+    return { ok: false, reason: error.message };
+  }
+  const payload = record(data);
+  return payload?.ok === true
+    ? { ok: true }
+    : { ok: false, reason: str(payload?.reason) ?? 'unknown' };
+}
+
+/**
+ * The public activity feed. Readable signed out, because a room address exists
+ * to be posted anywhere.
+ *
+ * The nickname arrives already resolved: null for a guest and for a member who
+ * opted out, identically. Nothing here may try to tell those apart.
+ */
+export async function listRoomActivity(
+  roomId: string,
+  limit = 20
+): Promise<{ ok: true; rows: RoomFeedRow[] } | { ok: false; reason: string }> {
+  const { data, error } = await callRpc<unknown>('list_room_activity', {
+    p_room_id: roomId,
+    p_limit: limit,
+  });
+  if (error) {
+    return { ok: false, reason: error.message };
+  }
+  const payload = record(data);
+  if (!payload || payload.ok !== true || !Array.isArray(payload.activity)) {
+    return { ok: false, reason: str(payload?.reason) ?? 'invalid_response' };
+  }
+
+  const rows: RoomFeedRow[] = [];
+  for (const entry of payload.activity) {
+    const item = record(entry);
+    const participantId = item ? str(item.participant_id) : null;
+    const missionId = item ? str(item.mission_id) : null;
+    const finishedAt = item ? str(item.finished_at) : null;
+    if (!item || !participantId || !missionId || !finishedAt) {
+      continue;
+    }
+    const score = Number(item.base_score);
+    rows.push({
+      participantId,
+      missionId,
+      templateId: str(item.template_id),
+      nickname: str(item.nickname),
+      score: Number.isFinite(score) ? score : null,
+      unit: item.score_unit === 'rounds' ? 'rounds' : 'reps',
+      finishedAt,
+      reactionCount: typeof item.reaction_count === 'number' ? item.reaction_count : 0,
+    });
+  }
+  return { ok: true, rows };
+}
+
+/** A member's own switch: whether their name shows in this room's activity. */
+export async function setRoomActivityVisible(
+  roomId: string,
+  visible: boolean
+): Promise<{ ok: boolean; reason?: string }> {
+  const { data, error } = await callRpc<unknown>('set_room_activity_visible', {
+    p_room_id: roomId,
+    p_visible: visible,
   });
   if (error) {
     return { ok: false, reason: error.message };
