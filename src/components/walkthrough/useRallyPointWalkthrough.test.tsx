@@ -129,6 +129,71 @@ describe('useRallyPointWalkthrough', () => {
     expect(result.current.active).toBe(false);
   });
 
+  it('does not rerun after Lets do this on the same mission', () => {
+    const { result, unmount } = renderHook(() =>
+      useRallyPointWalkthrough({
+        missionId: 'mission-a',
+        isHost: true,
+        enabled: true,
+        isTargetPresent: () => true,
+      })
+    );
+
+    while (result.current.activeStep) {
+      act(() => {
+        result.current.next();
+      });
+    }
+    expect(result.current.showingFinale).toBe(true);
+
+    act(() => {
+      result.current.confirmLetsDoThis();
+    });
+    expect(result.current.complete).toBe(true);
+    unmount();
+
+    const remounted = renderHook(() =>
+      useRallyPointWalkthrough({
+        missionId: 'mission-a',
+        isHost: true,
+        enabled: true,
+        isTargetPresent: () => true,
+      })
+    );
+
+    expect(remounted.result.current.complete).toBe(true);
+    expect(remounted.result.current.active).toBe(false);
+    expect(remounted.result.current.showingFinale).toBe(false);
+  });
+
+  it('still shows the tour on a new mission after completing a prior one', () => {
+    const { result, unmount } = renderHook(() =>
+      useRallyPointWalkthrough({
+        missionId: 'mission-a',
+        isHost: true,
+        enabled: true,
+        isTargetPresent: () => true,
+      })
+    );
+
+    act(() => {
+      result.current.skipVisit();
+    });
+    unmount();
+
+    const nextMission = renderHook(() =>
+      useRallyPointWalkthrough({
+        missionId: 'mission-b',
+        isHost: true,
+        enabled: true,
+        isTargetPresent: () => true,
+      })
+    );
+
+    expect(nextMission.result.current.active).toBe(true);
+    expect(nextMission.result.current.complete).toBe(false);
+  });
+
   it('still shows the host tour after only the joiner tour was dismissed', () => {
     dismissWalkthroughForever('joiner');
 
