@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { CampaignEditForm } from '@/components/campaign/CampaignEditForm';
 import { CampaignScheduleSection } from '@/components/campaign/CampaignScheduleSection';
-import { AddSquadFriendToCampaign } from '@/components/campaign/AddSquadFriendToCampaign';
+import { SendInvitationButton } from '@/components/invitations/SendInvitationFlow';
 import { CopyCampaignInvite } from '@/components/campaign/CopyCampaignInvite';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import {
@@ -583,10 +583,14 @@ export default function CampaignDetailPage() {
         {detail.viewerRole === 'host' &&
         detail.status !== 'complete' &&
         detail.status !== 'abandoned' ? (
-          <AddSquadFriendToCampaign
+          <SendInvitationButton
             campaignId={detail.campaignId}
-            memberUserIds={detail.members.map((member) => member.userId)}
-            onAdded={() => setReloadKey((key) => key + 1)}
+            durationMinutes={detail.occurrences[0]?.durationMinutes ?? 15}
+            workout={detail.occurrences[0]?.workout ?? []}
+            allowedTypes={['campaign']}
+            defaultType="campaign"
+            triggerLabel="Send invitation"
+            triggerClassName="btn-outline text-sm font-semibold"
           />
         ) : null}
 

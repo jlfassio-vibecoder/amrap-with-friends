@@ -49,7 +49,7 @@ import { writeScalingPlan } from '@/lib/mission/scalingPlan';
 import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
 import { createRallyPointMission } from '@/lib/api/rallyPoint';
 import { setMissionChain as persistMissionChain } from '@/lib/api/missionChain';
-import { SendWorkoutToSquad } from '@/components/mission/SendWorkoutToSquad';
+import { SendInvitationButton } from '@/components/invitations/SendInvitationFlow';
 import { getSupabaseConfigError } from '@/lib/supabase';
 import { track } from '@/lib/analytics/track';
 import { quotasFromProfile } from '@/lib/hud/classificationQuotas';
@@ -1066,12 +1066,15 @@ export default function CreateMissionPage() {
               />
 
               <div className="pt-4">
-                <SendWorkoutToSquad
+                <SendInvitationButton
                   durationMinutes={durationMinutes}
                   workout={configuredWorkout.movements}
                   templateId={configuredWorkout.templateId}
                   intensityTier={configuredWorkout.intensityTier}
                   ready={configuredWorkout.movements.length > 0}
+                  allowedTypes={['workout']}
+                  defaultType="workout"
+                  triggerLabel="Send invitation"
                   triggerClassName="btn-outline w-full font-semibold"
                 />
               </div>

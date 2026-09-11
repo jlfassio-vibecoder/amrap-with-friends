@@ -85,6 +85,9 @@ export const ANALYTICS_EVENT_NAMES = [
   'featured_wod_joined',
   'featured_wod_calendar_saved',
 
+  // Coach's Rooms
+  'room_mission_calendar_saved',
+
   // Acquisition
   'first_touch_captured',
   'content_page_viewed',

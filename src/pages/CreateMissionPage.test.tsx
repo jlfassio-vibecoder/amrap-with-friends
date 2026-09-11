@@ -129,8 +129,9 @@ vi.mock('@/components/createMission/WorkoutTemplatePicker', () => ({
 vi.mock('@/components/createMission/CoachWodPicker', () => ({
   CoachWodPicker: () => null,
 }));
-vi.mock('@/components/mission/SendWorkoutToSquad', () => ({
-  SendWorkoutToSquad: () => null,
+vi.mock('@/components/invitations/SendInvitationFlow', () => ({
+  SendInvitationButton: () => null,
+  SendInvitationFlow: () => null,
 }));
 vi.mock('@/components/AuthModal', () => ({
   AuthModal: () => <div>Save & Launch</div>,

@@ -34,6 +34,9 @@ import { MissionScorecard, type MissionScorecardSaveState } from '@/components/M
 import { MissionChat } from '@/components/MissionChat';
 import { GhostPacerStrip } from '@/components/GhostPacerStrip';
 import { CopyInviteLink } from '@/components/mission/CopyInviteLink';
+import { ParticipantInviteMenu } from '@/components/invitations/ParticipantInviteMenu';
+import { SendInvitationButton } from '@/components/invitations/SendInvitationFlow';
+import { fetchInvitationAudience, type InvitationMissionParticipant } from '@/lib/api/invitations';
 import { DaisyChainCta } from '@/components/mission/DaisyChainCta';
 import { MissionLoadingModal } from '@/components/mission/MissionLoadingModal';
 import { MissionLockedModal } from '@/components/mission/MissionLockedModal';
@@ -474,7 +477,10 @@ function LiveMissionView({
   const [scorecardDismissed, setScorecardDismissed] = useState(false);
   const [missionLoadingDismissed, setMissionLoadingDismissed] = useState(false);
   const [authOpenForSave, setAuthOpenForSave] = useState(false);
+  const [authOpenForInvitation, setAuthOpenForInvitation] = useState(false);
   const [chatExpanded, setChatExpanded] = useState(false);
+  const [inviteParticipants, setInviteParticipants] = useState<InvitationMissionParticipant[]>([]);
+  const [canInviteCampaign, setCanInviteCampaign] = useState(false);
   const pendingSaveAfterAuth = useRef(false);
   const [ghostSelection, setGhostSelection] = useState<StoredGhostSelection | null>(() =>
     getStoredGhostSelection(missionId)
@@ -508,6 +514,23 @@ function LiveMissionView({
   const rallyPointEnteredRef = useRef(false);
   const rallyPointLeftRef = useRef(false);
   const rallyPointEnteredAtMsRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!isAuthenticated || live.phase === 'work') {
+      return;
+    }
+    let cancelled = false;
+    void fetchInvitationAudience(missionId).then((result) => {
+      if (cancelled || result.error || !result.data) {
+        return;
+      }
+      setInviteParticipants(result.data.missionParticipants);
+      setCanInviteCampaign(result.data.campaigns.length > 0);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, missionId, live.phase]);
   const amqapFlow = findAmqapFlow(live.templateId);
   const amqapSets = useMemo(() => (amqapFlow ? expandAmqapSets(amqapFlow) : []), [amqapFlow]);
   const amqapProgress =
@@ -1667,6 +1690,23 @@ function LiveMissionView({
                 <CopyInviteLink missionId={missionId} rallyPointId={rallyPointId} />
               ) : null}
 
+              {isAuthenticated && live.phase !== 'work' ? (
+                <SendInvitationButton
+                  sourceMissionId={missionId}
+                  durationMinutes={live.workDurationSec / 60}
+                  workout={live.workout}
+                  templateId={live.templateId}
+                  allowedTypes={
+                    live.phase === 'finished'
+                      ? ['workout', 'campaign']
+                      : ['mission', 'workout', 'campaign']
+                  }
+                  defaultType={live.phase === 'finished' ? 'workout' : 'mission'}
+                  triggerLabel="Send invitation"
+                  triggerClassName="btn-outline w-full text-sm font-semibold"
+                />
+              ) : null}
+
               {/*
                 Joiners never had a pacer at all: the picker lives inside the
                 host's rally-point steps, and the old gate meant the only person
@@ -1906,7 +1946,41 @@ function LiveMissionView({
               className={`lg:min-h-0 lg:flex-1 lg:overflow-hidden ${
                 compactMobileLive ? 'max-lg:hidden' : ''
               }`}
+              renderRowAction={(entry) => {
+                const match = inviteParticipants.find(
+                  (person) => person.participantId === entry.participantId
+                );
+                if (!match || !isAuthenticated) {
+                  return null;
+                }
+                return (
+                  <ParticipantInviteMenu
+                    userId={match.userId}
+                    nickname={match.nickname}
+                    isFriend={match.isFriend}
+                    isSelf={match.isSelf}
+                    sourceMissionId={missionId}
+                    durationMinutes={live.workDurationSec / 60}
+                    workout={live.workout}
+                    templateId={live.templateId}
+                    canInviteCampaign={canInviteCampaign}
+                  />
+                );
+              }}
             />
+
+            {isAuthenticated && live.phase === 'work' && !compactMobileLive ? (
+              <SendInvitationButton
+                sourceMissionId={missionId}
+                durationMinutes={live.workDurationSec / 60}
+                workout={live.workout}
+                templateId={live.templateId}
+                allowedTypes={['mission', 'workout', 'campaign']}
+                defaultType="mission"
+                triggerLabel="Send invitation"
+                triggerClassName="btn-outline w-full text-sm font-semibold"
+              />
+            ) : null}
 
             <MissionChat
               missionId={missionId}
@@ -1916,6 +1990,11 @@ function LiveMissionView({
               messages={channel.messages}
               expanded={chatExpanded}
               onExpandedChange={setChatExpanded}
+              durationMinutes={live.workDurationSec / 60}
+              workout={live.workout}
+              templateId={live.templateId}
+              phase={live.phase}
+              onRequestSignIn={() => setAuthOpenForInvitation(true)}
               className={[
                 chatExpanded
                   ? 'lg:min-h-0 lg:flex-1 lg:overflow-hidden'
@@ -2078,6 +2157,13 @@ function LiveMissionView({
       ) : null}
 
       {authOpenForSave ? <AuthModal onClose={handleAuthCloseForSave} /> : null}
+      {authOpenForInvitation ? (
+        <AuthModal
+          onClose={() => setAuthOpenForInvitation(false)}
+          heading="Sign in to save this invitation"
+          subtitle="Your invitation stays with this tab until you sign in."
+        />
+      ) : null}
 
       {showSafetyNotice && activeSafetyNotice ? (
         <SafetyNoticeModal

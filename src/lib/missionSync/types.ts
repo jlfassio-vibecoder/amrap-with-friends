@@ -40,6 +40,11 @@ export interface RoundRow {
   created_at: string;
 }
 
+export interface MessageAttachment {
+  type: 'invitation';
+  invitation_id: string;
+}
+
 export interface MessageRow {
   id: string;
   mission_id: string;
@@ -48,6 +53,8 @@ export interface MessageRow {
   body: string;
   segment_index: number;
   created_at: string;
+  /** Present on invitation cards; omitted on ordinary text. */
+  attachment?: MessageAttachment | null;
 }
 
 export interface UpdateMissionStateInput {

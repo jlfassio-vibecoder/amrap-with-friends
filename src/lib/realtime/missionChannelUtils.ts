@@ -270,6 +270,18 @@ export function parseMessageRow(record: Record<string, unknown>): MessageRow | n
     return null;
   }
 
+  let attachment: MessageRow['attachment'] = null;
+  if (record.attachment && typeof record.attachment === 'object') {
+    const raw = record.attachment as Record<string, unknown>;
+    const invitationId =
+      typeof raw.invitation_id === 'string' && raw.invitation_id.length > 0
+        ? raw.invitation_id
+        : null;
+    if (raw.type === 'invitation' && invitationId) {
+      attachment = { type: 'invitation', invitation_id: invitationId };
+    }
+  }
+
   return {
     id,
     mission_id: missionId,
@@ -278,6 +290,7 @@ export function parseMessageRow(record: Record<string, unknown>): MessageRow | n
     body,
     segment_index: segmentIndex,
     created_at: createdAt,
+    attachment,
   };
 }
 

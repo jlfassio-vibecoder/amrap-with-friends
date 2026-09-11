@@ -92,4 +92,53 @@ describe('parseMissionLiveStatePayload', () => {
       reason: 'invalid_claim_token',
     });
   });
+
+  it('keeps invitation attachments on chat messages', () => {
+    const result = parseMissionLiveStatePayload({
+      ok: true,
+      mission: {
+        id: 'm1',
+        duration_minutes: 10,
+        workout: [{ name: 'Squat', target: 10, unit: 'reps' }],
+        template_id: null,
+        state: 'waiting',
+        time_left_sec: 0,
+        is_paused: false,
+        started_at: null,
+        scheduled_at: null,
+        rally_point_countdown_ends_at: null,
+        segment_index: 0,
+        created_at: '2026-01-01T00:00:00.000Z',
+        is_featured: false,
+        rally_point_id: null,
+      },
+      participants: [],
+      rounds: [],
+      messages: [
+        {
+          id: 'msg-1',
+          mission_id: 'm1',
+          participant_id: 'p1',
+          nickname: 'Alex',
+          body: 'Shared a workout',
+          segment_index: 0,
+          created_at: '2026-01-01T00:00:00.000Z',
+          attachment: {
+            type: 'invitation',
+            invitation_id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+          },
+        },
+      ],
+      segment_results: [],
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.data.messages[0]?.attachment).toEqual({
+      type: 'invitation',
+      invitation_id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+    });
+  });
 });

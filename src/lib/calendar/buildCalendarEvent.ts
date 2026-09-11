@@ -15,6 +15,10 @@ export interface CalendarEventInput {
   description: string;
   startsAt: Date;
   durationMinutes: number;
+  /** Where it happens. Most calendar apps make this tappable. */
+  location?: string;
+  /** The canonical page for the event, for apps that show a link field. */
+  url?: string;
 }
 
 function pad2(value: number): string {
@@ -44,18 +48,46 @@ function icsEscape(text: string): string {
     .replace(/\r?\n/g, '\\n');
 }
 
+/**
+ * Folds to 75 *octets*, counted in UTF-8 and never inside a code point.
+ *
+ * The first version counted UTF-16 code units, which is the same number only
+ * for ASCII. Two things go wrong once the text is not ASCII, and a room's
+ * display name is exactly where that arrives: a line of accented characters
+ * silently exceeds the limit, and `slice` can cut an emoji in half, leaving a
+ * lone surrogate that is not valid UTF-8 at all. Continuation lines count
+ * their own leading space, which the first version also missed.
+ */
 function foldLine(line: string): string {
   const LIMIT = 75;
-  if (line.length <= LIMIT) {
+  const encoder = new TextEncoder();
+  if (encoder.encode(line).length <= LIMIT) {
     return line;
   }
+
   const chunks: string[] = [];
-  let rest = line;
-  while (rest.length > LIMIT) {
-    chunks.push(rest.slice(0, LIMIT));
-    rest = rest.slice(LIMIT);
+  // Code points, not code units: iterating a string yields whole characters,
+  // so a surrogate pair can never be split across the boundary.
+  let current = '';
+  let currentOctets = 0;
+  let limit = LIMIT;
+
+  for (const character of line) {
+    const size = encoder.encode(character).length;
+    if (currentOctets + size > limit) {
+      chunks.push(current);
+      current = '';
+      currentOctets = 0;
+      // Every line after the first spends one octet on its leading space.
+      limit = LIMIT - 1;
+    }
+    current += character;
+    currentOctets += size;
   }
-  chunks.push(rest);
+  if (current.length > 0) {
+    chunks.push(current);
+  }
+
   return chunks.join('\r\n ');
 }
 
@@ -70,7 +102,7 @@ export function buildIcsFileContent(input: CalendarEventInput): string {
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//AMRAP With Friends//Featured WOD//EN',
+    'PRODID:-//AMRAP With Friends//Mission//EN',
     'CALSCALE:GREGORIAN',
     'BEGIN:VEVENT',
     `UID:${icsEscape(input.uid)}@amrapwithfriends`,
@@ -79,6 +111,10 @@ export function buildIcsFileContent(input: CalendarEventInput): string {
     `DTEND:${toIcsUtc(endsAt)}`,
     `SUMMARY:${icsEscape(input.title)}`,
     `DESCRIPTION:${icsEscape(input.description)}`,
+    ...(input.location ? [`LOCATION:${icsEscape(input.location)}`] : []),
+    // URL takes a URI value, which is not text-escaped -- a comma or semicolon
+    // in a URL is part of the URL, and escaping it would break the link.
+    ...(input.url ? [`URL:${input.url}`] : []),
     'END:VEVENT',
     'END:VCALENDAR',
   ];
@@ -96,6 +132,7 @@ export function buildGoogleCalendarUrl(input: CalendarEventInput): string {
     text: input.title,
     dates: `${toIcsUtc(input.startsAt)}/${toIcsUtc(endsAt)}`,
     details: input.description,
+    ...(input.location ? { location: input.location } : {}),
   });
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }

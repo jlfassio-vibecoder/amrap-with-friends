@@ -9,6 +9,7 @@ interface MyMissionsTopTabsProps {
   tabs?: readonly MyMissionsTabDefinition[];
   activeTab: MyMissionsTabKey;
   onChange: (tab: MyMissionsTabKey) => void;
+  sentUnreadCount?: number;
 }
 
 /** Underlined section tabs — visual/ARIA parity with HudTopTabs. */
@@ -16,6 +17,7 @@ export function MyMissionsTopTabs({
   tabs = MY_MISSIONS_TABS,
   activeTab,
   onChange,
+  sentUnreadCount = 0,
 }: MyMissionsTopTabsProps) {
   return (
     <div className="-mx-1 overflow-x-auto pt-1">
@@ -43,6 +45,11 @@ export function MyMissionsTopTabs({
               onClick={() => onChange(tab.key)}
             >
               {tab.label}
+              {tab.key === 'sent' && sentUnreadCount > 0 ? (
+                <span className="ml-1.5 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-on-accent">
+                  {sentUnreadCount > 9 ? '9+' : sentUnreadCount}
+                </span>
+              ) : null}
             </button>
           );
         })}
