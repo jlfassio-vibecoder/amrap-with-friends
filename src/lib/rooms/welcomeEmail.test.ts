@@ -52,6 +52,17 @@ describe('buildWelcomeEmail', () => {
     expect(email.html).not.toContain('<img src=x>');
   });
 
+  it('never calls the room URL a rally link', () => {
+    // CLAUDE.md reserves "rally link" for a URL that opens a mission (`?m=`)
+    // or the Next Mission hub (`?r=`). This one opens the room page, and the
+    // dashboard's own button calls it "Copy link".
+    for (const isActive of [true, false]) {
+      const email = buildWelcomeEmail({ ...base, isActive });
+      expect(email.text.toLowerCase()).not.toContain('rally link');
+      expect(email.html.toLowerCase()).not.toContain('rally link');
+    }
+  });
+
   it('points at the dashboard', () => {
     expect(buildWelcomeEmail(base).html).toContain('https://www.amrapwithfriends.com/host');
   });

@@ -482,6 +482,62 @@ describe('MyMissionsPage CTAs', () => {
   });
 });
 
+describe('MyMissionsPage repeats', () => {
+  it('collapses same template+duration into one card with earlier-run links', async () => {
+    fetchMyMissionsMock.mockResolvedValue({
+      data: [
+        entry({
+          participantId: 'p-new',
+          missionId: 'm-new',
+          templateId: 'the-pendulum',
+          durationMinutes: 10,
+          createdAt: '2026-09-06T12:00:00.000Z',
+          state: 'finished',
+          finalScore: 12,
+          workout: [{ name: 'Burpees', target: 10, unit: 'reps' }],
+          movementCount: 1,
+        }),
+        entry({
+          participantId: 'p-old',
+          missionId: 'm-old',
+          templateId: 'the-pendulum',
+          durationMinutes: 10,
+          createdAt: '2026-09-04T12:00:00.000Z',
+          state: 'finished',
+          finalScore: 9,
+          workout: [{ name: 'Burpees', target: 10, unit: 'reps' }],
+          movementCount: 1,
+        }),
+      ],
+      chains: {},
+      error: null,
+    });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('The Pendulum')).toBeTruthy();
+      expect(screen.getByText(/2 runs/)).toBeTruthy();
+    });
+
+    expect(screen.getAllByText('The Pendulum')).toHaveLength(1);
+    expect(screen.getAllByRole('link', { name: 'View mission' })).toHaveLength(1);
+    expect(screen.getByRole('link', { name: 'View mission' }).getAttribute('href')).toBe(
+      '/mission/m-new'
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Earlier runs' }));
+
+    await waitFor(() => {
+      const links = screen.getAllByRole('link', { name: 'View mission' });
+      expect(links.map((link) => link.getAttribute('href'))).toEqual([
+        '/mission/m-new',
+        '/mission/m-old',
+      ]);
+    });
+  });
+});
+
 describe('MyMissionsPage relaunch', () => {
   it('creates a new mission from the card workout and navigates to it', async () => {
     fetchMyMissionsMock.mockResolvedValue({
