@@ -17,7 +17,10 @@ import { join } from 'node:path';
  */
 
 const MIGRATIONS = join(process.cwd(), 'supabase', 'migrations');
-const ROOM_MIGRATION = /coach_rooms/;
+// Every room migration, not only the ones that happen to be named
+// `coach_rooms`. The reserved-handles migration redefines create_room and was
+// invisible to this guard until Copilot pointed it out.
+const ROOM_MIGRATION = /coach_rooms|room_handles|_room/;
 const ALLOWED_IN = 'grant_room_entitlement';
 
 function roomMigrations(): { name: string; sql: string }[] {

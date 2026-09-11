@@ -20,37 +20,8 @@ import { capabilitiesFor } from '@/lib/rooms/membership';
  */
 export default function HostRoomsPage() {
   useSeo();
-  const { isAuthenticated, isAuthLoading } = useAmrapAuth();
-  const [rooms, setRooms] = useState<RoomSummary[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { user, isAuthenticated, isAuthLoading } = useAmrapAuth();
   const [authOpen, setAuthOpen] = useState(false);
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      return;
-    }
-    let cancelled = false;
-
-    // setState only after the await, and only if this effect still owns the
-    // page -- signing out mid-request must not repopulate it.
-    async function load() {
-      const result = await listMyRooms();
-      if (cancelled) {
-        return;
-      }
-      if (result.ok) {
-        setRooms(result.rooms);
-        setError(null);
-      } else {
-        setError(result.reason);
-      }
-    }
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [isAuthenticated]);
 
   if (isAuthLoading) {
     return (
@@ -60,7 +31,7 @@ export default function HostRoomsPage() {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !user) {
     return (
       <NarrowPageLayout title="Your rooms" subtitle="Sign in required">
         <p className="text-sm text-secondary">Sign in to see the rooms you host or belong to.</p>
@@ -71,6 +42,38 @@ export default function HostRoomsPage() {
       </NarrowPageLayout>
     );
   }
+
+  // Keyed on the user id, so switching accounts remounts with empty state
+  // rather than leaving the previous athlete's rooms on screen. A SIGNED_IN
+  // event from another tab can swap accounts under a mounted page, and the
+  // list must not survive that.
+  return <RoomList key={user.id} />;
+}
+
+function RoomList() {
+  const [rooms, setRooms] = useState<RoomSummary[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      const result = await listMyRooms();
+      if (cancelled) {
+        return;
+      }
+      if (result.ok) {
+        setRooms(result.rooms);
+      } else {
+        setError(result.reason);
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const hosted = rooms?.filter((room) => capabilitiesFor(room.role).runRoom) ?? [];
   const joined = rooms?.filter((room) => !capabilitiesFor(room.role).runRoom) ?? [];
