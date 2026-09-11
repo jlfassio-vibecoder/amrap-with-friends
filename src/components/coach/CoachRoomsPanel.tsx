@@ -83,7 +83,11 @@ export function CoachRoomsPanel() {
       {rows === null ? <p className="text-sm text-secondary">Loading…</p> : null}
       {error ? <p className="text-error text-sm">{error}</p> : null}
 
-      {rows !== null ? (
+      {/* Never the table beside an error. A failed read sets `rows` to empty,
+          and "No rooms yet." under a permission failure reads as an empty
+          production database -- the one thing this screen must not imply when
+          it could not see. */}
+      {rows !== null && !error ? (
         <CoachDataTable
           rows={rows}
           rowKey={(row) => row.roomId}

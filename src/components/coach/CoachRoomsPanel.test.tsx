@@ -100,4 +100,24 @@ describe('CoachRoomsPanel', () => {
     render(<CoachRoomsPanel />);
     expect(await screen.findByText('forbidden')).toBeDefined();
   });
+
+  it('does not say "No rooms yet." when it could not read them', async () => {
+    // A failed read and an empty database are different facts, and only one of
+    // them means the pilot has no hosts.
+    listRoomsForAdmin.mockResolvedValue({ ok: false, reason: 'forbidden' });
+    render(<CoachRoomsPanel />);
+    await screen.findByText('forbidden');
+    expect(screen.queryByText('No rooms yet.')).toBeNull();
+  });
+
+  it('offers renewal, not activation, to a host whose grant lapsed', async () => {
+    // The SQL originally filtered expired entitlements out, so this state was
+    // unreachable in production while the unit tests for it passed.
+    listRoomsForAdmin.mockResolvedValue({
+      ok: true,
+      rooms: [room({ entitlement: { source: 'founding', expiresAt: '2026-01-01T00:00:00.000Z' } })],
+    });
+    render(<CoachRoomsPanel />);
+    expect(await screen.findByRole('button', { name: 'Renew 12 months' })).toBeDefined();
+  });
 });
