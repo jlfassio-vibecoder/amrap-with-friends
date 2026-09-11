@@ -64,6 +64,10 @@
       "destination": "/_app-shell"
     },
     {
+      "source": "/host",
+      "destination": "/_app-shell"
+    },
+    {
       "source": "/coach",
       "destination": "/_app-shell"
     },
