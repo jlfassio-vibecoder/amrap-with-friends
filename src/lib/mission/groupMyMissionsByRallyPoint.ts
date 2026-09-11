@@ -48,23 +48,13 @@ function buildChainGroup(
   const byMissionId = new Map(members.map((entry) => [entry.missionId, entry]));
   const sorted = [...chain].sort((a, b) => a.position - b.position);
   const first = sorted[0]!;
-  // Missions stamped on a later position are rendered as children. A fallback
-  // that picked one of those would render the same mission twice in one group —
-  // once as the parent, once beneath it — which is what happens to a guest who
-  // joined at mission 2 and so has no row for mission 1.
-  const childMissionIds = new Set(
-    sorted
-      .slice(1)
-      .map((item) => item.startedMissionId)
-      .filter((id): id is string => typeof id === 'string')
-  );
-  const fallbackMembers = members.filter((entry) => !childMissionIds.has(entry.missionId));
-  // Prefer the stamped position-0 mission; if the stamp is missing or stale,
-  // fall back to the sole hub row / oldest row so expand still works.
-  const parent =
-    (first.startedMissionId ? byMissionId.get(first.startedMissionId) : undefined) ??
-    (fallbackMembers.length === 1 ? fallbackMembers[0] : undefined) ??
-    [...fallbackMembers].sort((a, b) => displayTimeMs(a) - displayTimeMs(b))[0];
+  // Planned-chain UI only when position 0 is stamped to a mission the athlete
+  // can see. Falling back to an unstamped hub row made "1 of N in this chain"
+  // appear while advance still treated pos0 as unstarted and recreated workout 1.
+  if (!first.startedMissionId) {
+    return null;
+  }
+  const parent = byMissionId.get(first.startedMissionId);
   if (!parent) {
     return null;
   }
@@ -112,10 +102,11 @@ function buildSiblingGroup(
 /**
  * Collapse hub missions into expandable groups.
  *
- * Planned chains (from get_mission_chain): parent is position 0; children follow
- * chain order and may be queued slots with no mission row yet.
- * Daisy-chain siblings without a chain table: newest parent, older children
- * ascending by time.
+ * Planned chains (from get_mission_chain): parent is the stamped position-0
+ * mission only; children follow chain order and may be queued slots with no
+ * mission row yet. Unstamped position 0 does not form a planned group.
+ * Daisy-chain siblings without a usable chain stamp: newest parent, older
+ * children ascending by time.
  */
 export function groupMyMissionsByRallyPoint(
   entries: MyMissionEntry[],
