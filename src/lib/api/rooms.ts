@@ -1,5 +1,6 @@
 import { callRpc } from '@/lib/api/callRpc';
 import { persistMissionIdentity } from '@/lib/missionIdentity';
+import { parseRoomBrand, type RoomBrand } from '@/lib/rooms/brand';
 import { isRoomReaction, type RoomReaction } from '@/lib/rooms/reactions';
 import type { RoomRole } from '@/lib/rooms/membership';
 
@@ -28,6 +29,7 @@ export interface RoomPage {
   memberCount: number;
   myRole: RoomRole | null;
   announcement: string | null;
+  brand: RoomBrand | null;
 }
 
 function str(value: unknown): string | null {
@@ -87,6 +89,7 @@ export async function getRoomByHandle(handle: string): Promise<GetRoomResult> {
       memberCount: typeof room.member_count === 'number' ? room.member_count : 0,
       myRole: role(room.my_role),
       announcement: str(room.announcement),
+      brand: parseRoomBrand(room.brand),
     },
   };
 }
@@ -186,6 +189,7 @@ export interface MissionRoom {
   displayName: string;
   isMember: boolean;
   hasHomeCoach: boolean;
+  brand: RoomBrand | null;
 }
 
 /**
@@ -215,6 +219,7 @@ export async function getMissionRoom(missionId: string): Promise<MissionRoom | n
     displayName: str(room.display_name) ?? handle,
     isMember: room.is_member === true,
     hasHomeCoach: room.has_home_coach === true,
+    brand: parseRoomBrand(room.brand),
   };
 }
 
@@ -425,6 +430,27 @@ export async function setRoomAnnouncement(
   const { data, error } = await callRpc<unknown>('set_room_announcement', {
     p_room_id: roomId,
     p_body: body,
+  });
+  if (error) {
+    return { ok: false, reason: error.message };
+  }
+  const payload = record(data);
+  return payload?.ok === true
+    ? { ok: true }
+    : { ok: false, reason: str(payload?.reason) ?? 'unknown' };
+}
+
+/**
+ * Owner-only, and the RPC says so again -- a co-host runs missions, but the
+ * room's identity is not theirs to change. Pass an empty accent to clear it.
+ */
+export async function setRoomBrand(
+  roomId: string,
+  accent: string
+): Promise<{ ok: boolean; reason?: string }> {
+  const { data, error } = await callRpc<unknown>('set_room_brand', {
+    p_room_id: roomId,
+    p_accent: accent,
   });
   if (error) {
     return { ok: false, reason: error.message };
