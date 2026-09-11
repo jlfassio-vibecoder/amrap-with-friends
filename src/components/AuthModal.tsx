@@ -15,6 +15,12 @@ interface AuthModalProps {
   subtitle?: string;
   /** Defaults to onClose. Header Create account uses this to send new accounts to /create. */
   onAuthenticated?: () => void;
+  /**
+   * Fires the moment a password signup produces a session, before the athlete
+   * presses Continue. A caller resuming work they already asked for wants this
+   * as well as onAuthenticated, because the two fire at different moments.
+   */
+  onSignupSessionSuccess?: () => void;
 }
 
 export function AuthModal({
@@ -24,6 +30,7 @@ export function AuthModal({
   heading,
   subtitle,
   onAuthenticated = onClose,
+  onSignupSessionSuccess,
 }: AuthModalProps) {
   return (
     <div
@@ -38,6 +45,7 @@ export function AuthModal({
           titleId="auth-modal-title"
           onClose={onClose}
           onAuthenticated={onAuthenticated}
+          onSignupSessionSuccess={onSignupSessionSuccess}
           initialPasswordMode={initialPasswordMode}
           guestAllowed={guestAllowed}
           heading={heading}

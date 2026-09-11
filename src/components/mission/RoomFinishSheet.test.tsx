@@ -14,10 +14,23 @@ vi.mock('@/hooks/useAmrapAuth', () => ({
 // The sign-up the guest path opens. Rendering the real one would pull in
 // Supabase; what matters here is whether it is asked for at all.
 vi.mock('@/components/AuthModal', () => ({
-  AuthModal: ({ onAuthenticated }: { onAuthenticated?: () => void }) => (
-    <button type="button" data-testid="auth-modal" onClick={() => onAuthenticated?.()}>
-      sign in
-    </button>
+  AuthModal: ({
+    onAuthenticated,
+    onSignupSessionSuccess,
+    initialPasswordMode,
+  }: {
+    onAuthenticated?: () => void;
+    onSignupSessionSuccess?: () => void;
+    initialPasswordMode?: string;
+  }) => (
+    <div data-testid="auth-modal" data-mode={initialPasswordMode}>
+      <button type="button" data-testid="auth-signin" onClick={() => onAuthenticated?.()}>
+        sign in
+      </button>
+      <button type="button" data-testid="auth-signup" onClick={() => onSignupSessionSuccess?.()}>
+        sign up
+      </button>
+    </div>
   ),
 }));
 
@@ -184,9 +197,7 @@ describe('the guest, who is who this sheet exists for', () => {
 
     // Nothing saved yet — there is no account to save into.
     expect(onSave).not.toHaveBeenCalled();
-    const modal = screen.getByTestId('auth-modal');
-
-    await click(modal);
+    await click(screen.getByTestId('auth-signin'));
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(joinRoomMock).toHaveBeenCalledWith(ROOM.id, true));
@@ -208,5 +219,106 @@ describe('the guest, who is who this sheet exists for', () => {
 
     await screen.findByText(/Join Bay Area CrossFit/);
     expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(true);
+  });
+});
+
+describe('the guest paths that are not a callback', () => {
+  /**
+   * Magic link and OAuth leave the page. The component remounts with no state,
+   * so only a marker that outlived the redirect can resume the save the athlete
+   * already asked for.
+   */
+  it('resumes a save left pending by a redirect', async () => {
+    cleanup();
+    window.sessionStorage.setItem('awf:room-finish-save:mission-1', '1');
+    authMock.mockReturnValue({ isAuthenticated: true });
+    getMissionRoomMock.mockResolvedValue(ROOM);
+    const onSave = vi.fn().mockResolvedValue(true);
+
+    render(
+      <RoomFinishSheet
+        missionId="mission-1"
+        canSave
+        isSaving={false}
+        onSave={onSave}
+        onJoinResult={vi.fn()}
+      />
+    );
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(joinRoomMock).toHaveBeenCalledWith(ROOM.id, true));
+    // Consumed, so a second mount does not claim again.
+    expect(window.sessionStorage.getItem('awf:room-finish-save:mission-1')).toBeNull();
+  });
+
+  it('saves on a password signup, which reports before Continue is pressed', async () => {
+    cleanup();
+    window.sessionStorage.clear();
+    authMock.mockReturnValue({ isAuthenticated: false });
+    getMissionRoomMock.mockResolvedValue(ROOM);
+    const onSave = vi.fn().mockResolvedValue(true);
+
+    render(
+      <RoomFinishSheet
+        missionId="mission-1"
+        canSave
+        isSaving={false}
+        onSave={onSave}
+        onJoinResult={vi.fn()}
+      />
+    );
+
+    await screen.findByText(/Join Bay Area CrossFit/);
+    await click(screen.getByRole('button', { name: /Save my result/ }));
+    await click(screen.getByTestId('auth-signup'));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+  });
+
+  it('opens sign-up rather than sign-in, because a guest has no account', async () => {
+    cleanup();
+    window.sessionStorage.clear();
+    authMock.mockReturnValue({ isAuthenticated: false });
+    getMissionRoomMock.mockResolvedValue(ROOM);
+
+    render(
+      <RoomFinishSheet
+        missionId="mission-1"
+        canSave
+        isSaving={false}
+        onSave={vi.fn().mockResolvedValue(true)}
+        onJoinResult={vi.fn()}
+      />
+    );
+
+    await screen.findByText(/Join Bay Area CrossFit/);
+    await click(screen.getByRole('button', { name: /Save my result/ }));
+    expect(screen.getByTestId('auth-modal').getAttribute('data-mode')).toBe('sign-up');
+  });
+
+  // The window between mount and the room lookup resolving is still a window a
+  // guest can tap in.
+  it('routes the pre-load prompt through the auth gate too', async () => {
+    cleanup();
+    window.sessionStorage.clear();
+    authMock.mockReturnValue({ isAuthenticated: false });
+    // Never resolves: the sheet stays on its fallback prompt.
+    getMissionRoomMock.mockReturnValue(new Promise(() => {}));
+    const onSave = vi.fn().mockResolvedValue(true);
+
+    render(
+      <RoomFinishSheet
+        missionId="mission-1"
+        canSave
+        isSaving={false}
+        onSave={onSave}
+        onJoinResult={vi.fn()}
+      />
+    );
+
+    await click(await screen.findByRole('button', { name: /Save this mission/ }));
+
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByTestId('auth-modal')).toBeTruthy();
   });
 });
