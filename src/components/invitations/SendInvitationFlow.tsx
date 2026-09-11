@@ -57,7 +57,9 @@ export function SendInvitationFlow({
   const [type, setType] = useState<InvitationType>(
     typeOptions.includes(defaultType) ? defaultType : (typeOptions[0] ?? 'workout')
   );
-  const [selectedSquad, setSelectedSquad] = useState<Record<string, boolean>>({});
+  const [selectedSquad, setSelectedSquad] = useState<Record<string, boolean>>(
+    lockRecipientUserId ? { [lockRecipientUserId]: true } : {}
+  );
   const [selectedMission, setSelectedMission] = useState<Record<string, boolean>>({});
   const [everyoneInMission, setEveryoneInMission] = useState(false);
   const [postInChat, setPostInChat] = useState(defaultPostInChat);
@@ -66,39 +68,13 @@ export function SendInvitationFlow({
   const [pickedCampaignId, setPickedCampaignId] = useState(campaignId ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loadingAudience, setLoadingAudience] = useState(false);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    setType(typeOptions.includes(defaultType) ? defaultType : (typeOptions[0] ?? 'workout'));
-    setPostInChat(defaultPostInChat);
-    setIncludeSquadInvite(defaultIncludeSquadInvite);
-    setPickedCampaignId(campaignId ?? '');
-    setNote('');
-    setEveryoneInMission(false);
-    setSelectedSquad({});
-    setSelectedMission({});
-    setError(null);
-    if (lockRecipientUserId) {
-      setSelectedSquad({ [lockRecipientUserId]: true });
-    }
-  }, [
-    open,
-    defaultType,
-    defaultPostInChat,
-    defaultIncludeSquadInvite,
-    campaignId,
-    lockRecipientUserId,
-  ]);
+  const [loadingAudience, setLoadingAudience] = useState(Boolean(open));
 
   useEffect(() => {
     if (!open) {
       return;
     }
     let cancelled = false;
-    setLoadingAudience(true);
     void fetchInvitationAudience(sourceMissionId).then((result) => {
       if (cancelled) {
         return;
@@ -110,9 +86,6 @@ export function SendInvitationFlow({
         return;
       }
       setAudience(result.data);
-      if (!pickedCampaignId && result.data.campaigns[0] && type === 'campaign') {
-        setPickedCampaignId(result.data.campaigns[0].campaignId);
-      }
     });
     return () => {
       cancelled = true;
@@ -147,9 +120,14 @@ export function SendInvitationFlow({
     postInChat: postInChat && Boolean(sourceMissionId),
   });
 
+  const resolvedCampaignId =
+    campaignId ||
+    pickedCampaignId ||
+    (type === 'campaign' ? (audience?.campaigns[0]?.campaignId ?? '') : '');
+
   const canSend =
     (squadCount > 0 || missionCount > 0 || (postInChat && Boolean(sourceMissionId))) &&
-    (type !== 'campaign' || Boolean(pickedCampaignId || campaignId)) &&
+    (type !== 'campaign' || Boolean(resolvedCampaignId)) &&
     (type !== 'mission' || Boolean(sourceMissionId)) &&
     (type !== 'workout' || workout.length > 0);
 
@@ -189,7 +167,7 @@ export function SendInvitationFlow({
       includeSquadInvite: needsSquadBundle,
       note,
       targetMissionId: type === 'mission' ? sourceMissionId : null,
-      targetCampaignId: type === 'campaign' ? campaignId || pickedCampaignId || null : null,
+      targetCampaignId: type === 'campaign' ? resolvedCampaignId || null : null,
       sourceMissionId,
       durationMinutes: type === 'workout' ? durationMinutes : null,
       workout: type === 'workout' ? workout : null,
@@ -251,7 +229,7 @@ export function SendInvitationFlow({
             <span className="text-sm font-semibold text-ink">Campaign</span>
             <select
               className="input-field"
-              value={pickedCampaignId}
+              value={resolvedCampaignId}
               onChange={(event) => setPickedCampaignId(event.target.value)}
             >
               <option value="">Pick a campaign…</option>
@@ -462,6 +440,7 @@ export function SendInvitationButton({
         {busy ? 'Loading…' : triggerLabel}
       </button>
       <SendInvitationFlow
+        key={open ? 'open' : 'closed'}
         {...context}
         workout={workout}
         open={open}

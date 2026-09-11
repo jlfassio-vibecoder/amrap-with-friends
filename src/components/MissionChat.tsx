@@ -94,10 +94,9 @@ function ChatInvitationMessage({
       return;
     }
     void saveChatInvitation(invitationId).then((result) => {
-      if (!result.error && result.deliveryId) {
-        setCard((current) =>
-          current ? { ...current, deliveryId: result.deliveryId ?? current.deliveryId } : current
-        );
+      const deliveryId = result.deliveryId;
+      if (!result.error && deliveryId) {
+        setCard((current) => (current ? { ...current, deliveryId } : current));
       }
     });
   }, [isAuthenticated, card, invitationId]);
@@ -169,10 +168,9 @@ function ChatInvitationMessage({
           setBusy(true);
           const result = await saveChatInvitation(invitationId);
           setBusy(false);
-          if (!result.error && result.deliveryId) {
-            setCard((current) =>
-              current ? { ...current, deliveryId: result.deliveryId } : current
-            );
+          const deliveryId = result.deliveryId;
+          if (!result.error && deliveryId) {
+            setCard((current) => (current ? { ...current, deliveryId } : current));
           }
         })();
       }}

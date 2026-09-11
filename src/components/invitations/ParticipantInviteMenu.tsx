@@ -108,6 +108,7 @@ export function ParticipantInviteMenu({
       {error ? <p className="text-error mt-1 text-xs">{error}</p> : null}
       {sent ? <p className="mt-1 text-xs text-secondary">{sent}</p> : null}
       <SendInvitationFlow
+        key={flowOpen ? `${flowType}-${includeSquad}` : 'closed'}
         open={flowOpen}
         onClose={() => setFlowOpen(false)}
         onSent={setSent}

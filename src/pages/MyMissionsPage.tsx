@@ -31,6 +31,7 @@ import {
 import type { MissionChainItem } from '@/lib/api/missionChain';
 import type { WorkoutExercise } from '@/lib/api/missionTypes';
 import { fetchInvitationUnreadCount } from '@/lib/api/invitations';
+import { fetchHostActiveMissionCount } from '@/lib/api/missions';
 import { createRallyPointMission } from '@/lib/api/rallyPoint';
 import { WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';

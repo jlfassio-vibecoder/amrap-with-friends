@@ -16,6 +16,7 @@ import {
   type SquadSearchHit,
 } from '@/lib/api/squad';
 import { buildSquadInviteUrl } from '@/lib/squad';
+import { ogCardFromSex } from '@/lib/share/ogCard';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { isIntakeRequiredMessage } from '@/lib/auth/profileNeedsIntake';
 import { SendInvitationButton } from '@/components/invitations/SendInvitationFlow';

@@ -79,7 +79,9 @@ describe('InvitationCard', () => {
       onPrimary: vi.fn(),
     });
 
-    expect(screen.getByRole('button', { name: 'Joining closed' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Joining closed' }).hasAttribute('disabled')).toBe(
+      true
+    );
     expect(screen.queryByRole('button', { name: 'Join 15-min mission' })).toBeNull();
   });
 
@@ -121,8 +123,7 @@ describe('InvitationCard', () => {
       onPrimary: vi.fn(),
     });
 
-    expect(screen.getByRole('link', { name: 'View workout' })).toHaveAttribute(
-      'href',
+    expect(screen.getByRole('link', { name: 'View workout' }).getAttribute('href')).toBe(
       '/mission/m-1'
     );
     expect(screen.queryByRole('button', { name: 'Join 15-min mission' })).toBeNull();

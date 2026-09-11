@@ -706,13 +706,7 @@ describe('MyMissionsPage campaigns', () => {
       error: null,
     });
 
-    render(
-      <MemoryRouter>
-        <ThemeProvider>
-          <MyMissionsPage />
-        </ThemeProvider>
-      </MemoryRouter>
-    );
+    renderPage();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Campaigns' }));
 

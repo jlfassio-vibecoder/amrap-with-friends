@@ -32,28 +32,43 @@ export function InvitationsInboxPanel({
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    const result = await fetchMyInvitations();
-    if (result.error) {
-      setError(result.error.message);
-      setPending([]);
-      setResolved([]);
-      onUnreadChange?.(0);
-    } else {
-      setError(null);
-      setPending(result.pending);
-      setResolved(result.resolved);
-      onUnreadChange?.(result.unreadCount);
-    }
-    setLoading(false);
-  }, [onUnreadChange]);
+  const applyResult = useCallback(
+    (result: Awaited<ReturnType<typeof fetchMyInvitations>>) => {
+      if (result.error) {
+        setError(result.error.message);
+        setPending([]);
+        setResolved([]);
+        onUnreadChange?.(0);
+      } else {
+        setError(null);
+        setPending(result.pending);
+        setResolved(result.resolved);
+        onUnreadChange?.(result.unreadCount);
+      }
+      setLoading(false);
+    },
+    [onUnreadChange]
+  );
+
+  const load = useCallback(() => {
+    return fetchMyInvitations().then(applyResult);
+  }, [applyResult]);
 
   useEffect(() => {
     if (isAuthLoading || !isAuthenticated) {
       return;
     }
-    void load();
-  }, [isAuthenticated, isAuthLoading, load]);
+    let cancelled = false;
+    void fetchMyInvitations().then((result) => {
+      if (cancelled) {
+        return;
+      }
+      applyResult(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, isAuthLoading, applyResult]);
 
   useRefetchOnVisible(Boolean(isAuthenticated && !isAuthLoading), load);
 
