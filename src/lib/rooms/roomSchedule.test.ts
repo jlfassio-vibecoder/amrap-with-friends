@@ -30,7 +30,7 @@ describe('nextMission', () => {
     expect(nextMission([mission({ state: 'finished' })])).toBeNull();
   });
 
-  // A host looking at the dashboard mid-session wants the session.
+  // A host looking at the dashboard mid-mission wants that mission.
   it('prefers a mission already running over one scheduled later', () => {
     const running = mission({ missionId: 'live', state: 'work' });
     const later = mission({ missionId: 'later', scheduledAt: '2026-09-20T17:00:00.000Z' });
@@ -59,7 +59,7 @@ describe('nextMission', () => {
 });
 
 describe('repeatableMission', () => {
-  // Offering back a session nobody finished is how a room repeats an empty slot.
+  // Offering back a mission nobody finished is how a room repeats an empty slot.
   it('skips a finished mission nobody completed', () => {
     expect(repeatableMission([mission({ state: 'finished', finishers: 0 })])).toBeNull();
   });
@@ -151,7 +151,7 @@ describe('repeatableMission orders by completion, not creation', () => {
   /**
    * The case that made created_at wrong: a mission scheduled on Monday for next
    * Tuesday is *created* before one that is created and run on Wednesday, so
-   * sorting by creation offers back the older session.
+   * sorting by creation offers back the older one.
    */
   it('prefers the one finished most recently', () => {
     const scheduledEarlyRunLate = mission({

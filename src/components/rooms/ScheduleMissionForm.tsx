@@ -10,7 +10,7 @@ const HORIZON_DAYS = 60;
 interface ScheduleMissionFormProps {
   roomId: string;
   hostNickname: string;
-  /** The last session anyone finished, offered as "run this again". */
+  /** The last mission anyone finished, offered as "run this again". */
   repeatable: RoomMissionLike | null;
   /** `opensNow` is true when no time was given, so the caller can go run it. */
   onScheduled: (missionId: string, opensNow: boolean) => void;
@@ -21,7 +21,7 @@ interface ScheduleMissionFormProps {
  *
  * Two paths to the same place: pick a workout, or repeat the last one anyone
  * finished. A time is optional -- leaving it blank opens the mission now, which
- * is the same button a coach uses to start an unplanned session.
+ * is the same button a coach uses to start an unplanned one.
  */
 export function ScheduleMissionForm({
   roomId,
