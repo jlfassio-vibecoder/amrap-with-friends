@@ -972,10 +972,20 @@ function LiveMissionView({
     live.hasSubmittedPartialReps &&
     !scorecardDismissed &&
     selfLeaderboardEntry !== null;
+  const canSave = canOfferMissionSave({
+    claimToken,
+    participantId,
+    claimStatus: claim.claimStatus,
+  });
+
+  // canSave, not claim.showClaimPrompt: the latter requires being signed in
+  // already, and the whole point of this sheet is the athlete who is not. A
+  // guest finishing a room mission is exactly who it exists for, and gating it
+  // on authentication put it in front of everyone except them.
   const showFinishedClaimPrompt =
     !live.isPractice &&
     livePhase === 'finished' &&
-    claim.showClaimPrompt &&
+    canSave &&
     !showPartialRepsModal &&
     !amqapLockPending &&
     !showScorecard;
@@ -1166,12 +1176,6 @@ function LiveMissionView({
     }
     setMissionLoadingDismissed(true);
   }
-
-  const canSave = canOfferMissionSave({
-    claimToken,
-    participantId,
-    claimStatus: claim.claimStatus,
-  });
 
   const scorecardSaveState: MissionScorecardSaveState =
     claim.claimStatus === 'claimed'

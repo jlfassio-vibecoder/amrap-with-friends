@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
+import { AuthModal } from '@/components/AuthModal';
+import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { getMissionRoom, joinRoom, type MissionRoom } from '@/lib/api/rooms';
+import {
+  clearPendingRoomSave,
+  markPendingRoomSave,
+  takePendingRoomSave,
+} from '@/lib/rooms/pendingRoomSave';
 import { postFinishSheet } from '@/lib/rooms/postFinish';
 
 interface RoomFinishSheetProps {
@@ -36,9 +43,11 @@ export function RoomFinishSheet({
   onSave,
   onJoinResult,
 }: RoomFinishSheetProps) {
+  const { isAuthenticated } = useAmrapAuth();
   const [room, setRoom] = useState<MissionRoom | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [joinTicked, setJoinTicked] = useState(true);
+  const [authOpen, setAuthOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,6 +67,61 @@ export function RoomFinishSheet({
     };
   }, [missionId]);
 
+  // Resume a save the athlete asked for before they signed up. Waits for the
+  // room lookup so the join rides along with it, and takePendingRoomSave
+  // consumes the marker, so a remount cannot run this twice.
+  useEffect(() => {
+    if (!loaded || !isAuthenticated) {
+      return;
+    }
+    let cancelled = false;
+
+    async function resume() {
+      if (!takePendingRoomSave(missionId)) {
+        return;
+      }
+      if (cancelled) {
+        return;
+      }
+      await saveThenJoin();
+    }
+
+    void resume();
+    return () => {
+      cancelled = true;
+    };
+    // saveThenJoin closes over room and joinTicked, both settled by `loaded`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, isAuthenticated, missionId]);
+
+  const authModal = authOpen ? (
+    <AuthModal
+      // A guest converting has no account yet; landing them on Sign in
+      // makes them hunt for the tab they actually need.
+      initialPasswordMode="sign-up"
+      onClose={() => {
+        setAuthOpen(false);
+        // Closing without signing in is a decision. Do not save them later
+        // because they once opened this.
+        if (!isAuthenticated) {
+          clearPendingRoomSave(missionId);
+        }
+      }}
+      // Both, because they fire at different moments: signup reports a
+      // session immediately, and onAuthenticated waits for Continue.
+      onSignupSessionSuccess={() => {
+        clearPendingRoomSave(missionId);
+        void saveThenJoin();
+      }}
+      onAuthenticated={() => {
+        setAuthOpen(false);
+        if (takePendingRoomSave(missionId)) {
+          void saveThenJoin();
+        }
+      }}
+    />
+  ) : null;
+
   const sheet = postFinishSheet({
     room: room
       ? {
@@ -73,7 +137,33 @@ export function RoomFinishSheet({
   // Until the room is known, fall back to the plain save prompt rather than
   // flashing a checkbox in and out.
   if (!loaded || !sheet.show) {
-    return canSave ? <SavePrompt isSaving={isSaving} onSave={onSave} note={null} /> : null;
+    // Through `save`, not `onSave`: a guest who taps while the room lookup is
+    // still in flight would otherwise claim anonymously and fail.
+    if (!canSave) {
+      return null;
+    }
+    return (
+      <>
+        <SavePrompt isSaving={isSaving} onSave={save} note={null} />
+        {authModal}
+      </>
+    );
+  }
+
+  /**
+   * A guest has no account to save into yet, so the button opens the sign-up
+   * first and the save runs when auth settles. Asking them to press it twice is
+   * how the claim gets abandoned.
+   */
+  function save() {
+    if (!isAuthenticated) {
+      // Survives a redirect: magic link and OAuth leave the page entirely, so a
+      // callback alone would lose an intent the athlete already expressed.
+      markPendingRoomSave(missionId);
+      setAuthOpen(true);
+      return;
+    }
+    void saveThenJoin();
   }
 
   async function saveThenJoin() {
@@ -130,24 +220,20 @@ export function RoomFinishSheet({
       ) : null}
 
       {sheet.showSave ? (
-        <button
-          type="button"
-          className="btn-primary text-sm"
-          disabled={isSaving}
-          onClick={() => void saveThenJoin()}
-        >
-          {isSaving ? 'Saving…' : 'Save this mission to my account'}
+        <button type="button" className="btn-primary text-sm" disabled={isSaving} onClick={save}>
+          {isSaving
+            ? 'Saving…'
+            : isAuthenticated
+              ? 'Save this mission to my account'
+              : 'Save my result'}
         </button>
       ) : sheet.showJoin && room ? (
-        <button
-          type="button"
-          className="btn-primary text-sm"
-          disabled={!joinTicked}
-          onClick={() => void saveThenJoin()}
-        >
+        <button type="button" className="btn-primary text-sm" disabled={!joinTicked} onClick={save}>
           Join {room.displayName}
         </button>
       ) : null}
+
+      {authModal}
     </section>
   );
 }
