@@ -17,6 +17,7 @@
 import { createReminderToken } from '../../src/lib/rooms/reminderToken.ts';
 import { buildReminderEmail, type ReminderKind } from '../../src/lib/rooms/reminderEmail.ts';
 import { WORKOUT_TEMPLATES } from '../../src/data/workoutTemplates.ts';
+import { callServiceRpc, sendEmail } from '../../src/lib/server/supabaseRpc.ts';
 
 /** The same lookup the room page does, so the mail names what the page names. */
 function workoutName(templateId: string | null): string | undefined {
@@ -47,29 +48,6 @@ interface SettleResult {
   failed_reason: string | null;
 }
 
-async function callRpc(
-  supabaseUrl: string,
-  serviceKey: string,
-  fn: string,
-  args: Record<string, unknown>
-): Promise<unknown> {
-  const response = await fetch(`${supabaseUrl}/rest/v1/rpc/${fn}`, {
-    method: 'POST',
-    headers: {
-      apikey: serviceKey,
-      Authorization: `Bearer ${serviceKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(args),
-  });
-
-  if (!response.ok) {
-    throw new Error(`${fn} failed: ${response.status}`);
-  }
-
-  return response.json();
-}
-
 export default async function handler(request: Request): Promise<Response> {
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = request.headers.get('Authorization');
@@ -94,7 +72,7 @@ export default async function handler(request: Request): Promise<Response> {
     });
   }
 
-  const claim = (await callRpc(supabaseUrl, serviceKey, 'claim_due_room_reminders', {
+  const claim = (await callServiceRpc(supabaseUrl, serviceKey, 'claim_due_room_reminders', {
     p_limit: 100,
   })) as { ok: boolean; reminders: ClaimedReminder[] };
 
@@ -138,32 +116,17 @@ export default async function handler(request: Request): Promise<Response> {
       failedReason = 'invalid_room_timezone';
     }
 
-    // Guarded rather than thrown into the catch below, which would overwrite
-    // the real reason with a misleading `resend_unreachable`.
+    // Guarded, so a mail that never built keeps its real reason instead of
+    // being relabelled as a Resend failure.
     if (email !== null) {
-      try {
-        const response = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${resendKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            from: fromAddress,
-            to: reminder.email,
-            subject: email.subject,
-            text: email.text,
-            html: email.html,
-            headers: email.headers,
-          }),
-        });
-
-        if (!response.ok) {
-          failedReason = `resend_${response.status}`;
-        }
-      } catch {
-        failedReason = 'resend_unreachable';
-      }
+      failedReason = await sendEmail(resendKey, {
+        from: fromAddress,
+        to: reminder.email,
+        subject: email.subject,
+        text: email.text,
+        html: email.html,
+        headers: email.headers,
+      });
     }
 
     settled.push({
@@ -174,7 +137,7 @@ export default async function handler(request: Request): Promise<Response> {
     });
   }
 
-  await callRpc(supabaseUrl, serviceKey, 'settle_room_reminders', { p_results: settled });
+  await callServiceRpc(supabaseUrl, serviceKey, 'settle_room_reminders', { p_results: settled });
 
   const failures = settled.filter((entry) => entry.failed_reason !== null).length;
   return new Response(
