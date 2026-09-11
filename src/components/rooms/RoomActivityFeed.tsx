@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { claimParticipant } from '@/lib/api/claimParticipant';
 import { listRoomActivity, setRoomActivityVisible } from '@/lib/api/rooms';
-import { getStoredParticipantId } from '@/lib/missionIdentity';
+import { getStoredClaimToken, getStoredParticipantId } from '@/lib/missionIdentity';
+import { ownUnclaimedFinishes } from '@/lib/rooms/claimOwnFinishes';
 import {
   NAMING_PROMPT,
   feedLines,
@@ -25,6 +27,7 @@ export function RoomActivityFeed({
   signedIn,
   isMember,
   activityVisible,
+  authNonce,
   workoutName,
   onSignUp,
 }: {
@@ -33,26 +36,53 @@ export function RoomActivityFeed({
   isMember: boolean;
   /** The viewer's own setting, when they are a member. */
   activityVisible: boolean | null;
+  /** Bumped by the page when someone signs in, so this can claim its rows. */
+  authNonce: number;
   workoutName: (templateId: string | null) => string | undefined;
   onSignUp: () => void;
 }) {
   const [rows, setRows] = useState<RoomFeedRow[] | null>(null);
-  const [visible, setVisible] = useState(activityVisible !== false);
   const [saving, setSaving] = useState(false);
 
+  const load = useCallback(async () => {
+    const result = await listRoomActivity(roomId);
+    // A failed read is not an empty room. Rendering nothing is the same
+    // outcome here, and it never claims the room has done nothing.
+    setRows(result.ok ? result.rows : null);
+  }, [roomId]);
+
   useEffect(() => {
+    void load();
+  }, [load]);
+
+  // Signing up has to actually put the name on the result the prompt pointed
+  // at. Claiming attaches this device's guest participant to the new account;
+  // membership alone leaves user_id null and the row unnamed, which would make
+  // the prompt a promise the product breaks.
+  useEffect(() => {
+    if (authNonce === 0 || rows === null) {
+      return;
+    }
     let cancelled = false;
-    void listRoomActivity(roomId).then((result) => {
-      if (!cancelled) {
-        // A failed read is not an empty room. Rendering nothing is the same
-        // outcome here, and it never claims the room has done nothing.
-        setRows(result.ok ? result.rows : null);
+    const mine = ownUnclaimedFinishes(rows, getStoredParticipantId, getStoredClaimToken);
+    if (mine.length === 0) {
+      return;
+    }
+    void (async () => {
+      for (const finish of mine) {
+        await claimParticipant(finish);
       }
-    });
+      if (!cancelled) {
+        await load();
+      }
+    })();
     return () => {
       cancelled = true;
     };
-  }, [roomId]);
+    // rows is deliberately not a dependency: this runs when auth happens, not
+    // every time the feed reloads, or claiming would re-run on its own result.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authNonce, load]);
 
   if (rows === null || rows.length === 0) {
     // An empty list is worse than no section: it tells a visitor the room has
@@ -61,17 +91,22 @@ export function RoomActivityFeed({
   }
 
   const lines = feedLines(rows, getStoredParticipantId);
+  // Read from the room, not from local state: after a rejoin the persisted
+  // setting is whatever it was before leaving, and a switch that says "shown"
+  // over a name that is hidden is worse than no switch.
+  const visible = activityVisible !== false;
 
   async function toggle(next: boolean) {
     setSaving(true);
-    // Optimistic: the switch is the athlete's own and should move under their
-    // finger. Put back if the write refuses.
-    setVisible(next);
     const result = await setRoomActivityVisible(roomId, next);
-    setSaving(false);
-    if (!result.ok) {
-      setVisible(!next);
+    // Re-read rather than flip a local flag: the names already on screen were
+    // resolved before the write, so opting out would otherwise leave the name
+    // showing until a reload — on the one control whose whole job is to take
+    // it down.
+    if (result.ok) {
+      await load();
     }
+    setSaving(false);
   }
 
   return (

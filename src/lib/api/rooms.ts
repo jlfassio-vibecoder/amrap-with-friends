@@ -498,13 +498,16 @@ export async function listRoomActivity(
     if (!item || !participantId || !missionId || !finishedAt) {
       continue;
     }
-    const score = Number(item.base_score);
+    // Number(null) is 0, which would print "0 reps" for a result that has no
+    // base score instead of the dash the type promises.
+    const raw = item.base_score;
+    const score = raw === null || raw === undefined ? null : Number(raw);
     rows.push({
       participantId,
       missionId,
       templateId: str(item.template_id),
       nickname: str(item.nickname),
-      score: Number.isFinite(score) ? score : null,
+      score: score !== null && Number.isFinite(score) ? score : null,
       unit: item.score_unit === 'rounds' ? 'rounds' : 'reps',
       finishedAt,
       reactionCount: typeof item.reaction_count === 'number' ? item.reaction_count : 0,

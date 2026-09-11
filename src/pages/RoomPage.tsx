@@ -73,6 +73,9 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
   const [joining, setJoining] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  // Bumped when someone signs in, so the feed can claim the finishes this
+  // device already owns rather than leaving them unnamed behind a new account.
+  const [authNonce, setAuthNonce] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -130,8 +133,19 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
         : ({ action: 'none' } as const);
 
     setNotice(homeCoachNotice(outcome, room.displayName) ?? `You joined ${room.displayName}.`);
-    setRoom({ ...room, myRole: 'member', memberCount: room.memberCount + 1 });
-  }, [room]);
+
+    // Re-read rather than patch. Rejoining reopens the membership row that was
+    // there before, keeping whatever activity_visible it held, and a hand-built
+    // local room object would leave that null -- showing a "Show my name here"
+    // switch ticked over a name the database is hiding. The member count is
+    // the server's to say too.
+    const again = await getRoomByHandle(handle);
+    if (again.ok) {
+      setRoom(again.room);
+    } else {
+      setRoom({ ...room, myRole: 'member', memberCount: room.memberCount + 1 });
+    }
+  }, [room, handle]);
 
   // The start time passes while the page is open, and nothing here reloads.
   // Without a tick, a visitor who opens the room five minutes before the
@@ -272,6 +286,7 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
         signedIn={signedIn}
         isMember={isMember}
         activityVisible={room.myActivityVisible}
+        authNonce={authNonce}
         workoutName={workoutName}
         onSignUp={() => setAuthOpen(true)}
       />
@@ -288,6 +303,11 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
           onClose={() => setAuthOpen(false)}
           onAuthenticated={() => {
             setAuthOpen(false);
+            // Tells the feed to claim this device's own finishes. Runs whether
+            // or not the join below succeeds: naming a result already on the
+            // page is what the prompt promised, and it does not depend on
+            // membership.
+            setAuthNonce((nonce) => nonce + 1);
             void runJoin();
           }}
         />
