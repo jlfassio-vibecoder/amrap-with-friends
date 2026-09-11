@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { formatModifiedBadge } from '@/lib/mission/modifiedMovements';
 import { formatVariantBadge } from '@/lib/mission/exerciseScaling';
 import { AppLink } from '@/components/AppLink';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { MyMissionScoreBreakdownModal } from '@/components/MyMissionScoreBreakdownModal';
 import { AssignedWorkoutsPanel } from '@/components/mission/AssignedWorkoutsPanel';
@@ -30,11 +30,16 @@ import {
 } from '@/lib/api/myMissions';
 import type { MissionChainItem } from '@/lib/api/missionChain';
 import type { WorkoutExercise } from '@/lib/api/missionTypes';
+import { fetchHostActiveMissionCount } from '@/lib/api/missions';
+import { createRallyPointMission } from '@/lib/api/rallyPoint';
+import { WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
+import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { useCopyFlash } from '@/hooks/useCopyFlash';
 import { useRefetchOnVisible } from '@/hooks/useRefetchOnVisible';
 import { formatMissionStateLabel } from '@/lib/mission/formatMissionStateLabel';
 import { groupMyMissionsByRallyPoint } from '@/lib/mission/groupMyMissionsByRallyPoint';
+import { HOST_ACTIVE_MISSION_LIMIT } from '@/lib/mission/rallySchedule';
 import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
 
 function formatMissionWhen(entry: MyMissionEntry): string {
@@ -183,7 +188,9 @@ function QueuedMissionCard({ item }: { item: MissionChainItem }) {
 function MyMissionCard({
   entry,
   deletingMissionId,
+  relaunchingMissionId,
   onDelete,
+  onRelaunch,
   onViewBreakdown,
   ensureDetail,
   benchmark,
@@ -192,7 +199,9 @@ function MyMissionCard({
 }: {
   entry: MyMissionEntry;
   deletingMissionId: string | null;
+  relaunchingMissionId: string | null;
   onDelete: (entry: MyMissionEntry) => void;
+  onRelaunch: (entry: MyMissionEntry) => void;
   onViewBreakdown: (entry: MyMissionEntry) => void;
   ensureDetail: (entry: MyMissionEntry) => Promise<MyMissionEntry | null>;
   /** The benchmark this workout and clock belong to, live or retired. */
@@ -210,6 +219,8 @@ function MyMissionCard({
   // — and fall back to the plain mark when no named option was chosen.
   const modifiedBadge =
     formatVariantBadge(entry.movementVariants) ?? formatModifiedBadge(entry.modifiedMovements);
+  const relaunching = relaunchingMissionId === entry.missionId;
+  const relaunchBusy = relaunchingMissionId != null;
   return (
     <div className="card space-y-2 p-4 text-sm">
       <MyMissionMovements
@@ -256,9 +267,6 @@ function MyMissionCard({
         </p>
       ) : null}
       <div className="flex flex-wrap items-center gap-3">
-        <Link className="btn-teal" to={`/mission/${entry.missionId}`}>
-          View mission
-        </Link>
         {entry.hasScoreBreakdown ? (
           <button
             type="button"
@@ -298,16 +306,33 @@ function MyMissionCard({
             {expandControl.position} of {expandControl.missionCount} in this chain
           </button>
         ) : null}
-        {canDeleteMyMission(entry) ? (
-          <button
-            type="button"
-            className="text-error ml-auto"
-            disabled={deletingMissionId === entry.missionId}
-            onClick={() => onDelete(entry)}
-          >
-            {deletingMissionId === entry.missionId ? 'Deleting…' : 'Delete'}
-          </button>
-        ) : null}
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <Link className="btn-teal" to={`/mission/${entry.missionId}`}>
+          View mission
+        </Link>
+        <div className="ml-auto flex flex-wrap items-center gap-3">
+          {!canDeleteMyMission(entry) ? (
+            <button
+              type="button"
+              className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-sm font-semibold leading-tight text-on-accent hover:bg-accent-hover disabled:opacity-50"
+              disabled={relaunchBusy}
+              onClick={() => onRelaunch(entry)}
+            >
+              {relaunching ? 'Launching…' : 'Re-launch mission'}
+            </button>
+          ) : null}
+          {canDeleteMyMission(entry) ? (
+            <button
+              type="button"
+              className="text-error"
+              disabled={deletingMissionId === entry.missionId}
+              onClick={() => onDelete(entry)}
+            >
+              {deletingMissionId === entry.missionId ? 'Deleting…' : 'Delete'}
+            </button>
+          ) : null}
+        </div>
       </div>
       <MyMissionCheckIn
         rpe={entry.rpe}
@@ -319,7 +344,9 @@ function MyMissionCard({
 }
 
 export default function MyMissionsPage() {
+  const navigate = useNavigate();
   const { user, isAuthenticated, isAuthLoading } = useAmrapAuth();
+  const { profile } = useAthleteProfile();
   const [entries, setEntries] = useState<MyMissionEntry[]>([]);
   const [chainsByRallyPointId, setChainsByRallyPointId] = useState<
     Record<string, MissionChainItem[]>
@@ -328,6 +355,7 @@ export default function MyMissionsPage() {
   const [hasLoaded, setHasLoaded] = useState(false);
   const [breakdownEntry, setBreakdownEntry] = useState<MyMissionEntry | null>(null);
   const [deletingMissionId, setDeletingMissionId] = useState<string | null>(null);
+  const [relaunchingMissionId, setRelaunchingMissionId] = useState<string | null>(null);
   const [expandedRallyPointIds, setExpandedRallyPointIds] = useState<Set<string>>(() => new Set());
   const [benchmarks, setBenchmarks] = useState<AthleteBenchmark[]>([]);
   const [activeTab, setActiveTab] = useState<MyMissionsTabKey>('missions');
@@ -461,6 +489,61 @@ export default function MyMissionsPage() {
     }
   }
 
+  async function handleRelaunch(entry: MyMissionEntry) {
+    if (relaunchingMissionId) {
+      return;
+    }
+
+    const nickname = profile?.nickname?.trim() ?? '';
+    if (!nickname) {
+      setError('Add your name in Your profile before launching.');
+      return;
+    }
+
+    setRelaunchingMissionId(entry.missionId);
+    setError(null);
+    try {
+      const activeCount = await fetchHostActiveMissionCount();
+      if (activeCount.error) {
+        setError(activeCount.error.message);
+        return;
+      }
+      if ((activeCount.data ?? 0) >= HOST_ACTIVE_MISSION_LIMIT) {
+        setError(`You already have ${HOST_ACTIVE_MISSION_LIMIT} active missions.`);
+        return;
+      }
+
+      const hydrated = (await ensureDetail(entry)) ?? entry;
+      if (hydrated.workout.length === 0) {
+        setError('Could not load this workout to re-launch.');
+        return;
+      }
+
+      const intensityTier =
+        (hydrated.templateId
+          ? WORKOUT_TEMPLATES.find((template) => template.id === hydrated.templateId)?.intensityTier
+          : null) ?? null;
+
+      const result = await createRallyPointMission({
+        nickname,
+        durationMinutes: hydrated.durationMinutes,
+        workout: hydrated.workout,
+        templateId: hydrated.templateId,
+        intensityTier,
+      });
+      if (result.error || !result.data) {
+        setError(result.error?.message ?? 'Something went wrong. Please try again.');
+        return;
+      }
+
+      navigate(`/mission/${result.data.missionId}`);
+    } catch {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setRelaunchingMissionId(null);
+    }
+  }
+
   function toggleGroup(rallyPointId: string) {
     setExpandedRallyPointIds((current) => {
       const next = new Set(current);
@@ -512,7 +595,9 @@ export default function MyMissionsPage() {
                       <MyMissionCard
                         entry={item.entry}
                         deletingMissionId={deletingMissionId}
+                        relaunchingMissionId={relaunchingMissionId}
                         onDelete={(entry) => void handleDelete(entry)}
+                        onRelaunch={(entry) => void handleRelaunch(entry)}
                         onViewBreakdown={setBreakdownEntry}
                         ensureDetail={ensureDetail}
                         benchmark={benchmarkForMission(item.entry, benchmarks)}
@@ -528,7 +613,9 @@ export default function MyMissionsPage() {
                     <MyMissionCard
                       entry={item.parent}
                       deletingMissionId={deletingMissionId}
+                      relaunchingMissionId={relaunchingMissionId}
                       onDelete={(entry) => void handleDelete(entry)}
+                      onRelaunch={(entry) => void handleRelaunch(entry)}
                       onViewBreakdown={setBreakdownEntry}
                       ensureDetail={ensureDetail}
                       benchmark={benchmarkForMission(item.parent, benchmarks)}
@@ -548,7 +635,9 @@ export default function MyMissionsPage() {
                               <MyMissionCard
                                 entry={child.entry}
                                 deletingMissionId={deletingMissionId}
+                                relaunchingMissionId={relaunchingMissionId}
                                 onDelete={(entry) => void handleDelete(entry)}
+                                onRelaunch={(entry) => void handleRelaunch(entry)}
                                 onViewBreakdown={setBreakdownEntry}
                                 ensureDetail={ensureDetail}
                                 benchmark={benchmarkForMission(child.entry, benchmarks)}

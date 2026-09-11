@@ -10,7 +10,14 @@ const fetchMyMissionsMock = vi.fn();
 const deleteIncompleteMissionMock = vi.fn();
 const fetchMyCampaignsMock = vi.fn();
 const fetchMyAssignedWorkoutsMock = vi.fn();
+const createRallyPointMissionMock = vi.fn();
+const fetchHostActiveMissionCountMock = vi.fn();
+const navigateMock = vi.fn();
 const authUser = { id: 'user-1' };
+const athleteProfileState = {
+  profile: { nickname: 'Justin' } as { nickname: string } | null,
+  loading: false,
+};
 
 vi.mock('@/hooks/useAmrapAuth', () => ({
   useAmrapAuth: () => ({
@@ -21,7 +28,7 @@ vi.mock('@/hooks/useAmrapAuth', () => ({
 }));
 
 vi.mock('@/hooks/useAthleteProfile', () => ({
-  useAthleteProfile: () => ({ profile: null, loading: false }),
+  useAthleteProfile: () => athleteProfileState,
 }));
 
 vi.mock('@/lib/api/myMissions', async () => {
@@ -50,6 +57,28 @@ vi.mock('@/lib/api/assignedWorkouts', async () => {
     ...actual,
     fetchMyAssignedWorkouts: (...args: unknown[]) => fetchMyAssignedWorkoutsMock(...args),
   };
+});
+
+vi.mock('@/lib/api/rallyPoint', async () => {
+  const actual =
+    await vi.importActual<typeof import('@/lib/api/rallyPoint')>('@/lib/api/rallyPoint');
+  return {
+    ...actual,
+    createRallyPointMission: (...args: unknown[]) => createRallyPointMissionMock(...args),
+  };
+});
+
+vi.mock('@/lib/api/missions', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/api/missions')>('@/lib/api/missions');
+  return {
+    ...actual,
+    fetchHostActiveMissionCount: (...args: unknown[]) => fetchHostActiveMissionCountMock(...args),
+  };
+});
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return { ...actual, useNavigate: () => navigateMock };
 });
 
 function entry(overrides: Partial<MyMissionEntry> = {}): MyMissionEntry {
@@ -110,6 +139,11 @@ afterEach(() => {
   deleteIncompleteMissionMock.mockReset();
   fetchMyCampaignsMock.mockReset();
   fetchMyAssignedWorkoutsMock.mockReset();
+  createRallyPointMissionMock.mockReset();
+  fetchHostActiveMissionCountMock.mockReset();
+  navigateMock.mockReset();
+  athleteProfileState.profile = { nickname: 'Justin' };
+  athleteProfileState.loading = false;
   vi.unstubAllGlobals();
 });
 
@@ -224,6 +258,8 @@ describe('MyMissionsPage delete', () => {
     });
 
     expect(screen.getAllByRole('button', { name: 'Delete' })).toHaveLength(1);
+    // Incomplete host gets Delete; Re-launch only on the three non-deletable rows.
+    expect(screen.getAllByRole('button', { name: 'Re-launch mission' })).toHaveLength(3);
     expect(screen.getByRole('button', { name: 'View breakdown' })).toBeTruthy();
   });
 
@@ -419,6 +455,80 @@ describe('MyMissionsPage CTAs', () => {
         '/campaign/new'
       );
     });
+  });
+});
+
+describe('MyMissionsPage relaunch', () => {
+  it('creates a new mission from the card workout and navigates to it', async () => {
+    fetchMyMissionsMock.mockResolvedValue({
+      data: [
+        entry({
+          missionId: 'old-mission',
+          durationMinutes: 10,
+          templateId: 'the-pendulum',
+          workout: [{ name: 'Burpees', target: 10, unit: 'reps' }],
+          movementCount: 1,
+          state: 'finished',
+          finalScore: 42,
+        }),
+      ],
+      chains: {},
+      error: null,
+    });
+    fetchHostActiveMissionCountMock.mockResolvedValue({ data: 0, error: null });
+    createRallyPointMissionMock.mockResolvedValue({
+      data: {
+        rallyPointId: 'rp-1',
+        rallyPointMemberId: 'rpm-1',
+        missionId: 'new-mission',
+        hostToken: 'host',
+        participantId: 'part-1',
+        claimToken: 'claim',
+      },
+      error: null,
+    });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Re-launch mission' })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Re-launch mission' }));
+
+    await waitFor(() => {
+      expect(createRallyPointMissionMock).toHaveBeenCalledWith({
+        nickname: 'Justin',
+        durationMinutes: 10,
+        workout: [{ name: 'Burpees', target: 10, unit: 'reps' }],
+        templateId: 'the-pendulum',
+        intensityTier: expect.any(Number),
+      });
+      expect(navigateMock).toHaveBeenCalledWith('/mission/new-mission');
+    });
+  });
+
+  it('blocks relaunch when the athlete has no nickname', async () => {
+    athleteProfileState.profile = null;
+    fetchMyMissionsMock.mockResolvedValue({
+      data: [entry({ missionId: 'old-mission', state: 'finished', finalScore: 10 })],
+      chains: {},
+      error: null,
+    });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Re-launch mission' })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Re-launch mission' }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Add your name in Your profile before launching/)).toBeTruthy();
+    });
+    expect(createRallyPointMissionMock).not.toHaveBeenCalled();
+    expect(navigateMock).not.toHaveBeenCalled();
   });
 });
 
