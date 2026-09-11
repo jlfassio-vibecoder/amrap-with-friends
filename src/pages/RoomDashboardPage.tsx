@@ -235,7 +235,12 @@ function Dashboard({ handle }: { handle: string }) {
           <p className="text-secondary">
             Athletes&rsquo; share cards from your missions carry your colour and your handle.
           </p>
-          <BrandEditor roomId={room.id} current={room.brand} onSaved={() => void load()} />
+          <BrandEditor
+            roomId={room.id}
+            handle={room.handle}
+            current={room.brand}
+            onSaved={() => void load()}
+          />
         </section>
       ) : null}
 

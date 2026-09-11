@@ -43,9 +43,11 @@ function ShareCardFetcher({
 }) {
   const [data, setData] = useState<ReplayData | null>(null);
   // Null covers both "no room" and "we could not find out", and both mean the
-  // same thing to the card: draw it in the house colours. A branding lookup is
-  // never allowed to hold up or break the card itself.
+  // same thing to the card: draw it in the house colours. `settled` is what
+  // separates either of those from "we have not asked yet" -- the panel waits
+  // for the answer, and a failure is an answer.
   const [room, setRoom] = useState<MissionRoom | null>(null);
+  const [roomSettled, setRoomSettled] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,6 +71,7 @@ function ShareCardFetcher({
     void getMissionRoom(missionId).then((found) => {
       if (!cancelled) {
         setRoom(found);
+        setRoomSettled(true);
       }
     });
     return () => {
@@ -76,7 +79,15 @@ function ShareCardFetcher({
     };
   }, [missionId]);
 
-  if (!data) {
+  // Both, not just the replay. The two fetches run in parallel, so this waits
+  // for the slower rather than for their sum -- and the panel is below the
+  // scorecard, where nobody is watching for it to appear.
+  //
+  // The panel's buttons are live the moment it renders. Rendering on the
+  // replay alone let a fast tap download the card, and upload the link's OG
+  // image, in the house colours while the room lookup was still in flight --
+  // and that OG image is written once.
+  if (!data || !roomSettled) {
     return null;
   }
 

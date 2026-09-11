@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { setRoomBrand } from '@/lib/api/rooms';
-import { legibleAccent, normalizeHex, roomShareTheme, type RoomBrand } from '@/lib/rooms/brand';
+import {
+  legibleAccent,
+  normalizeHex,
+  roomCardMark,
+  roomShareTheme,
+  type RoomBrand,
+} from '@/lib/rooms/brand';
 import { AWF_THEME } from '@/lib/share/renderer/theme';
 
 /**
@@ -13,10 +19,12 @@ import { AWF_THEME } from '@/lib/share/renderer/theme';
  */
 export function BrandEditor({
   roomId,
+  handle,
   current,
   onSaved,
 }: {
   roomId: string;
+  handle: string;
   current: RoomBrand | null;
   onSaved: () => void;
 }) {
@@ -73,8 +81,10 @@ export function BrandEditor({
           7 rounds
         </div>
         <div className="mt-2 h-1 w-16" style={{ backgroundColor: theme.accent }} />
+        {/* The renderer's own footer line, not a copy of it: a preview that
+            can drift from the card is worse than no preview. */}
         <div className="mt-1 text-xs" style={{ color: theme.secondary }}>
-          AMRAP With Friends
+          {roomCardMark(handle)}
         </div>
       </div>
 
