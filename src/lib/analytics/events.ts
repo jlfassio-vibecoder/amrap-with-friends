@@ -87,6 +87,7 @@ export const ANALYTICS_EVENT_NAMES = [
 
   // Coach's Rooms
   'room_mission_calendar_saved',
+  'room_reminders_toggled',
 
   // Acquisition
   'first_touch_captured',

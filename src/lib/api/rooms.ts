@@ -35,6 +35,8 @@ export interface RoomPage {
   brand: RoomBrand | null;
   /** The viewer's own setting. Null when signed out or not a member. */
   myActivityVisible: boolean | null;
+  /** Null for a signed-out visitor and for anyone who is not a member. */
+  myRemindersEnabled: boolean | null;
 }
 
 function str(value: unknown): string | null {
@@ -97,6 +99,8 @@ export async function getRoomByHandle(handle: string): Promise<GetRoomResult> {
       brand: parseRoomBrand(room.brand),
       myActivityVisible:
         typeof room.my_activity_visible === 'boolean' ? room.my_activity_visible : null,
+      myRemindersEnabled:
+        typeof room.my_reminders_enabled === 'boolean' ? room.my_reminders_enabled : null,
     },
   };
 }
@@ -526,6 +530,29 @@ export async function setRoomActivityVisible(
   const { data, error } = await callRpc<unknown>('set_room_activity_visible', {
     p_room_id: roomId,
     p_visible: visible,
+  });
+  if (error) {
+    return { ok: false, reason: error.message };
+  }
+  const payload = record(data);
+  return payload?.ok === true
+    ? { ok: true }
+    : { ok: false, reason: str(payload?.reason) ?? 'unknown' };
+}
+
+/**
+ * A member's own switch: whether this room emails them before a mission.
+ *
+ * The same setting the unsubscribe link in every reminder flips, reachable
+ * without having to receive the mail first.
+ */
+export async function setRoomReminders(
+  roomId: string,
+  enabled: boolean
+): Promise<{ ok: boolean; reason?: string }> {
+  const { data, error } = await callRpc<unknown>('set_room_reminders_enabled', {
+    p_room_id: roomId,
+    p_enabled: enabled,
   });
   if (error) {
     return { ok: false, reason: error.message };
