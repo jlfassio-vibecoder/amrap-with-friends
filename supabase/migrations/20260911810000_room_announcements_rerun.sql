@@ -1,14 +1,19 @@
--- Re-run of 20260911800000, which was recorded as applied but never ran.
+-- Re-run of 20260911800000_room_announcements.sql, which was never applied.
 --
--- The push that recorded it aborted on LegacyDbPushMissingLocalError (a
--- migration from an unmerged branch was live). The history row landed; the
--- DDL did not. Verified after: schema_migrations held 20260911800000 while
--- room_announcements 404'd and set_room_announcement did not exist.
+-- That file lost a version collision. #180 merged
+-- 20260911800000_heal_chain_position_zero_match_workout.sql, and its branch had
+-- already pushed, so `20260911800000` was recorded in schema_migrations against
+-- *that* file. db push then reported "up to date" and skipped mine, because the
+-- version was taken. This is the shadowing CLAUDE.md describes, and the fourth
+-- time it has happened.
 --
--- db push will never replay a recorded version, and an applied migration is
--- immutable, so the correction is this new file rather than an edit to that
--- one. Everything below is idempotent, so it is safe whichever state the
--- database is actually in.
+-- Caught by checking the database rather than the CLI: schema_migrations held
+-- 20260911800000 while room_announcements 404'd and set_room_announcement did
+-- not exist. The shadowed file is deleted -- its SQL was byte-identical to what
+-- follows, which did run.
+--
+-- Everything below is idempotent, so it is safe whichever state the database is
+-- actually in.
 
 CREATE TABLE IF NOT EXISTS public.room_announcements (
   room_id uuid PRIMARY KEY REFERENCES public.rooms (id) ON DELETE CASCADE,
