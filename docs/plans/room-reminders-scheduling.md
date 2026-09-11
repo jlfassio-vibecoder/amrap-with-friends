@@ -15,10 +15,16 @@ guarantees that — and it never drops one, because the window is still open on
 the next run. A narrow window would have made punctuality a correctness
 requirement and ruled out every free option below.
 
-The first attempt shipped `crons` in `vercel.json` at `* * * * *`. Vercel
-rejected the deployment: sub-daily cron is a Pro plan feature. The schedule is
-therefore **not** in `vercel.json`, and this file records the options rather
-than quietly picking one.
+**Decided: option 1.** The project is on Vercel Pro, and `crons` in
+`vercel.json` is the only option where the schedule is version-controlled next
+to the route it triggers. The rest of this file is kept because the reasoning
+still applies if that ever has to change -- and because the granularity table
+is the thing to check before substituting any other trigger.
+
+The first attempt shipped the same block before the upgrade and Vercel rejected
+the deployment: sub-daily cron is a Pro feature, and the failure link goes
+straight to the cron pricing page. Worth knowing as the symptom, because the
+error does not say which line of `vercel.json` it objected to.
 
 ## What the granularity has to be
 
@@ -37,9 +43,9 @@ plan's cron cannot run this feature by itself.
 
 ## Options
 
-### 1. Vercel Pro — `crons` in `vercel.json`
+### 1. Vercel Pro — `crons` in `vercel.json` (chosen)
 
-Add back the block the first attempt used:
+The block now in `vercel.json`:
 
 ```json
 "crons": [{ "path": "/api/room-reminders/send", "schedule": "* * * * *" }]
@@ -74,11 +80,12 @@ has never used and a service-role key stored inside the database that key
 unlocks. Worth revisiting only if the Vercel route turns out to be the wrong
 home for other reasons.
 
-## Recommendation
+## If this ever has to change
 
-**Option 1 if the project is already heading to Pro for anything else** — it is
-the only one where the schedule is version-controlled next to the code.
-Otherwise **option 2**, with something watching for the 60-day disable.
+Options 2 and 3 stay viable without a plan change, because the claim design
+tolerates a late trigger. Check the granularity table first: anything at or
+under 15 minutes is fine, and daily is not a smaller version of this feature but
+a broken one.
 
 Whichever is chosen, the route needs `CRON_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`,
 `RESEND_API_KEY`, `REMINDER_FROM_ADDRESS` and `REMINDER_TOKEN_SECRET` in Vercel,
