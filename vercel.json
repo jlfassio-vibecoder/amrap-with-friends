@@ -87,11 +87,5 @@
       "source": "/coach/articles",
       "destination": "/_app-shell"
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/room-reminders/send",
-      "schedule": "* * * * *"
-    }
   ]
 }

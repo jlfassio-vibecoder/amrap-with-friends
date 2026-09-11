@@ -1,7 +1,8 @@
 /**
  * The room-reminder sender.
  *
- * Woken every minute by Vercel Cron. All the deciding happens in
+ * Woken on a schedule -- see docs/plans/room-reminders-scheduling.md for which
+ * one, and why the schedule is not in vercel.json. All the deciding happens in
  * `claim_due_room_reminders`, which hands back rows it has already claimed, so
  * this route's only jobs are to call Resend and report what happened.
  *
@@ -61,8 +62,9 @@ export default async function handler(request: Request): Promise<Response> {
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = request.headers.get('Authorization');
 
-  // Vercel Cron sends `Authorization: Bearer $CRON_SECRET`. Without this the
-  // route is an open trigger for mail, which is the one thing it must not be.
+  // Whatever wakes this sends `Authorization: Bearer $CRON_SECRET`. Without the
+  // check the route is an open trigger for mail, which is the one thing it must
+  // not be.
   if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return new Response(JSON.stringify({ ok: false, reason: 'unauthorized' }), { status: 401 });
   }
