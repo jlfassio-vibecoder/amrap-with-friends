@@ -773,6 +773,7 @@ function LiveMissionView({
   const lastLogRoundAtMsRef = useRef<number | null>(null);
   const [logRoundHint, setLogRoundHint] = useState<string | null>(null);
   const claim = useParticipantClaim(missionId);
+  const [roomJoinNotice, setRoomJoinNotice] = useState<string | null>(null);
   const selfLeaderboardEntry = live.leaderboard.find((entry) => entry.isSelf) ?? null;
   const selfBaseScore = selfLeaderboardEntry?.baseScore ?? 0;
   // Always the raw reps/rounds this athlete did — never finalScore, which is
@@ -1364,12 +1365,25 @@ function LiveMissionView({
           {/* One sheet at the finish. For a room mission it carries the join
               checkbox alongside the save; for a personal mission it is the
               same save prompt it always was. */}
+          {/* The join result lives out here on purpose: a successful save flips
+              the claim status and the sheet stops rendering, so a notice held
+              inside it would unmount before anyone read it. */}
+          {roomJoinNotice ? (
+            <section className="card bg-success-tint p-4 text-sm text-success-text">
+              {roomJoinNotice}
+            </section>
+          ) : null}
+
           {showFinishedClaimPrompt && missionId && (
             <RoomFinishSheet
+              // Keyed by mission: without it the previous mission's room could
+              // survive a route change and be joined instead of this one's.
+              key={missionId}
               missionId={missionId}
               canSave
               isSaving={claim.isClaiming}
               onSave={() => claim.saveToAccount()}
+              onJoinResult={setRoomJoinNotice}
             />
           )}
 

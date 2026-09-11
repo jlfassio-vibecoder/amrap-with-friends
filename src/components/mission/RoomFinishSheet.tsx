@@ -7,7 +7,14 @@ interface RoomFinishSheetProps {
   /** Whether the result can still be claimed. */
   canSave: boolean;
   isSaving: boolean;
-  onSave: () => void;
+  /** Resolves true only once the mission is actually on the account. */
+  onSave: () => Promise<boolean>;
+  /**
+   * Where the join result goes. Not local state: a successful save flips the
+   * claim status, the parent stops rendering this sheet, and any notice held
+   * here would unmount before anyone read it.
+   */
+  onJoinResult: (message: string) => void;
 }
 
 /**
@@ -22,11 +29,16 @@ interface RoomFinishSheetProps {
  * and the join is attempted after the save, so a failure to join cannot lose
  * the result.
  */
-export function RoomFinishSheet({ missionId, canSave, isSaving, onSave }: RoomFinishSheetProps) {
+export function RoomFinishSheet({
+  missionId,
+  canSave,
+  isSaving,
+  onSave,
+  onJoinResult,
+}: RoomFinishSheetProps) {
   const [room, setRoom] = useState<MissionRoom | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [joinTicked, setJoinTicked] = useState(true);
-  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,21 +77,33 @@ export function RoomFinishSheet({ missionId, canSave, isSaving, onSave }: RoomFi
   }
 
   async function saveThenJoin() {
-    onSave();
+    // Wait for the save to actually land. Starting the join alongside it could
+    // create membership and attribution for a mission that was never saved --
+    // and then say it had been.
+    if (canSave) {
+      const saved = await onSave();
+      if (!saved) {
+        return;
+      }
+    }
+
     if (!joinTicked || !room || room.isMember) {
       return;
     }
+
     const result = await joinRoom(room.id, true);
     if (!result.ok) {
       // The result is already saved; a failed join is worth saying, not worth
       // making it look like the save failed.
-      setNotice(`Saved. We could not add you to ${room.displayName} — try from their room page.`);
+      onJoinResult(
+        `Saved. We could not add you to ${room.displayName} — you can join from their room page.`
+      );
       return;
     }
-    setNotice(
+    onJoinResult(
       result.homeCoachAlreadySet
-        ? `Saved, and you joined ${room.displayName}. Your home coach is unchanged.`
-        : `Saved, and you joined ${room.displayName}.`
+        ? `You joined ${room.displayName}. Your home coach is unchanged.`
+        : `You joined ${room.displayName}.`
     );
   }
 
@@ -104,8 +128,6 @@ export function RoomFinishSheet({ missionId, canSave, isSaving, onSave }: RoomFi
           </span>
         </label>
       ) : null}
-
-      {notice ? <p className="text-success-text">{notice}</p> : null}
 
       {sheet.showSave ? (
         <button
