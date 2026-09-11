@@ -258,6 +258,13 @@ export const DYNAMIC_APP_ROUTES: RouteSeo[] = [
   // Registered so the middleware serves it instead of answering a real 404 —
   // which is what it does to any path not listed here, before the SPA loads.
   { path: '/s/:shareId', title: 'Shared mission', description: '', index: false },
+  // A coach's room. `index: false` here is about the *sitemap*, not the page:
+  // rooms are created at runtime, so they cannot be enumerated at build time,
+  // and sitemap.test.ts requires every indexable row to have a URL behind it.
+  // The middleware sets `index, follow` on a room that actually resolves —
+  // that is the tag a crawler receives, and it is set there because only the
+  // edge knows whether the handle exists.
+  { path: '/@:handle', title: 'Room', description: '', index: false },
 ];
 
 export const DYNAMIC_CONTENT_ROUTES: RouteSeo[] = [
@@ -340,16 +347,31 @@ export function normalizePathname(pathname: string): string {
   return trimmed === '' ? '/' : trimmed;
 }
 
-/** `:param` matches exactly one non-empty segment. No wildcards — every app route is fixed depth. */
+/**
+ * `:param` matches one non-empty segment. No wildcards — every app route is
+ * fixed depth.
+ *
+ * A param may carry a literal prefix inside its segment, as `/@:handle` does:
+ * a room's address is the handle with an `@` welded to it, and treating that
+ * segment as a plain literal made `/@anyone` an unknown path, which the
+ * middleware answers with a real 404.
+ */
 export function matchRoutePath(pattern: string, pathname: string): boolean {
   const patternSegments = pattern.split('/');
   const pathSegments = normalizePathname(pathname).split('/');
   if (patternSegments.length !== pathSegments.length) {
     return false;
   }
-  return patternSegments.every((segment, i) =>
-    segment.startsWith(':') ? pathSegments[i].length > 0 : segment === pathSegments[i]
-  );
+  return patternSegments.every((segment, i) => {
+    const path = pathSegments[i] as string;
+    const colon = segment.indexOf(':');
+    if (colon < 0) {
+      return segment === path;
+    }
+    const prefix = segment.slice(0, colon);
+    // The param itself must match something, so `/@` alone is not a room.
+    return path.startsWith(prefix) && path.length > prefix.length;
+  });
 }
 
 export function findRouteSeo(pathname: string): RouteSeo | undefined {

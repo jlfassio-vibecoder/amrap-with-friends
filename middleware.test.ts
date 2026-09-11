@@ -57,6 +57,33 @@ describe('middleware', () => {
     }
   });
 
+  // A room address is posted in bios and pasted into group chats, so the two
+  // redirects below are the ones that decide whether those links keep working.
+  it('normalizes a handle typed in the wrong case rather than serving two URLs', async () => {
+    const response = await middleware(request('/@Bay_Area_CrossFit'));
+    expect(response.status).toBe(308);
+    expect(response.headers.get('location')).toBe(
+      'https://amrapwithfriends.com/@bay_area_crossfit'
+    );
+  });
+
+  it('keeps the query string when it normalizes the case', async () => {
+    const response = await middleware(request('/@Coach_Maya?ref=story'));
+    expect(response.headers.get('location')).toBe(
+      'https://amrapwithfriends.com/@coach_maya?ref=story'
+    );
+  });
+
+  it('404s a handle that could never be valid instead of asking the database', async () => {
+    for (const path of ['/@ab', '/@has-a-hyphen', '/@_leading', '/@' + 'x'.repeat(25)]) {
+      expect((await middleware(request(path))).status, path).toBe(404);
+    }
+  });
+
+  it('does not treat a deeper path under a handle as a room', async () => {
+    expect((await middleware(request('/@coach_maya/settings'))).status).toBe(404);
+  });
+
   it('serves an unfurl card to a bot on an invite route', async () => {
     const response = await middleware(request('/join?m=abc', BOT));
     const html = await response.text();

@@ -10,6 +10,13 @@ import {
   type ShareSummary,
 } from './src/lib/share/shareOg';
 import { injectShareMeta } from './src/lib/share/shareShell';
+import {
+  roomCanonical,
+  roomOgDescription,
+  roomOgImage,
+  roomOgTitle,
+  type RoomSummary,
+} from './src/lib/rooms/roomOg';
 import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, isKnownRoute, resolveSeo } from './src/lib/seo/routes';
 
 const BOT_UA =
@@ -21,6 +28,9 @@ const OG_ROUTES = new Set(['/join', '/campaign/join', '/squad/join']);
 /** `/s/abc12345` — the share link. Matched here rather than added to OG_ROUTES because it carries an id. */
 const SHARE_PATH = /^\/s\/([0-9a-hjkmnp-tv-z]{8})$/;
 
+/** `/@handle` — a room. Same shape the database enforces, so a malformed one 404s here. */
+const ROOM_PATH = /^\/@([a-z0-9][a-z0-9_]{2,23})$/i;
+
 /**
  * Fetches what a share link is allowed to say about itself.
  *
@@ -28,6 +38,59 @@ const SHARE_PATH = /^\/s\/([0-9a-hjkmnp-tv-z]{8})$/;
  * a link pasted into a group chat has to unfurl as *something*, and a preview
  * that fails is worse than a generic one.
  */
+/**
+ * What a room link is allowed to say about itself.
+ *
+ * Returns the summary, or the handle it moved to, or null. Null falls back to
+ * the generic card, for the same reason the share path does: a link in a group
+ * chat has to unfurl as something.
+ */
+async function fetchRoomSummary(
+  handle: string
+): Promise<{ room: RoomSummary | null; movedTo: string | null }> {
+  const url = process.env.VITE_SUPABASE_URL?.trim();
+  const key = process.env.VITE_SUPABASE_ANON_KEY?.trim();
+  if (!url || !key) {
+    return { room: null, movedTo: null };
+  }
+  try {
+    const response = await fetch(`${url}/rest/v1/rpc/get_room_by_handle`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+      },
+      body: JSON.stringify({ p_handle: handle.toLowerCase() }),
+    });
+    if (!response.ok) {
+      return { room: null, movedTo: null };
+    }
+    const body = (await response.json()) as Record<string, unknown>;
+    if (body.ok !== true) {
+      const movedTo =
+        body.reason === 'moved' && typeof body.handle === 'string' ? body.handle : null;
+      return { room: null, movedTo };
+    }
+    const room = body.room as Record<string, unknown> | undefined;
+    if (!room || typeof room.handle !== 'string') {
+      return { room: null, movedTo: null };
+    }
+    return {
+      room: {
+        handle: room.handle,
+        displayName: typeof room.display_name === 'string' ? room.display_name : room.handle,
+        intro: typeof room.intro === 'string' ? room.intro : null,
+        memberCount: Number(room.member_count ?? 0),
+        avatarPath: typeof room.avatar_path === 'string' ? room.avatar_path : null,
+      },
+      movedTo: null,
+    };
+  } catch {
+    return { room: null, movedTo: null };
+  }
+}
+
 /**
  * The built app shell, which the share page decorates rather than replaces.
  *
@@ -121,7 +184,12 @@ export default async function middleware(request: Request): Promise<Response> {
   // A catch-all rewrite to index.html answers every typo with HTTP 200 and an
   // empty shell. At the scale of an unbounded URL space that is a soft-404
   // problem, so unknown paths get a real 404 here, before the rewrite runs.
-  if (!isKnownRoute(pathname)) {
+  // `/@:handle` matches any non-empty segment, so the route table alone would
+  // accept `/@ab` and hand back a 200 shell. The handle shape is the database's
+  // rule, and a path that could never name a room is a real 404.
+  const malformedRoom = pathname.startsWith('/@') && !ROOM_PATH.test(pathname);
+
+  if (!isKnownRoute(pathname) || malformedRoom) {
     return new Response(notFoundHtml(url.origin, pathname), {
       status: 404,
       headers: {
@@ -145,6 +213,66 @@ export default async function middleware(request: Request): Promise<Response> {
   // — no card, and a claim that the link was really the homepage — while the
   // same link on Facebook showed the card. A user-agent allowlist cannot be
   // completed, so this stops keeping one.
+  // A room link unfurls the same way a share link does, and for the same
+  // reason gets its real tags regardless of who is asking.
+  const roomMatch = ROOM_PATH.exec(pathname);
+  if (roomMatch) {
+    const handle = (roomMatch[1] as string).toLowerCase();
+
+    // A handle typed in the wrong case is the same room, not a second URL.
+    if (pathname !== `/@${handle}`) {
+      return Response.redirect(`${url.origin}/@${handle}${url.search}`, 308);
+    }
+
+    const [summary, shell] = await Promise.all([
+      fetchRoomSummary(handle),
+      fetchAppShell(url.origin),
+    ]);
+
+    // A renamed room keeps answering its old address, because share cards
+    // carrying it are already in group chats and cannot be recalled.
+    if (summary.movedTo) {
+      return Response.redirect(`${url.origin}/@${summary.movedTo}${url.search}`, 301);
+    }
+
+    if (shell !== null) {
+      return new Response(
+        injectShareMeta(shell, {
+          title: roomOgTitle(summary.room),
+          description: roomOgDescription(summary.room),
+          url: roomCanonical(url.origin, handle),
+          image: roomOgImage(
+            summary.room,
+            url.origin,
+            process.env.VITE_SUPABASE_URL?.trim() ?? null
+          ),
+          imageWidth: 1200,
+          imageHeight: 630,
+          twitterImage: roomOgImage(
+            summary.room,
+            url.origin,
+            process.env.VITE_SUPABASE_URL?.trim() ?? null
+          ),
+          // The document tag has to agree with the header. injectShareMeta
+          // writes `noindex, follow` by default because that is right for a
+          // share link, and a header alone would have lost to it.
+          robots: summary.room ? 'index, follow' : 'noindex, follow',
+          canonical: summary.room ? roomCanonical(url.origin, handle) : null,
+        }),
+        {
+          status: 200,
+          headers: {
+            'content-type': 'text/html; charset=utf-8',
+            // Rooms are public pages meant to be found, unlike share links.
+            'x-robots-tag': summary.room ? 'index, follow' : 'noindex, follow',
+            'cache-control': 'public, max-age=60',
+            'set-cookie': consentRegionCookie(request),
+          },
+        }
+      );
+    }
+  }
+
   const shareMatch = SHARE_PATH.exec(pathname);
   if (shareMatch) {
     const shareId = shareMatch[1] as string;

@@ -141,3 +141,34 @@ describe('ROUTE_SEO', () => {
     }
   });
 });
+
+describe('matchRoutePath with a prefixed param', () => {
+  it('matches a handle welded to its @', () => {
+    expect(matchRoutePath('/@:handle', '/@bay_area_crossfit')).toBe(true);
+    expect(matchRoutePath('/@:handle', '/@Bay_Area_CrossFit')).toBe(true);
+  });
+
+  // The prefix alone is not a room, and neither is a deeper path.
+  it('requires the param to match something', () => {
+    expect(matchRoutePath('/@:handle', '/@')).toBe(false);
+    expect(matchRoutePath('/@:handle', '/@coach/settings')).toBe(false);
+  });
+
+  it('does not match a segment missing the prefix', () => {
+    expect(matchRoutePath('/@:handle', '/coach_maya')).toBe(false);
+  });
+
+  // The change is to a shared matcher, so the plain forms must still behave.
+  it('leaves whole-segment params and literals alone', () => {
+    expect(matchRoutePath('/exercises/:slug', '/exercises/air-squat')).toBe(true);
+    expect(matchRoutePath('/exercises/:slug', '/exercises')).toBe(false);
+    expect(matchRoutePath('/about', '/about')).toBe(true);
+    expect(matchRoutePath('/about', '/privacy')).toBe(false);
+  });
+
+  it('keeps a room address a known route while other single segments are not', () => {
+    expect(isKnownRoute('/@coach_maya')).toBe(true);
+    expect(isKnownRoute('/create')).toBe(true);
+    expect(isKnownRoute('/not-a-real-page')).toBe(false);
+  });
+});

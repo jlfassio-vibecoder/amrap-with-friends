@@ -24,6 +24,7 @@ const IntakePage = lazy(() => import('./pages/IntakePage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const CoachPage = lazy(() => import('./pages/CoachPage'));
 const HostRoomsPage = lazy(() => import('./pages/HostRoomsPage'));
+const RoomPage = lazy(() => import('./pages/RoomPage'));
 const CoachWodsPage = lazy(() => import('./pages/CoachWodsPage'));
 const CoachArticlesPage = lazy(() => import('./pages/CoachArticlesPage'));
 const TimerDevPage = lazy(() => import('./pages/dev/TimerDevPage'));
@@ -142,6 +143,12 @@ function App() {
           {/* The host dashboard. Not under /coach: that area is the platform
               owner's, gated by the coach_users allowlist. */}
           <Route path="/host" element={<HostRoomsPage />} />
+          {/* A room address, `/@handle`. React Router cannot express a param
+              with a literal prefix inside a segment, so the route is a plain
+              segment and RoomPage rejects anything without the `@`. Static
+              routes outrank it in React Router's ranking, so `/create` and the
+              rest still win. */}
+          <Route path="/:handle" element={<RoomPage />} />
           <Route
             path="/coach"
             element={
