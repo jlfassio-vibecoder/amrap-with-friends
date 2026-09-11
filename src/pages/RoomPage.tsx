@@ -3,7 +3,16 @@ import { useParams } from 'react-router-dom';
 import { AuthModal } from '@/components/AuthModal';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
-import { getRoomByHandle, joinRoom, type RoomPage as RoomPageData } from '@/lib/api/rooms';
+import {
+  getRoomByHandle,
+  joinRoom,
+  listRoomMissions,
+  type RoomMission,
+  type RoomPage as RoomPageData,
+} from '@/lib/api/rooms';
+import { WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
+import { activityLine, recentActivity, shouldShowActivity } from '@/lib/rooms/roomActivity';
+import { nextMission, nextMissionLabel } from '@/lib/rooms/roomSchedule';
 import { homeCoachNotice } from '@/lib/rooms/homeCoach';
 import { isRoomHost } from '@/lib/rooms/membership';
 import NotFoundPage from '@/pages/NotFoundPage';
@@ -43,6 +52,8 @@ export default function RoomPage() {
 
 function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
   const [room, setRoom] = useState<RoomPageData | null>(null);
+  const [upcoming, setUpcoming] = useState<RoomMission[]>([]);
+  const [recent, setRecent] = useState<RoomMission[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading');
   const [notice, setNotice] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
@@ -59,6 +70,13 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
       if (result.ok) {
         setRoom(result.room);
         setStatus('ready');
+        // The schedule is a second read because the room resolves first: a
+        // missing handle should 404 without waiting on a list nobody will see.
+        const schedule = await listRoomMissions(result.room.id);
+        if (!cancelled && schedule.ok) {
+          setUpcoming(schedule.upcoming);
+          setRecent(schedule.recent);
+        }
       } else {
         setStatus(result.reason === 'not_found' || result.reason === 'moved' ? 'missing' : 'error');
       }
@@ -144,6 +162,27 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
     <NarrowPageLayout title={room.displayName} subtitle={`@${room.handle}`}>
       {room.intro ? <p className="text-sm">{room.intro}</p> : null}
 
+      {room.announcement ? (
+        <p className="card mt-3 bg-surface-muted p-3 text-sm">{room.announcement}</p>
+      ) : null}
+
+      <section className="card mt-4 space-y-2 p-4 text-sm">
+        <h2 className="eyebrow text-secondary">Next mission</h2>
+        <p>{nextMissionLabel(nextMission(upcoming))}</p>
+        {nextMission(upcoming) ? (
+          <a
+            className="btn-primary inline-block text-sm"
+            href={`/mission/${nextMission(upcoming)!.missionId}`}
+          >
+            {nextMission(upcoming)!.state === 'waiting' ? 'Enter mission' : 'Join mission'}
+          </a>
+        ) : (
+          <p className="text-xs text-secondary">
+            Nothing on the clock right now. Joining means you&rsquo;ll see the next one.
+          </p>
+        )}
+      </section>
+
       <p className="mt-2 text-xs text-secondary">
         {room.memberCount} {room.memberCount === 1 ? 'athlete' : 'athletes'}
         {!room.isActive ? ' · not running missions right now' : null}
@@ -165,6 +204,19 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
         )}
       </div>
 
+      {shouldShowActivity(recentActivity(recent)) ? (
+        <section className="card mt-4 space-y-2 p-4 text-sm">
+          <h2 className="eyebrow text-secondary">Recently in this room</h2>
+          <ul className="flex flex-col gap-1">
+            {recentActivity(recent).map((row) => (
+              <li key={row.missionId} className="text-secondary">
+                {activityLine(row, workoutName(row.templateId))}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       {!isMember ? (
         <p className="mt-3 text-xs text-secondary">
           Joining lets this coach see the missions you finish in their room. It never adds you to
@@ -183,4 +235,12 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
       ) : null}
     </NarrowPageLayout>
   );
+}
+
+/** The workout's own name, when the room ran one from the library. */
+function workoutName(templateId: string | null): string | undefined {
+  if (!templateId) {
+    return undefined;
+  }
+  return WORKOUT_TEMPLATES.find((template) => template.id === templateId)?.name;
 }

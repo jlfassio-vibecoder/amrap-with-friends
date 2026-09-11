@@ -16,6 +16,7 @@ import {
 import { capabilitiesFor } from '@/lib/rooms/membership';
 import { roomActivitySentence, roomInviteUrl } from '@/lib/rooms/roomInvite';
 import { ScheduleMissionForm } from '@/components/rooms/ScheduleMissionForm';
+import { AnnouncementEditor } from '@/components/rooms/AnnouncementEditor';
 import { nextMission, nextMissionLabel, repeatableMission } from '@/lib/rooms/roomSchedule';
 
 /**
@@ -202,6 +203,19 @@ function Dashboard({ handle }: { handle: string }) {
         {!room.isActive ? (
           <p className="text-xs text-accent">This room isn&rsquo;t running missions right now.</p>
         ) : null}
+      </section>
+
+      <section className="card mt-4 space-y-2 p-4 text-sm">
+        <h2 className="eyebrow text-secondary">Announcement</h2>
+        <p className="text-secondary">
+          One note, pinned to the top of your room page. Athletes see it whether or not they have
+          joined.
+        </p>
+        <AnnouncementEditor
+          roomId={room.id}
+          current={room.announcement}
+          onSaved={() => void load()}
+        />
       </section>
 
       <section className="card mt-4 space-y-2 p-4 text-sm">

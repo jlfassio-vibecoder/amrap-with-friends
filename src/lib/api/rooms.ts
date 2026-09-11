@@ -26,6 +26,7 @@ export interface RoomPage {
   isActive: boolean;
   memberCount: number;
   myRole: RoomRole | null;
+  announcement: string | null;
 }
 
 function str(value: unknown): string | null {
@@ -84,6 +85,7 @@ export async function getRoomByHandle(handle: string): Promise<GetRoomResult> {
       isActive: room.is_active === true,
       memberCount: typeof room.member_count === 'number' ? room.member_count : 0,
       myRole: role(room.my_role),
+      announcement: str(room.announcement),
     },
   };
 }
@@ -412,4 +414,22 @@ export async function scheduleRoomMission(
   }
 
   return { ok: true, missionId };
+}
+
+/** Pass an empty body to take the announcement down. */
+export async function setRoomAnnouncement(
+  roomId: string,
+  body: string
+): Promise<{ ok: boolean; reason?: string }> {
+  const { data, error } = await callRpc<unknown>('set_room_announcement', {
+    p_room_id: roomId,
+    p_body: body,
+  });
+  if (error) {
+    return { ok: false, reason: error.message };
+  }
+  const payload = record(data);
+  return payload?.ok === true
+    ? { ok: true }
+    : { ok: false, reason: str(payload?.reason) ?? 'unknown' };
 }
