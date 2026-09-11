@@ -12,6 +12,13 @@ import {
   persistMissionIdentity,
 } from '@/lib/missionIdentity';
 import { useLiveAmrapMission } from '@/hooks/useLiveAmrapMission';
+import { track, trackBeacon } from '@/lib/analytics/track';
+import {
+  isWaitingRoomPresenceState,
+  rallyPointStayDurationSec,
+  resolveMissionStartSource,
+  type RallyPointLeaveReason,
+} from '@/lib/analytics/missionStartSource';
 import { useParticipantClaim } from '@/hooks/useParticipantClaim';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useMissionChannel } from '@/lib/realtime/useMissionChannel';
@@ -502,6 +509,13 @@ function LiveMissionView({
   );
   const live = useLiveAmrapMission(missionId, channel);
   const { isHost, start: startMission, phase: livePhase } = live;
+  const livePhaseRef = useRef(livePhase);
+  livePhaseRef.current = livePhase;
+  const liveIsPracticeRef = useRef(live.isPractice);
+  liveIsPracticeRef.current = live.isPractice;
+  const rallyPointEnteredRef = useRef(false);
+  const rallyPointLeftRef = useRef(false);
+  const rallyPointEnteredAtMsRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated || live.phase === 'work') {
@@ -552,7 +566,92 @@ function LiveMissionView({
     chainAdvanceAttemptedRef.current = null;
     amqapAutoLockAttemptedRef.current = false;
     setAmqapAutoLockFailed(false);
+    rallyPointEnteredRef.current = false;
+    rallyPointLeftRef.current = false;
+    rallyPointEnteredAtMsRef.current = null;
   }, [missionId]);
+
+  useEffect(() => {
+    if (!channel.mission || live.isPractice) {
+      return;
+    }
+    if (!isWaitingRoomPresenceState(channel.mission.state)) {
+      return;
+    }
+    if (rallyPointEnteredRef.current) {
+      return;
+    }
+    rallyPointEnteredRef.current = true;
+    rallyPointEnteredAtMsRef.current = Date.now();
+    // Copilot suggestion ignored: userId already passed for waiting-room cohort attribution.
+    track('rally_point_entered', {}, { missionId, userId: user?.id ?? null });
+  }, [channel.mission, channel.mission?.state, live.isPractice, missionId, user?.id]);
+
+  useEffect(() => {
+    function fireRallyPointLeft(reason: RallyPointLeaveReason, useBeacon: boolean) {
+      if (!rallyPointEnteredRef.current || rallyPointLeftRef.current) {
+        return;
+      }
+      rallyPointLeftRef.current = true;
+      const enteredAt = rallyPointEnteredAtMsRef.current ?? Date.now();
+      const props = {
+        reason,
+        duration_sec: rallyPointStayDurationSec(enteredAt, Date.now()),
+      };
+      // Copilot suggestion ignored: leave track/beacon already include userId.
+      const context = { missionId, userId: user?.id ?? null };
+      if (useBeacon) {
+        trackBeacon('rally_point_left', props, context);
+      } else {
+        track('rally_point_left', props, context);
+      }
+    }
+
+    if (livePhase === 'work' && !live.isPractice) {
+      fireRallyPointLeft('started', false);
+      return;
+    }
+
+    if (
+      !live.isPractice &&
+      channel.mission?.state === 'finished' &&
+      livePhase === 'waiting'
+    ) {
+      fireRallyPointLeft('closed', false);
+    }
+  }, [livePhase, channel.mission?.state, missionId, user?.id, live.isPractice]);
+
+  useEffect(() => {
+    function leaveNavigatingAway() {
+      const phase = livePhaseRef.current;
+      if (phase === 'work' || phase === 'finished') {
+        return;
+      }
+      if (liveIsPracticeRef.current) {
+        return;
+      }
+      if (!rallyPointEnteredRef.current || rallyPointLeftRef.current) {
+        return;
+      }
+      rallyPointLeftRef.current = true;
+      const enteredAt = rallyPointEnteredAtMsRef.current ?? Date.now();
+      trackBeacon(
+        'rally_point_left',
+        {
+          reason: 'navigated_away',
+          duration_sec: rallyPointStayDurationSec(enteredAt, Date.now()),
+        },
+        // Copilot suggestion ignored: userId already supplied for cohort attribution.
+        { missionId, userId: user?.id ?? null }
+      );
+    }
+
+    window.addEventListener('pagehide', leaveNavigatingAway);
+    return () => {
+      window.removeEventListener('pagehide', leaveNavigatingAway);
+      leaveNavigatingAway();
+    };
+  }, [missionId, user?.id]);
 
   // AMQAP: lock a 0-partial score on finish so HUD Active Recovery / week volume
   // record without the metabolic "Where did you break?" PartialReps step.
@@ -902,7 +1001,12 @@ function LiveMissionView({
             disabled={!missionReady}
             onClick={() => {
               handleAudioUnlock();
-              void startMission();
+              void startMission({
+                source: resolveMissionStartSource({
+                  countdownArmed: rallyPointCountdownArmed,
+                  hasChainRest: Boolean(chainRestBanner),
+                }),
+              });
             }}
           >
             Start
@@ -1303,7 +1407,7 @@ function LiveMissionView({
   const hostStatusText = live.isPractice
     ? 'Practice — 2 min, not recorded.'
     : isHost
-      ? 'You are the host.'
+      ? 'Start begins the mission now. Countdown is optional — use it for friends or a timed T-minus.'
       : 'Waiting on host for mission control.';
   // Waiting room stays "Rally point"; once the clock is running this screen is the mission.
   const headerTitle = live.phase === 'waiting' && !live.isPractice ? 'Rally point' : 'Mission';
@@ -1493,7 +1597,12 @@ function LiveMissionView({
                       onAudioUnlock={handleAudioUnlock}
                       onStart={() => {
                         handleAudioUnlock();
-                        void startMission();
+                        void startMission({
+                          source: resolveMissionStartSource({
+                            countdownArmed: rallyPointCountdownArmed,
+                            hasChainRest: Boolean(chainRestBanner),
+                          }),
+                        });
                       }}
                     />
                   </div>

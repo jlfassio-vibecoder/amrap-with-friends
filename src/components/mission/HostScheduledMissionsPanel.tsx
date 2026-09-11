@@ -10,6 +10,7 @@ import {
   type HostScheduledMissionEntry,
 } from '@/lib/api/hostScheduledMissions';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
+import { hostMissionListCtaLabel } from '@/lib/mission/hostMissionListCta';
 
 export function HostScheduledMissionsPanel() {
   const { isAuthenticated, isAuthLoading, user, session } = useAmrapAuth();
@@ -115,7 +116,7 @@ export function HostScheduledMissionsPanel() {
               ) : (
                 <div className="flex flex-wrap items-center gap-3">
                   <AppLink className="link-accent" to={`/mission/${entry.missionId}`}>
-                    Enter mission
+                    {hostMissionListCtaLabel(entry.state)}
                   </AppLink>
                   <button
                     type="button"

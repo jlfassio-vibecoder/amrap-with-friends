@@ -43,6 +43,7 @@ export const ANALYTICS_EVENT_NAMES = [
 
   // Missions
   'mission_created',
+  'mission_started',
   'mission_joined',
   'mission_abandoned',
   'mission_chain_advanced',
@@ -52,11 +53,15 @@ export const ANALYTICS_EVENT_NAMES = [
   'template_selected',
   'coach_workout_selected',
   'physical_activity_logged',
+  // Plan mission surface (/create) — signup → Plan without Explore archaeology
+  'create_viewed',
 
   // Rally point / invites
   'rally_link_copied',
   'rally_point_created',
   'rally_point_joined',
+  'rally_point_entered',
+  'rally_point_left',
   'rally_point_closed',
   'rally_point_next_mission',
   'rally_point_host_reassigned',

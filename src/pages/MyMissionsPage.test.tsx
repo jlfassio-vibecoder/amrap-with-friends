@@ -276,7 +276,9 @@ describe('MyMissionsPage delete', () => {
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getAllByText('View mission')).toHaveLength(4);
+      expect(screen.getAllByText('Start this mission')).toHaveLength(1);
+      expect(screen.getAllByText('Enter mission')).toHaveLength(1);
+      expect(screen.getAllByText('View mission')).toHaveLength(2);
     });
 
     expect(screen.getAllByRole('button', { name: 'Delete' })).toHaveLength(1);
@@ -613,7 +615,7 @@ describe('MyMissionsPage tabs', () => {
       expect(screen.getByRole('tab', { name: 'Missions' }).getAttribute('aria-selected')).toBe(
         'true'
       );
-      expect(screen.getByRole('link', { name: 'View mission' })).toBeTruthy();
+      expect(screen.getByRole('link', { name: 'Start this mission' })).toBeTruthy();
     });
 
     expect(screen.queryByText('Your campaigns')).toBeNull();

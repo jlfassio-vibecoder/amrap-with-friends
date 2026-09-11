@@ -37,6 +37,7 @@ import {
   persistMissionIdentity,
 } from '@/lib/missionIdentity';
 import { track, trackBeacon } from '@/lib/analytics/track';
+import type { MissionStartSource } from '@/lib/analytics/missionStartSource';
 
 const PUSH_INTERVAL_MS = 15_000;
 
@@ -70,7 +71,7 @@ export interface UseLiveAmrapMissionReturn {
   syncError: string | null;
   isPractice: boolean;
   practiceRounds: AmrapRoundLog[];
-  start: () => Promise<void>;
+  start: (options?: { source?: MissionStartSource }) => Promise<void>;
   startPractice: () => void;
   endPractice: () => void;
   /** Live host rematch (new mission id) or practice local restart. */
@@ -129,7 +130,7 @@ export function useLiveAmrapMission(
   const isHost = hostToken !== null;
 
   const timer = useAmrapTimer();
-  const { isAuthenticated } = useAmrapAuth();
+  const { isAuthenticated, user } = useAmrapAuth();
 
   const [joinerSnapshot, setJoinerSnapshot] = useState<AuthoritativeSnapshot | null>(null);
   const [joinerDisplay, setJoinerDisplay] = useState<DisplayState | null>(null);
@@ -142,6 +143,13 @@ export function useLiveAmrapMission(
   const prevMissionStateRef = useRef<LiveMissionPhase | null>(null);
   const prevIsPausedRef = useRef(false);
   const pushInFlightRef = useRef(false);
+  const missionStartedFiredRef = useRef(false);
+  const startSourceRef = useRef<MissionStartSource>('immediate');
+
+  useEffect(() => {
+    missionStartedFiredRef.current = false;
+    startSourceRef.current = 'immediate';
+  }, [missionId]);
 
   const mission = channel.mission;
   const segmentIndex = mission?.segment_index ?? 0;
@@ -301,6 +309,7 @@ export function useLiveAmrapMission(
         timer.workStartedAtMs !== null ? new Date(timer.workStartedAtMs).toISOString() : null;
 
       try {
+        const priorMissionState = channel.mission?.state ?? null;
         const result = await updateMissionState({
           missionId,
           hostToken,
@@ -319,6 +328,29 @@ export function useLiveAmrapMission(
         } else if (result.data?.ok === true) {
           lastPushAtRef.current = now;
           setLastAuthoritativeSyncAtMs(now);
+          const startedFromWaitingRoom =
+            priorMissionState === 'waiting' || priorMissionState === 'setup';
+          if (
+            missionState === 'work' &&
+            startedFromWaitingRoom &&
+            !missionStartedFiredRef.current
+          ) {
+            missionStartedFiredRef.current = true;
+            track(
+              'mission_started',
+              {
+                source: startSourceRef.current,
+                is_host: true,
+                participant_count: channel.participants.length,
+              },
+              {
+                missionId,
+                participantId: participantId || undefined,
+                // Copilot suggestion ignored: userId already attached for activation cohort joins.
+                userId: user?.id ?? null,
+              }
+            );
+          }
         }
       } finally {
         pushInFlightRef.current = false;
@@ -333,6 +365,11 @@ export function useLiveAmrapMission(
       timer.timeLeftSec,
       timer.isPaused,
       timer.workStartedAtMs,
+      channel.participants.length,
+      // Copilot suggestion ignored: once-per-mission storage boundary; waiting→work + ref is enough.
+      channel.mission?.state,
+      participantId,
+      user?.id,
     ]
   );
 
@@ -557,16 +594,21 @@ export function useLiveAmrapMission(
     };
   }, [isPractice, displayPhase, displayTimeLeftSec, myRoundCount, missionId, participantId]);
 
-  const start = useCallback(async () => {
-    if (isPractice || !isHost || displayPhase !== 'waiting' || !mission) {
-      return;
-    }
+  const start = useCallback(
+    async (options?: { source?: MissionStartSource }) => {
+      if (isPractice || !isHost || displayPhase !== 'waiting' || !mission) {
+        return;
+      }
 
-    timer.start({
-      setupDurationSec: setupDurationSec,
-      workDurationSec: mission.duration_minutes * 60,
-    });
-  }, [isPractice, isHost, displayPhase, mission, timer, setupDurationSec]);
+      startSourceRef.current = options?.source ?? 'immediate';
+
+      timer.start({
+        setupDurationSec: setupDurationSec,
+        workDurationSec: mission.duration_minutes * 60,
+      });
+    },
+    [isPractice, isHost, displayPhase, mission, timer, setupDurationSec]
+  );
 
   const startPractice = useCallback(() => {
     if (isPractice) {

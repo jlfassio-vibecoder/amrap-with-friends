@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
+import { CoachActivationFunnelCard } from '@/components/coach/CoachActivationFunnelCard';
+import { CoachActivationInactiveTable } from '@/components/coach/CoachActivationInactiveTable';
 import { CoachActivityCohorts } from '@/components/coach/CoachActivityCohorts';
 import { CoachDataTable } from '@/components/coach/CoachDataTable';
 import { CoachEventsExplorer } from '@/components/coach/CoachEventsExplorer';
@@ -18,11 +20,14 @@ import { CoachTabPanel } from '@/components/coach/CoachTabPanel';
 import { CoachTopTabs } from '@/components/coach/CoachTopTabs';
 import { CoachUserDetailPanel } from '@/components/coach/CoachUserDetailPanel';
 import { CoachUserPicker } from '@/components/coach/CoachUserPicker';
+import { CoachWaitingGraveyardSummaryCard } from '@/components/coach/CoachWaitingGraveyardSummaryCard';
+import { CoachWaitingGraveyardTable } from '@/components/coach/CoachWaitingGraveyardTable';
 import { CoachWindowPicker } from '@/components/coach/CoachWindowPicker';
 import type { CoachTabKey } from '@/components/coach/coachTabIds';
 import { COACH_TABS } from '@/components/coach/coachTabs';
 import {
   coachDashboardWindowLabel,
+  coachDashboardWindowSince,
   fetchCoachDashboard,
   fetchCoachRecentEvents,
   type CoachDashboard,
@@ -55,6 +60,7 @@ export default function CoachPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<CoachUserListRow | null>(null);
   const [guestBrowsersOpen, setGuestBrowsersOpen] = useState(false);
+  const [waitingGraveyardOpen, setWaitingGraveyardOpen] = useState(false);
   const [reportWindow, setReportWindow] = useState<CoachDashboardWindow>('all');
   const [activeTab, setActiveTab] = useState<CoachTabKey>('applications');
   const [applicationRows, setApplicationRows] = useState<CoachEventRow[] | null>(null);
@@ -165,6 +171,7 @@ export default function CoachPage() {
         <CoachTabPanel tab="users" activeTab={activeTab}>
           <CoachActivityCohorts selectedUser={selectedUser} onSelect={setSelectedUser} />
           <CoachOnboardingStuckTable />
+          <CoachActivationInactiveTable />
           <CoachUserPicker selectedUser={selectedUser} onSelect={setSelectedUser} />
           {selectedUser ? (
             <CoachUserDetailPanel key={selectedUser.userId} userId={selectedUser.userId} />
@@ -234,6 +241,12 @@ export default function CoachPage() {
                   title={`Where commitment dies · ${coachDashboardWindowLabel(dashboard.window)}`}
                 />
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <CoachActivationFunnelCard funnel={dashboard.activationFunnel} />
+                  <CoachWaitingGraveyardSummaryCard
+                    summary={dashboard.waitingGraveyard}
+                    detailOpen={waitingGraveyardOpen}
+                    onShowDetail={() => setWaitingGraveyardOpen((open) => !open)}
+                  />
                   <CoachFunnelCard
                     title="Guest → account (claim)"
                     steps={[
@@ -277,6 +290,14 @@ export default function CoachPage() {
                     />
                   ))}
                 </div>
+                {waitingGraveyardOpen ? (
+                  // Copilot suggestion ignored: table already receives dashboard window + since.
+                  <CoachWaitingGraveyardTable
+                    key={dashboard.window}
+                    window={dashboard.window}
+                    since={coachDashboardWindowSince(dashboard.window)}
+                  />
+                ) : null}
                 <div className="card space-y-2 p-4">
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-secondary">
                     Why sign-in and sign-up fail
@@ -526,6 +547,11 @@ export default function CoachPage() {
                         align: 'right',
                       },
                       {
+                        header: 'Joined a mission',
+                        render: (row) => row.trained,
+                        align: 'right',
+                      },
+                      {
                         header: 'Completed a mission',
                         render: (row) => row.completed,
                         align: 'right',
@@ -538,6 +564,7 @@ export default function CoachPage() {
                     ]}
                   />
                   <p className="text-xs text-secondary">
+                    Joined a mission means any participant seat. Completed means a locked score.
                     First touch, ranked by athletes who completed a mission rather than by traffic —
                     a channel sending a thousand bounces is worth less than one sending ten people
                     who train. Clicks from our own content pages count as internal, not as a
