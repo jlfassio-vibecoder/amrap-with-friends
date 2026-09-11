@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { formatModifiedBadge } from '@/lib/mission/modifiedMovements';
 import { formatVariantBadge } from '@/lib/mission/exerciseScaling';
 import { PacingBadge } from '@/components/PacingBadge';
@@ -29,6 +29,7 @@ interface ParticipantsPanelProps {
   selfParticipantId: string;
   phase: LiveMissionPhase;
   className?: string;
+  renderRowAction?: (entry: ParticipantRosterEntry) => ReactNode;
 }
 
 const AVATAR_STACK_LIMIT = 5;
@@ -148,6 +149,7 @@ function RosterRow({
   barPercent,
   showBar,
   isFlashing,
+  action,
 }: {
   entry: ParticipantRosterEntry;
   phase: LiveMissionPhase;
@@ -155,6 +157,7 @@ function RosterRow({
   barPercent: number;
   showBar: boolean;
   isFlashing: boolean;
+  action?: ReactNode;
 }) {
   const showPacingBadge = phase === 'finished' && entry.pviVerdict.length > 0;
   const scoreDisplay = formatRosterScore(entry, phase, sortMode);
@@ -189,6 +192,7 @@ function RosterRow({
           <PacingBadge classification={entry.pviClassification} verdict={entry.pviVerdict} />
         ) : null}
         <span className="shrink-0 text-sm font-semibold tabular-nums">{scoreDisplay}</span>
+        {action}
       </div>
       {/* The bar is the creators board's whole idea: the gap between athletes
           read at a glance rather than by comparing two numbers. Decorative —
@@ -214,6 +218,7 @@ export function ParticipantsPanel({
   selfParticipantId,
   phase,
   className,
+  renderRowAction,
 }: ParticipantsPanelProps) {
   const [sortMode, setSortMode] = useState<LeaderboardSortMode>('absolute');
   const effectiveSortMode = phase === 'finished' ? sortMode : 'absolute';
@@ -311,6 +316,7 @@ export function ParticipantsPanel({
                   showBar={showBars}
                   barPercent={rosterBarPercent(rosterBarScore(entry, phase), leaderScore)}
                   isFlashing={flashing.has(entry.participantId)}
+                  action={phase === 'work' ? null : renderRowAction?.(entry)}
                 />
               ))}
             </div>

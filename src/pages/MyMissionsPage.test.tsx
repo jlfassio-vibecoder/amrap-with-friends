@@ -10,7 +10,9 @@ const fetchMyMissionsMock = vi.fn();
 const fetchMyMissionDetailMock = vi.fn();
 const deleteIncompleteMissionMock = vi.fn();
 const fetchMyCampaignsMock = vi.fn();
-const fetchMyAssignedWorkoutsMock = vi.fn();
+const fetchMyInvitationsMock = vi.fn();
+const fetchInvitationUnreadCountMock = vi.fn();
+const markInvitationsReadMock = vi.fn();
 const createRallyPointMissionMock = vi.fn();
 const fetchHostActiveMissionCountMock = vi.fn();
 const navigateMock = vi.fn();
@@ -52,13 +54,14 @@ vi.mock('@/lib/api/campaigns', async () => {
   };
 });
 
-vi.mock('@/lib/api/assignedWorkouts', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/api/assignedWorkouts')>(
-    '@/lib/api/assignedWorkouts'
-  );
+vi.mock('@/lib/api/invitations', async () => {
+  const actual =
+    await vi.importActual<typeof import('@/lib/api/invitations')>('@/lib/api/invitations');
   return {
     ...actual,
-    fetchMyAssignedWorkouts: (...args: unknown[]) => fetchMyAssignedWorkoutsMock(...args),
+    fetchMyInvitations: (...args: unknown[]) => fetchMyInvitationsMock(...args),
+    fetchInvitationUnreadCount: (...args: unknown[]) => fetchInvitationUnreadCountMock(...args),
+    markInvitationsRead: (...args: unknown[]) => markInvitationsReadMock(...args),
   };
 });
 
@@ -143,7 +146,9 @@ afterEach(() => {
   fetchMyMissionDetailMock.mockReset();
   deleteIncompleteMissionMock.mockReset();
   fetchMyCampaignsMock.mockReset();
-  fetchMyAssignedWorkoutsMock.mockReset();
+  fetchMyInvitationsMock.mockReset();
+  fetchInvitationUnreadCountMock.mockReset();
+  markInvitationsReadMock.mockReset();
   createRallyPointMissionMock.mockReset();
   fetchHostActiveMissionCountMock.mockReset();
   navigateMock.mockReset();
@@ -157,8 +162,19 @@ function renderPage() {
   if (!fetchMyCampaignsMock.getMockImplementation()) {
     fetchMyCampaignsMock.mockResolvedValue({ data: [], error: null });
   }
-  if (!fetchMyAssignedWorkoutsMock.getMockImplementation()) {
-    fetchMyAssignedWorkoutsMock.mockResolvedValue({ data: [], error: null });
+  if (!fetchMyInvitationsMock.getMockImplementation()) {
+    fetchMyInvitationsMock.mockResolvedValue({
+      pending: [],
+      resolved: [],
+      unreadCount: 0,
+      error: null,
+    });
+  }
+  if (!fetchInvitationUnreadCountMock.getMockImplementation()) {
+    fetchInvitationUnreadCountMock.mockResolvedValue({ unreadCount: 0, error: null });
+  }
+  if (!markInvitationsReadMock.getMockImplementation()) {
+    markInvitationsReadMock.mockResolvedValue({ error: null });
   }
   return render(
     <MemoryRouter>
@@ -582,7 +598,13 @@ describe('MyMissionsPage tabs', () => {
       data: [campaign()],
       error: null,
     });
-    fetchMyAssignedWorkoutsMock.mockResolvedValue({ data: [], error: null });
+    fetchMyInvitationsMock.mockResolvedValue({
+      pending: [],
+      resolved: [],
+      unreadCount: 0,
+      error: null,
+    });
+    fetchInvitationUnreadCountMock.mockResolvedValue({ unreadCount: 2, error: null });
 
     renderPage();
 
@@ -595,7 +617,8 @@ describe('MyMissionsPage tabs', () => {
     });
 
     expect(screen.queryByText('Your campaigns')).toBeNull();
-    expect(screen.queryByText(/Nothing waiting from your squad/)).toBeNull();
+    expect(screen.queryByText(/Nothing waiting/)).toBeNull();
+    expect(screen.getByRole('tab', { name: /Sent to you/ }).textContent).toContain('2');
 
     fireEvent.click(screen.getByRole('tab', { name: 'Campaigns' }));
 
@@ -610,13 +633,61 @@ describe('MyMissionsPage tabs', () => {
       );
     });
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Sent to you' }));
+    fireEvent.click(screen.getByRole('tab', { name: /Sent to you/ }));
 
     await waitFor(() => {
-      expect(screen.getByRole('tab', { name: 'Sent to you' }).getAttribute('aria-selected')).toBe(
+      expect(screen.getByRole('tab', { name: /Sent to you/ }).getAttribute('aria-selected')).toBe(
         'true'
       );
-      expect(screen.getByText(/Nothing waiting from your squad/)).toBeTruthy();
+      expect(screen.getByText('Nothing waiting.')).toBeTruthy();
+    });
+  });
+
+  it('lists a pending invitation in Sent to you', async () => {
+    fetchMyMissionsMock.mockResolvedValue({ data: [entry()], chains: {}, error: null });
+    fetchMyCampaignsMock.mockResolvedValue({ data: [], error: null });
+    fetchMyInvitationsMock.mockResolvedValue({
+      pending: [
+        {
+          invitationId: 'inv-1',
+          deliveryId: 'del-1',
+          type: 'workout',
+          status: 'pending',
+          readAt: null,
+          createdAt: '2026-09-11T12:00:00.000Z',
+          note: 'Same time tomorrow?',
+          fromUserId: 'user-2',
+          fromNickname: 'Alex',
+          includeSquadInvite: false,
+          durationMinutes: 15,
+          workout: [{ name: 'Burpees', target: 10, unit: 'reps' }],
+          templateId: null,
+          intensityTier: null,
+          assignedWorkoutId: 'aw-1',
+          squadRequestId: null,
+          squadStatus: null,
+          resultingMissionId: null,
+          resultingCampaignId: null,
+          sourceMissionId: 'm-1',
+          sourceMessageId: null,
+          mission: null,
+          campaign: null,
+        },
+      ],
+      resolved: [],
+      unreadCount: 1,
+      error: null,
+    });
+    fetchInvitationUnreadCountMock.mockResolvedValue({ unreadCount: 1, error: null });
+
+    renderPage();
+    fireEvent.click(screen.getByRole('tab', { name: /Sent to you/ }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Alex shared a 15-minute workout')).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Start 15-min mission' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Dismiss' })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'Not now' })).toBeNull();
     });
   });
 });
@@ -628,15 +699,14 @@ describe('MyMissionsPage campaigns', () => {
       data: [campaign()],
       error: null,
     });
-    fetchMyAssignedWorkoutsMock.mockResolvedValue({ data: [], error: null });
+    fetchMyInvitationsMock.mockResolvedValue({
+      pending: [],
+      resolved: [],
+      unreadCount: 0,
+      error: null,
+    });
 
-    render(
-      <MemoryRouter>
-        <ThemeProvider>
-          <MyMissionsPage />
-        </ThemeProvider>
-      </MemoryRouter>
-    );
+    renderPage();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Campaigns' }));
 
