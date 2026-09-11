@@ -281,6 +281,35 @@ git config core.hooksPath .githooks   # once, per clone
 in the remote history changes what the repo says ran without changing what ran,
 and `db push` will never replay it. Corrections go in a new migration.
 
+**There is one database, and every branch pushes to it.** `db push` applies to
+production, so a migration that runs from an unmerged branch is live while its
+file exists on that branch alone. Until it merges, anyone else pushing hits:
+
+```
+LegacyDbPushMissingLocalError: Remote migration versions not found in local
+migrations directory.
+```
+
+**Do not run the repair command that error suggests.** `supabase migration
+repair --status reverted <version>` marks an applied migration as reverted, and
+the next push replays SQL that already ran — against a schema that already has
+it. The error cannot tell "someone else pushed from a branch" apart from "your
+history is corrupt", and it guesses the second.
+
+Check which it is first:
+
+```bash
+git log --all --oneline -- supabase/migrations/<version>_*.sql
+```
+
+A commit on somebody's branch means the history is fine and the file is merely
+elsewhere. Wait for it to merge, or copy the file into your tree just long
+enough to push — and delete it before you commit, or two branches end up
+carrying the same migration and you have the collision above.
+
+Push migrations from the branch that is merging, as close to merging as you can.
+The window where a migration is live but unmerged is the window that does this.
+
 ## Before pushing
 
 ```bash
