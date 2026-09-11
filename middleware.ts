@@ -253,6 +253,11 @@ export default async function middleware(request: Request): Promise<Response> {
             url.origin,
             process.env.VITE_SUPABASE_URL?.trim() ?? null
           ),
+          // The document tag has to agree with the header. injectShareMeta
+          // writes `noindex, follow` by default because that is right for a
+          // share link, and a header alone would have lost to it.
+          robots: summary.room ? 'index, follow' : 'noindex, follow',
+          canonical: summary.room ? roomCanonical(url.origin, handle) : null,
         }),
         {
           status: 200,

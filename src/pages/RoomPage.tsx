@@ -70,12 +70,8 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
     };
   }, [handle]);
 
-  const join = useCallback(async () => {
+  const runJoin = useCallback(async () => {
     if (!room) {
-      return;
-    }
-    if (!signedIn) {
-      setAuthOpen(true);
       return;
     }
     setJoining(true);
@@ -97,13 +93,38 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
 
     setNotice(homeCoachNotice(outcome, room.displayName) ?? `You joined ${room.displayName}.`);
     setRoom({ ...room, myRole: 'member', memberCount: room.memberCount + 1 });
-  }, [room, signedIn]);
+  }, [room]);
+
+  const join = useCallback(() => {
+    if (!signedIn) {
+      // AuthModal reports back when auth settles, so the join the visitor
+      // already asked for happens without a second tap. Someone who taps Join,
+      // signs in, and lands back on the room having joined nothing has been
+      // asked to decide twice, and the second ask is the one they walk away
+      // from.
+      setAuthOpen(true);
+      return;
+    }
+    void runJoin();
+  }, [signedIn, runJoin]);
 
   if (status === 'loading') {
     return (
       <main className="flex min-h-screen items-center justify-center p-6 text-sm text-secondary">
         Loading…
       </main>
+    );
+  }
+
+  // A failed request is not a missing room. Collapsing the two told a visitor
+  // their coach's handle does not exist because a fetch timed out.
+  if (status === 'error') {
+    return (
+      <NarrowPageLayout title="Can’t load this room" subtitle={`@${handle}`}>
+        <p className="text-sm text-secondary">
+          Something went wrong reaching this room. Refresh to try again.
+        </p>
+      </NarrowPageLayout>
     );
   }
 
@@ -138,12 +159,7 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
         ) : isMember ? (
           <p className="text-sm text-secondary">You&rsquo;re training with this room.</p>
         ) : (
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => void join()}
-            disabled={joining}
-          >
+          <button type="button" className="btn-primary" onClick={join} disabled={joining}>
             {joining ? 'Joining…' : `Join ${room.displayName}`}
           </button>
         )}
@@ -156,7 +172,15 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
         </p>
       ) : null}
 
-      {authOpen ? <AuthModal onClose={() => setAuthOpen(false)} /> : null}
+      {authOpen ? (
+        <AuthModal
+          onClose={() => setAuthOpen(false)}
+          onAuthenticated={() => {
+            setAuthOpen(false);
+            void runJoin();
+          }}
+        />
+      ) : null}
     </NarrowPageLayout>
   );
 }

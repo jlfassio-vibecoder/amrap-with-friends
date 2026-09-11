@@ -28,6 +28,16 @@ export interface ShareMeta {
   imageHeight: number;
   /** X crops a portrait card to a band out of its middle, so it gets the wide render. */
   twitterImage: string;
+  /**
+   * What the page tells crawlers. Defaults to `noindex, follow`, which is right
+   * for a share link: one athlete's result is not a page a search engine should
+   * hold. A room is the opposite -- a public address that exists to be found --
+   * and passing a header alone would not have worked, because the tag written
+   * here is in the document and contradicts it.
+   */
+  robots?: string;
+  /** Rooms have one canonical address; shares have none worth declaring. */
+  canonical?: string | null;
 }
 
 function escapeAttr(value: string): string {
@@ -66,7 +76,7 @@ export function injectShareMeta(shell: string, meta: ShareMeta): string {
   const tags = [
     `<title>${escapeAttr(meta.title)}</title>`,
     `<meta name="description" content="${escapeAttr(meta.description)}" />`,
-    `<meta name="robots" content="noindex, follow" />`,
+    `<meta name="robots" content="${escapeAttr(meta.robots ?? 'noindex, follow')}" />`,
     `<meta property="og:type" content="website" />`,
     `<meta property="og:title" content="${escapeAttr(meta.title)}" />`,
     `<meta property="og:description" content="${escapeAttr(meta.description)}" />`,
@@ -78,7 +88,13 @@ export function injectShareMeta(shell: string, meta: ShareMeta): string {
     `<meta name="twitter:title" content="${escapeAttr(meta.title)}" />`,
     `<meta name="twitter:description" content="${escapeAttr(meta.description)}" />`,
     `<meta name="twitter:image" content="${escapeAttr(meta.twitterImage)}" />`,
-  ].join('\n    ');
+  ];
 
-  return `${head}\n    ${tags}\n  ${rest}`;
+  if (meta.canonical) {
+    // The shell carries no canonical (index.html must never claim one), so
+    // this adds rather than replaces.
+    tags.push(`<link rel="canonical" href="${escapeAttr(meta.canonical)}" />`);
+  }
+
+  return `${head}\n    ${tags.join('\n    ')}\n  ${rest}`;
 }

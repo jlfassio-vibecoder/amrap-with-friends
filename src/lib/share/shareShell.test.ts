@@ -109,3 +109,47 @@ describe('injectShareMeta', () => {
     expect(injectShareMeta('not html', meta)).toBe('not html');
   });
 });
+
+describe('robots and canonical', () => {
+  const base = {
+    title: 'T',
+    description: 'D',
+    url: 'https://x.test/@coach',
+    image: 'https://x.test/i.png',
+    imageWidth: 1200,
+    imageHeight: 630,
+    twitterImage: 'https://x.test/i.png',
+  };
+
+  // A share link is one athlete's result; a search engine should not hold it.
+  it('defaults to noindex, so share links keep the behaviour they had', () => {
+    const html = injectShareMeta(SHELL, base);
+    expect(html).toContain('<meta name="robots" content="noindex, follow" />');
+    expect(html).not.toContain('rel="canonical"');
+  });
+
+  /**
+   * The bug this was written for: the middleware sent `index, follow` as a
+   * header while this injector wrote `noindex` into the document, and the
+   * document wins. A public room would never have been indexed.
+   */
+  it('lets a room declare itself indexable', () => {
+    const html = injectShareMeta(SHELL, {
+      ...base,
+      robots: 'index, follow',
+      canonical: 'https://x.test/@coach',
+    });
+    expect(html).toContain('<meta name="robots" content="index, follow" />');
+    expect(html).not.toContain('noindex');
+    expect(html).toContain('<link rel="canonical" href="https://x.test/@coach" />');
+  });
+
+  it('escapes a canonical rather than letting it break out of the attribute', () => {
+    const html = injectShareMeta(SHELL, {
+      ...base,
+      canonical: 'https://x.test/@a"><script>x</script>',
+    });
+    expect(html).not.toContain('<script>x</script>');
+    expect(html).toContain('&quot;');
+  });
+});
