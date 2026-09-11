@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { AddToCalendar } from '@/components/calendar/AddToCalendar';
+import { RoomRemindersToggle } from '@/components/rooms/RoomRemindersToggle';
 import { AuthModal } from '@/components/AuthModal';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
@@ -260,6 +261,14 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
             }
           />
         ) : null}
+        {/* Beside the mission it is about, which is the whole point: every
+            reminder carries an unsubscribe link, but that one requires first
+            receiving the mail you did not want. */}
+        <RoomRemindersToggle
+          roomId={room.id}
+          remindersEnabled={room.myRemindersEnabled}
+          hasUpcoming={next !== null}
+        />
       </section>
 
       <p className="mt-2 text-xs text-secondary">
