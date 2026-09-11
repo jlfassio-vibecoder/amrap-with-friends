@@ -175,3 +175,41 @@ export async function joinRoom(
     homeCoachAlreadySet: payload.home_coach_already_set === true,
   };
 }
+
+export interface MissionRoom {
+  id: string;
+  handle: string;
+  displayName: string;
+  isMember: boolean;
+  hasHomeCoach: boolean;
+}
+
+/**
+ * The room a mission belongs to, or null for a personal mission.
+ *
+ * Deliberately its own call rather than a field on the live-state snapshot:
+ * the post-finish sheet needs it once, and that snapshot is pulled on a timer
+ * by every client in the room.
+ */
+export async function getMissionRoom(missionId: string): Promise<MissionRoom | null> {
+  const { data, error } = await callRpc<unknown>('get_mission_room', {
+    p_mission_id: missionId,
+  });
+  if (error) {
+    return null;
+  }
+  const payload = record(data);
+  const room = payload ? record(payload.room) : null;
+  const id = room ? str(room.id) : null;
+  const handle = room ? str(room.handle) : null;
+  if (!room || !id || !handle) {
+    return null;
+  }
+  return {
+    id,
+    handle,
+    displayName: str(room.display_name) ?? handle,
+    isMember: room.is_member === true,
+    hasHomeCoach: room.has_home_coach === true,
+  };
+}
