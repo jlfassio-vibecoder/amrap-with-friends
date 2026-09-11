@@ -17,6 +17,7 @@ import { capabilitiesFor } from '@/lib/rooms/membership';
 import { roomActivitySentence, roomInviteUrl } from '@/lib/rooms/roomInvite';
 import { ScheduleMissionForm } from '@/components/rooms/ScheduleMissionForm';
 import { AnnouncementEditor } from '@/components/rooms/AnnouncementEditor';
+import { BrandEditor } from '@/components/rooms/BrandEditor';
 import { RecentFinishes } from '@/components/rooms/RecentFinishes';
 import { nextMission, nextMissionLabel, repeatableMission } from '@/lib/rooms/roomSchedule';
 
@@ -173,6 +174,7 @@ function Dashboard({ handle }: { handle: string }) {
 
   const invite = roomInviteUrl(window.location.origin, room.handle);
   const canManageCohosts = capabilitiesFor(room.myRole).manageCohosts;
+  const canEditIdentity = capabilitiesFor(room.myRole).editIdentity;
 
   return (
     <NarrowPageLayout title={room.displayName} subtitle={`@${room.handle}`}>
@@ -226,6 +228,16 @@ function Dashboard({ handle }: { handle: string }) {
           onSaved={() => void load()}
         />
       </section>
+
+      {canEditIdentity ? (
+        <section className="card mt-4 space-y-2 p-4 text-sm">
+          <h2 className="eyebrow text-secondary">Your colour</h2>
+          <p className="text-secondary">
+            Athletes&rsquo; share cards from your missions carry your colour and your handle.
+          </p>
+          <BrandEditor roomId={room.id} current={room.brand} onSaved={() => void load()} />
+        </section>
+      ) : null}
 
       <section className="card mt-4 space-y-2 p-4 text-sm">
         <h2 className="eyebrow text-secondary">Invite</h2>

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { track } from '@/lib/analytics/track';
 import { callRpc } from '@/lib/api/callRpc';
+import type { MissionRoom } from '@/lib/api/rooms';
+import { roomShareTheme } from '@/lib/rooms/brand';
 import { buildCaption } from '@/lib/share/caption';
 import { cardFileName, renderCardBlob } from '@/lib/share/renderCard';
 import { OG_ENCODINGS, OG_LAYOUT, OG_WIDE_LAYOUT, fitsOgLimit } from '@/lib/share/ogImage';
@@ -61,6 +63,8 @@ interface ShareCardPanelProps {
   participantId?: string | null;
   claimToken?: string | null;
   hostToken?: string | null;
+  /** The room this mission belonged to, if any. Brands the card. */
+  room?: MissionRoom | null;
 }
 
 export function ShareCardPanel({
@@ -69,6 +73,7 @@ export function ShareCardPanel({
   participantId,
   claimToken,
   hostToken,
+  room = null,
 }: ShareCardPanelProps) {
   const [layout, setLayout] = useState<ShareLayout>('story');
   const [variant, setVariant] = useState<ShareVariant>('result');
@@ -186,9 +191,15 @@ export function ShareCardPanel({
     blobRef.current.clear();
   }, [photoToken]);
 
+  // The room arrives a round trip after the first render, so its colours are
+  // part of the cache key. Without it the unbranded card drawn while the
+  // lookup was in flight would be handed back for every later download.
+  const theme = useMemo(() => roomShareTheme(room?.brand ?? null), [room]);
+  const brandToken = `${room?.handle ?? ''}:${theme.accent}`;
+
   const cacheKey = useCallback(
-    (ratio: ShareLayout) => `${ratio}:${effectiveVariant}:${photoToken}`,
-    [effectiveVariant, photoToken]
+    (ratio: ShareLayout) => `${ratio}:${effectiveVariant}:${photoToken}:${brandToken}`,
+    [effectiveVariant, photoToken, brandToken]
   );
   const bar = useMemo(() => myBar(frameAt(data).bars), [data]);
 
@@ -220,6 +231,8 @@ export function ShareCardPanel({
       title: workoutTitle,
       subtitle: `${data.mission.durationMinutes} min AMRAP`,
       shareUrl: shareUrl(shareId),
+      theme,
+      roomHandle: room?.handle ?? null,
       // Every card carries it for now: there is no athlete tier to exempt.
       watermark: true,
       movements: cardMovements(data),
@@ -233,7 +246,7 @@ export function ShareCardPanel({
       photoWidth: photos[slotForLayout(layout)]?.width,
       photoHeight: photos[slotForLayout(layout)]?.height,
     }),
-    [layout, effectiveVariant, workoutTitle, data, me, repsPerRound, shareId, photos]
+    [layout, effectiveVariant, workoutTitle, data, me, repsPerRound, shareId, photos, theme, room]
   );
 
   // The link preview gets its own render, in landscape.
