@@ -5,6 +5,7 @@ import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useSeo } from '@/hooks/useSeo';
 import { listMyRooms, type RoomSummary } from '@/lib/api/rooms';
 import { capabilitiesFor } from '@/lib/rooms/membership';
+import { CreateRoomForm } from '@/components/rooms/CreateRoomForm';
 
 /**
  * The host dashboard shell.
@@ -88,9 +89,17 @@ function RoomList() {
 
       {rooms !== null && rooms.length === 0 ? (
         <p className="text-sm text-secondary">
-          You are not in a room yet. Finish a mission in someone&rsquo;s room to join it, or apply
-          to host one.
+          You are not in a room yet. Finish a mission in someone&rsquo;s room to join it — or claim
+          your own below.
         </p>
+      ) : null}
+
+      {/* The form existed in the last PR and nothing rendered it, so a host
+          still had no way to claim a room. */}
+      {rooms !== null && hosted.length === 0 ? (
+        <div className="mt-4">
+          <CreateRoomForm onCreated={(handle) => window.location.assign(`/host/${handle}`)} />
+        </div>
       ) : null}
 
       {hosted.length > 0 ? (
@@ -128,6 +137,11 @@ function RoomRow({ room }: { room: RoomSummary }) {
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
+        {capabilitiesFor(room.role).runRoom ? (
+          <a className="btn-outline text-xs" href={`/host/${room.handle}`}>
+            Manage
+          </a>
+        ) : null}
         {room.role !== 'member' ? (
           <span className="text-xs uppercase text-secondary">{room.role}</span>
         ) : null}

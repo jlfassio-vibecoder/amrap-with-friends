@@ -265,6 +265,8 @@ export const DYNAMIC_APP_ROUTES: RouteSeo[] = [
   // that is the tag a crawler receives, and it is set there because only the
   // edge knows whether the handle exists.
   { path: '/@:handle', title: 'Room', description: '', index: false },
+  // A host managing their own room. Private, like every other /host surface.
+  { path: '/host/:handle', title: 'Manage room', description: '', index: false },
 ];
 
 export const DYNAMIC_CONTENT_ROUTES: RouteSeo[] = [
