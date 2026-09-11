@@ -690,12 +690,16 @@ function LiveMissionView({
         return;
       }
 
-      setNextChainedMissionId(result.data.missionId);
-      setContinueMissionName(queuedName);
+      const advancedMissionId = result.data.missionId;
+      setNextChainedMissionId(advancedMissionId);
+      // Prefer the post-advance stamp: heal may skip pos0 so pre-call next name is stale.
       void getMissionChain(hubId).then((refresh) => {
         if (cancelled || refresh.error || !refresh.data) {
+          setContinueMissionName(queuedName);
           return;
         }
+        const started = refresh.data.find((item) => item.startedMissionId === advancedMissionId);
+        setContinueMissionName(started ? resolveWorkoutTitle(started.templateId) : queuedName);
         setNextUpMissionName(nextChainedMissionName(refresh.data));
       });
     })();
