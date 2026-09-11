@@ -16,6 +16,7 @@ import { useParticipantClaim } from '@/hooks/useParticipantClaim';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useMissionChannel } from '@/lib/realtime/useMissionChannel';
 import { canOfferMissionSave } from '@/lib/claim/canOfferMissionSave';
+import { RoomFinishSheet } from '@/components/mission/RoomFinishSheet';
 import { resumeMissionIdentity } from '@/lib/api/resumeMissionIdentity';
 import { AppHeader } from '@/components/AppHeader';
 import { AuthModal } from '@/components/AuthModal';
@@ -772,6 +773,7 @@ function LiveMissionView({
   const lastLogRoundAtMsRef = useRef<number | null>(null);
   const [logRoundHint, setLogRoundHint] = useState<string | null>(null);
   const claim = useParticipantClaim(missionId);
+  const [roomJoinNotice, setRoomJoinNotice] = useState<string | null>(null);
   const selfLeaderboardEntry = live.leaderboard.find((entry) => entry.isSelf) ?? null;
   const selfBaseScore = selfLeaderboardEntry?.baseScore ?? 0;
   // Always the raw reps/rounds this athlete did — never finalScore, which is
@@ -1360,22 +1362,29 @@ function LiveMissionView({
 
           {claim.claimMessage && <p className="alert-success">{claim.claimMessage}</p>}
 
-          {showFinishedClaimPrompt && (
-            <section className="card space-y-2 bg-accent-tint p-4 text-sm">
-              <p className="font-semibold">Save your results</p>
-              <p className="text-secondary">
-                Sign up is optional, but saving links this mission to your account for My Missions.
-              </p>
-              {/* Copilot suggestion ignored: this banner only renders when claim.showClaimPrompt requires isAuthenticated. */}
-              <button
-                type="button"
-                className="btn-primary text-sm"
-                disabled={claim.isClaiming}
-                onClick={() => claim.saveToAccount()}
-              >
-                {claim.isClaiming ? 'Saving…' : 'Save this mission to my account'}
-              </button>
+          {/* One sheet at the finish. For a room mission it carries the join
+              checkbox alongside the save; for a personal mission it is the
+              same save prompt it always was. */}
+          {/* The join result lives out here on purpose: a successful save flips
+              the claim status and the sheet stops rendering, so a notice held
+              inside it would unmount before anyone read it. */}
+          {roomJoinNotice ? (
+            <section className="card bg-success-tint p-4 text-sm text-success-text">
+              {roomJoinNotice}
             </section>
+          ) : null}
+
+          {showFinishedClaimPrompt && missionId && (
+            <RoomFinishSheet
+              // Keyed by mission: without it the previous mission's room could
+              // survive a route change and be joined instead of this one's.
+              key={missionId}
+              missionId={missionId}
+              canSave
+              isSaving={claim.isClaiming}
+              onSave={() => claim.saveToAccount()}
+              onJoinResult={setRoomJoinNotice}
+            />
           )}
 
           {claim.showClaimPrompt && live.phase !== 'finished' && (

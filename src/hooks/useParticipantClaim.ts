@@ -65,9 +65,14 @@ export function useParticipantClaim(missionId: string) {
     }
   }, [showClaimPrompt, userId, missionId, participantId]);
 
-  async function saveToAccount() {
+  /**
+   * Returns whether the mission actually landed on the account, so a caller
+   * that does something *after* saving -- joining a room, say -- can wait for
+   * the answer instead of assuming one.
+   */
+  async function saveToAccount(): Promise<boolean> {
     if (!participantId || !claimToken) {
-      return;
+      return false;
     }
 
     setIsClaiming(true);
@@ -83,7 +88,7 @@ export function useParticipantClaim(missionId: string) {
 
     if (result.error) {
       setClaimError(result.error.message);
-      return;
+      return false;
     }
 
     if (result.data?.ok === false) {
@@ -99,7 +104,7 @@ export function useParticipantClaim(missionId: string) {
       } else {
         setClaimError(`Could not save mission: ${result.data.reason}`);
       }
-      return;
+      return false;
     }
 
     if (result.data?.ok === true) {
@@ -115,7 +120,10 @@ export function useParticipantClaim(missionId: string) {
           ? 'This mission is already on your account.'
           : 'Mission saved to your account.'
       );
+      return true;
     }
+
+    return false;
   }
 
   return {
