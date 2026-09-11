@@ -1,28 +1,23 @@
--- The workout collection: what this room actually runs.
+-- The collection was ordering by the wrong time, again.
 --
--- The plan calls it "the coach's published workouts, each launchable as a
--- personal mission". There is no publishing mechanism yet and deliberately so
--- -- `workout_publications`, the weekly window and standings are Phase 3, and
--- they are the release valve for a room too large to share one clock. This is
--- the 2a half: the workouts the room has already run, offered back.
+-- `list_room_workouts` took `last_run` from `m.created_at`, which since #179 is
+-- when the mission row was *made* -- up to sixty days before it runs. Two
+-- consequences, and the second is the worse one:
 --
--- Derived rather than curated, which is the honest version. A room cannot
--- advertise a workout it has never run, and a collection built from history
--- cannot go stale against a schedule nobody updated.
+--   1. A workout created earlier but run later sorts below one created later
+--      and run sooner, so "what this room is running now" is not what the list
+--      leads with.
+--   2. DISTINCT ON picks the *representative* run by that same ordering, so the
+--      duration, tier and scorability shown for a workout can come from a run
+--      that is not the room's latest.
 --
--- The workout jsonb is returned, not just the template id, because the entry
--- has to describe itself: its duration, the unit it is counted in, and whether
--- it is scorable at all come from the run, not from the library.
+-- 20260912100000_room_reads_time_fixes.sql fixed exactly this for two other
+-- room reads, and its own header says created_at stopped being a proxy for when
+-- anything happened. I wrote this one file later and reached for it anyway.
 --
--- It is not what a launch runs. The client starts a mission through
--- /create?template=, against the library's current version. CLAUDE.md's
--- snapshot rule protects a *recorded result* from a later edit; starting a new
--- mission is a different act, and every other surface that offers a template
--- launches the current one.
---
--- Deduped on the template when there is one and on the workout's content when
--- there is not, so a room running the same session every Tuesday lists it once.
--- Most recently run first: that is the room's current programming.
+-- Same shape as that fix: max(psr.updated_at) is when a mission was actually
+-- finished, with created_at as the fallback for a finished mission nobody
+-- scored.
 
 CREATE OR REPLACE FUNCTION public.list_room_workouts(p_room_id uuid, p_limit int DEFAULT 12)
 RETURNS jsonb
@@ -49,7 +44,7 @@ BEGIN
     SELECT last_run, row
     FROM (
       SELECT DISTINCT ON (coalesce(m.template_id, md5(m.workout::text)))
-        m.created_at AS last_run,
+        coalesce(scored.completed_at, m.created_at) AS last_run,
         jsonb_build_object(
           'workout_key', coalesce(m.template_id, md5(m.workout::text)),
           'template_id', m.template_id,
@@ -57,9 +52,10 @@ BEGIN
           'duration_minutes', m.duration_minutes,
           'intensity_tier', m.intensity_tier,
           'score_unit', public.mission_score_unit(m.workout),
-          'last_run', m.created_at,
-          -- How many people have finished it here. A workout the room ran once
-          -- for nobody is not programming, and the page can say so.
+          'last_run', coalesce(scored.completed_at, m.created_at),
+          -- How many people have finished it here, across every run of it. A
+          -- workout the room ran once for nobody is not programming, and the
+          -- page can say so.
           'finishers', (
             SELECT count(*)
             FROM public.missions m2
@@ -74,14 +70,24 @@ BEGIN
           )
         ) AS row
       FROM public.missions m
+      LEFT JOIN LATERAL (
+        SELECT max(psr.updated_at) AS completed_at
+        FROM public.participants p
+        JOIN public.participant_segment_results psr
+          ON psr.participant_id = p.id AND psr.segment_index = m.segment_index
+        WHERE p.mission_id = m.id
+          AND psr.final_score IS NOT NULL
+          AND p.role <> 'host'
+      ) scored ON true
       WHERE m.room_id = p_room_id
         AND m.state = 'finished'
         AND jsonb_typeof(m.workout) = 'array'
         AND jsonb_array_length(m.workout) > 0
       -- DISTINCT ON keeps the first row per key, so this ordering decides
-      -- *which* run represents the workout: the latest, whose jsonb is the
-      -- version the room is running now.
-      ORDER BY coalesce(m.template_id, md5(m.workout::text)), m.created_at DESC
+      -- *which* run represents the workout: the one most recently finished.
+      ORDER BY
+        coalesce(m.template_id, md5(m.workout::text)),
+        coalesce(scored.completed_at, m.created_at) DESC
     ) deduped
     ORDER BY last_run DESC
     LIMIT least(greatest(coalesce(p_limit, 12), 1), 50)
@@ -92,7 +98,4 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.list_room_workouts(uuid, int) FROM PUBLIC;
--- Public, like the room page it sits on. Launching one is create_mission,
--- which anon may already call -- a guest can train a coach's workout without
--- an account, which is the whole return loop.
 GRANT EXECUTE ON FUNCTION public.list_room_workouts(uuid, int) TO anon, authenticated;

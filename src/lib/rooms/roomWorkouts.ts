@@ -9,13 +9,31 @@ import type { WorkoutExercise } from '@/lib/api/missionTypes';
  * history cannot drift from a schedule nobody updated. The curated version —
  * `workout_publications`, the weekly window, standings — is Phase 3, and this
  * does not pre-empt it.
+ *
+ * **Launching runs the library's current version, not the historical one.**
+ * The read carries the workout jsonb the room ran and this uses it — for the
+ * duration shown, the unit, and whether the thing is scorable at all — but the
+ * mission itself starts from `/create?template=`, which resolves against
+ * `WORKOUT_TEMPLATES` as it is today.
+ *
+ * That is deliberate, and it is the narrower reading of the repo's snapshot
+ * rule. Stored jsonb exists so a *recorded result* cannot be reinterpreted by
+ * a later edit — that is what CLAUDE.md protects, and what the benchmark
+ * fingerprints enforce. Starting a *new* mission is a different act: every
+ * other surface that offers a template (the featured mission, campaign
+ * previews, `/create`) launches the current version, and pinning here would
+ * make the room collection the one place in the product that hands an athlete
+ * a library version the product has since corrected.
  */
 
 export interface RoomWorkout {
   /** Template id when the room ran one from the library; a content hash when not. */
   workoutKey: string;
   templateId: string | null;
-  /** The workout as the room ran it, not as the library defines it today. */
+  /**
+   * The workout as the room ran it. Describes the entry — duration, unit,
+   * whether it is scorable — and is not what a launch runs; see the note above.
+   */
   workout: WorkoutExercise[];
   durationMinutes: number;
   intensityTier: number | null;

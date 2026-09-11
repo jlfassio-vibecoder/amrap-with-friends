@@ -73,3 +73,19 @@ describe('isLaunchable', () => {
     expect(launchHref(entry({ templateId: null }))).toBeNull();
   });
 });
+
+describe('what a launch actually runs', () => {
+  it('links by template, and does not try to carry the stored workout', () => {
+    // Deliberate, and the opposite of what the first version of this file
+    // claimed. The snapshot describes the entry; the mission starts from the
+    // library's current version, like every other surface that offers a
+    // template. Pinning here would make this the one place in the product that
+    // hands an athlete a version the product has since corrected.
+    const href = launchHref(
+      entry({ workout: [{ name: 'Old Movement', unit: 'reps', target: 99 }] })
+    );
+    expect(href).toBe('/create?template=the-piston');
+    expect(href).not.toContain('Old Movement');
+    expect(href).not.toContain('99');
+  });
+});
