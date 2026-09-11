@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { hostMissionListCtaLabel, myMissionListCtaLabel } from './hostMissionListCta';
 
 describe('hostMissionListCtaLabel', () => {
-  it('names Start for waiting and setup', () => {
+  it('names Start for waiting only', () => {
     expect(hostMissionListCtaLabel('waiting')).toBe('Start this mission');
-    expect(hostMissionListCtaLabel('setup')).toBe('Start this mission');
   });
 
-  it('names Enter for live work', () => {
+  it('names Enter for setup and live work', () => {
+    expect(hostMissionListCtaLabel('setup')).toBe('Enter mission');
     expect(hostMissionListCtaLabel('work')).toBe('Enter mission');
   });
 
@@ -19,9 +19,9 @@ describe('hostMissionListCtaLabel', () => {
 });
 
 describe('myMissionListCtaLabel', () => {
-  it('uses Start only for host waiting/setup', () => {
+  it('uses Start only for host waiting', () => {
     expect(myMissionListCtaLabel('waiting', 'host')).toBe('Start this mission');
-    expect(myMissionListCtaLabel('setup', 'host')).toBe('Start this mission');
+    expect(myMissionListCtaLabel('setup', 'host')).toBe('Enter mission');
   });
 
   it('uses Enter for joiners who have not finished', () => {

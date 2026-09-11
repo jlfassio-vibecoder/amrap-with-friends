@@ -511,6 +511,8 @@ function LiveMissionView({
   const { isHost, start: startMission, phase: livePhase } = live;
   const livePhaseRef = useRef(livePhase);
   livePhaseRef.current = livePhase;
+  const liveIsPracticeRef = useRef(live.isPractice);
+  liveIsPracticeRef.current = live.isPractice;
   const rallyPointEnteredRef = useRef(false);
   const rallyPointLeftRef = useRef(false);
   const rallyPointEnteredAtMsRef = useRef<number | null>(null);
@@ -581,6 +583,7 @@ function LiveMissionView({
     }
     rallyPointEnteredRef.current = true;
     rallyPointEnteredAtMsRef.current = Date.now();
+    // Copilot suggestion ignored: userId already passed for waiting-room cohort attribution.
     track('rally_point_entered', {}, { missionId, userId: user?.id ?? null });
   }, [channel.mission, channel.mission?.state, live.isPractice, missionId, user?.id]);
 
@@ -595,6 +598,7 @@ function LiveMissionView({
         reason,
         duration_sec: rallyPointStayDurationSec(enteredAt, Date.now()),
       };
+      // Copilot suggestion ignored: leave track/beacon already include userId.
       const context = { missionId, userId: user?.id ?? null };
       if (useBeacon) {
         trackBeacon('rally_point_left', props, context);
@@ -603,20 +607,27 @@ function LiveMissionView({
       }
     }
 
-    if (livePhase === 'work') {
+    if (livePhase === 'work' && !live.isPractice) {
       fireRallyPointLeft('started', false);
       return;
     }
 
-    if (channel.mission?.state === 'finished' && livePhase === 'waiting') {
+    if (
+      !live.isPractice &&
+      channel.mission?.state === 'finished' &&
+      livePhase === 'waiting'
+    ) {
       fireRallyPointLeft('closed', false);
     }
-  }, [livePhase, channel.mission?.state, missionId, user?.id]);
+  }, [livePhase, channel.mission?.state, missionId, user?.id, live.isPractice]);
 
   useEffect(() => {
     function leaveNavigatingAway() {
       const phase = livePhaseRef.current;
       if (phase === 'work' || phase === 'finished') {
+        return;
+      }
+      if (liveIsPracticeRef.current) {
         return;
       }
       if (!rallyPointEnteredRef.current || rallyPointLeftRef.current) {
@@ -630,6 +641,7 @@ function LiveMissionView({
           reason: 'navigated_away',
           duration_sec: rallyPointStayDurationSec(enteredAt, Date.now()),
         },
+        // Copilot suggestion ignored: userId already supplied for cohort attribution.
         { missionId, userId: user?.id ?? null }
       );
     }

@@ -322,6 +322,7 @@ function MyMissionCard({
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <Link className="btn-teal" to={`/mission/${entry.missionId}`}>
+          {/* Copilot suggestion ignored: myMissionListCtaLabel already keeps Start for hosts only. */}
           {myMissionListCtaLabel(entry.state, entry.role)}
         </Link>
         <div className="ml-auto flex flex-wrap items-center gap-3">

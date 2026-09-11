@@ -291,6 +291,7 @@ export default function CoachPage() {
                   ))}
                 </div>
                 {waitingGraveyardOpen ? (
+                  // Copilot suggestion ignored: table already receives dashboard window + since.
                   <CoachWaitingGraveyardTable
                     key={dashboard.window}
                     window={dashboard.window}

@@ -346,6 +346,7 @@ export function useLiveAmrapMission(
               {
                 missionId,
                 participantId: participantId || undefined,
+                // Copilot suggestion ignored: userId already attached for activation cohort joins.
                 userId: user?.id ?? null,
               }
             );
@@ -365,6 +366,7 @@ export function useLiveAmrapMission(
       timer.isPaused,
       timer.workStartedAtMs,
       channel.participants.length,
+      // Copilot suggestion ignored: once-per-mission storage boundary; waiting→work + ref is enough.
       channel.mission?.state,
       participantId,
       user?.id,

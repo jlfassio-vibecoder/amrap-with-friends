@@ -5,8 +5,8 @@
 export function hostMissionListCtaLabel(state: string): string {
   switch (state) {
     case 'waiting':
-    case 'setup':
       return 'Start this mission';
+    case 'setup':
     case 'work':
       return 'Enter mission';
     default:

@@ -36,7 +36,13 @@ export function CoachWaitingGraveyardSummaryCard({
           <p className="text-xs text-secondary">Older than 24h</p>
         </div>
       </div>
-      <button type="button" className="btn-outline px-3 py-1.5 text-sm" onClick={onShowDetail}>
+      <button
+        type="button"
+        className="btn-outline px-3 py-1.5 text-sm"
+        aria-expanded={detailOpen}
+        aria-controls="coach-waiting-graveyard-detail"
+        onClick={onShowDetail}
+      >
         {detailOpen ? 'Hide detail' : 'Show missions stuck over 2h'}
       </button>
     </div>

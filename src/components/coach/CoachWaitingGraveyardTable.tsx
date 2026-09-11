@@ -41,7 +41,11 @@ export function CoachWaitingGraveyardTable({ since, window }: CoachWaitingGravey
   }, [since]);
 
   return (
-    <section className="space-y-3" data-testid="coach-waiting-graveyard">
+    <section
+      id="coach-waiting-graveyard-detail"
+      className="space-y-3"
+      data-testid="coach-waiting-graveyard"
+    >
       <CoachSectionHeader
         title={
           window === 'all'

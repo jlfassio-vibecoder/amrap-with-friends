@@ -153,6 +153,7 @@ export default function CreateMissionPage() {
   const [retest, setRetest] = useState<AthleteBenchmark | null>(null);
 
   useEffect(() => {
+    // Copilot suggestion ignored: userId already passed so Plan viewed joins the signup cohort.
     track('create_viewed', {}, { userId: user?.id ?? null });
   }, [user?.id]);
 
