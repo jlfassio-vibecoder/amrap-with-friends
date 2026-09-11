@@ -14,12 +14,17 @@ import {
   type RoomPage,
 } from '@/lib/api/rooms';
 import { capabilitiesFor } from '@/lib/rooms/membership';
-import { roomActivitySentence, roomInviteUrl } from '@/lib/rooms/roomInvite';
-import { ScheduleMissionForm } from '@/components/rooms/ScheduleMissionForm';
-import { AnnouncementEditor } from '@/components/rooms/AnnouncementEditor';
-import { BrandEditor } from '@/components/rooms/BrandEditor';
-import { RecentFinishes } from '@/components/rooms/RecentFinishes';
-import { nextMission, nextMissionLabel, repeatableMission } from '@/lib/rooms/roomSchedule';
+import {
+  DEFAULT_ROOM_DASHBOARD_TAB,
+  roomDashboardTabs,
+  type RoomDashboardTabKey,
+} from '@/lib/rooms/roomDashboardTabs';
+import { TopTabs } from '@/components/tabs/TopTabs';
+import { TabPanel } from '@/components/tabs/TabPanel';
+import { MissionsTab } from '@/components/rooms/dashboard/MissionsTab';
+import { ScheduleTab } from '@/components/rooms/dashboard/ScheduleTab';
+import { RoomTab } from '@/components/rooms/dashboard/RoomTab';
+import { CommsTab } from '@/components/rooms/dashboard/CommsTab';
 
 /**
  * A host's view of their own room.
@@ -67,7 +72,7 @@ function Dashboard({ handle }: { handle: string }) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'denied' | 'missing' | 'error'>(
     'loading'
   );
-  const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState<RoomDashboardTabKey>(DEFAULT_ROOM_DASHBOARD_TAB);
 
   const load = useCallback(async () => {
     const found = await getRoomByHandle(handle);
@@ -172,24 +177,39 @@ function Dashboard({ handle }: { handle: string }) {
     );
   }
 
-  const invite = roomInviteUrl(window.location.origin, room.handle);
-  const canManageCohosts = capabilitiesFor(room.myRole).manageCohosts;
-  const canEditIdentity = capabilitiesFor(room.myRole).editIdentity;
+  const tabs = roomDashboardTabs(room.myRole);
 
   return (
     <NarrowPageLayout title={room.displayName} subtitle={`@${room.handle}`}>
-      <section className="card space-y-3 p-4 text-sm">
-        <h2 className="eyebrow text-secondary">Next mission</h2>
-        <p>{nextMissionLabel(nextMission(upcoming))}</p>
-        {room.isActive ? (
-          <ScheduleMissionForm
+      <TopTabs
+        namespace="room-dashboard"
+        ariaLabel="Room sections"
+        tabs={tabs}
+        activeTab={activeTab}
+        onChange={setActiveTab}
+      />
+
+      <div className="mt-4">
+        <TabPanel namespace="room-dashboard" tab="missions" activeTab={activeTab}>
+          <MissionsTab
+            roomId={room.id}
+            isActive={room.isActive}
+            upcoming={upcoming}
+            activity={activity}
+          />
+        </TabPanel>
+
+        <TabPanel namespace="room-dashboard" tab="schedule" activeTab={activeTab}>
+          <ScheduleTab
             roomId={room.id}
             hostNickname={room.displayName}
-            repeatable={repeatableMission(recent)}
+            isActive={room.isActive}
+            upcoming={upcoming}
+            recent={recent}
             onScheduled={(missionId, opensNow) => {
-              // A mission opened now is one the coach means to run. Taking
-              // them to it is the difference between scheduling and hosting.
-              // A dated one just joins the list.
+              // A mission opened now is one the coach means to run. Taking them
+              // to it is the difference between scheduling and hosting. A dated
+              // one just joins the list.
               if (opensNow) {
                 window.location.assign(`/mission/${missionId}`);
                 return;
@@ -197,108 +217,21 @@ function Dashboard({ handle }: { handle: string }) {
               void load();
             }}
           />
-        ) : null}
-      </section>
+        </TabPanel>
 
-      <section className="card mt-4 space-y-2 p-4 text-sm">
-        <h2 className="eyebrow text-secondary">This week</h2>
-        <p>{activity ? roomActivitySentence(activity) : 'Loading…'}</p>
-        {!room.isActive ? (
-          <p className="text-xs text-accent">This room isn&rsquo;t running missions right now.</p>
-        ) : null}
-      </section>
-
-      <section className="card mt-4 space-y-2 p-4 text-sm">
-        <h2 className="eyebrow text-secondary">Recent finishes</h2>
-        <p className="text-secondary">
-          One tap tells an athlete you saw it. Tap the same one again to take it back.
-        </p>
-        <RecentFinishes roomId={room.id} />
-      </section>
-
-      <section className="card mt-4 space-y-2 p-4 text-sm">
-        <h2 className="eyebrow text-secondary">Announcement</h2>
-        <p className="text-secondary">
-          One note, pinned to the top of your room page. Athletes see it whether or not they have
-          joined.
-        </p>
-        <AnnouncementEditor
-          roomId={room.id}
-          current={room.announcement}
-          onSaved={() => void load()}
-        />
-      </section>
-
-      {canEditIdentity ? (
-        <section className="card mt-4 space-y-2 p-4 text-sm">
-          <h2 className="eyebrow text-secondary">Your colour</h2>
-          <p className="text-secondary">
-            Athletes&rsquo; share cards from your missions carry your colour and your handle.
-          </p>
-          <BrandEditor
-            roomId={room.id}
-            handle={room.handle}
-            current={room.brand}
+        <TabPanel namespace="room-dashboard" tab="room" activeTab={activeTab}>
+          <RoomTab
+            room={room}
+            members={members}
+            onToggleCohost={(member) => void toggleCohost(member)}
             onSaved={() => void load()}
           />
-        </section>
-      ) : null}
+        </TabPanel>
 
-      <section className="card mt-4 space-y-2 p-4 text-sm">
-        <h2 className="eyebrow text-secondary">Invite</h2>
-        <p className="text-secondary">
-          Share this anywhere. Anyone can open it; joining is their choice at the finish.
-        </p>
-        <div className="flex items-center gap-2">
-          <code className="min-w-0 flex-1 truncate text-xs">{invite}</code>
-          <button
-            type="button"
-            className="btn-outline text-sm"
-            onClick={() => {
-              void navigator.clipboard?.writeText(invite).then(
-                () => setCopied(true),
-                () => setCopied(false)
-              );
-            }}
-          >
-            {copied ? 'Copied' : 'Copy link'}
-          </button>
-        </div>
-      </section>
-
-      <section className="card mt-4 space-y-2 p-4 text-sm">
-        <h2 className="eyebrow text-secondary">Athletes ({members.length})</h2>
-        {members.length === 0 ? (
-          <p className="text-secondary">Nobody has joined yet.</p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {members.map((member) => (
-              <li key={member.userId} className="flex items-center justify-between gap-3">
-                <span className="min-w-0 truncate">
-                  {member.nickname ?? 'Athlete'}
-                  {member.role !== 'member' ? (
-                    <span className="ml-2 text-xs uppercase text-secondary">{member.role}</span>
-                  ) : null}
-                </span>
-                {canManageCohosts && member.role !== 'owner' ? (
-                  <button
-                    type="button"
-                    className="btn-outline shrink-0 text-xs"
-                    onClick={() => void toggleCohost(member)}
-                  >
-                    {member.role === 'cohost' ? 'Remove co-host' : 'Make co-host'}
-                  </button>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
-        {canManageCohosts ? (
-          <p className="text-xs text-secondary">
-            Co-hosts can publish and run missions. They can&rsquo;t change billing or see earnings.
-          </p>
-        ) : null}
-      </section>
+        <TabPanel namespace="room-dashboard" tab="comms" activeTab={activeTab}>
+          <CommsTab roomId={room.id} announcement={room.announcement} onSaved={() => void load()} />
+        </TabPanel>
+      </div>
     </NarrowPageLayout>
   );
 }

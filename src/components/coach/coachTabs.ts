@@ -1,10 +1,7 @@
+import type { TabDefinition } from '@/components/tabs/TopTabs';
 import type { CoachTabKey } from './coachTabIds';
 
-export interface CoachTabDefinition {
-  key: CoachTabKey;
-  label: string;
-  badge?: string;
-}
+export type CoachTabDefinition = TabDefinition<CoachTabKey>;
 
 export const COACH_TABS: readonly CoachTabDefinition[] = [
   { key: 'applications', label: 'Applications' },
