@@ -28,6 +28,15 @@ REVOKE ALL ON public.room_mission_reminders FROM anon, authenticated;
 CREATE INDEX IF NOT EXISTS room_mission_reminders_mission_idx
   ON public.room_mission_reminders (mission_id);
 
+-- The claim runs every minute and its predicates are always the same three:
+-- a room mission, not yet started, starting soon. Without this it scans and
+-- sorts the room's whole mission history on each pass, and that history only
+-- grows. Partial, so it stays small: finished missions -- eventually almost
+-- all of them -- are not in it.
+CREATE INDEX IF NOT EXISTS missions_room_waiting_scheduled_idx
+  ON public.missions (scheduled_at)
+  WHERE room_id IS NOT NULL AND state = 'waiting' AND scheduled_at IS NOT NULL;
+
 COMMENT ON TABLE public.room_mission_reminders IS
   'One row per reminder actually claimed. The primary key is the idempotency '
   'guarantee: a reminder is claimed exactly once no matter how often the '
@@ -116,7 +125,10 @@ BEGIN
       'email', u.email,
       'scheduled_at', m.scheduled_at,
       'duration_minutes', m.duration_minutes,
-      'workout', m.workout,
+      -- The template id, not the workout jsonb: `missions.workout` is an array
+      -- of movements and carries no name, so the only source of a library
+      -- workout's name is the template it came from.
+      'template_id', m.template_id,
       'room_id', r.id,
       'room_handle', r.handle,
       'room_name', r.display_name,
@@ -134,6 +146,11 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.claim_due_room_reminders(int) FROM PUBLIC, anon, authenticated;
+-- Granted explicitly rather than relying on Supabase's default privileges: the
+-- sender calls this with the service-role JWT, and a missing grant fails as a
+-- permission error before a single reminder is claimed -- silently, because
+-- nothing sends and nothing is written down.
+GRANT EXECUTE ON FUNCTION public.claim_due_room_reminders(int) TO service_role;
 
 
 -- Confirm a batch. The sender reports back what Resend accepted and what it
@@ -174,6 +191,7 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.settle_room_reminders(jsonb) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.settle_room_reminders(jsonb) TO service_role;
 
 
 -- The member's own switch, mirroring set_room_activity_visible exactly.
@@ -256,3 +274,6 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.admin_set_room_reminders(uuid, uuid, boolean) FROM PUBLIC, anon, authenticated;
+-- Without this every valid unsubscribe link fails, which is the worst place in
+-- the feature to have a silent permission error.
+GRANT EXECUTE ON FUNCTION public.admin_set_room_reminders(uuid, uuid, boolean) TO service_role;

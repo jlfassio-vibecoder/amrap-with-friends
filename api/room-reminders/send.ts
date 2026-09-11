@@ -1,8 +1,11 @@
 /**
  * The room-reminder sender.
  *
- * Woken on a schedule -- see docs/plans/room-reminders-scheduling.md for which
- * one, and why the schedule is not in vercel.json. All the deciding happens in
+ * Woken by the Vercel cron entry in vercel.json (every minute); the other
+ * trigger options, and why this one was chosen, are in
+ * docs/plans/room-reminders-scheduling.md. Triggering and claiming are separate
+ * concerns: the schedule only decides how often to ask, and all the deciding
+ * about what is actually due happens in
  * `claim_due_room_reminders`, which hands back rows it has already claimed, so
  * this route's only jobs are to call Resend and report what happened.
  *
@@ -13,6 +16,15 @@
  */
 import { createReminderToken } from '../../src/lib/rooms/reminderToken.ts';
 import { buildReminderEmail, type ReminderKind } from '../../src/lib/rooms/reminderEmail.ts';
+import { WORKOUT_TEMPLATES } from '../../src/data/workoutTemplates.ts';
+
+/** The same lookup the room page does, so the mail names what the page names. */
+function workoutName(templateId: string | null): string | undefined {
+  if (!templateId) {
+    return undefined;
+  }
+  return WORKOUT_TEMPLATES.find((template) => template.id === templateId)?.name;
+}
 
 interface ClaimedReminder {
   mission_id: string;
@@ -21,7 +33,7 @@ interface ClaimedReminder {
   email: string;
   scheduled_at: string;
   duration_minutes: number;
-  workout: { name?: string } | null;
+  template_id: string | null;
   room_handle: string;
   room_name: string;
   room_timezone: string;
@@ -102,41 +114,56 @@ export default async function handler(request: Request): Promise<Response> {
       tokenSecret
     );
 
-    const email = buildReminderEmail({
-      kind: reminder.kind,
-      roomHandle: reminder.room_handle,
-      roomDisplayName: reminder.room_name,
-      scheduledAt: new Date(reminder.scheduled_at),
-      roomTimezone: reminder.room_timezone,
-      durationMinutes: reminder.duration_minutes,
-      workoutName: reminder.workout?.name,
-      origin,
-      unsubscribeToken: token,
-    });
-
     let failedReason: string | null = null;
-    try {
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${resendKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: fromAddress,
-          to: reminder.email,
-          subject: email.subject,
-          text: email.text,
-          html: email.html,
-          headers: email.headers,
-        }),
-      });
+    let email: ReturnType<typeof buildReminderEmail> | null = null;
 
-      if (!response.ok) {
-        failedReason = `resend_${response.status}`;
-      }
+    // Building the mail is inside the try, not before it. `create_room` stores
+    // its caller-supplied timezone unvalidated, and Intl throws on a bad IANA
+    // zone -- so one malformed room would otherwise abort the whole batch after
+    // its rows were claimed, and claimed-but-unsent rows are never retried.
+    // One bad room now costs one reminder, recorded as a failure.
+    try {
+      email = buildReminderEmail({
+        kind: reminder.kind,
+        roomHandle: reminder.room_handle,
+        roomDisplayName: reminder.room_name,
+        scheduledAt: new Date(reminder.scheduled_at),
+        roomTimezone: reminder.room_timezone,
+        durationMinutes: reminder.duration_minutes,
+        workoutName: workoutName(reminder.template_id),
+        origin,
+        unsubscribeToken: token,
+      });
     } catch {
-      failedReason = 'resend_unreachable';
+      failedReason = 'invalid_room_timezone';
+    }
+
+    // Guarded rather than thrown into the catch below, which would overwrite
+    // the real reason with a misleading `resend_unreachable`.
+    if (email !== null) {
+      try {
+        const response = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${resendKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: fromAddress,
+            to: reminder.email,
+            subject: email.subject,
+            text: email.text,
+            html: email.html,
+            headers: email.headers,
+          }),
+        });
+
+        if (!response.ok) {
+          failedReason = `resend_${response.status}`;
+        }
+      } catch {
+        failedReason = 'resend_unreachable';
+      }
     }
 
     settled.push({

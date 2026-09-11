@@ -42,8 +42,14 @@ describe('buildReminderEmail', () => {
     const tomorrow = buildReminderEmail(base);
 
     expect(soon.subject).toBe('Starting in an hour: Ironworks');
-    expect(tomorrow.subject).toContain('Tomorrow with Ironworks');
+    expect(tomorrow.subject).toContain('Coming up with Ironworks');
     expect(soon.text).not.toEqual(tomorrow.text);
+  });
+
+  it('never claims a day it cannot know', () => {
+    // Anything one to twenty-four hours out is classified `24h`, so the mail
+    // reaches people whose mission is later today.
+    expect(buildReminderEmail(base).subject).not.toContain('Tomorrow');
   });
 
   it('links to the room and carries the workout', () => {

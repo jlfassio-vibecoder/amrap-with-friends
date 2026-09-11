@@ -94,10 +94,15 @@ export function buildReminderEmail(input: ReminderEmailInput): ReminderEmail {
     ? `${workoutName} · ${durationMinutes} min`
     : `${durationMinutes} min`;
 
+  // Not "Tomorrow". The claim classifies everything from one to twenty-four
+  // hours out as `24h`, so this mail routinely goes to someone whose mission is
+  // later the same day -- and a subject line that says the wrong day is worse
+  // than a vaguer one. `when` already carries the weekday, so the reader gets
+  // the actual day either way.
   const subject =
     kind === '1h'
       ? `Starting in an hour: ${roomDisplayName}`
-      : `Tomorrow with ${roomDisplayName}: ${when}`;
+      : `Coming up with ${roomDisplayName}: ${when}`;
 
   const lead =
     kind === '1h'

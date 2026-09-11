@@ -1,16 +1,40 @@
 /**
  * Stop reminders, with no account and no session.
  *
- * Two verbs, because two different things click this link. A person clicking
- * in their mail reader sends GET and should see a page confirming it worked.
- * Gmail and Outlook send POST with no body (RFC 8058 one-click, advertised by
- * the List-Unsubscribe-Post header the email carries) and want a bare 200.
+ * Two verbs, and only one of them writes.
  *
- * Authority is the HMAC in the token, verified here before anything is written.
+ * GET never changes anything: it verifies the token and renders a button. That
+ * is not politeness, it is the difference between working and not. Corporate
+ * mail scanners and link prefetchers fetch every URL in a message with nobody
+ * clicking, so a GET that unsubscribed would switch reminders off for people
+ * who never touched the link -- and the symptom is indistinguishable from the
+ * feature working correctly.
+ *
+ * POST does the write, covering both the button on that page and RFC 8058
+ * one-click (Gmail and Outlook POST with no body, advertised by the
+ * List-Unsubscribe-Post header the email carries). Scanners do not POST.
+ *
+ * Authority is the HMAC in the token, verified before anything is written.
  * There is no session to check and deliberately no login wall: making someone
  * sign in to stop email is how a sending domain earns spam complaints.
  */
 import { verifyReminderToken } from '../../src/lib/rooms/reminderToken.ts';
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
+ * A mail client's one-click POST, as opposed to the confirmation form's. The
+ * form posts a normal form content type; RFC 8058 clients send none.
+ */
+function isOneClick(request: Request): boolean {
+  return !(request.headers.get('Content-Type') ?? '').includes('application/x-www-form-urlencoded');
+}
 
 function page(title: string, body: string, status: number): Response {
   return new Response(
@@ -48,6 +72,21 @@ export default async function handler(request: Request): Promise<Response> {
         );
   }
 
+  // A verified token on a GET buys a confirmation page, never a write.
+  if (request.method !== 'POST') {
+    return page(
+      'Stop reminders',
+      '<h1>Stop reminders from this room?</h1>' +
+        '<p>You will stay a member, and you can turn reminders back on from the ' +
+        'room page.</p>' +
+        `<form method="post" action="${escapeHtml(request.url)}">` +
+        '<button type="submit" style="font:inherit;padding:10px 20px;border-radius:8px;' +
+        'border:0;background:#b4441f;color:#fff;cursor:pointer">Stop reminders</button>' +
+        '</form>',
+      200
+    );
+  }
+
   const response = await fetch(`${supabaseUrl}/rest/v1/rpc/admin_set_room_reminders`, {
     method: 'POST',
     headers: {
@@ -63,20 +102,19 @@ export default async function handler(request: Request): Promise<Response> {
   });
 
   if (!response.ok) {
-    return request.method === 'POST'
+    return isOneClick(request)
       ? new Response(null, { status: 500 })
       : page('Something went wrong', '<h1>Something went wrong</h1>', 500);
   }
 
-  if (request.method === 'POST') {
-    return new Response(null, { status: 200 });
-  }
-
-  return page(
-    'Reminders off',
-    '<h1>Reminders off</h1>' +
-      '<p>You will not get mission reminders from this room any more. ' +
-      'You are still a member, and you can turn them back on from the room page.</p>',
-    200
-  );
+  // Both paths have already written; the distinction is only what gets drawn.
+  return isOneClick(request)
+    ? new Response(null, { status: 200 })
+    : page(
+        'Reminders off',
+        '<h1>Reminders off</h1>' +
+          '<p>You will not get mission reminders from this room any more. ' +
+          'You are still a member, and you can turn them back on from the room page.</p>',
+        200
+      );
 }

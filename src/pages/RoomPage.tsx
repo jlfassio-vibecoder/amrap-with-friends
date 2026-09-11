@@ -267,7 +267,13 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
         <RoomRemindersToggle
           roomId={room.id}
           remindersEnabled={room.myRemindersEnabled}
-          hasUpcoming={next !== null}
+          // `calendarEvent`, not `next !== null`. `nextMission` deliberately
+          // also returns a mission running now and an open one with no time,
+          // and the reminder claim sends for neither -- so the switch would
+          // offer to turn off mail that was never going to arrive. The
+          // calendar event is non-null under exactly the claim's condition: a
+          // waiting mission with a time still in the future.
+          hasUpcoming={calendarEvent !== null}
         />
       </section>
 
