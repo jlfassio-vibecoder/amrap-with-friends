@@ -17,6 +17,7 @@ import {
   TYPE_SCALE,
   type ShareTheme,
 } from '@/lib/share/renderer/theme';
+import { roomCardMark } from '@/lib/rooms/brand';
 import type { ShareLayout, ShareVariant } from '@/lib/share/types';
 
 export interface DrawFrameOptions {
@@ -27,6 +28,11 @@ export interface DrawFrameOptions {
   shareUrl: string;
   watermark: boolean;
   theme?: ShareTheme;
+  /**
+   * The room this mission belonged to. Sits in the watermark line ahead of the
+   * product name; absent on a personal mission, where the line is unchanged.
+   */
+  roomHandle?: string | null;
   /** Set for replay frames; the card omits it. */
   capSeconds?: number;
   /** What the workout was. The first card omitted this entirely. */
@@ -490,7 +496,11 @@ function drawCardFrame(ctx: Ctx, frame: FrameState, options: DrawFrameOptions): 
     ctx.fillRect(left, footerY + metrics.footer + gap(16), gap(120), 6);
     ctx.fillStyle = theme.secondary;
     ctx.font = font(metrics.watermark, 600);
-    ctx.fillText('AMRAP With Friends', left, footerY + metrics.footer + gap(16) + gap(24));
+    ctx.fillText(
+      fitText(ctx, roomCardMark(options.roomHandle), contentWidth),
+      left,
+      footerY + metrics.footer + gap(16) + gap(24)
+    );
   }
 
   ctx.restore();

@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { drawFrame, type Ctx } from '@/lib/share/renderer/drawFrame';
+import { roomShareTheme } from '@/lib/rooms/brand';
+import { AWF_THEME } from '@/lib/share/renderer/theme';
 import { frameAt } from '@/lib/share/timeline';
 import type { ReplayData } from '@/lib/share/types';
 
@@ -126,6 +128,24 @@ describe('drawFrame', () => {
     const { ctx, texts } = recordingCtx();
     drawFrame(ctx, frameAt(data(2)), { ...baseOptions, watermark: false });
     expect(texts.map((entry) => entry.text)).not.toContain('AMRAP With Friends');
+  });
+
+  it('puts the room ahead of the product in the watermark', () => {
+    const { ctx, texts } = recordingCtx();
+    drawFrame(ctx, frameAt(data(2)), { ...baseOptions, roomHandle: 'northside' });
+    const all = texts.map((entry) => entry.text);
+    expect(all).toContain('@northside · AMRAP With Friends');
+    // The product never comes off a coach's card: the card is the loop.
+    expect(all).not.toContain('@northside');
+  });
+
+  it('draws the hero in the room accent when one is given', () => {
+    const { ctx, texts } = recordingCtx();
+    const theme = roomShareTheme({ accent: '#1e90ff' });
+    drawFrame(ctx, frameAt(data(2)), { ...baseOptions, theme, roomHandle: 'northside' });
+    expect(texts.map((entry) => entry.text)).toContain('7 rounds + 12');
+    expect(theme.accent).toBe('#1e90ff');
+    expect(theme.background).toBe(AWF_THEME.background);
   });
 
   it('truncates a name rather than letting it run off the card', () => {

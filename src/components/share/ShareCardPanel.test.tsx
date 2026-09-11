@@ -171,6 +171,61 @@ describe('adding a photo to the share card', () => {
   });
 });
 
+describe('a room on the card', () => {
+  afterEach(() => {
+    cleanup();
+    renderCardBlob.mockReset();
+  });
+
+  const room = {
+    id: 'r1',
+    handle: 'northside',
+    displayName: 'Northside',
+    isMember: true,
+    hasHomeCoach: false,
+    brand: { accent: '#1e90ff' },
+  };
+
+  it('draws the room accent and handle', async () => {
+    renderCardBlob.mockResolvedValue(new Blob(['card'], { type: 'image/png' }));
+    render(<ShareCardPanel data={data} workoutTitle="The Piston" room={room} />);
+    await waitFor(() => expect(renderCardBlob).toHaveBeenCalled());
+    const options = renderCardBlob.mock.calls[0][1];
+    expect(options.roomHandle).toBe('northside');
+    expect(options.theme.accent).toBe('#1e90ff');
+  });
+
+  it('re-renders instead of serving the cached unbranded card', async () => {
+    // The room arrives a round trip after the replay does, so a card drawn
+    // before it landed used to be handed back for every later download. Same
+    // shape as the photo cache bug above, and the same fix: the brand is part
+    // of the cache key.
+    renderCardBlob.mockResolvedValue(new Blob(['card'], { type: 'image/png' }));
+    const view = render(<ShareCardPanel data={data} workoutTitle="The Piston" />);
+    await waitFor(() => expect(renderCardBlob).toHaveBeenCalledTimes(1));
+    expect(renderCardBlob.mock.calls[0][1].roomHandle).toBeNull();
+
+    view.rerender(<ShareCardPanel data={data} workoutTitle="The Piston" room={room} />);
+
+    await waitFor(() => expect(renderCardBlob).toHaveBeenCalledTimes(2));
+    expect(renderCardBlob.mock.calls[1][1].roomHandle).toBe('northside');
+    expect(renderCardBlob.mock.calls[1][1].theme.accent).toBe('#1e90ff');
+  });
+
+  it('lifts an accent the card could not show, rather than drawing it', async () => {
+    renderCardBlob.mockResolvedValue(new Blob(['card'], { type: 'image/png' }));
+    render(
+      <ShareCardPanel
+        data={data}
+        workoutTitle="The Piston"
+        room={{ ...room, brand: { accent: '#0a0a2a' } }}
+      />
+    );
+    await waitFor(() => expect(renderCardBlob).toHaveBeenCalled());
+    expect(renderCardBlob.mock.calls[0][1].theme.accent).not.toBe('#0a0a2a');
+  });
+});
+
 describe('the image the link preview gets', () => {
   afterEach(() => {
     cleanup();
