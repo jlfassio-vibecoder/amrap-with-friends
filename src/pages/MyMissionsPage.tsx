@@ -41,7 +41,9 @@ import { useRefetchOnVisible } from '@/hooks/useRefetchOnVisible';
 import { formatMissionStateLabel } from '@/lib/mission/formatMissionStateLabel';
 import { myMissionListCtaLabel } from '@/lib/mission/hostMissionListCta';
 import { groupMyMissionsByRallyPoint } from '@/lib/mission/groupMyMissionsByRallyPoint';
+import { groupMyMissionRepeats } from '@/lib/mission/groupMyMissionRepeats';
 import { HOST_ACTIVE_MISSION_LIMIT } from '@/lib/mission/rallySchedule';
+import { countOf } from '@/lib/units/plural';
 import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
 
 function formatMissionWhen(entry: MyMissionEntry): string {
@@ -205,6 +207,10 @@ function MyMissionCard({
   benchmark,
   onRetireBenchmark,
   expandControl,
+  runCount,
+  earlierRuns,
+  earlierRunsExpanded,
+  onToggleEarlierRuns,
 }: {
   entry: MyMissionEntry;
   deletingMissionId: string | null;
@@ -224,6 +230,12 @@ function MyMissionCard({
     position: number;
     onToggle: () => void;
   };
+  /** Total times this workout+clock appears; only shown when greater than 1. */
+  runCount?: number;
+  /** Older instances newest→oldest, excluding the face card entry. */
+  earlierRuns?: MyMissionEntry[];
+  earlierRunsExpanded?: boolean;
+  onToggleEarlierRuns?: () => void;
 }) {
   // Prefer what the athlete actually named — "Diamond Push-ups: from the knees"
   // — and fall back to the plain mark when no named option was chosen.
@@ -246,6 +258,7 @@ function MyMissionCard({
       <p className="text-center text-secondary">
         {formatMissionWhen(entry)} · {entry.durationMinutes} min ·{' '}
         {formatMyMissionScoreDisplay(entry)} · {formatMissionStateLabel(entry.state)}
+        {runCount != null && runCount > 1 ? ` · ${countOf(runCount, 'run')}` : ''}
         {modifiedBadge ? (
           <>
             {' · '}
@@ -348,6 +361,37 @@ function MyMissionCard({
           ) : null}
         </div>
       </div>
+      {earlierRuns && earlierRuns.length > 0 && onToggleEarlierRuns ? (
+        <div className="space-y-2">
+          <button
+            type="button"
+            className="link-accent inline-flex items-center gap-1 text-xs font-semibold"
+            aria-expanded={earlierRunsExpanded === true}
+            onClick={onToggleEarlierRuns}
+          >
+            <span aria-hidden="true">{earlierRunsExpanded ? '▲' : '▼'}</span>
+            Earlier runs
+          </button>
+          {earlierRunsExpanded ? (
+            <ul className="space-y-2 border-l-2 border-border pl-3">
+              {earlierRuns.map((run) => (
+                <li
+                  key={run.participantId}
+                  className="flex flex-wrap items-center justify-between gap-2 text-xs text-secondary"
+                >
+                  <span>
+                    {formatMissionWhen(run)} · {formatMyMissionScoreDisplay(run)} ·{' '}
+                    {formatMissionStateLabel(run.state)}
+                  </span>
+                  <Link className="btn-outline text-xs" to={`/mission/${run.missionId}`}>
+                    {myMissionListCtaLabel(run.state, run.role)}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
       <MyMissionCheckIn
         rpe={entry.rpe}
         sessionNotes={entry.sessionNotes}
@@ -371,12 +415,13 @@ export default function MyMissionsPage() {
   const [deletingMissionId, setDeletingMissionId] = useState<string | null>(null);
   const [relaunchingMissionId, setRelaunchingMissionId] = useState<string | null>(null);
   const [expandedRallyPointIds, setExpandedRallyPointIds] = useState<Set<string>>(() => new Set());
+  const [expandedRepeatKeys, setExpandedRepeatKeys] = useState<Set<string>>(() => new Set());
   const [benchmarks, setBenchmarks] = useState<AthleteBenchmark[]>([]);
   const [activeTab, setActiveTab] = useState<MyMissionsTabKey>('missions');
   const [sentUnreadCount, setSentUnreadCount] = useState(0);
 
   const listItems = useMemo(
-    () => groupMyMissionsByRallyPoint(entries, chainsByRallyPointId),
+    () => groupMyMissionRepeats(groupMyMissionsByRallyPoint(entries, chainsByRallyPointId)),
     [entries, chainsByRallyPointId]
   );
 
@@ -598,6 +643,18 @@ export default function MyMissionsPage() {
     });
   }
 
+  function toggleRepeat(key: string) {
+    setExpandedRepeatKeys((current) => {
+      const next = new Set(current);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }
+
   return (
     <NarrowPageLayout
       title="My missions"
@@ -650,6 +707,69 @@ export default function MyMissionsPage() {
                         benchmark={benchmarkForMission(item.entry, benchmarks)}
                         onRetireBenchmark={(id) => void handleRetireBenchmark(id)}
                       />
+                    </li>
+                  );
+                }
+
+                if (item.kind === 'repeat') {
+                  const earlierRuns = item.runs.slice(1);
+                  const chainExpanded = item.chain
+                    ? expandedRallyPointIds.has(item.chain.rallyPointId)
+                    : false;
+                  return (
+                    <li key={item.key} className="space-y-2">
+                      <MyMissionCard
+                        entry={item.parent}
+                        deletingMissionId={deletingMissionId}
+                        relaunchingMissionId={relaunchingMissionId}
+                        profileLoading={profileLoading}
+                        onDelete={(entry) => void handleDelete(entry)}
+                        onRelaunch={(entry) => void handleRelaunch(entry)}
+                        onViewBreakdown={setBreakdownEntry}
+                        ensureDetail={ensureDetail}
+                        benchmark={benchmarkForMission(item.parent, benchmarks)}
+                        onRetireBenchmark={(id) => void handleRetireBenchmark(id)}
+                        runCount={item.runs.length}
+                        earlierRuns={earlierRuns}
+                        earlierRunsExpanded={expandedRepeatKeys.has(item.key)}
+                        onToggleEarlierRuns={() => toggleRepeat(item.key)}
+                        expandControl={
+                          item.chain
+                            ? {
+                                expanded: chainExpanded,
+                                missionCount: item.chain.chainLength,
+                                position: 1,
+                                onToggle: () => toggleGroup(item.chain!.rallyPointId),
+                              }
+                            : undefined
+                        }
+                      />
+                      {item.chain && chainExpanded ? (
+                        <ul className="space-y-2 border-l-2 border-border pl-3">
+                          {item.chain.children.map((child) =>
+                            child.kind === 'started' ? (
+                              <li key={child.entry.participantId}>
+                                <MyMissionCard
+                                  entry={child.entry}
+                                  deletingMissionId={deletingMissionId}
+                                  relaunchingMissionId={relaunchingMissionId}
+                                  profileLoading={profileLoading}
+                                  onDelete={(entry) => void handleDelete(entry)}
+                                  onRelaunch={(entry) => void handleRelaunch(entry)}
+                                  onViewBreakdown={setBreakdownEntry}
+                                  ensureDetail={ensureDetail}
+                                  benchmark={benchmarkForMission(child.entry, benchmarks)}
+                                  onRetireBenchmark={(id) => void handleRetireBenchmark(id)}
+                                />
+                              </li>
+                            ) : (
+                              <li key={child.chainItem.id}>
+                                <QueuedMissionCard item={child.chainItem} />
+                              </li>
+                            )
+                          )}
+                        </ul>
+                      ) : null}
                     </li>
                   );
                 }
