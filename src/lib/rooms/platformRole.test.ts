@@ -11,9 +11,19 @@ import { join } from 'node:path';
  * the authorization check already lying around. Room code has its own:
  * `room_role()` on the row's own room_id.
  *
- * The one exception is deliberate and named below: granting a room free access
- * is an AWF decision, not a host's, so `grant_room_entitlement` checks the
- * platform allowlist. Nothing else in rooms may.
+ * The exceptions are deliberate, enumerated below, and both are the same kind
+ * of thing: the platform owner acting on rooms as the platform, rather than a
+ * host acting on their own room.
+ *
+ * - `grant_room_entitlement` — giving a room free access is an AWF decision,
+ *   not a host's.
+ * - `list_rooms_for_admin` — the read behind that screen. It returns every
+ *   host's room and their owner's email address, so `room_role` would be the
+ *   wrong check: there is no single room it is scoped to.
+ *
+ * Nothing else in rooms may. Adding a third entry here should feel like a
+ * decision, because the failure this guards against is a later change reaching
+ * for the allowlist as the authorization check already lying around.
  */
 
 const MIGRATIONS = join(process.cwd(), 'supabase', 'migrations');
@@ -21,7 +31,7 @@ const MIGRATIONS = join(process.cwd(), 'supabase', 'migrations');
 // `coach_rooms`. The reserved-handles migration redefines create_room and was
 // invisible to this guard until Copilot pointed it out.
 const ROOM_MIGRATION = /coach_rooms|room_handles|_room/;
-const ALLOWED_IN = 'grant_room_entitlement';
+const ALLOWED_IN = ['grant_room_entitlement', 'list_rooms_for_admin'] as const;
 
 function roomMigrations(): { name: string; sql: string }[] {
   return readdirSync(MIGRATIONS)
@@ -52,12 +62,12 @@ describe('rooms never widen the platform coach role', () => {
     expect(roomMigrations().length).toBeGreaterThan(0);
   });
 
-  it('references coach_users only inside grant_room_entitlement', () => {
+  it('references coach_users only inside the named exceptions', () => {
     const offenders: string[] = [];
 
     for (const migration of roomMigrations()) {
       for (const fn of functionBodies(migration.sql)) {
-        if (fn.name === ALLOWED_IN) {
+        if ((ALLOWED_IN as readonly string[]).includes(fn.name)) {
           continue;
         }
         if (/\bcoach_users\b/.test(stripComments(fn.body))) {
@@ -69,14 +79,24 @@ describe('rooms never widen the platform coach role', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('still has the one deliberate use, so this test cannot pass by the check disappearing', () => {
-    const granting = roomMigrations()
-      .flatMap((migration) => functionBodies(migration.sql))
-      .find((fn) => fn.name === ALLOWED_IN);
+  it.each(ALLOWED_IN)(
+    'still checks coach_users inside %s, so this cannot pass by the check disappearing',
+    (name) => {
+      // The exception list is only safe while each entry actually performs the
+      // check. An allowlisted function that quietly stopped checking would be
+      // invisible to the test above -- it is skipped either way.
+      // The last definition wins: these functions are redefined by later
+      // migrations, and an earlier copy still carrying the check would hide a
+      // newer one that dropped it.
+      const fn = roomMigrations()
+        .flatMap((migration) => functionBodies(migration.sql))
+        .filter((candidate) => candidate.name === name)
+        .pop();
 
-    expect(granting).toBeDefined();
-    expect(/\bcoach_users\b/.test(granting!.body)).toBe(true);
-  });
+      expect(fn).toBeDefined();
+      expect(/\bcoach_users\b/.test(stripComments(fn!.body))).toBe(true);
+    }
+  );
 });
 
 /** Comments explaining the rule mention the table; they are not uses of it. */

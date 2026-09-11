@@ -8,6 +8,7 @@ export interface CoachTabDefinition {
 
 export const COACH_TABS: readonly CoachTabDefinition[] = [
   { key: 'applications', label: 'Applications' },
+  { key: 'rooms', label: 'Rooms' },
   { key: 'users', label: 'Users' },
   { key: 'funnels', label: 'Funnels' },
   { key: 'content-acquisition', label: 'Content & acquisition' },
