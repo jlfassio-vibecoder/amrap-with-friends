@@ -195,7 +195,7 @@ describe('CreateMissionPage create_viewed', () => {
   it('tracks create_viewed on mount', () => {
     markGuidedIgnitionComplete();
     renderPage();
-    expect(trackMock).toHaveBeenCalledWith('create_viewed');
+    expect(trackMock).toHaveBeenCalledWith('create_viewed', {}, { userId: 'u1' });
   });
 });
 

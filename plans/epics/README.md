@@ -10,5 +10,5 @@ either keep it here or promote a cleaned version under `docs/epics/`.
 
 | Epic                                                   | Status                                                               |
 | ------------------------------------------------------ | -------------------------------------------------------------------- |
-| [onboarding-activation.md](./onboarding-activation.md) | Draft — Phase 3 Create → Start on `feature/onboarding-activation-p1` |
+| [onboarding-activation.md](./onboarding-activation.md) | Draft — review fixes on `feature/onboarding-activation-p1` |
 | [phase0-findings.md](./phase0-findings.md)             | Phase 0 diagnosis from `/coach` (2026-09-10)                         |

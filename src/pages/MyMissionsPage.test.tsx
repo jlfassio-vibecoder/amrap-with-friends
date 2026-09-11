@@ -260,7 +260,8 @@ describe('MyMissionsPage delete', () => {
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getAllByText('Start this mission')).toHaveLength(2);
+      expect(screen.getAllByText('Start this mission')).toHaveLength(1);
+      expect(screen.getAllByText('Enter mission')).toHaveLength(1);
       expect(screen.getAllByText('View mission')).toHaveLength(2);
     });
 

@@ -16,7 +16,6 @@ export function CoachActivationFunnelCard({ funnel }: CoachActivationFunnelCardP
     { label: 'Mission created', value: funnel.missionCreated },
     { label: 'Started', value: funnel.missionStarted },
     { label: 'Finished', value: funnel.finished },
-    { label: 'Claimed', value: funnel.claimed },
   ];
 
   const rates: Array<{ label: string; value: number | null }> = [
@@ -25,7 +24,6 @@ export function CoachActivationFunnelCard({ funnel }: CoachActivationFunnelCardP
     { label: 'Plan viewed → created', value: funnel.missionCreatedRatePct },
     { label: 'Created → started', value: funnel.missionStartedRatePct },
     { label: 'Started → finished', value: funnel.finishedRatePct },
-    { label: 'Finished → claimed', value: funnel.claimedRatePct },
   ];
 
   return (
@@ -50,7 +48,7 @@ export function CoachActivationFunnelCard({ funnel }: CoachActivationFunnelCardP
       </ul>
       <p className="text-xs text-secondary">
         Cohort is accounts created in this window. Later steps are unique users from that cohort.
-        Plan viewed falls back to hosting a mission when create_viewed events are missing.
+        Started and finished count host missions only. Guest claim lives in the claim card.
       </p>
     </div>
   );

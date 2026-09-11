@@ -43,13 +43,11 @@ export interface CoachActivationFunnel {
   missionCreated: number;
   missionStarted: number;
   finished: number;
-  claimed: number;
   identityRatePct: number | null;
   createViewedRatePct: number | null;
   missionCreatedRatePct: number | null;
   missionStartedRatePct: number | null;
   finishedRatePct: number | null;
-  claimedRatePct: number | null;
 }
 
 export interface CoachWaitingGraveyardSummary {
@@ -145,6 +143,24 @@ export function coachDashboardWindowLabel(window: CoachDashboardWindow): string 
       return 'Last 90 days';
     default:
       return 'All time';
+  }
+}
+
+/** Mirrors `report_window_start` for client-side list RPCs that take `p_since`. */
+export function coachDashboardWindowSince(
+  window: CoachDashboardWindow,
+  nowMs: number = Date.now()
+): string | null {
+  const dayMs = 24 * 60 * 60 * 1000;
+  switch (window) {
+    case '7d':
+      return new Date(nowMs - 7 * dayMs).toISOString();
+    case '30d':
+      return new Date(nowMs - 30 * dayMs).toISOString();
+    case '90d':
+      return new Date(nowMs - 90 * dayMs).toISOString();
+    default:
+      return null;
   }
 }
 
@@ -474,13 +490,11 @@ function parseActivationFunnel(row: Record<string, unknown>): CoachActivationFun
     missionCreated: num(row, 'mission_created'),
     missionStarted: num(row, 'mission_started'),
     finished: num(row, 'finished'),
-    claimed: num(row, 'claimed'),
     identityRatePct: numOrNull(row, 'identity_rate_pct'),
     createViewedRatePct: numOrNull(row, 'create_viewed_rate_pct'),
     missionCreatedRatePct: numOrNull(row, 'mission_created_rate_pct'),
     missionStartedRatePct: numOrNull(row, 'mission_started_rate_pct'),
     finishedRatePct: numOrNull(row, 'finished_rate_pct'),
-    claimedRatePct: numOrNull(row, 'claimed_rate_pct'),
   };
 }
 
@@ -1043,9 +1057,11 @@ export async function fetchCoachActivationInactiveList(input?: {
 
 export async function fetchCoachWaitingGraveyardList(input?: {
   limit?: number;
+  since?: string | null;
 }): Promise<{ data: CoachWaitingGraveyardRow[] | null; error: CoachApiError | null }> {
   const { data, error } = await callRpc('coach_waiting_graveyard_list', {
     p_limit: input?.limit ?? 100,
+    p_since: input?.since ?? null,
   });
 
   if (error) {

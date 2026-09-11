@@ -1,20 +1,29 @@
 import { useEffect, useState } from 'react';
 import { CoachDataTable } from '@/components/coach/CoachDataTable';
 import { CoachSectionHeader } from '@/components/coach/CoachSectionHeader';
-import { fetchCoachWaitingGraveyardList, type CoachWaitingGraveyardRow } from '@/lib/api/coach';
+import {
+  fetchCoachWaitingGraveyardList,
+  type CoachDashboardWindow,
+  type CoachWaitingGraveyardRow,
+} from '@/lib/api/coach';
 
 function formatTimestamp(value: string): string {
   return new Date(value).toLocaleString();
 }
 
-export function CoachWaitingGraveyardTable() {
+interface CoachWaitingGraveyardTableProps {
+  since: string | null;
+  window: CoachDashboardWindow;
+}
+
+export function CoachWaitingGraveyardTable({ since, window }: CoachWaitingGraveyardTableProps) {
   const [missions, setMissions] = useState<CoachWaitingGraveyardRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    fetchCoachWaitingGraveyardList().then((result) => {
+    fetchCoachWaitingGraveyardList({ since }).then((result) => {
       if (cancelled) {
         return;
       }
@@ -29,11 +38,17 @@ export function CoachWaitingGraveyardTable() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [since]);
 
   return (
     <section className="space-y-3" data-testid="coach-waiting-graveyard">
-      <CoachSectionHeader title="Missions waiting over 2 hours" />
+      <CoachSectionHeader
+        title={
+          window === 'all'
+            ? 'Missions waiting over 2 hours'
+            : `Missions waiting over 2 hours · ${window}`
+        }
+      />
       <div className="card space-y-3 p-4">
         {loading ? <p className="text-sm text-secondary">Loading…</p> : null}
         {error ? <p className="text-error text-sm">{error}</p> : null}

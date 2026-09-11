@@ -558,8 +558,8 @@ function LiveMissionView({
     }
     rallyPointEnteredRef.current = true;
     rallyPointEnteredAtMsRef.current = Date.now();
-    track('rally_point_entered', {}, { missionId });
-  }, [channel.mission, channel.mission?.state, live.isPractice, missionId]);
+    track('rally_point_entered', {}, { missionId, userId: user?.id ?? null });
+  }, [channel.mission, channel.mission?.state, live.isPractice, missionId, user?.id]);
 
   useEffect(() => {
     function fireRallyPointLeft(reason: RallyPointLeaveReason, useBeacon: boolean) {
@@ -572,10 +572,11 @@ function LiveMissionView({
         reason,
         duration_sec: rallyPointStayDurationSec(enteredAt, Date.now()),
       };
+      const context = { missionId, userId: user?.id ?? null };
       if (useBeacon) {
-        trackBeacon('rally_point_left', props, { missionId });
+        trackBeacon('rally_point_left', props, context);
       } else {
-        track('rally_point_left', props, { missionId });
+        track('rally_point_left', props, context);
       }
     }
 
@@ -587,7 +588,7 @@ function LiveMissionView({
     if (channel.mission?.state === 'finished' && livePhase === 'waiting') {
       fireRallyPointLeft('closed', false);
     }
-  }, [livePhase, channel.mission?.state, missionId]);
+  }, [livePhase, channel.mission?.state, missionId, user?.id]);
 
   useEffect(() => {
     function leaveNavigatingAway() {
@@ -606,7 +607,7 @@ function LiveMissionView({
           reason: 'navigated_away',
           duration_sec: rallyPointStayDurationSec(enteredAt, Date.now()),
         },
-        { missionId }
+        { missionId, userId: user?.id ?? null }
       );
     }
 
@@ -615,7 +616,7 @@ function LiveMissionView({
       window.removeEventListener('pagehide', leaveNavigatingAway);
       leaveNavigatingAway();
     };
-  }, [missionId]);
+  }, [missionId, user?.id]);
 
   // AMQAP: lock a 0-partial score on finish so HUD Active Recovery / week volume
   // record without the metabolic "Where did you break?" PartialReps step.

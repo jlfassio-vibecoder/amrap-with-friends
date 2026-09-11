@@ -1,7 +1,7 @@
 # Epic: Onboarding Activation — See Why New Users Don’t Train
 
 **Branch:** `feature/onboarding-activation-p1`  
-**Status:** Draft — Phase 3 Create → Start slice on branch  
+**Status:** Draft — review fixes on `feature/onboarding-activation-p1`  
 **Last updated:** 2026-09-11
 
 **Related:** [Phase 0 findings](./phase0-findings.md), [JIT onboarding](../../docs/epics/jit-onboarding.md) (Launch → auth → identity → rally point), [anonymous guest tracking](../../docs/epics/anonymous-guest-tracking.md), [analytics back-end roadmap](../../docs/epics/analytics-back-end-roadmap), `/coach` (Content & acquisition, Funnels, Incomplete sign-ups, Explore).
@@ -202,13 +202,14 @@ Featured join gate events (`featured_join_*`) deferred — Phase 0 ranked featur
 
 **Depends on:** Phase 0 direction (or ship in parallel if Phase 0 is slow)  
 **Risk:** Event spam; keep payloads small and coach-aggregatable.  
-**Status:** Implemented on `feature/onboarding-activation-p1` (client emit; verify in staging Explore).
+**Status:** Implemented on `feature/onboarding-activation-p1` (client emit; verify in staging Explore).  
+**Review fix:** `create_viewed`, `rally_point_*`, and `mission_started` pass `userId` so Activation joins work; `mission_started` only on waiting/setup → work.
 
 ### Deliverables
 
-1. [x] `mission_started` — once on first successful host push to `work`; `source` / `is_host` / `participant_count`.
-2. [x] **Waiting-room presence** — `rally_point_entered` / `rally_point_left` on `/mission/:id` while waiting/setup.
-3. [x] **Create surface view** — `create_viewed` on `/create` mount.
+1. [x] `mission_started` — once on first successful host push to `work` from waiting/setup; `source` / `is_host` / `participant_count`; `userId` when signed in.
+2. [x] **Waiting-room presence** — `rally_point_entered` / `rally_point_left` on `/mission/:id` while waiting/setup (`userId` when signed in).
+3. [x] **Create surface view** — `create_viewed` on `/create` mount (`userId` when signed in).
 4. [~] Featured join gate events — **deferred** (Phase 0 secondary).
 5. [x] Unit tests for helpers + `create_viewed`; registry emit coverage via call sites.
 
@@ -226,13 +227,14 @@ Featured join gate events (`featured_join_*`) deferred — Phase 0 ranked featur
 
 **Depends on:** Phase 1 (or DB-derived Start if events lag)  
 **Risk:** Coach RPC cost; keep windows and coach role gates consistent with existing coach RPCs.  
-**Status:** Implemented on `feature/onboarding-activation-p1` (migrations `20260912430000`–`450000` applied).
+**Status:** Implemented on `feature/onboarding-activation-p1` (migrations `20260912430000`–`460000`).  
+**Review fix (`20260912460000`):** Plan viewed = `create_viewed` events only; Started/Finished = host path; claimed removed from Activation (claim card stays); graveyard excludes future `scheduled_at` and shares the dashboard window.
 
 ### Deliverables
 
-1. [x] **Activation funnel** via `report_activation_funnel` + `coach_dashboard.activationFunnel` (signup cohort steps + consecutive rates).
+1. [x] **Activation funnel** via `report_activation_funnel` + `coach_dashboard.activationFunnel` (signup → finished; host-scoped Start/Finish).
 2. [x] **Cohort table:** `coach_activation_inactive_list` — profile complete, zero finished missions (Users tab).
-3. [x] **Waiting graveyard:** `report_waiting_graveyard` summary + `coach_waiting_graveyard_list` detail.
+3. [x] **Waiting graveyard:** `report_waiting_graveyard` summary + windowed `coach_waiting_graveyard_list` detail.
 4. [x] UI on `/coach` Funnels — Activation card + graveyard; Acquisition **Joined a mission** column (`trained`).
 5. [x] Clarify Joined vs Completed on Acquisition (caption).
 
@@ -272,7 +274,7 @@ Featured join gate events (`featured_join_*`) deferred — Phase 0 ranked featur
 
 **Product change:**
 
-1. [x] List CTA **Start this mission** for host `waiting`/`setup` (`hostMissionListCtaLabel` on My missions + scheduled panel); **Enter mission** when Live; **View mission** when finished.
+1. [x] List CTA **Start this mission** for **host** `waiting`/`setup` (`myMissionListCtaLabel` / `hostMissionListCtaLabel`); joiners get **Enter mission**; finished → **View mission**.
 2. [x] Rally point host subtitle: Start begins now; countdown optional.
 
 **After:** Compare Activation `mission_created → mission_started` and graveyard `older_than_2h` in the next comparable window post-deploy.
@@ -323,7 +325,7 @@ Do **not** ship a large onboarding UX rewrite before T0/T1 unless JIT Phase 3/4 
 | Area      | Files                                                                 |
 | --------- | --------------------------------------------------------------------- |
 | Events    | Phase 1: `events.ts`, create/waiting/start emit sites                 |
-| Coach API | `coach.ts`; migrations `20260912430000`–`450000`                      |
+| Coach API | `coach.ts`; migrations `20260912430000`–`460000`                      |
 | Coach UI  | `CoachActivationFunnelCard`, inactive + graveyard tables, `CoachPage` |
 | Phase 3   | `hostMissionListCta`, My missions / scheduled CTAs, waiting-room copy |
 | Tests     | `coach.test.ts`, Phase 1 analytics tests, list CTA tests              |

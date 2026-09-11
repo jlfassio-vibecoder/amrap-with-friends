@@ -72,13 +72,11 @@ describe('fetchCoachDashboard', () => {
           mission_created: 6,
           mission_started: 4,
           finished: 3,
-          claimed: 2,
           identity_rate_pct: 75,
           create_viewed_rate_pct: 77.78,
           mission_created_rate_pct: 85.71,
           mission_started_rate_pct: 66.67,
           finished_rate_pct: 75,
-          claimed_rate_pct: 66.67,
         },
         waitingGraveyard: {
           waiting_or_setup: 11,
@@ -732,10 +730,13 @@ describe('fetchCoachWaitingGraveyardList', () => {
       error: null,
     });
 
-    const result = await fetchCoachWaitingGraveyardList();
+    const result = await fetchCoachWaitingGraveyardList({
+      since: '2026-09-01T00:00:00.000Z',
+    });
 
     expect(callRpcMock).toHaveBeenCalledWith('coach_waiting_graveyard_list', {
       p_limit: 100,
+      p_since: '2026-09-01T00:00:00.000Z',
     });
     expect(result.error).toBeNull();
     expect(result.data).toEqual([

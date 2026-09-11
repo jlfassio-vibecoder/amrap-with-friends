@@ -130,7 +130,7 @@ export function useLiveAmrapMission(
   const isHost = hostToken !== null;
 
   const timer = useAmrapTimer();
-  const { isAuthenticated } = useAmrapAuth();
+  const { isAuthenticated, user } = useAmrapAuth();
 
   const [joinerSnapshot, setJoinerSnapshot] = useState<AuthoritativeSnapshot | null>(null);
   const [joinerDisplay, setJoinerDisplay] = useState<DisplayState | null>(null);
@@ -309,6 +309,7 @@ export function useLiveAmrapMission(
         timer.workStartedAtMs !== null ? new Date(timer.workStartedAtMs).toISOString() : null;
 
       try {
+        const priorMissionState = channel.mission?.state ?? null;
         const result = await updateMissionState({
           missionId,
           hostToken,
@@ -327,7 +328,13 @@ export function useLiveAmrapMission(
         } else if (result.data?.ok === true) {
           lastPushAtRef.current = now;
           setLastAuthoritativeSyncAtMs(now);
-          if (missionState === 'work' && !missionStartedFiredRef.current) {
+          const startedFromWaitingRoom =
+            priorMissionState === 'waiting' || priorMissionState === 'setup';
+          if (
+            missionState === 'work' &&
+            startedFromWaitingRoom &&
+            !missionStartedFiredRef.current
+          ) {
             missionStartedFiredRef.current = true;
             track(
               'mission_started',
@@ -336,7 +343,11 @@ export function useLiveAmrapMission(
                 is_host: true,
                 participant_count: channel.participants.length,
               },
-              { missionId, participantId: participantId || undefined }
+              {
+                missionId,
+                participantId: participantId || undefined,
+                userId: user?.id ?? null,
+              }
             );
           }
         }
@@ -354,7 +365,9 @@ export function useLiveAmrapMission(
       timer.isPaused,
       timer.workStartedAtMs,
       channel.participants.length,
+      channel.mission?.state,
       participantId,
+      user?.id,
     ]
   );
 

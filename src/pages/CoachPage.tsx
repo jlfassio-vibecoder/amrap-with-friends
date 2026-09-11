@@ -27,6 +27,7 @@ import type { CoachTabKey } from '@/components/coach/coachTabIds';
 import { COACH_TABS } from '@/components/coach/coachTabs';
 import {
   coachDashboardWindowLabel,
+  coachDashboardWindowSince,
   fetchCoachDashboard,
   fetchCoachRecentEvents,
   type CoachDashboard,
@@ -289,7 +290,13 @@ export default function CoachPage() {
                     />
                   ))}
                 </div>
-                {waitingGraveyardOpen ? <CoachWaitingGraveyardTable /> : null}
+                {waitingGraveyardOpen ? (
+                  <CoachWaitingGraveyardTable
+                    key={dashboard.window}
+                    window={dashboard.window}
+                    since={coachDashboardWindowSince(dashboard.window)}
+                  />
+                ) : null}
                 <div className="card space-y-2 p-4">
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-secondary">
                     Why sign-in and sign-up fail

@@ -13,3 +13,11 @@ export function hostMissionListCtaLabel(state: string): string {
       return 'View mission';
   }
 }
+
+/** My missions lists hosts and joiners — only hosts get the Start label. */
+export function myMissionListCtaLabel(state: string, role: string): string {
+  if (role === 'host') {
+    return hostMissionListCtaLabel(state);
+  }
+  return state === 'finished' ? 'View mission' : 'Enter mission';
+}

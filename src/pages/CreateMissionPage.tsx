@@ -56,6 +56,7 @@ import { quotasFromProfile } from '@/lib/hud/classificationQuotas';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { useEnsureAthleteIdentity } from '@/hooks/useEnsureAthleteIdentity';
 import { useHudTelemetry } from '@/hooks/useHudTelemetry';
+import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useSmartRecovery } from '@/hooks/useSmartRecovery';
 import { coachWorkoutLockId } from '@/lib/smartRecovery/deriveCoachWorkoutPatterns';
 import { firstAvailableCategoryForDuration } from '@/lib/workout/filterWorkoutTemplates';
@@ -107,6 +108,7 @@ export default function CreateMissionPage() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { telemetry, isAuthenticated } = useHudTelemetry();
+  const { user } = useAmrapAuth();
   const { profile, loading: profileLoading } = useAthleteProfile();
   const {
     ensureThen,
@@ -151,8 +153,8 @@ export default function CreateMissionPage() {
   const [retest, setRetest] = useState<AthleteBenchmark | null>(null);
 
   useEffect(() => {
-    track('create_viewed');
-  }, []);
+    track('create_viewed', {}, { userId: user?.id ?? null });
+  }, [user?.id]);
 
   useEffect(() => {
     const state = location.state as IntakeNavigationState | null;
