@@ -8,7 +8,7 @@ either keep it here or promote a cleaned version under `docs/epics/`.
 
 ## Documents
 
-| Epic                                                   | Status                                                                  |
-| ------------------------------------------------------ | ----------------------------------------------------------------------- |
-| [onboarding-activation.md](./onboarding-activation.md) | Draft — Phase 2 Activation funnel on `feature/onboarding-activation-p1` |
-| [phase0-findings.md](./phase0-findings.md)             | Phase 0 diagnosis from `/coach` (2026-09-10)                            |
+| Epic                                                   | Status                                                               |
+| ------------------------------------------------------ | -------------------------------------------------------------------- |
+| [onboarding-activation.md](./onboarding-activation.md) | Draft — Phase 3 Create → Start on `feature/onboarding-activation-p1` |
+| [phase0-findings.md](./phase0-findings.md)             | Phase 0 diagnosis from `/coach` (2026-09-10)                         |

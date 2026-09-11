@@ -1,7 +1,7 @@
 # Epic: Onboarding Activation — See Why New Users Don’t Train
 
 **Branch:** `feature/onboarding-activation-p1`  
-**Status:** Draft — Phase 2 Activation funnel on branch (push migrations to verify live)  
+**Status:** Draft — Phase 3 Create → Start slice on branch  
 **Last updated:** 2026-09-11
 
 **Related:** [Phase 0 findings](./phase0-findings.md), [JIT onboarding](../../docs/epics/jit-onboarding.md) (Launch → auth → identity → rally point), [anonymous guest tracking](../../docs/epics/anonymous-guest-tracking.md), [analytics back-end roadmap](../../docs/epics/analytics-back-end-roadmap), `/coach` (Content & acquisition, Funnels, Incomplete sign-ups, Explore).
@@ -58,10 +58,10 @@ flowchart LR
 
 Design choices that matter for diagnosis:
 
-1. **Signup defaults to `/create`, never `/intake`** ([`postAuthDestination.ts`](../../src/lib/auth/postAuthDestination.ts)) — identity deferred to Launch overlay or a later hard gate.
+1. **Signup defaults to** `/create`**, never** `/intake` (`[postAuthDestination.ts](../../src/lib/auth/postAuthDestination.ts)`) — identity deferred to Launch overlay or a later hard gate.
 2. **SQL “intake required” ≠ client complete profile** — create RPCs often need a profile _row_; client gates need username + nickname (`profileNeedsIntake`); body metrics optional.
-3. **Claim after fatigue** — guests can finish without an account; save is a second decision (`claim_*` events).
-4. **No `mission_started` event** — Start is only visible as DB state (`waiting` → `work`) or countdown events.
+3. **Claim after fatigue** — guests can finish without an account; save is a second decision (`claim_`* events).
+4. **No** `mission_started` **event** — Start is only visible as DB state (`waiting` → `work`) or countdown events.
 
 ### What `/coach` can already tell you
 
@@ -153,12 +153,12 @@ Reuse `track()` / `analytics_events`. Do not invent a second pipe. Naming: produ
 
 ### Phase 1 event names + props
 
-| Event                 | Emit site                                                              | Context     | Props                                                                           |
-| --------------------- | ---------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------- |
-| `create_viewed`       | `CreateMissionPage` mount                                              | —           | (none)                                                                          |
-| `rally_point_entered` | `MissionWaitingRoomPage` when mission `waiting`/`setup`                | `missionId` | (none)                                                                          |
-| `rally_point_left`    | Leave waiting (Start → work, navigate away, closed)                    | `missionId` | `reason`: `started` \| `navigated_away` \| `closed`; `duration_sec`             |
-| `mission_started`     | First successful host push to `state = 'work'` (`useLiveAmrapMission`) | `missionId` | `source`: `countdown` \| `immediate` \| `chain`; `is_host`; `participant_count` |
+| Event                 | Emit site                                                              | Context     | Props                 |
+| --------------------- | ---------------------------------------------------------------------- | ----------- | --------------------- |
+| `create_viewed`       | `CreateMissionPage` mount                                              | —           | (none)                |
+| `rally_point_entered` | `MissionWaitingRoomPage` when mission `waiting`/`setup`                | `missionId` | (none)                |
+| `rally_point_left`    | Leave waiting (Start → work, navigate away, closed)                    | `missionId` | `reason`: `started`   | `navigated_away` | `closed`; `duration_sec`                |
+| `mission_started`     | First successful host push to `state = 'work'` (`useLiveAmrapMission`) | `missionId` | `source`: `countdown` | `immediate`      | `chain`; `is_host`; `participant_count` |
 
 Featured join gate events (`featured_join_*`) deferred — Phase 0 ranked featured timing secondary.
 
@@ -206,7 +206,7 @@ Featured join gate events (`featured_join_*`) deferred — Phase 0 ranked featur
 
 ### Deliverables
 
-1. [x] **`mission_started`** — once on first successful host push to `work`; `source` / `is_host` / `participant_count`.
+1. [x] `mission_started` — once on first successful host push to `work`; `source` / `is_host` / `participant_count`.
 2. [x] **Waiting-room presence** — `rally_point_entered` / `rally_point_left` on `/mission/:id` while waiting/setup.
 3. [x] **Create surface view** — `create_viewed` on `/create` mount.
 4. [~] Featured join gate events — **deferred** (Phase 0 secondary).
@@ -249,7 +249,8 @@ Featured join gate events (`featured_join_*`) deferred — Phase 0 ranked featur
 **Goal:** Change the journey only where Phase 0–2 show a dominant drop. Do not ship all of these by default.
 
 **Depends on:** Phase 0 findings; Phase 2 preferred so we can measure the fix  
-**Related epic:** [JIT onboarding](../../docs/epics/jit-onboarding.md) owns Launch identity overlays (P3/P4 there).
+**Related epic:** [JIT onboarding](../../docs/epics/jit-onboarding.md) owns Launch identity overlays (P3/P4 there).  
+**Status:** Create → Start slice shipped on `feature/onboarding-activation-p1`.
 
 | If dominant drop is…        | Candidate fix                                                                                         |
 | --------------------------- | ----------------------------------------------------------------------------------------------------- |
@@ -260,10 +261,28 @@ Featured join gate events (`featured_join_*`) deferred — Phase 0 ranked featur
 | Featured window             | Show join availability earlier or clearer “opens shortly” with calendar ≠ join                        |
 | Room join after claim fails | Fix membership path; surface retry (not only “Saved. We could not add you…”)                          |
 
+### Shipped slice: Create → Start
+
+**Target step:** `mission_created → mission_started` (Activation consecutive rate).
+
+**Before (Phase 0 proxies, 2026-09-10 — Activation card client deploy still pending for live rates):**
+
+- 30d missions created **78** / finished **32** (~41%); solo finish **20%** vs social **86%**; First contact **8/0**; mid-work abandon **0**.
+- Waiting graveyard SQL not run in Phase 0; after Phase 2 client ships, record Activation `mission_created` / `mission_started_rate_pct` and graveyard `older_than_2h` for the same window as the after pass.
+
+**Product change:**
+
+1. [x] List CTA **Start this mission** for host `waiting`/`setup` (`hostMissionListCtaLabel` on My missions + scheduled panel); **Enter mission** when Live; **View mission** when finished.
+2. [x] Rally point host subtitle: Start begins now; countdown optional.
+
+**After:** Compare Activation `mission_created → mission_started` and graveyard `older_than_2h` in the next comparable window post-deploy.
+
+**Deferred:** zero-mission Featured nudge; JIT identity (other epic); claim / Featured window / room-join retry.
+
 ### Exit criteria
 
-- [ ] Each shipped fix names the funnel step it targets and the before/after metric.
-- [ ] No vocabulary regressions (Mission / Start / Rally point / Room vs Squad).
+- [x] Each shipped fix names the funnel step it targets and the before/after metric (after TBD post-deploy).
+- [x] No vocabulary regressions (Mission / Start / Rally point / Room vs Squad).
 
 ---
 
@@ -306,7 +325,8 @@ Do **not** ship a large onboarding UX rewrite before T0/T1 unless JIT Phase 3/4 
 | Events    | Phase 1: `events.ts`, create/waiting/start emit sites                 |
 | Coach API | `coach.ts`; migrations `20260912430000`–`450000`                      |
 | Coach UI  | `CoachActivationFunnelCard`, inactive + graveyard tables, `CoachPage` |
-| Tests     | `coach.test.ts`, Phase 1 analytics tests                              |
+| Phase 3   | `hostMissionListCta`, My missions / scheduled CTAs, waiting-room copy |
+| Tests     | `coach.test.ts`, Phase 1 analytics tests, list CTA tests              |
 | Docs      | this epic; Phase 0 findings                                           |
 
 ---
@@ -316,4 +336,4 @@ Do **not** ship a large onboarding UX rewrite before T0/T1 unless JIT Phase 3/4 
 - [x] **P0** Diagnose with existing `/coach` (+ SQL pending for waiting graveyard); record dominant drop — [phase0-findings.md](./phase0-findings.md)
 - [x] **P1** `mission_started` + create/waiting-room signals (staging Explore verify remaining)
 - [x] **P2** Coach Activation funnel + profile-complete-zero-missions cohort (migrations applied; client deploy remaining)
-- [ ] **P3** Data-gated product fix(es) for the measured step
+- [x] **P3** Create → Start list CTA + waiting-room clarity (after metric pending post-deploy)

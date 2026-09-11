@@ -38,6 +38,7 @@ import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { useCopyFlash } from '@/hooks/useCopyFlash';
 import { useRefetchOnVisible } from '@/hooks/useRefetchOnVisible';
 import { formatMissionStateLabel } from '@/lib/mission/formatMissionStateLabel';
+import { hostMissionListCtaLabel } from '@/lib/mission/hostMissionListCta';
 import { groupMyMissionsByRallyPoint } from '@/lib/mission/groupMyMissionsByRallyPoint';
 import { HOST_ACTIVE_MISSION_LIMIT } from '@/lib/mission/rallySchedule';
 import { resolveWorkoutTitle } from '@/lib/workout/resolveWorkoutTitle';
@@ -317,7 +318,7 @@ function MyMissionCard({
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <Link className="btn-teal" to={`/mission/${entry.missionId}`}>
-          View mission
+          {hostMissionListCtaLabel(entry.state)}
         </Link>
         <div className="ml-auto flex flex-wrap items-center gap-3">
           {!canDeleteMyMission(entry) ? (

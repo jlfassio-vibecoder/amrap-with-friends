@@ -1371,7 +1371,7 @@ function LiveMissionView({
   const hostStatusText = live.isPractice
     ? 'Practice — 2 min, not recorded.'
     : isHost
-      ? 'You are the host.'
+      ? 'Start begins the mission now. Countdown is optional — use it for friends or a timed T-minus.'
       : 'Waiting on host for mission control.';
   // Waiting room stays "Rally point"; once the clock is running this screen is the mission.
   const headerTitle = live.phase === 'waiting' && !live.isPractice ? 'Rally point' : 'Mission';
