@@ -10,6 +10,7 @@ import {
   CoachFoundingHostApplications,
   FOUNDING_HOST_APPLICATIONS_LIMIT,
 } from '@/components/coach/CoachFoundingHostApplications';
+import { CoachRoomsPanel } from '@/components/coach/CoachRoomsPanel';
 import { CoachFunnelCard } from '@/components/coach/CoachFunnelCard';
 import { CoachGuestBrowsersPanel } from '@/components/coach/CoachGuestBrowsersPanel';
 import { CoachOnboardingStuckTable } from '@/components/coach/CoachOnboardingStuckTable';
@@ -160,6 +161,13 @@ export default function CoachPage() {
         </div>
 
         <CoachTopTabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+
+        <CoachTabPanel tab="rooms" activeTab={activeTab}>
+          <div className="space-y-4">
+            <CoachSectionHeader title="Rooms" />
+            <CoachRoomsPanel />
+          </div>
+        </CoachTabPanel>
 
         <CoachTabPanel tab="applications" activeTab={activeTab}>
           <section className="space-y-3">

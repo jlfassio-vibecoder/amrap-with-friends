@@ -1,3 +1,4 @@
+import type { AdminRoomRow } from '@/lib/rooms/adminRoomStatus';
 import { callRpc } from '@/lib/api/callRpc';
 import { persistMissionIdentity } from '@/lib/missionIdentity';
 import { parseRoomBrand, type RoomBrand } from '@/lib/rooms/brand';
@@ -553,6 +554,68 @@ export async function setRoomReminders(
   const { data, error } = await callRpc<unknown>('set_room_reminders_enabled', {
     p_room_id: roomId,
     p_enabled: enabled,
+  });
+  if (error) {
+    return { ok: false, reason: error.message };
+  }
+  const payload = record(data);
+  return payload?.ok === true
+    ? { ok: true }
+    : { ok: false, reason: str(payload?.reason) ?? 'unknown' };
+}
+
+/**
+ * Every room, for the platform owner. Gated on `coach_users` in the RPC, not
+ * here -- the navigation is not the boundary.
+ */
+export async function listRoomsForAdmin(): Promise<
+  { ok: true; rooms: AdminRoomRow[] } | { ok: false; reason: string }
+> {
+  const { data, error } = await callRpc<unknown>('list_rooms_for_admin', {});
+  if (error) {
+    return { ok: false, reason: error.message };
+  }
+  const payload = record(data);
+  if (payload?.ok !== true || !Array.isArray(payload.rooms)) {
+    return { ok: false, reason: str(payload?.reason) ?? 'unknown' };
+  }
+
+  const rooms: AdminRoomRow[] = [];
+  for (const raw of payload.rooms) {
+    const row = record(raw);
+    const roomId = str(row?.room_id);
+    const handle = str(row?.handle);
+    if (!row || !roomId || !handle) {
+      continue;
+    }
+    const ent = record(row.entitlement);
+    rooms.push({
+      roomId,
+      handle,
+      displayName: str(row.display_name) ?? handle,
+      createdAt: str(row.created_at) ?? '',
+      hostAccountId: str(row.host_account_id) ?? '',
+      ownerEmail: str(row.owner_email),
+      memberCount: typeof row.member_count === 'number' ? row.member_count : 0,
+      isActive: row.is_active === true,
+      entitlement: ent
+        ? { source: str(ent.source) ?? 'unknown', expiresAt: str(ent.expires_at) }
+        : null,
+    });
+  }
+  return { ok: true, rooms };
+}
+
+/** Activate or renew a host. The RPC restricts the source to founding/pilot. */
+export async function grantRoomEntitlement(
+  hostAccountId: string,
+  source: 'founding' | 'pilot',
+  expiresAt: string
+): Promise<{ ok: boolean; reason?: string }> {
+  const { data, error } = await callRpc<unknown>('grant_room_entitlement', {
+    p_host_account_id: hostAccountId,
+    p_source: source,
+    p_expires_at: expiresAt,
   });
   if (error) {
     return { ok: false, reason: error.message };

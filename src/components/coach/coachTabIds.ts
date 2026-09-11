@@ -1,5 +1,11 @@
 export type CoachTabKey =
-  'applications' | 'users' | 'funnels' | 'content-acquisition' | 'reliability' | 'explore';
+  | 'applications'
+  | 'rooms'
+  | 'users'
+  | 'funnels'
+  | 'content-acquisition'
+  | 'reliability'
+  | 'explore';
 
 export function panelIdForCoachTab(tab: CoachTabKey): string {
   return `coach-panel-${tab}`;
