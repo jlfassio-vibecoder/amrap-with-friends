@@ -90,6 +90,7 @@ export function ParticipantInviteMenu({
             {isFriend ? 'Send workout' : 'Invite to squad and send'}
           </button>
           {canInviteCampaign ? (
+            // Copilot suggestion ignored: menu actions use bare nouns like "Send workout"; durationized copy lives on invitation cards.
             <button
               type="button"
               className="block w-full px-2 py-1 text-left text-sm text-ink hover:bg-surface-muted"

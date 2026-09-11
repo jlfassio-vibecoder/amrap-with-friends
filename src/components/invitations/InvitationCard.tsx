@@ -65,7 +65,8 @@ export function InvitationCard({
       })
     : null;
   const movements = movementLine(card);
-  const squadPending = card.squadRequestId && card.squadStatus === 'pending';
+  const isDismissed = card.status === 'dismissed';
+  const squadPending = !isDismissed && card.squadRequestId && card.squadStatus === 'pending';
   const isOwnCard = Boolean(viewerUserId && viewerUserId === card.fromUserId);
   const showSave =
     variant === 'chat' &&
@@ -87,6 +88,7 @@ export function InvitationCard({
 
   const primaryDisabled =
     busy ||
+    isDismissed ||
     (card.type === 'mission' && missionAction === 'unavailable') ||
     card.status === 'unavailable';
 
@@ -125,13 +127,13 @@ export function InvitationCard({
           </AppLink>
         ) : null}
 
-        {card.type === 'workout' && onPrimary && !card.resultingMissionId ? (
+        {card.type === 'workout' && onPrimary && !card.resultingMissionId && !isDismissed ? (
           <button type="button" className="btn-primary text-sm" disabled={busy} onClick={onPrimary}>
             {busy ? 'Starting…' : primaryLabel}
           </button>
         ) : null}
 
-        {card.type === 'mission' && card.mission ? (
+        {card.type === 'mission' && card.mission && !isDismissed ? (
           missionAction === 'join_mission' && onPrimary ? (
             <button
               type="button"
@@ -157,7 +159,7 @@ export function InvitationCard({
             <AppLink className="btn-outline text-sm" to={`/campaign/${card.campaign.id}`}>
               {campaignViewCtaLabel(weekCount)}
             </AppLink>
-            {card.campaign.joinable && onJoinCampaign ? (
+            {card.campaign.joinable && onJoinCampaign && !isDismissed ? (
               <button
                 type="button"
                 className="btn-primary text-sm"

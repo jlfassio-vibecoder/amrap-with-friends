@@ -62,8 +62,8 @@ describe('SendInvitationFlow', () => {
     );
 
     expect(await screen.findByText('Maya')).toBeTruthy();
-    expect(screen.getByText('Invite to this 15-min mission')).toBeTruthy();
-    expect(screen.getByText('Send this 15-min workout')).toBeTruthy();
+    expect(screen.getByText('Invite to this mission')).toBeTruthy();
+    expect(screen.getByText('Send this workout')).toBeTruthy();
     expect(screen.getByText('Pick at least one recipient.')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('checkbox', { name: /Maya/ }));

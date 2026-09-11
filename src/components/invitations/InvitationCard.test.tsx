@@ -199,4 +199,22 @@ describe('InvitationCard', () => {
 
     expect(screen.getByRole('button', { name: 'Save to Sent to you' })).toBeTruthy();
   });
+
+  it('hides Start and Accept on a dismissed card', () => {
+    const onPrimary = vi.fn();
+    const onAcceptSquad = vi.fn();
+    renderCard({
+      card: card({
+        status: 'dismissed',
+        includeSquadInvite: true,
+        squadRequestId: 'sr-1',
+        squadStatus: 'pending',
+      }),
+      onPrimary,
+      onAcceptSquad,
+    });
+
+    expect(screen.queryByRole('button', { name: 'Start 15-min mission' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Accept squad invite' })).toBeNull();
+  });
 });

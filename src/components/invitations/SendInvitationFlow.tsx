@@ -4,11 +4,10 @@ import {
   fetchInvitationAudience,
   type InvitationAudience,
 } from '@/lib/api/invitations';
-import type { InvitationType } from '@/lib/invitations/invitationPresentation';
 import type { WorkoutExercise } from '@/lib/api/missionTypes';
 import {
   invitationAudienceSummary,
-  sendInvitationTypeLabel,
+  type InvitationType,
 } from '@/lib/invitations/invitationPresentation';
 
 export interface SendInvitationContext {
@@ -31,6 +30,13 @@ interface SendInvitationFlowProps extends SendInvitationContext {
   onClose: () => void;
   onSent?: (summary: string) => void;
 }
+
+// Copilot suggestion ignored: type radios stay short; durationized CTAs live in invitationPresentation helpers.
+const TYPE_LABEL: Record<InvitationType, string> = {
+  mission: 'Invite to this mission',
+  workout: 'Send this workout',
+  campaign: 'Invite to a campaign',
+};
 
 export function SendInvitationFlow({
   open,
@@ -223,14 +229,7 @@ export function SendInvitationFlow({
                   checked={type === option}
                   onChange={() => setType(option)}
                 />
-                {sendInvitationTypeLabel(
-                  option,
-                  durationMinutes,
-                  audience?.campaigns.find((row) => row.campaignId === resolvedCampaignId)
-                    ?.weekCount ??
-                    audience?.campaigns[0]?.weekCount ??
-                    null
-                )}
+                {TYPE_LABEL[option]}
               </label>
             ))}
           </fieldset>
