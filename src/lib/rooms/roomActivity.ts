@@ -3,9 +3,9 @@ import type { RoomMissionLike } from '@/lib/rooms/roomSchedule';
 /**
  * "Why come back" — the third question the room page answers.
  *
- * A list of finished sessions is only worth showing if it looks like a room
- * that runs. Sessions nobody completed are noise: they are usually a mission
- * opened and abandoned, and a page full of them argues against joining.
+ * A list of finished missions is only worth showing if it looks like a room
+ * that runs. Missions nobody completed are noise: they are usually one opened
+ * and abandoned, and a page full of them argues against joining.
  */
 
 export interface RoomActivityRow {
@@ -31,7 +31,7 @@ export function recentActivity(missions: RoomMissionLike[], limit = 5): RoomActi
 }
 
 /**
- * How a finished session reads on the page.
+ * How a finished mission reads on the page.
  *
  * Names the workout when the room used a template and falls back to the
  * duration when it did not, because "12 min AMRAP" still tells an athlete what

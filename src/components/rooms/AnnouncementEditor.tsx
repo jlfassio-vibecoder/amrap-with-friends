@@ -44,7 +44,11 @@ export function AnnouncementEditor({
 
   return (
     <div className="space-y-2">
+      <label className="eyebrow text-secondary" htmlFor="room-announcement">
+        Announcement
+      </label>
       <textarea
+        id="room-announcement"
         className="input-field w-full"
         rows={3}
         maxLength={MAX}

@@ -7,7 +7,7 @@ import { join } from 'node:path';
  * carries conversion and web analytics for the whole product.
  *
  * A paying host must never acquire it, and the way that would happen is not a
- * decision -- it is a future session reaching for the allowlist because it is
+ * decision -- it is a later change reaching for the allowlist because it is
  * the authorization check already lying around. Room code has its own:
  * `room_role()` on the row's own room_id.
  *

@@ -17,12 +17,12 @@ function mission(over: Partial<RoomMissionLike> = {}): RoomMissionLike {
 }
 
 describe('recentActivity', () => {
-  it('keeps finished sessions somebody completed', () => {
+  it('keeps finished missions somebody completed', () => {
     expect(recentActivity([mission()])).toHaveLength(1);
   });
 
-  // A page full of abandoned sessions argues against joining.
-  it('drops finished sessions nobody completed', () => {
+  // A page full of abandoned missions argues against joining.
+  it('drops finished missions nobody completed', () => {
     expect(recentActivity([mission({ finishers: 0 })])).toEqual([]);
   });
 

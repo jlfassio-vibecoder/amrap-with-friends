@@ -54,6 +54,9 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
   const [room, setRoom] = useState<RoomPageData | null>(null);
   const [upcoming, setUpcoming] = useState<RoomMission[]>([]);
   const [recent, setRecent] = useState<RoomMission[]>([]);
+  // A schedule that failed to load is not an empty schedule. Without this, a
+  // slow or failed read says "nothing on the clock" over a mission that exists.
+  const [scheduleStatus, setScheduleStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [status, setStatus] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading');
   const [notice, setNotice] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
@@ -73,9 +76,15 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
         // The schedule is a second read because the room resolves first: a
         // missing handle should 404 without waiting on a list nobody will see.
         const schedule = await listRoomMissions(result.room.id);
-        if (!cancelled && schedule.ok) {
+        if (cancelled) {
+          return;
+        }
+        if (schedule.ok) {
           setUpcoming(schedule.upcoming);
           setRecent(schedule.recent);
+          setScheduleStatus('ready');
+        } else {
+          setScheduleStatus('error');
         }
       } else {
         setStatus(result.reason === 'not_found' || result.reason === 'moved' ? 'missing' : 'error');
@@ -168,19 +177,25 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
 
       <section className="card mt-4 space-y-2 p-4 text-sm">
         <h2 className="eyebrow text-secondary">Next mission</h2>
-        <p>{nextMissionLabel(nextMission(upcoming))}</p>
-        {nextMission(upcoming) ? (
+        {scheduleStatus === 'loading' ? <p className="text-secondary">Checking…</p> : null}
+        {scheduleStatus === 'error' ? (
+          <p className="text-secondary">
+            Couldn&rsquo;t load this room&rsquo;s schedule. Refresh to try again.
+          </p>
+        ) : null}
+        {scheduleStatus === 'ready' ? <p>{nextMissionLabel(nextMission(upcoming))}</p> : null}
+        {scheduleStatus === 'ready' && nextMission(upcoming) ? (
           <a
             className="btn-primary inline-block text-sm"
             href={`/mission/${nextMission(upcoming)!.missionId}`}
           >
             {nextMission(upcoming)!.state === 'waiting' ? 'Enter mission' : 'Join mission'}
           </a>
-        ) : (
+        ) : scheduleStatus === 'ready' ? (
           <p className="text-xs text-secondary">
             Nothing on the clock right now. Joining means you&rsquo;ll see the next one.
           </p>
-        )}
+        ) : null}
       </section>
 
       <p className="mt-2 text-xs text-secondary">
@@ -204,7 +219,7 @@ function RoomView({ handle, signedIn }: { handle: string; signedIn: boolean }) {
         )}
       </div>
 
-      {shouldShowActivity(recentActivity(recent)) ? (
+      {scheduleStatus === 'ready' && shouldShowActivity(recentActivity(recent)) ? (
         <section className="card mt-4 space-y-2 p-4 text-sm">
           <h2 className="eyebrow text-secondary">Recently in this room</h2>
           <ul className="flex flex-col gap-1">

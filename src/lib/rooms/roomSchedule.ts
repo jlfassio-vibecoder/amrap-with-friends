@@ -30,7 +30,7 @@ export function isOpenMission(mission: RoomMissionLike): boolean {
  * The next mission the room will run.
  *
  * A mission already running beats one scheduled for later -- a host looking at
- * the dashboard mid-session should see the session, not next Tuesday. Among
+ * the dashboard mid-mission should see that mission, not next Tuesday. Among
  * scheduled ones, the soonest wins; a mission with no time is open now and
  * sorts ahead of anything dated.
  */
@@ -63,7 +63,7 @@ export function nextMission(missions: RoomMissionLike[]): RoomMissionLike | null
  * The workout "run this again" repeats: the most recent finished mission that
  * anyone actually completed.
  *
- * A mission nobody finished is not a session worth repeating -- it is usually
+ * A mission nobody finished is not one worth repeating -- it is usually
  * one that was opened and abandoned, and offering it back is how a room ends up
  * running the same empty slot every week.
  */
@@ -72,7 +72,7 @@ export function repeatableMission(missions: RoomMissionLike[]): RoomMissionLike 
     .filter((mission) => mission.state === 'finished' && mission.finishers > 0)
     // By when it was *finished*, not when it was created. A mission scheduled
     // on Monday for next Tuesday is created before one run on Wednesday, and
-    // sorting by creation would offer back the older session.
+    // sorting by creation would offer back the older one.
     .sort((a, b) => completedKey(b).localeCompare(completedKey(a)));
   return finished[0] ?? null;
 }
