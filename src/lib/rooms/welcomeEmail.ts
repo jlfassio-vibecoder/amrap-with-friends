@@ -48,7 +48,10 @@ export function welcomeSteps(isActive: boolean, roomUrl: string): string[] {
 
   return [
     'Schedule your first mission — pick a workout and a start time from your room dashboard.',
-    `Share your rally link: ${roomUrl}`,
+    // Not "rally link". CLAUDE.md reserves that for a URL opening a mission
+    // (`?m=`) or the Next Mission hub (`?r=`); this is the room page, and the
+    // dashboard's own button already calls it "Copy link".
+    `Share your room link: ${roomUrl}`,
     'Anyone can train with you without an account. They can save their result and join the room afterwards.',
   ];
 }
