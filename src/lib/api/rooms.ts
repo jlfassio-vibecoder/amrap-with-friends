@@ -1,5 +1,6 @@
 import { callRpc } from '@/lib/api/callRpc';
 import { persistMissionIdentity } from '@/lib/missionIdentity';
+import { isRoomReaction, type RoomReaction } from '@/lib/rooms/reactions';
 import type { RoomRole } from '@/lib/rooms/membership';
 
 /**
@@ -424,6 +425,78 @@ export async function setRoomAnnouncement(
   const { data, error } = await callRpc<unknown>('set_room_announcement', {
     p_room_id: roomId,
     p_body: body,
+  });
+  if (error) {
+    return { ok: false, reason: error.message };
+  }
+  const payload = record(data);
+  return payload?.ok === true
+    ? { ok: true }
+    : { ok: false, reason: str(payload?.reason) ?? 'unknown' };
+}
+
+export interface RoomFinish {
+  participantId: string;
+  segmentIndex: number;
+  nickname: string;
+  missionId: string;
+  templateId: string | null;
+  /** Reps or rounds actually done. Never the P.V.I.-adjusted final score. */
+  baseScore: number | null;
+  scoreUnit: 'reps' | 'rounds';
+  finishedAt: string;
+  isGuest: boolean;
+  myReaction: RoomReaction | null;
+  reactionCount: number;
+}
+
+export async function listRoomFinishes(
+  roomId: string
+): Promise<{ ok: true; finishes: RoomFinish[] } | { ok: false; reason: string }> {
+  const { data, error } = await callRpc<unknown>('list_room_finishes', { p_room_id: roomId });
+  if (error) {
+    return { ok: false, reason: error.message };
+  }
+  const payload = record(data);
+  if (!payload || payload.ok !== true || !Array.isArray(payload.finishes)) {
+    return { ok: false, reason: str(payload?.reason) ?? 'invalid_response' };
+  }
+
+  const finishes: RoomFinish[] = [];
+  for (const entry of payload.finishes) {
+    const row = record(entry);
+    const participantId = row ? str(row.participant_id) : null;
+    const missionId = row ? str(row.mission_id) : null;
+    if (!row || !participantId || !missionId) {
+      continue;
+    }
+    const reaction = str(row.my_reaction);
+    finishes.push({
+      participantId,
+      segmentIndex: typeof row.segment_index === 'number' ? row.segment_index : 0,
+      nickname: str(row.nickname) ?? '',
+      missionId,
+      templateId: str(row.template_id),
+      baseScore: typeof row.base_score === 'number' ? row.base_score : null,
+      scoreUnit: row.score_unit === 'rounds' ? 'rounds' : 'reps',
+      finishedAt: str(row.finished_at) ?? '',
+      isGuest: row.is_guest === true,
+      myReaction: reaction && isRoomReaction(reaction) ? reaction : null,
+      reactionCount: typeof row.reaction_count === 'number' ? row.reaction_count : 0,
+    });
+  }
+  return { ok: true, finishes };
+}
+
+export async function reactToFinish(
+  participantId: string,
+  segmentIndex: number,
+  reaction: RoomReaction | null
+): Promise<{ ok: boolean; reason?: string }> {
+  const { data, error } = await callRpc<unknown>('react_to_finish', {
+    p_participant_id: participantId,
+    p_segment_index: segmentIndex,
+    p_reaction: reaction,
   });
   if (error) {
     return { ok: false, reason: error.message };

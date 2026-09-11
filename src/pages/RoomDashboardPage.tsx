@@ -17,6 +17,7 @@ import { capabilitiesFor } from '@/lib/rooms/membership';
 import { roomActivitySentence, roomInviteUrl } from '@/lib/rooms/roomInvite';
 import { ScheduleMissionForm } from '@/components/rooms/ScheduleMissionForm';
 import { AnnouncementEditor } from '@/components/rooms/AnnouncementEditor';
+import { RecentFinishes } from '@/components/rooms/RecentFinishes';
 import { nextMission, nextMissionLabel, repeatableMission } from '@/lib/rooms/roomSchedule';
 
 /**
@@ -203,6 +204,14 @@ function Dashboard({ handle }: { handle: string }) {
         {!room.isActive ? (
           <p className="text-xs text-accent">This room isn&rsquo;t running missions right now.</p>
         ) : null}
+      </section>
+
+      <section className="card mt-4 space-y-2 p-4 text-sm">
+        <h2 className="eyebrow text-secondary">Recent finishes</h2>
+        <p className="text-secondary">
+          One tap tells an athlete you saw it. Tap the same one again to take it back.
+        </p>
+        <RecentFinishes roomId={room.id} />
       </section>
 
       <section className="card mt-4 space-y-2 p-4 text-sm">
