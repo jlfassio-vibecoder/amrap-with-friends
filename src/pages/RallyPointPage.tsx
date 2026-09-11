@@ -3,7 +3,7 @@ import { AppLink } from '@/components/AppLink';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
 import { WorkoutTemplatePicker } from '@/components/createMission/WorkoutTemplatePicker';
-import { SendWorkoutToSquad } from '@/components/mission/SendWorkoutToSquad';
+import { SendInvitationButton } from '@/components/invitations/SendInvitationFlow';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useSmartRecovery } from '@/hooks/useSmartRecovery';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
@@ -565,14 +565,16 @@ export default function RallyPointPage() {
               </form>
             )}
             {!chainQueueRemaining && isAuthenticated ? (
-              <SendWorkoutToSquad
+              <SendInvitationButton
                 durationMinutes={durationMinutes}
                 workout={stagedWorkout}
                 templateId={selectedTemplate?.id}
                 intensityTier={selectedTemplate?.intensityTier}
                 ready={Boolean(selectedTemplate) && stagedWorkout.length > 0}
+                allowedTypes={['workout']}
+                defaultType="workout"
                 triggerClassName="btn-outline w-full font-semibold"
-                triggerLabel="Send this to a squad friend"
+                triggerLabel="Send invitation"
               />
             ) : null}
             <button

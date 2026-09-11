@@ -18,7 +18,7 @@ import {
 import { buildSquadInviteUrl } from '@/lib/squad';
 import { useAthleteProfile } from '@/hooks/useAthleteProfile';
 import { isIntakeRequiredMessage } from '@/lib/auth/profileNeedsIntake';
-import { ogCardFromSex } from '@/lib/share/ogCard';
+import { SendInvitationButton } from '@/components/invitations/SendInvitationFlow';
 
 function displayName(athlete: SquadAthlete): string {
   return athlete.nickname ?? athlete.username ?? 'Athlete';
@@ -452,14 +452,27 @@ export default function SquadPage() {
                     <p className="text-xs text-muted">{handleLabel(friend)}</p>
                   ) : null}
                 </div>
-                <button
-                  type="button"
-                  className="text-sm font-semibold text-accent"
-                  disabled={busyId === friend.userId}
-                  onClick={() => void handleRemove(friend.userId)}
-                >
-                  Remove
-                </button>
+                <div className="flex flex-wrap items-center gap-3">
+                  <SendInvitationButton
+                    durationMinutes={15}
+                    workout={[]}
+                    lockRecipientUserId={friend.userId}
+                    recipientIsFriend
+                    allowedTypes={['campaign']}
+                    defaultType="campaign"
+                    triggerLabel="Send campaign invitation"
+                    triggerClassName="text-sm font-semibold text-accent"
+                    ready
+                  />
+                  <button
+                    type="button"
+                    className="text-sm font-semibold text-accent"
+                    disabled={busyId === friend.userId}
+                    onClick={() => void handleRemove(friend.userId)}
+                  >
+                    Remove
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

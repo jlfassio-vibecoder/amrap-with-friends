@@ -718,4 +718,35 @@ describe('missionChannelUtils', () => {
     expect(sorted[0].id).toBe(messageA.id);
     expect(sorted[1].id).toBe(messageB.id);
   });
+
+  it('parseMessageRow keeps a typed invitation attachment and ignores unknown ones', () => {
+    const withCard = parseMessageRow({
+      id: 'dddd4444-4444-4444-8444-444444444444',
+      mission_id: MISSION_ID,
+      participant_id: HOST_ID,
+      nickname: 'Host',
+      body: 'Shared a workout',
+      segment_index: 0,
+      created_at: '2026-08-22T12:00:00.000Z',
+      attachment: {
+        type: 'invitation',
+        invitation_id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      },
+    });
+    expect(withCard?.attachment).toEqual({
+      type: 'invitation',
+      invitation_id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+    });
+
+    const ordinary = parseMessageRow({
+      id: 'eeee5555-5555-4555-8555-555555555555',
+      mission_id: MISSION_ID,
+      participant_id: HOST_ID,
+      nickname: 'Host',
+      body: 'https://example.com',
+      segment_index: 0,
+      created_at: '2026-08-22T12:00:01.000Z',
+    });
+    expect(ordinary?.attachment).toBeNull();
+  });
 });

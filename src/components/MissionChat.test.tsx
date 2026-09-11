@@ -34,6 +34,7 @@ function renderChat(
     messages: MessageRow[];
     expanded: boolean;
     onExpandedChange: (expanded: boolean) => void;
+    isAuthenticated: boolean;
   }> = {}
 ) {
   const onExpandedChange = props.onExpandedChange ?? vi.fn();
@@ -42,7 +43,7 @@ function renderChat(
       missionId={MISSION_ID}
       participantId={PARTICIPANT_ID}
       claimToken="claim-token"
-      isAuthenticated={false}
+      isAuthenticated={props.isAuthenticated ?? false}
       messages={props.messages ?? []}
       expanded={props.expanded ?? false}
       onExpandedChange={onExpandedChange}
@@ -157,5 +158,20 @@ describe('MissionChat', () => {
     });
     expect((screen.getByPlaceholderText('Type a message…') as HTMLInputElement).value).toBe('');
     expect(onExpandedChange).toHaveBeenCalledWith(true);
+  });
+
+  it('offers Send as invitation for a recognized rally link instead of posting it', async () => {
+    renderChat({ isAuthenticated: true });
+
+    fireEvent.change(screen.getByPlaceholderText('Type a message…'), {
+      target: { value: `https://amrapwithfriends.com/join?m=${MISSION_ID}` },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+    expect(
+      await screen.findByText('Send this as an invitation instead of a raw link?')
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Send as invitation' })).toBeTruthy();
+    expect(sendMessageMock).not.toHaveBeenCalled();
   });
 });

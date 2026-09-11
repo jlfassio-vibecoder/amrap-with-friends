@@ -5,8 +5,8 @@ import { AppLink } from '@/components/AppLink';
 import { Link, useNavigate } from 'react-router-dom';
 import { NarrowPageLayout } from '@/components/NarrowPageLayout';
 import { MyMissionScoreBreakdownModal } from '@/components/MyMissionScoreBreakdownModal';
-import { AssignedWorkoutsPanel } from '@/components/mission/AssignedWorkoutsPanel';
-import { SendWorkoutToSquad } from '@/components/mission/SendWorkoutToSquad';
+import { InvitationsInboxPanel } from '@/components/invitations/InvitationsInboxPanel';
+import { SendInvitationButton } from '@/components/invitations/SendInvitationFlow';
 import { MyCampaignsPanel } from '@/components/campaign/MyCampaignsPanel';
 import { ScalingProgressionPanel } from '@/components/mission/ScalingProgressionPanel';
 import { CheckInProgressionPanel } from '@/components/mission/CheckInProgressionPanel';
@@ -30,7 +30,7 @@ import {
 } from '@/lib/api/myMissions';
 import type { MissionChainItem } from '@/lib/api/missionChain';
 import type { WorkoutExercise } from '@/lib/api/missionTypes';
-import { fetchHostActiveMissionCount } from '@/lib/api/missions';
+import { fetchInvitationUnreadCount } from '@/lib/api/invitations';
 import { createRallyPointMission } from '@/lib/api/rallyPoint';
 import { WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
@@ -290,17 +290,20 @@ function MyMissionCard({
           </button>
         ) : null}
         <ShareMyMissionButton entry={entry} ensureDetail={ensureDetail} />
-        <SendWorkoutToSquad
+        <SendInvitationButton
           durationMinutes={entry.durationMinutes}
           workout={entry.workout}
           templateId={entry.templateId}
+          sourceMissionId={entry.missionId}
           ready={entry.movementCount > 0 || entry.workout.length > 0}
           ensureWorkout={async () => {
             const hydrated = await ensureDetail(entry);
             return hydrated?.workout ?? null;
           }}
+          allowedTypes={['workout', 'campaign']}
+          defaultType="workout"
           triggerClassName="link-accent font-normal disabled:text-muted"
-          triggerLabel="Add squad member"
+          triggerLabel="Send invitation"
         />
         {expandControl ? (
           <button
@@ -367,6 +370,7 @@ export default function MyMissionsPage() {
   const [expandedRallyPointIds, setExpandedRallyPointIds] = useState<Set<string>>(() => new Set());
   const [benchmarks, setBenchmarks] = useState<AthleteBenchmark[]>([]);
   const [activeTab, setActiveTab] = useState<MyMissionsTabKey>('missions');
+  const [sentUnreadCount, setSentUnreadCount] = useState(0);
 
   const listItems = useMemo(
     () => groupMyMissionsByRallyPoint(entries, chainsByRallyPointId),
@@ -469,9 +473,25 @@ export default function MyMissionsPage() {
   const refetchOnVisible = useCallback(() => {
     void loadMissions({ preserveHydration: true });
     void loadBenchmarks();
+    void fetchInvitationUnreadCount().then((result) => {
+      if (!result.error) {
+        setSentUnreadCount(result.unreadCount);
+      }
+    });
   }, [loadMissions, loadBenchmarks]);
 
   useRefetchOnVisible(Boolean(isAuthenticated && user && !isAuthLoading), refetchOnVisible);
+
+  useEffect(() => {
+    if (isAuthLoading || !isAuthenticated) {
+      return;
+    }
+    void fetchInvitationUnreadCount().then((result) => {
+      if (!result.error) {
+        setSentUnreadCount(result.unreadCount);
+      }
+    });
+  }, [isAuthLoading, isAuthenticated]);
 
   const loading = isAuthLoading || (isAuthenticated && user !== null && !hasLoaded);
 
@@ -592,7 +612,11 @@ export default function MyMissionsPage() {
       </div>
 
       <div className="space-y-4">
-        <MyMissionsTopTabs activeTab={activeTab} onChange={setActiveTab} />
+        <MyMissionsTopTabs
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          sentUnreadCount={sentUnreadCount}
+        />
 
         <MyMissionsTabPanel tab="missions" activeTab={activeTab}>
           {loading ? <p className="text-sm text-secondary">Loading…</p> : null}
@@ -685,7 +709,7 @@ export default function MyMissionsPage() {
         </MyMissionsTabPanel>
 
         <MyMissionsTabPanel tab="sent" activeTab={activeTab}>
-          <AssignedWorkoutsPanel showWhenEmpty />
+          <InvitationsInboxPanel showWhenEmpty onUnreadChange={setSentUnreadCount} />
         </MyMissionsTabPanel>
 
         <MyMissionsTabPanel tab="campaigns" activeTab={activeTab}>
