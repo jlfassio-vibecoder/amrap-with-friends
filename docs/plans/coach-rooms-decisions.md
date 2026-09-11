@@ -3,10 +3,14 @@
 _Recorded 10 September 2026 · [feature plan](coach-rooms-feature-plan.md) (what and why) ·
 [roadmap](coach-rooms-roadmap.md) (in what order)_
 
-Three questions the roadmap flagged as "decide before writing code, because
+The questions the roadmap flagged as "decide before writing code, because
 everything downstream forks on them." Each has a recommendation and the reason.
 **None is signed off** — override any of them here and the rest of the build
 follows this file.
+
+§1–3 are Phase 0's three. §4 was raised later, by Phase 2a shipping a room page
+with no athlete-facing activity list, and is recorded here because it forks the
+same way.
 
 ---
 
@@ -75,6 +79,109 @@ without Phase 1 having to break the rule on its first day.
 
 **Consequence:** the check is on `source`, not on who is calling. A bug in the
 admin path can grant a founding row; it cannot forge a Stripe one.
+
+---
+
+## 4. The public activity feed names members and counts everyone
+
+_Decided 11 September 2026, against two stated criteria: encourage account
+creation, and make sure guests come back._
+
+**Decision:**
+
+| Who                                             | On the public `/@handle` feed | Counted in "N athletes finished" |
+| ----------------------------------------------- | ----------------------------- | -------------------------------- |
+| Member, `activity_visible = true` (the default) | Named                         | Yes                              |
+| Member, opted out                               | Unnamed row                   | Yes                              |
+| Guest — no membership row                       | Unnamed row                   | Yes                              |
+
+`room_members.activity_visible` is a **member** setting and means exactly one
+thing: _show my name in this room's public activity_. It has existed since the
+boundary migration with no reader; this is the reader.
+
+**Guests do not get the setting, because the guest state already is the private
+state.** That is the whole answer to "what does `activity_visible` mean for
+someone with no membership row" — nothing, because there is no name being
+published to hide. A guest is at the more private setting by construction, and
+a column on a row they do not have cannot make them more private than that.
+
+### Unnamed, not omitted — this is the part that serves both criteria
+
+Omitting guests is the tempting default and it fails twice over. It makes the
+feed **dishonest**: a room that ran twenty athletes, most of them guests, would
+render as a room that ran six, which argues against joining it. And it makes
+the feed **discouraging** to the one person the room loop is built to convert —
+a guest who finishes, opens the room page, and finds no trace of the thing they
+just did has been told their effort did not count.
+
+An unnamed row says the opposite. The guest watches their own result land on
+their coach's page, and the single thing missing is their name.
+
+That is also the strongest account-creation pitch the room has, because it is
+true and specific rather than generic. **The client already knows which row is
+its own** — `getStoredParticipantId(missionId)` in `missionIdentity` — so the
+page can mark _this one is you_ locally, without publishing anything and
+without the server knowing who is looking. The prompt lands on exactly the
+person it should, and it says the honest thing: the name is what the account
+buys.
+
+### Claiming names what you already did
+
+A guest who claims into an account with the room box ticked has their past
+finishes **in that room** become named. This is the payoff, and it is a much
+better offer than "create an account": it does not ask for a leap of faith
+about future value, it points at work already on the page.
+
+It also publishes a name that was previously anonymous, so the sheet must say
+so before the tick, not after. A retroactive change to a public page is exactly
+the kind of thing that must be consented to rather than discovered.
+
+### Default-on for members, but only with a one-tap opt-out next to the names
+
+Opt-in leaves every feed empty, which removes the reason the feed exists.
+Joining a room is already a deliberate act aimed at one coach, so default-on is
+the honest reading of what the athlete asked for. That is only defensible while
+the opt-out is one tap and visible **where the names are** — not buried in a
+settings page the athlete has no reason to open.
+
+### The host's view does not change, and the boundary is not member-vs-guest
+
+`list_room_finishes` stays host-only, stays named, and keeps including guests.
+The coach already sees every nickname live on the participants panel while the
+mission runs; publishing to the open web is the new thing, not the coach
+seeing it. **The boundary is public-vs-host.** Nobody should later "fix" the
+apparent inconsistency of a guest being named to their coach and unnamed to
+the world — that difference is the design.
+
+### There is a deadline on this, and a promise already shipped
+
+Two surfaces currently tell athletes the audience is the coach:
+
+- `src/pages/RoomPage.tsx` — "Joining lets this coach see the missions you
+  finish in their room."
+- `joinNote()` in `src/lib/rooms/postFinish.ts` — "<Room> will see the missions
+  you finish in their room."
+
+A public, named feed makes both false. **Today that costs nothing: there are
+zero rooms in production**, so nobody has joined under that promise. It stops
+being free the day the first founding host onboards, after which anyone who
+joined under "this coach" must stay unnamed and the fix is a backfill rather
+than a copy change. Ship the copy in the same commit as the feed, or do not
+ship the feed.
+
+### Consequences
+
+- A new public read — anon-executable, unlike host-only `list_room_finishes` —
+  returns a name only for a member with the flag set. Never a `user_id`, and
+  never a guest's nickname.
+- It must return `participant_id` so a guest's own device can recognise its
+  row. That id is a bare uuid and identifies nothing on its own, but it is
+  newly public: check at build time that nothing else public joins against it.
+- Counting stays as `room_activity_summary` already does it, deliberately
+  including guests (`20260912110000_room_activity_counts_guests.sql`).
+  `returning_athletes` still must not, because two guest finishes cannot be
+  shown to be the same person and inventing a returner would corrupt the
+  pilot's primary metric.
 
 ---
 

@@ -164,7 +164,10 @@ The first phase anyone can see. The plan's Phase 2, with reminders split out.
   at the edge (§1.5). `index: true` for rooms; the handle-history redirect answers
   the old path for 90 days.
 - Identity, next mission, workout collection, activity list, pinned announcement,
-  reactions.
+  reactions. The public activity list names members who have not opted out and
+  shows guests as unnamed rows — decided in
+  [§4 of the decisions](coach-rooms-decisions.md), which also carries the
+  deadline on the "this coach" copy already shipped.
 - Coach dashboard: publish, schedule, "run this again," copy invite, who finished
   and who returned, manage co-hosts and members.
 - **The single post-finish sheet** (§4): share → save result → join room checkbox,
