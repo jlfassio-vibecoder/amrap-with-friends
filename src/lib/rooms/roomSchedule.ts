@@ -14,6 +14,8 @@ export interface RoomMissionLike {
   templateId: string | null;
   scheduledAt: string | null;
   createdAt: string;
+  /** When someone finished it. Null for a mission nobody scored. */
+  completedAt?: string | null;
   finishers: number;
 }
 
@@ -68,8 +70,30 @@ export function nextMission(missions: RoomMissionLike[]): RoomMissionLike | null
 export function repeatableMission(missions: RoomMissionLike[]): RoomMissionLike | null {
   const finished = missions
     .filter((mission) => mission.state === 'finished' && mission.finishers > 0)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    // By when it was *finished*, not when it was created. A mission scheduled
+    // on Monday for next Tuesday is created before one run on Wednesday, and
+    // sorting by creation would offer back the older session.
+    .sort((a, b) => completedKey(b).localeCompare(completedKey(a)));
   return finished[0] ?? null;
+}
+
+function completedKey(mission: RoomMissionLike): string {
+  return mission.completedAt ?? mission.createdAt;
+}
+
+/**
+ * A host participant nickname, within the limit schedule_room_mission enforces.
+ *
+ * A room name may be 80 characters and a nickname 50, so a room with a long
+ * name could not schedule anything at all until this trimmed it.
+ */
+export const HOST_NICKNAME_MAX = 50;
+
+export function hostNicknameFor(roomDisplayName: string): string {
+  const trimmed = roomDisplayName.trim();
+  return trimmed.length <= HOST_NICKNAME_MAX
+    ? trimmed
+    : `${trimmed.slice(0, HOST_NICKNAME_MAX - 1).trimEnd()}…`;
 }
 
 /** Same day next week, at the same wall-clock time, in whatever zone the caller passes. */

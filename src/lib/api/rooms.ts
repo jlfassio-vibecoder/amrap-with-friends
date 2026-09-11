@@ -1,4 +1,5 @@
 import { callRpc } from '@/lib/api/callRpc';
+import { persistMissionIdentity } from '@/lib/missionIdentity';
 import type { RoomRole } from '@/lib/rooms/membership';
 
 /**
@@ -305,26 +306,19 @@ export interface RoomMission {
   state: string;
   durationMinutes: number;
   templateId: string | null;
-  workout: unknown;
   scheduledAt: string | null;
   createdAt: string;
+  /** When someone actually finished it, which is not when it was scheduled. */
+  completedAt: string | null;
   finishers: number;
 }
 
-export async function listRoomMissions(
-  roomId: string
-): Promise<{ ok: true; missions: RoomMission[] } | { ok: false; reason: string }> {
-  const { data, error } = await callRpc<unknown>('list_room_missions', { p_room_id: roomId });
-  if (error) {
-    return { ok: false, reason: error.message };
+function parseMissions(value: unknown): RoomMission[] {
+  if (!Array.isArray(value)) {
+    return [];
   }
-  const payload = record(data);
-  if (!payload || payload.ok !== true || !Array.isArray(payload.missions)) {
-    return { ok: false, reason: str(payload?.reason) ?? 'invalid_response' };
-  }
-
   const missions: RoomMission[] = [];
-  for (const entry of payload.missions) {
+  for (const entry of value) {
     const row = record(entry);
     const missionId = row ? str(row.mission_id) : null;
     if (!row || !missionId) {
@@ -335,13 +329,39 @@ export async function listRoomMissions(
       state: str(row.state) ?? 'waiting',
       durationMinutes: typeof row.duration_minutes === 'number' ? row.duration_minutes : 0,
       templateId: str(row.template_id),
-      workout: row.workout,
       scheduledAt: str(row.scheduled_at),
       createdAt: str(row.created_at) ?? '',
+      completedAt: str(row.completed_at),
       finishers: typeof row.finishers === 'number' ? row.finishers : 0,
     });
   }
-  return { ok: true, missions };
+  return missions;
+}
+
+/**
+ * Upcoming and recent come back as separate lists, ordered by the server.
+ * One capped list could not answer both questions: an older scheduled mission
+ * can be the earliest upcoming one, and the only completed mission can sit
+ * behind a page of newer scheduled rows.
+ */
+export async function listRoomMissions(
+  roomId: string
+): Promise<
+  { ok: true; upcoming: RoomMission[]; recent: RoomMission[] } | { ok: false; reason: string }
+> {
+  const { data, error } = await callRpc<unknown>('list_room_missions', { p_room_id: roomId });
+  if (error) {
+    return { ok: false, reason: error.message };
+  }
+  const payload = record(data);
+  if (!payload || payload.ok !== true) {
+    return { ok: false, reason: str(payload?.reason) ?? 'invalid_response' };
+  }
+  return {
+    ok: true,
+    upcoming: parseMissions(payload.upcoming),
+    recent: parseMissions(payload.recent),
+  };
 }
 
 export interface ScheduleRoomMissionInput {
@@ -375,5 +395,21 @@ export async function scheduleRoomMission(
   if (!payload || payload.ok !== true || !missionId) {
     return { ok: false, reason: str(payload?.reason) ?? 'invalid_response' };
   }
+
+  // Keep the host identity the RPC just minted. Without it the coach has a
+  // mission they own and no way to start it -- the tokens are returned once
+  // and never again.
+  const hostToken = str(payload.host_token);
+  const participantId = str(payload.participant_id);
+  const claimToken = str(payload.claim_token);
+  if (hostToken && participantId) {
+    persistMissionIdentity(missionId, {
+      nickname: input.nickname,
+      participantId,
+      hostToken,
+      ...(claimToken ? { claimToken } : {}),
+    });
+  }
+
   return { ok: true, missionId };
 }

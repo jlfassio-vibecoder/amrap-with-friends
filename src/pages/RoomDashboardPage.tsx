@@ -59,7 +59,8 @@ function Dashboard({ handle }: { handle: string }) {
   const [room, setRoom] = useState<RoomPage | null>(null);
   const [members, setMembers] = useState<RoomMember[]>([]);
   const [activity, setActivity] = useState<RoomActivity | null>(null);
-  const [missions, setMissions] = useState<RoomMission[]>([]);
+  const [upcoming, setUpcoming] = useState<RoomMission[]>([]);
+  const [recent, setRecent] = useState<RoomMission[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'denied' | 'missing' | 'error'>(
     'loading'
   );
@@ -103,7 +104,8 @@ function Dashboard({ handle }: { handle: string }) {
     // The mission list is public, so a failure there is worth an empty schedule
     // rather than a denied page -- it is not an authorization signal like the
     // other two reads.
-    setMissions(schedule.ok ? schedule.missions : []);
+    setUpcoming(schedule.ok ? schedule.upcoming : []);
+    setRecent(schedule.ok ? schedule.recent : []);
     setStatus('ready');
   }, [handle]);
 
@@ -174,13 +176,22 @@ function Dashboard({ handle }: { handle: string }) {
     <NarrowPageLayout title={room.displayName} subtitle={`@${room.handle}`}>
       <section className="card space-y-3 p-4 text-sm">
         <h2 className="eyebrow text-secondary">Next mission</h2>
-        <p>{nextMissionLabel(nextMission(missions))}</p>
+        <p>{nextMissionLabel(nextMission(upcoming))}</p>
         {room.isActive ? (
           <ScheduleMissionForm
             roomId={room.id}
             hostNickname={room.displayName}
-            repeatable={repeatableMission(missions)}
-            onScheduled={() => void load()}
+            repeatable={repeatableMission(recent)}
+            onScheduled={(missionId, opensNow) => {
+              // A mission opened now is one the coach means to run. Taking
+              // them to it is the difference between scheduling and hosting.
+              // A dated one just joins the list.
+              if (opensNow) {
+                window.location.assign(`/mission/${missionId}`);
+                return;
+              }
+              void load();
+            }}
           />
         ) : null}
       </section>

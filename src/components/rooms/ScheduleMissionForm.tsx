@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { WORKOUT_TEMPLATES } from '@/data/workoutTemplates';
 import { scheduleRoomMission } from '@/lib/api/rooms';
-import { checkScheduledAt, type RoomMissionLike } from '@/lib/rooms/roomSchedule';
+import { checkScheduledAt, hostNicknameFor, type RoomMissionLike } from '@/lib/rooms/roomSchedule';
 import { templateToExercises } from '@/lib/workout/templateToExercises';
 
 /** Mirrors room_schedule_horizon_days() so a host is told before they submit. */
@@ -12,7 +12,8 @@ interface ScheduleMissionFormProps {
   hostNickname: string;
   /** The last session anyone finished, offered as "run this again". */
   repeatable: RoomMissionLike | null;
-  onScheduled: () => void;
+  /** `opensNow` is true when no time was given, so the caller can go run it. */
+  onScheduled: (missionId: string, opensNow: boolean) => void;
 }
 
 /**
@@ -76,7 +77,7 @@ export function ScheduleMissionForm({
     setBusy(true);
     const result = await scheduleRoomMission({
       roomId,
-      nickname: hostNickname,
+      nickname: hostNicknameFor(hostNickname),
       durationMinutes: template.durationMinutes,
       workout: templateToExercises(template),
       templateId: template.id,
@@ -90,7 +91,7 @@ export function ScheduleMissionForm({
       return;
     }
     setWhen('');
-    onScheduled();
+    onScheduled(result.missionId, scheduledAt === null);
   }
 
   return (

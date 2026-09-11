@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   checkScheduledAt,
+  hostNicknameFor,
+  HOST_NICKNAME_MAX,
   isOpenMission,
   nextMission,
   nextMissionLabel,
@@ -142,5 +144,68 @@ describe('nextMissionLabel', () => {
     const label = nextMissionLabel(mission({ scheduledAt: '2026-09-22T17:00:00.000Z' }), 'en-US');
     expect(label).toMatch(/Sep/);
     expect(label).not.toBe('Nothing scheduled.');
+  });
+});
+
+describe('repeatableMission orders by completion, not creation', () => {
+  /**
+   * The case that made created_at wrong: a mission scheduled on Monday for next
+   * Tuesday is *created* before one that is created and run on Wednesday, so
+   * sorting by creation offers back the older session.
+   */
+  it('prefers the one finished most recently', () => {
+    const scheduledEarlyRunLate = mission({
+      missionId: 'tuesday',
+      state: 'finished',
+      finishers: 4,
+      createdAt: '2026-09-07T09:00:00.000Z',
+      completedAt: '2026-09-15T18:00:00.000Z',
+    });
+    const createdLateRunFirst = mission({
+      missionId: 'wednesday',
+      state: 'finished',
+      finishers: 2,
+      createdAt: '2026-09-09T09:00:00.000Z',
+      completedAt: '2026-09-09T18:00:00.000Z',
+    });
+    expect(repeatableMission([scheduledEarlyRunLate, createdLateRunFirst])?.missionId).toBe(
+      'tuesday'
+    );
+  });
+
+  it('falls back to creation when a completion time is missing', () => {
+    const older = mission({
+      missionId: 'a',
+      state: 'finished',
+      finishers: 1,
+      createdAt: '2026-09-01T00:00:00.000Z',
+    });
+    const newer = mission({
+      missionId: 'b',
+      state: 'finished',
+      finishers: 1,
+      createdAt: '2026-09-08T00:00:00.000Z',
+    });
+    expect(repeatableMission([older, newer])?.missionId).toBe('b');
+  });
+});
+
+describe('hostNicknameFor', () => {
+  // A room name may be 80 characters; schedule_room_mission caps a nickname at
+  // 50. Without this, a room with a long name could not schedule anything.
+  it('passes a short room name through unchanged', () => {
+    expect(hostNicknameFor('Bay Area CrossFit')).toBe('Bay Area CrossFit');
+  });
+
+  it('trims a name too long for the nickname limit', () => {
+    const long = 'A'.repeat(80);
+    const nickname = hostNicknameFor(long);
+    expect(nickname.length).toBeLessThanOrEqual(HOST_NICKNAME_MAX);
+    expect(nickname.endsWith('…')).toBe(true);
+  });
+
+  it('does not leave a dangling space before the ellipsis', () => {
+    const nickname = hostNicknameFor(`${'B'.repeat(48)} tail words here`);
+    expect(nickname).not.toContain(' …');
   });
 });
