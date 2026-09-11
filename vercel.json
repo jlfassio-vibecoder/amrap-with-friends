@@ -92,6 +92,10 @@
     {
       "path": "/api/room-reminders/send",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/room-welcome/send",
+      "schedule": "* * * * *"
     }
   ]
 }
