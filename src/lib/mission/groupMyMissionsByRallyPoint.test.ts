@@ -19,6 +19,7 @@ function entry(
     movementCount: 1,
     repsPerRound: 10,
     templateId: null,
+    intensityTier: null,
     rallyPointId: null,
     state: 'finished',
     segmentIndex: 0,
