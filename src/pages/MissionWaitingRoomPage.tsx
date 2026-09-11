@@ -12,6 +12,13 @@ import {
   persistMissionIdentity,
 } from '@/lib/missionIdentity';
 import { useLiveAmrapMission } from '@/hooks/useLiveAmrapMission';
+import { track, trackBeacon } from '@/lib/analytics/track';
+import {
+  isWaitingRoomPresenceState,
+  rallyPointStayDurationSec,
+  resolveMissionStartSource,
+  type RallyPointLeaveReason,
+} from '@/lib/analytics/missionStartSource';
 import { useParticipantClaim } from '@/hooks/useParticipantClaim';
 import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { useMissionChannel } from '@/lib/realtime/useMissionChannel';
@@ -496,6 +503,11 @@ function LiveMissionView({
   );
   const live = useLiveAmrapMission(missionId, channel);
   const { isHost, start: startMission, phase: livePhase } = live;
+  const livePhaseRef = useRef(livePhase);
+  livePhaseRef.current = livePhase;
+  const rallyPointEnteredRef = useRef(false);
+  const rallyPointLeftRef = useRef(false);
+  const rallyPointEnteredAtMsRef = useRef<number | null>(null);
   const amqapFlow = findAmqapFlow(live.templateId);
   const amqapSets = useMemo(() => (amqapFlow ? expandAmqapSets(amqapFlow) : []), [amqapFlow]);
   const amqapProgress =
@@ -529,6 +541,80 @@ function LiveMissionView({
     chainAdvanceAttemptedRef.current = null;
     amqapAutoLockAttemptedRef.current = false;
     setAmqapAutoLockFailed(false);
+    rallyPointEnteredRef.current = false;
+    rallyPointLeftRef.current = false;
+    rallyPointEnteredAtMsRef.current = null;
+  }, [missionId]);
+
+  useEffect(() => {
+    if (!channel.mission || live.isPractice) {
+      return;
+    }
+    if (!isWaitingRoomPresenceState(channel.mission.state)) {
+      return;
+    }
+    if (rallyPointEnteredRef.current) {
+      return;
+    }
+    rallyPointEnteredRef.current = true;
+    rallyPointEnteredAtMsRef.current = Date.now();
+    track('rally_point_entered', {}, { missionId });
+  }, [channel.mission, channel.mission?.state, live.isPractice, missionId]);
+
+  useEffect(() => {
+    function fireRallyPointLeft(reason: RallyPointLeaveReason, useBeacon: boolean) {
+      if (!rallyPointEnteredRef.current || rallyPointLeftRef.current) {
+        return;
+      }
+      rallyPointLeftRef.current = true;
+      const enteredAt = rallyPointEnteredAtMsRef.current ?? Date.now();
+      const props = {
+        reason,
+        duration_sec: rallyPointStayDurationSec(enteredAt, Date.now()),
+      };
+      if (useBeacon) {
+        trackBeacon('rally_point_left', props, { missionId });
+      } else {
+        track('rally_point_left', props, { missionId });
+      }
+    }
+
+    if (livePhase === 'work') {
+      fireRallyPointLeft('started', false);
+      return;
+    }
+
+    if (channel.mission?.state === 'finished' && livePhase === 'waiting') {
+      fireRallyPointLeft('closed', false);
+    }
+  }, [livePhase, channel.mission?.state, missionId]);
+
+  useEffect(() => {
+    function leaveNavigatingAway() {
+      const phase = livePhaseRef.current;
+      if (phase === 'work' || phase === 'finished') {
+        return;
+      }
+      if (!rallyPointEnteredRef.current || rallyPointLeftRef.current) {
+        return;
+      }
+      rallyPointLeftRef.current = true;
+      const enteredAt = rallyPointEnteredAtMsRef.current ?? Date.now();
+      trackBeacon(
+        'rally_point_left',
+        {
+          reason: 'navigated_away',
+          duration_sec: rallyPointStayDurationSec(enteredAt, Date.now()),
+        },
+        { missionId }
+      );
+    }
+
+    window.addEventListener('pagehide', leaveNavigatingAway);
+    return () => {
+      window.removeEventListener('pagehide', leaveNavigatingAway);
+      leaveNavigatingAway();
+    };
   }, [missionId]);
 
   // AMQAP: lock a 0-partial score on finish so HUD Active Recovery / week volume
@@ -879,7 +965,12 @@ function LiveMissionView({
             disabled={!missionReady}
             onClick={() => {
               handleAudioUnlock();
-              void startMission();
+              void startMission({
+                source: resolveMissionStartSource({
+                  countdownArmed: rallyPointCountdownArmed,
+                  hasChainRest: Boolean(chainRestBanner),
+                }),
+              });
             }}
           >
             Start
@@ -1470,7 +1561,12 @@ function LiveMissionView({
                       onAudioUnlock={handleAudioUnlock}
                       onStart={() => {
                         handleAudioUnlock();
-                        void startMission();
+                        void startMission({
+                          source: resolveMissionStartSource({
+                            countdownArmed: rallyPointCountdownArmed,
+                            hasChainRest: Boolean(chainRestBanner),
+                          }),
+                        });
                       }}
                     />
                   </div>

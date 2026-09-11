@@ -8,7 +8,7 @@ either keep it here or promote a cleaned version under `docs/epics/`.
 
 ## Documents
 
-| Epic | Status |
-| ---- | ------ |
-| [onboarding-activation.md](./onboarding-activation.md) | Draft — Phase 0 done; Phase 1 instrumentation next |
-| [phase0-findings.md](./phase0-findings.md) | Phase 0 diagnosis from `/coach` (2026-09-10) |
+| Epic                                                   | Status                                                                |
+| ------------------------------------------------------ | --------------------------------------------------------------------- |
+| [onboarding-activation.md](./onboarding-activation.md) | Draft — Phase 1 instrumentation on `feature/onboarding-activation-p1` |
+| [phase0-findings.md](./phase0-findings.md)             | Phase 0 diagnosis from `/coach` (2026-09-10)                          |

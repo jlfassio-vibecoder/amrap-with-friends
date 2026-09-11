@@ -10,12 +10,14 @@ import {
   resetGuidedIgnitionPrefs,
 } from '@/lib/onboarding/guidedIgnitionPrefs';
 import CreateMissionPage from './CreateMissionPage';
+import { track } from '@/lib/analytics/track';
 
 const createRallyPointMock = vi.fn();
 const createMissionMock = vi.fn();
 const setMissionChainMock = vi.fn();
 const navigateMock = vi.fn();
 const saveIdentityMock = vi.fn();
+const trackMock = vi.mocked(track);
 
 const authState = vi.hoisted(() => ({
   isAuthenticated: true,
@@ -160,6 +162,7 @@ beforeEach(() => {
   setMissionChainMock.mockReset();
   navigateMock.mockReset();
   saveIdentityMock.mockReset();
+  trackMock.mockReset();
   saveIdentityMock.mockResolvedValue({ error: null });
   createRallyPointMock.mockResolvedValue({
     data: {
@@ -186,6 +189,14 @@ beforeEach(() => {
   };
   authState.missing = false;
   authState.loading = false;
+});
+
+describe('CreateMissionPage create_viewed', () => {
+  it('tracks create_viewed on mount', () => {
+    markGuidedIgnitionComplete();
+    renderPage();
+    expect(trackMock).toHaveBeenCalledWith('create_viewed');
+  });
 });
 
 describe('CreateMissionPage Launch identity', () => {

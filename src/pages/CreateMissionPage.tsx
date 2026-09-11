@@ -151,6 +151,10 @@ export default function CreateMissionPage() {
   const [retest, setRetest] = useState<AthleteBenchmark | null>(null);
 
   useEffect(() => {
+    track('create_viewed');
+  }, []);
+
+  useEffect(() => {
     const state = location.state as IntakeNavigationState | null;
     if (!state?.intakeNotices?.length) {
       return;
