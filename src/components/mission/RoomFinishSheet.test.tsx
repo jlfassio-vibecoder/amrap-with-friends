@@ -1,9 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
-const { getMissionRoomMock, joinRoomMock } = vi.hoisted(() => ({
+const { getMissionRoomMock, joinRoomMock, authMock } = vi.hoisted(() => ({
   getMissionRoomMock: vi.fn(),
   joinRoomMock: vi.fn(),
+  authMock: vi.fn(),
+}));
+
+vi.mock('@/hooks/useAmrapAuth', () => ({
+  useAmrapAuth: () => authMock(),
+}));
+
+// The sign-up the guest path opens. Rendering the real one would pull in
+// Supabase; what matters here is whether it is asked for at all.
+vi.mock('@/components/AuthModal', () => ({
+  AuthModal: ({ onAuthenticated }: { onAuthenticated?: () => void }) => (
+    <button type="button" data-testid="auth-modal" onClick={() => onAuthenticated?.()}>
+      sign in
+    </button>
+  ),
 }));
 
 vi.mock('@/lib/api/rooms', () => ({
@@ -31,6 +46,8 @@ const ROOM = {
 describe('RoomFinishSheet', () => {
   beforeEach(() => {
     cleanup();
+    authMock.mockReset();
+    authMock.mockReturnValue({ isAuthenticated: true });
     getMissionRoomMock.mockReset();
     joinRoomMock.mockReset();
     joinRoomMock.mockResolvedValue({
@@ -137,5 +154,59 @@ describe('RoomFinishSheet', () => {
 
     await screen.findByRole('button', { name: /Save this mission/ });
     expect(screen.queryByRole('checkbox')).toBeNull();
+  });
+});
+
+describe('the guest, who is who this sheet exists for', () => {
+  /**
+   * The finding this was written for: the sheet was gated on being signed in
+   * already, so a guest finishing a room mission never saw it — and the guest
+   * is the entire audience for the plan's post-finish flow.
+   */
+  it('opens sign-up instead of saving, and saves once auth settles', async () => {
+    authMock.mockReturnValue({ isAuthenticated: false });
+    getMissionRoomMock.mockResolvedValue(ROOM);
+    const onSave = vi.fn().mockResolvedValue(true);
+    const onJoinResult = vi.fn();
+
+    render(
+      <RoomFinishSheet
+        missionId="mission-1"
+        canSave
+        isSaving={false}
+        onSave={onSave}
+        onJoinResult={onJoinResult}
+      />
+    );
+
+    await screen.findByText(/Join Bay Area CrossFit/);
+    await click(screen.getByRole('button', { name: /Save my result/ }));
+
+    // Nothing saved yet — there is no account to save into.
+    expect(onSave).not.toHaveBeenCalled();
+    const modal = screen.getByTestId('auth-modal');
+
+    await click(modal);
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(joinRoomMock).toHaveBeenCalledWith(ROOM.id, true));
+  });
+
+  it('offers the guest the room checkbox, ticked, like anyone else', async () => {
+    cleanup();
+    authMock.mockReturnValue({ isAuthenticated: false });
+    getMissionRoomMock.mockResolvedValue(ROOM);
+    render(
+      <RoomFinishSheet
+        missionId="mission-1"
+        canSave
+        isSaving={false}
+        onSave={vi.fn().mockResolvedValue(true)}
+        onJoinResult={vi.fn()}
+      />
+    );
+
+    await screen.findByText(/Join Bay Area CrossFit/);
+    expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(true);
   });
 });

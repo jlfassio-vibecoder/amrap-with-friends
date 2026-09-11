@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { AuthModal } from '@/components/AuthModal';
+import { useAmrapAuth } from '@/hooks/useAmrapAuth';
 import { getMissionRoom, joinRoom, type MissionRoom } from '@/lib/api/rooms';
 import { postFinishSheet } from '@/lib/rooms/postFinish';
 
@@ -36,9 +38,11 @@ export function RoomFinishSheet({
   onSave,
   onJoinResult,
 }: RoomFinishSheetProps) {
+  const { isAuthenticated } = useAmrapAuth();
   const [room, setRoom] = useState<MissionRoom | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [joinTicked, setJoinTicked] = useState(true);
+  const [authOpen, setAuthOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,6 +78,19 @@ export function RoomFinishSheet({
   // flashing a checkbox in and out.
   if (!loaded || !sheet.show) {
     return canSave ? <SavePrompt isSaving={isSaving} onSave={onSave} note={null} /> : null;
+  }
+
+  /**
+   * A guest has no account to save into yet, so the button opens the sign-up
+   * first and the save runs when auth settles. Asking them to press it twice is
+   * how the claim gets abandoned.
+   */
+  function save() {
+    if (!isAuthenticated) {
+      setAuthOpen(true);
+      return;
+    }
+    void saveThenJoin();
   }
 
   async function saveThenJoin() {
@@ -130,23 +147,27 @@ export function RoomFinishSheet({
       ) : null}
 
       {sheet.showSave ? (
-        <button
-          type="button"
-          className="btn-primary text-sm"
-          disabled={isSaving}
-          onClick={() => void saveThenJoin()}
-        >
-          {isSaving ? 'Saving…' : 'Save this mission to my account'}
+        <button type="button" className="btn-primary text-sm" disabled={isSaving} onClick={save}>
+          {isSaving
+            ? 'Saving…'
+            : isAuthenticated
+              ? 'Save this mission to my account'
+              : 'Save my result'}
         </button>
       ) : sheet.showJoin && room ? (
-        <button
-          type="button"
-          className="btn-primary text-sm"
-          disabled={!joinTicked}
-          onClick={() => void saveThenJoin()}
-        >
+        <button type="button" className="btn-primary text-sm" disabled={!joinTicked} onClick={save}>
           Join {room.displayName}
         </button>
+      ) : null}
+
+      {authOpen ? (
+        <AuthModal
+          onClose={() => setAuthOpen(false)}
+          onAuthenticated={() => {
+            setAuthOpen(false);
+            void saveThenJoin();
+          }}
+        />
       ) : null}
     </section>
   );
